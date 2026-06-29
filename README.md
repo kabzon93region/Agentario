@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="assets/icons/icon.png" width="80" alt="Cline" />
+  <img src="assets/icons/icon.png" width="80" alt="Agentario" />
 </p>
 
-<h1 align="center">Cline</h1>
+<h1 align="center">Agentario</h1>
 
 <p align="center">
-The open source coding agent in your IDE and terminal.
+Autonomous coding agent for VS Code — fork of <a href="https://github.com/cline/cline">Cline</a>, powered by local and cloud LLMs (Ollama, LM Studio, and more).
 </p>
 
 <div align="center">

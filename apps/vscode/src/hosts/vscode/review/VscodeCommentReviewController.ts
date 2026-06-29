@@ -64,7 +64,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString(comment.comment),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: "Agentario",
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}
@@ -109,7 +109,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString("_Thinking..._"),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: "Agentario",
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}
@@ -174,7 +174,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString(this.streamingContent || "_Thinking..._"),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: "Agentario",
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}
@@ -196,7 +196,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 			body: new vscode.MarkdownString(finalContent),
 			mode: vscode.CommentMode.Preview,
 			author: {
-				name: "Cline",
+				name: "Agentario",
 				iconPath: vscode.Uri.parse(CLINE_AVATAR_URL),
 			},
 		}
