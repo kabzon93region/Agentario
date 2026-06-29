@@ -1,3 +1,5 @@
+import { t } from "@/i18n"
+
 export enum NEW_USER_TYPE {
 	CLINE_PASS = "cline-pass",
 	FREE = "free",
@@ -11,67 +13,82 @@ type UserTypeSelection = {
 	type: NEW_USER_TYPE
 }
 
-export const STEP_CONFIG = {
-	0: {
-		title: "How will you use Cline?",
-		description: "Select an option below to get started.",
-		buttons: [
-			{ text: "Continue", action: "next", variant: "default" },
-			{ text: "Login to Agentario", action: "signin", variant: "secondary" },
-		],
-	},
-	[NEW_USER_TYPE.CLINE_PASS]: {
-		title: "Select a ClinePass model",
-		buttons: [
-			{ text: "Create my Account", action: "signup", variant: "default" },
-			{ text: "Back", action: "back", variant: "secondary" },
-		],
-	},
-	[NEW_USER_TYPE.FREE]: {
-		title: "Select a free model",
-		buttons: [
-			{ text: "Create my Account", action: "signup", variant: "default" },
-			{ text: "Back", action: "back", variant: "secondary" },
-		],
-	},
-	[NEW_USER_TYPE.POWER]: {
-		title: "Select your model",
-		buttons: [
-			{ text: "Create my Account", action: "signup", variant: "default" },
-			{ text: "Back", action: "back", variant: "secondary" },
-		],
-	},
-	[NEW_USER_TYPE.BYOK]: {
-		title: "Configure your provider",
-		buttons: [
-			{ text: "Continue", action: "done", variant: "default" },
-			{ text: "Back", action: "back", variant: "secondary" },
-		],
-	},
-	2: {
-		title: "Almost there!",
-		description: "Complete account creation in your browser. Then come back here to finish up.",
-		buttons: [{ text: "Back", action: "back", variant: "secondary" }],
-	},
-} as const
-
-const CLINE_PASS_USER_TYPE_SELECTION: UserTypeSelection = {
-	title: "ClinePass (Recommended)",
-	description: "One subscription, curated models, no API keys",
-	type: NEW_USER_TYPE.CLINE_PASS,
+export function getStepConfig() {
+	return {
+		0: {
+			title: t("onboarding.howToUse"),
+			description: t("onboarding.selectOption"),
+			buttons: [
+				{ text: t("onboarding.continue"), action: "next" as const, variant: "default" as const },
+				{ text: t("onboarding.login"), action: "signin" as const, variant: "secondary" as const },
+			],
+		},
+		[NEW_USER_TYPE.CLINE_PASS]: {
+			title: t("onboarding.selectClinePassModel"),
+			buttons: [
+				{ text: t("onboarding.createAccount"), action: "signup" as const, variant: "default" as const },
+				{ text: t("onboarding.back"), action: "back" as const, variant: "secondary" as const },
+			],
+		},
+		[NEW_USER_TYPE.FREE]: {
+			title: t("onboarding.selectFreeModel"),
+			buttons: [
+				{ text: t("onboarding.createAccount"), action: "signup" as const, variant: "default" as const },
+				{ text: t("onboarding.back"), action: "back" as const, variant: "secondary" as const },
+			],
+		},
+		[NEW_USER_TYPE.POWER]: {
+			title: t("onboarding.selectModel"),
+			buttons: [
+				{ text: t("onboarding.createAccount"), action: "signup" as const, variant: "default" as const },
+				{ text: t("onboarding.back"), action: "back" as const, variant: "secondary" as const },
+			],
+		},
+		[NEW_USER_TYPE.BYOK]: {
+			title: t("onboarding.configureProvider"),
+			buttons: [
+				{ text: t("onboarding.continue"), action: "done" as const, variant: "default" as const },
+				{ text: t("onboarding.back"), action: "back" as const, variant: "secondary" as const },
+			],
+		},
+		2: {
+			title: t("onboarding.almostThere"),
+			description: t("onboarding.almostThereDesc"),
+			buttons: [{ text: t("onboarding.back"), action: "back" as const, variant: "secondary" as const }],
+		},
+	} as const
 }
-
-const BASE_USER_TYPE_SELECTIONS: UserTypeSelection[] = [
-	{ title: "Absolutely Free", description: "Get started at no cost", type: NEW_USER_TYPE.FREE },
-	{ title: "Frontier Model", description: "Claude, GPT Codex, Gemini, etc.", type: NEW_USER_TYPE.POWER },
-	{ title: "Bring my own API key", description: "Use Cline with your provider of choice", type: NEW_USER_TYPE.BYOK },
-]
 
 /** Free leads (and is the default); ClinePass is inserted second when its models are available. */
 export function getUserTypeSelections(hasClinePassModels: boolean): UserTypeSelection[] {
+	const base: UserTypeSelection[] = [
+		{
+			title: t("onboarding.absolutelyFree"),
+			description: t("onboarding.absolutelyFreeDesc"),
+			type: NEW_USER_TYPE.FREE,
+		},
+		{
+			title: t("onboarding.frontierModel"),
+			description: t("onboarding.frontierModelDesc"),
+			type: NEW_USER_TYPE.POWER,
+		},
+		{
+			title: t("onboarding.byok"),
+			description: t("onboarding.byokDesc"),
+			type: NEW_USER_TYPE.BYOK,
+		},
+	]
+
 	if (!hasClinePassModels) {
-		return BASE_USER_TYPE_SELECTIONS
+		return base
 	}
-	const [free, ...rest] = BASE_USER_TYPE_SELECTIONS
-	return [free, CLINE_PASS_USER_TYPE_SELECTION, ...rest]
+
+	const clinePassSelection: UserTypeSelection = {
+		title: t("onboarding.clinePassRecommended"),
+		description: t("onboarding.clinePassDesc"),
+		type: NEW_USER_TYPE.CLINE_PASS,
+	}
+
+	const [free, ...rest] = base
+	return [free, clinePassSelection, ...rest]
 }

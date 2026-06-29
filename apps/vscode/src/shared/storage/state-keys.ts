@@ -266,7 +266,7 @@ const USER_SETTINGS_FIELDS = {
 	useAutoCondense: { default: false as boolean },
 	subagentsEnabled: { default: false as boolean },
 	worktreesEnabled: { default: false as boolean },
-	preferredLanguage: { default: "English" as string },
+	preferredLanguage: { default: "Russian - Русский" as string },
 	mode: { default: "act" as Mode },
 	focusChainSettings: { default: DEFAULT_FOCUS_CHAIN_SETTINGS as FocusChainSettings },
 	customPrompt: { default: undefined as "compact" | undefined },

@@ -6,6 +6,7 @@ import EntitlementError from "@/components/chat/EntitlementError"
 import OrgClinePassRestrictionError from "@/components/chat/OrgClinePassRestrictionError"
 import SpendLimitError from "@/components/chat/SpendLimitError"
 import { Button } from "@/components/ui/button"
+import { t } from "@/i18n"
 import { useClineAuth, useClineSignIn } from "@/context/ClineAuthContext"
 import { ClineError, ClineErrorType } from "../../../../src/services/error/ClineError"
 
@@ -97,7 +98,7 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 									Whoops looks like you're logged out – click below to sign in
 								</div>
 								<Button className="w-full" disabled={isLoginLoading} onClick={handleSignIn}>
-									Sign in to Agentario
+									{t("common.signIn")}
 									{isLoginLoading && (
 										<span className="ml-1 animate-spin">
 											<span className="codicon codicon-refresh" />

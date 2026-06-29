@@ -12,6 +12,7 @@ import { AlertCircle, Check, ExternalLink, FolderOpen, GitBranch, GitMerge, Load
 import { memo, useCallback, useEffect, useState } from "react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { FileServiceClient, TaskServiceClient, WorktreeServiceClient } from "@/services/grpc-client"
 import { getEnvironmentColor } from "@/utils/environmentColors"
 import CreateWorktreeModal from "./CreateWorktreeModal"
@@ -574,7 +575,7 @@ Please help me resolve these merge conflicts, then complete the merge, and delet
 
 								<div className="flex flex-col gap-2">
 									<VSCodeButton onClick={handleAskClineToResolve} style={{ width: "100%" }}>
-										Ask Agentario to Resolve
+										{t("common.askToResolve")}
 									</VSCodeButton>
 									<VSCodeButton appearance="secondary" onClick={closeMergeModal} style={{ width: "100%" }}>
 										I'll Resolve Manually

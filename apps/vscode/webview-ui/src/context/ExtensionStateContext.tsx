@@ -273,7 +273,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		shouldShowAnnouncement: false,
 		autoApprovalSettings: DEFAULT_AUTO_APPROVAL_SETTINGS,
 		browserSettings: DEFAULT_BROWSER_SETTINGS,
-		preferredLanguage: "English",
+		preferredLanguage: "Russian - Русский",
 		mode: "act",
 		platform: DEFAULT_PLATFORM,
 		environment: Environment.production,

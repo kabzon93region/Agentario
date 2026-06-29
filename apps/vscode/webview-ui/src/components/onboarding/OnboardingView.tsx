@@ -3,6 +3,7 @@ import type { OnboardingModel, OnboardingModelGroup, OpenRouterModelInfo } from 
 import { AlertCircleIcon, CircleCheckIcon, CircleIcon, ListIcon, LoaderCircleIcon, ZapIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ClineLogoWhite from "@/assets/ClineLogoWhite"
+import { t } from "@/i18n"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,7 +28,7 @@ import {
 	getSpeedLabel,
 	type OnboardingModelsByGroup,
 } from "./data-models"
-import { getUserTypeSelections, NEW_USER_TYPE, STEP_CONFIG } from "./data-steps"
+import { getUserTypeSelections, getStepConfig, NEW_USER_TYPE } from "./data-steps"
 import { useOnboardingModels } from "./useOnboardingModels"
 
 type OnboardingPage =
@@ -120,7 +121,7 @@ const ModelSelection = ({
 					</ItemTitle>
 					{isSelected && model.info && (
 						<ItemDescription>
-							<span className="text-foreground/70 text-sm">Support: </span>
+							<span className="text-foreground/70 text-sm">{t("onboarding.support")} </span>
 							<span className="text-foreground text-sm">{getCapabilities(model.info).join(", ")}</span>
 						</ItemDescription>
 					)}
@@ -130,14 +131,14 @@ const ModelSelection = ({
 						<div className="flex flex-col gap-3">
 							<div className="inline-flex gap-1 [&_svg]:stroke-success [&_svg]:size-3 items-center text-sm">
 								<ZapIcon />
-								<span>Speed: </span>
+								<span>{t("onboarding.speed")} </span>
 								<span className="text-foreground/70">{getSpeedLabel(model.latency)}</span>
 							</div>
 							{model.info && (
 								<div className="flex w-full justify-between">
 									<div className="inline-flex gap-1 [&_svg]:stroke-foreground [&_svg]:size-3 items-center text-sm">
 										<ListIcon />
-										<span>Context: </span>
+										<span>{t("onboarding.context")} </span>
 										<span className="text-foreground/70">{(model?.info.contextWindow || 0) / 1000}k</span>
 									</div>
 									{!hidePrice && <Badge>{getPriceRange(model.info)}</Badge>}
@@ -154,8 +155,8 @@ const ModelSelection = ({
 	if (isClinePass && modelGroups.length === 0) {
 		return (
 			<div className="flex w-full max-w-lg flex-col items-center justify-center my-8 px-2 text-center">
-				<p className="text-foreground text-sm m-0">No ClinePass models are available right now.</p>
-				<p className="text-foreground/70 text-sm mt-1">Please choose another option or try again later.</p>
+				<p className="text-foreground text-sm m-0">{t("onboarding.noClinePassModels")}</p>
+				<p className="text-foreground/70 text-sm mt-1">{t("onboarding.tryAnotherOption")}</p>
 			</div>
 		)
 	}
@@ -186,7 +187,7 @@ const ModelSelection = ({
 			{!isClinePass && (
 				<div className="flex w-full max-w-lg flex-col gap-6 my-4 border-t border-muted-foreground">
 					<div className="flex flex-col gap-3 mt-6" key="search-results">
-						<h4 className="text-sm font-bold text-foreground/70 uppercase mb-2">other options</h4>
+						<h4 className="text-sm font-bold text-foreground/70 uppercase mb-2">{t("onboarding.otherOptions")}</h4>
 						<Input
 							autoFocus={false}
 							className="focus-visible:border-button-background"
@@ -197,7 +198,7 @@ const ModelSelection = ({
 								setSearchTerm(e.target.value)
 							}}
 							onClick={() => onSelectModel("")}
-							placeholder="Search model..."
+							placeholder={t("onboarding.searchModel")}
 							type="search"
 							value={searchTerm}
 						/>
@@ -238,7 +239,9 @@ const ModelSelection = ({
 									return <ModelItem id={id} isSelected={isSelected} key={id} model={onboardingModel} />
 								})}
 							{searchTerm.length > 0 && searchedModels.length === 0 && (
-								<p className="px-1 mt-1 text-sm text-foreground/70">No result found for "{searchTerm}"</p>
+								<p className="px-1 mt-1 text-sm text-foreground/70">
+									{t("onboarding.noSearchResults", { term: searchTerm })}
+								</p>
 							)}
 						</div>
 					</div>
@@ -587,10 +590,11 @@ const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: Onboard
 	)
 
 	const stepDisplayInfo = useMemo(() => {
-		const step = stepNumber === 0 || stepNumber === 2 ? STEP_CONFIG[stepNumber] : null
-		const title = step ? step.title : userType ? STEP_CONFIG[userType].title : STEP_CONFIG[0].title
+		const stepConfig = getStepConfig()
+		const step = stepNumber === 0 || stepNumber === 2 ? stepConfig[stepNumber] : null
+		const title = step ? step.title : userType ? stepConfig[userType].title : stepConfig[0].title
 		const description = step ? step.description : null
-		const buttons = step ? step.buttons : userType ? STEP_CONFIG[userType].buttons : STEP_CONFIG[0].buttons
+		const buttons = step ? step.buttons : userType ? stepConfig[userType].buttons : stepConfig[0].buttons
 		return { title, description, buttons }
 	}, [stepNumber, userType])
 
@@ -639,20 +643,20 @@ const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: Onboard
 								onClick={() => handleFooterAction(btn.action)}
 								variant={btn.variant}>
 								{showSpinner && <LoaderCircleIcon className="mr-2 size-4 animate-spin" />}
-								{showSpinner ? "Waiting for sign in..." : btn.text}
+								{showSpinner ? t("onboarding.waitingForSignIn") : btn.text}
 							</Button>
 						)
 					})}
 
 					{isActionLoading && stepNumber !== 2 && (
 						<div className="items-center justify-center flex text-sm text-foreground/70 text-pretty text-center">
-							Complete sign in in your browser. We'll continue automatically once you're done.
+							{t("onboarding.completeSignIn")}
 						</div>
 					)}
 
 					{stepNumber !== 2 && (
 						<div className="items-center justify-center flex text-sm text-foreground gap-2 mb-3 text-pretty">
-							<AlertCircleIcon className="shrink-0 size-2" /> You can change this later in settings
+							<AlertCircleIcon className="shrink-0 size-2" /> {t("onboarding.changeLater")}
 						</div>
 					)}
 				</footer>

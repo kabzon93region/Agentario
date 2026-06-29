@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { ClineAuthStatus } from "@/components/account/ClineAuthStatus"
 import { useClineAuth, useClineSignIn } from "@/context/ClineAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { UiServiceClient } from "@/services/grpc-client"
 
 export const ClineAccountInfoCard = ({ usageLink }: { usageLink?: string }) => {
@@ -44,7 +45,7 @@ export const ClineAccountInfoCard = ({ usageLink }: { usageLink?: string }) => {
 			) : (
 				<div className="flex flex-col gap-3">
 					<VSCodeButton className="mt-0" disabled={isLoginLoading} onClick={handleLogin}>
-						Sign Up with Agentario
+						{t("common.signUp")}
 						{isLoginLoading && (
 							<span className="ml-1 animate-spin">
 								<span className="codicon codicon-refresh" />

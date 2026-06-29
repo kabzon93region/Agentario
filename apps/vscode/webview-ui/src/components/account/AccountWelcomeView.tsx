@@ -2,6 +2,7 @@ import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { ClineAuthStatus } from "@/components/account/ClineAuthStatus"
 import { useClineSignIn } from "@/context/ClineAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import ClineLogoVariable from "../../assets/ClineLogoVariable"
 
 // export const AccountWelcomeView = () => (
@@ -21,7 +22,7 @@ export const AccountWelcomeView = () => {
 			</p>
 
 			<VSCodeButton className="w-full mb-4" disabled={isLoginLoading} onClick={handleSignIn}>
-				Sign up with Agentario
+				{t("common.signUp")}
 				{isLoginLoading && (
 					<span className="ml-1 animate-spin">
 						<span className="codicon codicon-refresh" />

@@ -38,7 +38,7 @@ export type LanguageDisplay =
 	| "Traditional Chinese - 繁體中文"
 	| "Turkish - Türkçe"
 
-export const DEFAULT_LANGUAGE_SETTINGS: LanguageKey = "en"
+export const DEFAULT_LANGUAGE_SETTINGS: LanguageKey = "ru"
 
 const languageOptions: { key: LanguageKey; display: LanguageDisplay }[] = [
 	{ key: "en", display: "English" },
