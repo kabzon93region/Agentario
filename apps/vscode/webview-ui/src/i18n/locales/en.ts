@@ -1,5 +1,3 @@
-import type { RuLocale } from "./ru"
-
 export const en = {
 	onboarding: {
 		howToUse: "How will you use Agentario?",

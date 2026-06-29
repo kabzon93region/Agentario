@@ -346,7 +346,8 @@
 		}
 	},
 	"scripts": {
-		"vscode:prepublish": "bun run package",
+		"vscode:prepublish": "node -e \"process.exit(0)\"",
+		"package:vsix": "bun run build:webview && bun esbuild.mjs --production && bunx @vscode/vsce package --no-dependencies",
 		"compile": "bun run check-types && bun run lint && bun esbuild.mjs",
 		"compile-standalone": "bun run check-types && bun run lint && bun esbuild.mjs --standalone",
 		"postcompile-standalone": "node scripts/package-standalone.mjs",
