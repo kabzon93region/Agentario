@@ -13,6 +13,7 @@ import {
 	normalizeProviderReasoningSettings,
 	normalizeSdkBaseUrl,
 	resolveApiKey,
+	resolveModelId,
 	updateHistoryItem,
 } from "./cline-session-factory"
 
@@ -132,11 +133,48 @@ describe("getDefaultModelIdForProvider", () => {
 		expect(getDefaultModelIdForProvider("unknown-provider")).toBeUndefined()
 	})
 
+	it("does not return SDK catalog defaults for local LM Studio", () => {
+		expect(getDefaultModelIdForProvider("lmstudio")).toBeUndefined()
+	})
+
+	it("does not return SDK catalog defaults for local Ollama", () => {
+		expect(getDefaultModelIdForProvider("ollama")).toBeUndefined()
+	})
+
 	it("resolves the OpenAI Compatible default through the extension's openai alias", () => {
 		// The extension stores the OpenAI Compatible provider as "openai" while
 		// the SDK catalog keys it as "openai-compatible". toSdkProviderId bridges
 		// the two so the catalog default-model lookup resolves.
 		expect(getDefaultModelIdForProvider("openai")).toBe("gpt-4o")
+	})
+})
+
+describe("resolveModelId", () => {
+	it("falls back to providers.json for LM Studio when the mode field is empty", () => {
+		mocks.providerSettingsManager.getProviderSettings.mockReturnValue({
+			provider: "lmstudio",
+			model: "mistralai/ministral-3-14b-reasoning",
+		})
+
+		expect(
+			resolveModelId("lmstudio", "act", {
+				actModeApiProvider: "lmstudio",
+			} as never),
+		).toBe("mistralai/ministral-3-14b-reasoning")
+	})
+
+	it("prefers the committed LM Studio mode field over providers.json", () => {
+		mocks.providerSettingsManager.getProviderSettings.mockReturnValue({
+			provider: "lmstudio",
+			model: "mistralai/ministral-3-14b-reasoning",
+		})
+
+		expect(
+			resolveModelId("lmstudio", "act", {
+				actModeApiProvider: "lmstudio",
+				actModeLmStudioModelId: "other/model",
+			} as never),
+		).toBe("other/model")
 	})
 })
 

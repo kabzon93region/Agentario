@@ -17,6 +17,7 @@ import { useEvent } from "react-use"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { type ClineUser, useClineAuth } from "@/context/ClineAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { cn } from "@/lib/utils"
 import { StateServiceClient } from "@/services/grpc-client"
 import { isAdminOrOwner } from "../account/helpers"
@@ -44,57 +45,56 @@ interface SettingsTab {
 	hidden?: (params?: { user: ClineUser | null; activeOrganization: UserOrganization | null }) => boolean
 }
 
-const SETTINGS_TABS: SettingsTab[] = [
+const getSettingsTabs = (): SettingsTab[] => [
 	{
 		id: "api-config",
-		name: "API Configuration",
-		tooltipText: "API Configuration",
-		headerText: "API Configuration",
+		name: t("settings.tabs.apiConfig"),
+		tooltipText: t("settings.tabs.apiConfig"),
+		headerText: t("settings.tabs.apiConfig"),
 		icon: SlidersHorizontal,
 	},
 	{
 		id: "features",
-		name: "Features",
-		tooltipText: "Feature Settings",
-		headerText: "Feature Settings",
+		name: t("settings.tabs.features"),
+		tooltipText: t("settings.tabs.features"),
+		headerText: t("settings.tabs.features"),
 		icon: CheckCheck,
 	},
 	{
 		id: "terminal",
-		name: "Terminal",
-		tooltipText: "Terminal Settings",
-		headerText: "Terminal Settings",
+		name: t("settings.tabs.terminal"),
+		tooltipText: t("settings.tabs.terminal"),
+		headerText: t("settings.tabs.terminal"),
 		icon: SquareTerminal,
 	},
 	{
 		id: "general",
-		name: "General",
-		tooltipText: "General Settings",
-		headerText: "General Settings",
+		name: t("settings.tabs.general"),
+		tooltipText: t("settings.tabs.general"),
+		headerText: t("settings.tabs.general"),
 		icon: Wrench,
 	},
 	{
 		id: "remote-config",
-		name: "Remote Config",
-		tooltipText: "Remotely configured fields",
-		headerText: "Remote Config",
+		name: t("settings.tabs.remoteConfig"),
+		tooltipText: t("settings.tabs.remoteConfig"),
+		headerText: t("settings.tabs.remoteConfig"),
 		icon: HardDriveDownload,
 		hidden: ({ activeOrganization } = { user: null, activeOrganization: null }) =>
 			!activeOrganization || !isAdminOrOwner(activeOrganization),
 	},
 	{
 		id: "about",
-		name: "About",
-		tooltipText: "About Cline",
-		headerText: "About",
+		name: t("settings.tabs.about"),
+		tooltipText: t("settings.tabs.about"),
+		headerText: t("settings.tabs.about"),
 		icon: Info,
 	},
-	// Only show in dev mode
 	{
 		id: "debug",
-		name: "Debug",
-		tooltipText: "Debug Tools",
-		headerText: "Debug",
+		name: t("settings.tabs.debug"),
+		tooltipText: t("settings.tabs.debug"),
+		headerText: t("settings.tabs.debug"),
 		icon: FlaskConical,
 		hidden: ({ user } = { user: null, activeOrganization: null }) => !IS_DEV && !isClineInternalTester(user?.email || ""),
 	},
@@ -107,7 +107,7 @@ type SettingsViewProps = {
 
 // Helper to render section header - moved outside component for better performance
 const renderSectionHeader = (tabId: string) => {
-	const tab = SETTINGS_TABS.find((t) => t.id === tabId)
+	const tab = getSettingsTabs().find((t) => t.id === tabId)
 	if (!tab) {
 		return null
 	}
@@ -140,7 +140,7 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 	const { version, environment, settingsInitialModelTab } = useExtensionState()
 	const { activeOrganization, clineUser } = useClineAuth()
 
-	const [activeTab, setActiveTab] = useState<string>(targetSection || SETTINGS_TABS[0].id)
+	const [activeTab, setActiveTab] = useState<string>(targetSection || getSettingsTabs()[0].id)
 
 	// Optimized message handler with early returns
 	const handleMessage = useCallback((event: MessageEvent) => {
@@ -160,7 +160,7 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 		}
 
 		// Check if valid tab ID
-		if (SETTINGS_TABS.some((tab) => tab.id === tabId)) {
+		if (getSettingsTabs().some((tab) => tab.id === tabId)) {
 			setActiveTab(tabId)
 			return
 		}
@@ -202,7 +202,7 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 
 	// Memoized tab item renderer
 	const renderTabItem = useCallback(
-		(tab: (typeof SETTINGS_TABS)[0]) => {
+		(tab: ReturnType<typeof getSettingsTabs>[0]) => {
 			return (
 				<TabTrigger className="flex justify-baseline" data-testid={`tab-${tab.id}`} key={tab.id} value={tab.id}>
 					<Tooltip key={tab.id}>
@@ -249,14 +249,14 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 
 	return (
 		<Tab>
-			<ViewHeader environment={environment} onDone={onDone} title="Settings" />
+			<ViewHeader environment={environment} onDone={onDone} title={t("settings.title")} />
 
 			<div className="flex flex-1 overflow-hidden">
 				<TabList
 					className="shrink-0 flex flex-col overflow-y-auto border-r border-sidebar-background"
 					onValueChange={setActiveTab}
 					value={activeTab}>
-					{SETTINGS_TABS.filter((tab) => !tab.hidden?.({ user: clineUser, activeOrganization })).map(renderTabItem)}
+					{getSettingsTabs().filter((tab) => !tab.hidden?.({ user: clineUser, activeOrganization })).map(renderTabItem)}
 				</TabList>
 
 				<TabContent className="flex-1 overflow-auto">{ActiveContent}</TabContent>

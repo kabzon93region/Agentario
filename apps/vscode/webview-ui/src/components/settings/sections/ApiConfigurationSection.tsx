@@ -3,6 +3,7 @@ import { Mode } from "@shared/storage/types"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { useState } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { StateServiceClient } from "@/services/grpc-client"
 import { TabButton } from "../../mcp/configuration/McpConfigurationView"
 import ApiOptions from "../ApiOptions"
@@ -23,7 +24,6 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 		<div>
 			{renderSectionHeader?.("api-config")}
 			<Section>
-				{/* Tabs container */}
 				{planActSeparateModelsSetting ? (
 					<div className="rounded-md mb-5">
 						<div className="flex gap-px mb-[10px] -mt-2 border-0 border-b border-solid border-(--vscode-panel-border)">
@@ -35,7 +35,7 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 									opacity: 1,
 									cursor: "pointer",
 								}}>
-								Plan Mode
+								{t("api.planMode")}
 							</TabButton>
 							<TabButton
 								disabled={currentTab === "act"}
@@ -45,11 +45,10 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 									opacity: 1,
 									cursor: "pointer",
 								}}>
-								Act Mode
+								{t("api.actMode")}
 							</TabButton>
 						</div>
 
-						{/* Content container */}
 						<div className="-mb-3">
 							<ApiOptions currentMode={currentTab} initialModelTab={initialModelTab} showModelOptions={true} />
 						</div>
@@ -65,7 +64,6 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 						onChange={async (e: any) => {
 							const checked = e.target.checked === true
 							try {
-								// If unchecking the toggle, wait a bit for state to update, then sync configurations
 								if (!checked) {
 									await syncModeConfigurations(apiConfiguration, currentTab, handleFieldsChange)
 								}
@@ -78,12 +76,9 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 								console.error("Failed to update separate models setting:", error)
 							}
 						}}>
-						Use different models for Plan and Act modes
+						{t("api.separateModels")}
 					</VSCodeCheckbox>
-					<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">
-						Switching between Plan and Act mode will persist the API and model used in the previous mode. This may be
-						helpful e.g. when using a strong reasoning model to architect a plan for a cheaper coding model to act on.
-					</p>
+					<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">{t("api.separateModelsHint")}</p>
 				</div>
 			</Section>
 		</div>

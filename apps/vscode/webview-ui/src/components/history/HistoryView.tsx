@@ -8,6 +8,7 @@ import { GroupedVirtuoso } from "react-virtuoso"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { TaskServiceClient } from "@/services/grpc-client"
 import { formatSize } from "@/utils/format"
 import ViewHeader from "../common/ViewHeader"
@@ -376,7 +377,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	return (
 		<div className="fixed overflow-hidden inset-0 flex flex-col w-full">
 			{/* HEADER */}
-			<ViewHeader environment={environment} onDone={onDone} title="History" />
+			<ViewHeader environment={environment} onDone={onDone} title={t("nav.history")} />
 
 			{/* FILTERS */}
 			<div className="flex flex-col gap-3 px-3">

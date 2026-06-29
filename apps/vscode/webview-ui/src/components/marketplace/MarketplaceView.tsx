@@ -21,6 +21,7 @@ import {
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { Switch } from "@/components/ui/switch"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { MarketplaceServiceClient, McpServiceClient } from "@/services/grpc-client"
 import { Tab, TabContent, TabList, TabTrigger } from "../common/Tab"
 import ViewHeader from "../common/ViewHeader"
@@ -1218,7 +1219,7 @@ const MarketplaceView = ({ initialType = "skill", onDone }: MarketplaceViewProps
 	return (
 		<Tab className="marketplace-view">
 			<MarketplaceStyles />
-			<ViewHeader environment={environment} onDone={onDone} title="Customize" />
+			<ViewHeader environment={environment} onDone={onDone} title={t("nav.customize")} />
 
 			<div className="marketplace-shell">
 				<TabList className="marketplace-nav" onValueChange={handleTabChange} value={activeType}>

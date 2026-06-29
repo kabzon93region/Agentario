@@ -12,6 +12,7 @@ import { CLINE_PASS_FEATURE_FLAG } from "@/constants/featureFlags"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useHasFeatureFlag } from "@/hooks/useFeatureFlag"
 import { useProviderListings } from "@/hooks/useProviderListings"
+import { t } from "@/i18n"
 import { ModelsServiceClient } from "@/services/grpc-client"
 import { OPENROUTER_MODEL_PICKER_Z_INDEX } from "./OpenRouterModelPicker"
 import { AIhubmixProvider } from "./providers/AihubmixProvider"
@@ -313,16 +314,16 @@ const ApiOptions = ({
 						<TooltipTrigger>
 							<div className="flex items-center gap-2 mb-1">
 								<label htmlFor="api-provider">
-									<span style={{ fontWeight: 500 }}>API Provider</span>
+									<span style={{ fontWeight: 500 }}>{t("api.provider")}</span>
 								</label>
 								<i className="codicon codicon-lock text-description text-sm" />
 							</div>
 						</TooltipTrigger>
-						<TooltipContent>Provider options are managed by your organization's remote configuration</TooltipContent>
+						<TooltipContent>{t("api.remoteProviderLocked")}</TooltipContent>
 					</Tooltip>
 				) : (
 					<label htmlFor="api-provider">
-						<span style={{ fontWeight: 500 }}>API Provider</span>
+						<span style={{ fontWeight: 500 }}>{t("api.provider")}</span>
 					</label>
 				)}
 				<ProviderDropdownWrapper ref={dropdownRef}>
@@ -338,7 +339,7 @@ const ApiOptions = ({
 							setIsDropdownVisible(true)
 						}}
 						onKeyDown={handleKeyDown}
-						placeholder="Search and select provider..."
+						placeholder={t("api.searchProvider")}
 						role="combobox"
 						style={{
 							width: "100%",
@@ -349,7 +350,7 @@ const ApiOptions = ({
 						value={searchTerm}>
 						{searchTerm && searchTerm !== currentProviderLabel && (
 							<div
-								aria-label="Clear search"
+								aria-label={t("api.clearSearch")}
 								className="input-icon-button codicon codicon-close"
 								onClick={() => {
 									setSearchTerm("")

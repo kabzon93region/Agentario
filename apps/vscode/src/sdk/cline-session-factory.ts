@@ -35,6 +35,7 @@ import { type BedrockProviderConfig, buildBedrockProviderConfig } from "./bedroc
 import { buildAgentHooks } from "./hooks-adapter"
 import { readTaskHistory, resolveDataDir } from "./legacy-state-reader"
 import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
+import { providerAllowsCustomModelIds } from "./model-catalog/custom-model-ids"
 import { getProviderSettingsManager } from "./provider-migration"
 import { buildSapProviderConfig, type SapProviderConfig } from "./sap-config"
 import type { SdkSessionHost } from "./session-host"
@@ -296,7 +297,17 @@ const PROVIDER_MODEL_ID_MAP: Record<string, { plan: keyof ApiConfiguration; act:
 
 const DEFAULT_PROVIDER_ID = "cline"
 
+/** Providers that only serve user-loaded local models — no SDK catalog default. */
+const LOCAL_ONLY_MODEL_PROVIDERS = new Set(["lmstudio", "ollama"])
+
 export function getDefaultModelIdForProvider(providerId: string): string | undefined {
+	// LM Studio / Ollama have no meaningful remote default; using the SDK
+	// catalog default (e.g. openai/gpt-oss-20b) sends requests for models that
+	// are not loaded locally.
+	if (LOCAL_ONLY_MODEL_PROVIDERS.has(toSdkProviderId(providerId))) {
+		return undefined
+	}
+
 	const sdkProviderId = toSdkProviderId(providerId)
 	const collection = MODEL_COLLECTIONS_BY_PROVIDER_ID[sdkProviderId]
 	if (!collection) {
@@ -374,6 +385,16 @@ export function resolveApiKey(providerId: string, config: ApiConfiguration): str
 	return undefined
 }
 
+function readStoredProviderModelId(providerId: string): string | undefined {
+	try {
+		const settings = getProviderSettingsManager().getProviderSettings(toSdkProviderId(providerId))
+		const model = settings?.model
+		return typeof model === "string" && model.trim().length > 0 ? model.trim() : undefined
+	} catch {
+		return undefined
+	}
+}
+
 /**
  * Resolve the model ID for a given provider and mode from the ApiConfiguration.
  * Uses mode-specific model ID fields when available, falls back to generic fields.
@@ -407,7 +428,14 @@ export function resolveModelId(providerId: string, mode: Mode, config: ApiConfig
 	const modelFields = PROVIDER_MODEL_ID_MAP[providerId]
 	if (modelFields) {
 		const field = mode === "plan" ? modelFields.plan : modelFields.act
-		return (config[field] as string | undefined)?.trim() || undefined
+		const fromState = (config[field] as string | undefined)?.trim()
+		if (fromState) {
+			return fromState
+		}
+		if (providerAllowsCustomModelIds(providerId)) {
+			return readStoredProviderModelId(providerId)
+		}
+		return undefined
 	}
 
 	// Fallback to generic mode model ID fields only for providers without a

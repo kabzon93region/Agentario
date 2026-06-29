@@ -8,6 +8,7 @@ import UseCustomPromptCheckbox from "@/components/settings/UseCustomPromptCheckb
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useProviderConfig } from "@/hooks/useProviderConfig"
 import { useProviderModelSelection } from "@/hooks/useProviderModelSelection"
+import { t } from "@/i18n"
 import { ModelsServiceClient } from "@/services/grpc-client"
 import { ApiKeyField } from "../common/ApiKeyField"
 import { BaseUrlField } from "../common/BaseUrlField"
@@ -94,24 +95,23 @@ export const OllamaProvider = ({ showModelOptions, isPopup, currentMode }: Ollam
 		<div className="flex flex-col gap-2">
 			<BaseUrlField
 				initialValue={ollamaBaseUrl}
-				label="Use custom base URL"
+				label={t("api.useCustomBaseUrl")}
 				onChange={handleBaseUrlChange}
-				placeholder="Default: http://localhost:11434"
+				placeholder={t("providers.ollama.baseUrlPlaceholder")}
 			/>
 
 			{ollamaBaseUrl && (
 				<ApiKeyField
-					helpText="Optional API key for authenticated Ollama instances or cloud services. Leave empty for local installations."
+					helpText={t("providers.ollama.apiKeyHelp")}
 					initialValue={savedApiKeyMask}
 					onChange={handleApiKeyChange}
-					placeholder="Enter API Key (optional)..."
+					placeholder={t("providers.ollama.apiKeyPlaceholder")}
 					providerName="Ollama"
 				/>
 			)}
 
-			{/* Model selection - use filterable picker */}
 			<label htmlFor="ollama-model-selection">
-				<span className="font-semibold">Model</span>
+				<span className="font-semibold">{t("api.model")}</span>
 			</label>
 			<OllamaModelPicker
 				ollamaModels={ollamaModels}
@@ -125,17 +125,11 @@ export const OllamaProvider = ({ showModelOptions, isPopup, currentMode }: Ollam
 						modelInfo: { ...ollamaModelInfo, name: trimmedModelId },
 					}).catch((error) => console.error("Failed to update Ollama model selection:", error))
 				}}
-				placeholder={ollamaModels.length > 0 ? "Search and select a model..." : "e.g. llama3.1"}
+				placeholder={ollamaModels.length > 0 ? t("providers.ollama.searchModel") : t("providers.ollama.modelPlaceholder")}
 				selectedModelId={selectedModel.modelId || ""}
 			/>
 
-			{/* Show status message based on model availability */}
-			{ollamaModels.length === 0 && (
-				<p className="text-sm mt-1 text-description italic">
-					Unable to fetch models from Ollama server. Please ensure Ollama is running and accessible, or enter the model
-					ID manually above.
-				</p>
-			)}
+			{ollamaModels.length === 0 && <p className="text-sm mt-1 text-description italic">{t("providers.ollama.noModels")}</p>}
 
 			<DebouncedTextField
 				initialValue={apiConfiguration?.ollamaApiOptionsCtxNum || "32768"}
@@ -154,9 +148,9 @@ export const OllamaProvider = ({ showModelOptions, isPopup, currentMode }: Ollam
 						}).catch((error) => console.error("Failed to update Ollama context window:", error))
 					}
 				}}
-				placeholder={"e.g. 32768"}
+				placeholder={t("providers.ollama.contextPlaceholder")}
 				style={{ width: "100%" }}>
-				<span className="font-semibold">Model Context Window</span>
+				<span className="font-semibold">{t("providers.ollama.contextWindow")}</span>
 			</DebouncedTextField>
 
 			{showModelOptions && (
@@ -164,19 +158,16 @@ export const OllamaProvider = ({ showModelOptions, isPopup, currentMode }: Ollam
 					<DebouncedTextField
 						initialValue={apiConfiguration?.requestTimeoutMs ? apiConfiguration.requestTimeoutMs.toString() : "30000"}
 						onChange={(value) => {
-							// Convert to number, with validation
 							const numValue = Number.parseInt(value, 10)
 							if (!Number.isNaN(numValue) && numValue > 0) {
 								handleFieldChange("requestTimeoutMs", numValue)
 							}
 						}}
-						placeholder="Default: 30000 (30 seconds)"
+						placeholder={t("providers.ollama.timeoutPlaceholder")}
 						style={{ width: "100%" }}>
-						<span className="font-semibold">Request Timeout (ms)</span>
+						<span className="font-semibold">{t("providers.ollama.requestTimeout")}</span>
 					</DebouncedTextField>
-					<p className="text-xs mt-0 text-description">
-						Maximum time in milliseconds to wait for API responses before timing out.
-					</p>
+					<p className="text-xs mt-0 text-description">{t("providers.ollama.timeoutHint")}</p>
 				</>
 			)}
 
@@ -188,16 +179,11 @@ export const OllamaProvider = ({ showModelOptions, isPopup, currentMode }: Ollam
 					marginTop: "5px",
 					color: "var(--vscode-descriptionForeground)",
 				}}>
-				Ollama allows you to run models locally on your computer. For instructions on how to get started, see their{" "}
-				<VSCodeLink
-					href="https://github.com/ollama/ollama/blob/main/README.md"
-					style={{ display: "inline", fontSize: "inherit" }}>
-					quickstart guide.
+				{t("providers.ollama.introBefore")}{" "}
+				<VSCodeLink href="https://ollama.com" style={{ display: "inline", fontSize: "inherit" }}>
+					{t("providers.ollama.ollamaSite")}
 				</VSCodeLink>{" "}
-				<span style={{ color: "var(--vscode-errorForeground)" }}>
-					(<span style={{ fontWeight: 500 }}>Note:</span> Cline uses complex prompts, so behavior can vary across
-					models. Less capable models may not work as expected.)
-				</span>
+				{t("providers.ollama.introAfter")}
 			</p>
 		</div>
 	)

@@ -16,6 +16,7 @@ import type {
 	ProviderId,
 } from "./contracts"
 import { buildEffectiveProviderConfig } from "./effective-config"
+import { providerAllowsCustomModelIds } from "./custom-model-ids"
 import { applyHostModelInfoOverrides } from "./host-overrides"
 import { toSdkProviderId } from "./sdk-provider-id"
 import { adaptSdkModelInfo } from "./shape-adapter"
@@ -434,6 +435,17 @@ function readSelectionFromState(providerId: ProviderId, mode: Mode): ModelSelect
 
 	if (typeof modelId !== "string" || modelId.length === 0) {
 		return rememberedSelection ?? providerSettingsSelection
+	}
+
+	// Local / BYOK providers accept arbitrary model ids that are not in the SDK
+	// catalog. Honor the committed state id instead of falling back to
+	// providers.json or a catalog default.
+	if (providerAllowsCustomModelIds(providerId)) {
+		const resolvedModelInfo =
+			rememberedSelection?.modelId === modelId
+				? rememberedSelection.modelInfo
+				: (readKnownModelInfoForProvider(providerId, modelId) ?? fallbackModelInfo(modelId))
+		return { providerId, modelId, modelInfo: resolvedModelInfo }
 	}
 
 	if (!isKnownModelIdForProvider(providerId, modelId)) {

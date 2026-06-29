@@ -8,25 +8,69 @@
 Autonomous coding agent for VS Code — fork of <a href="https://github.com/cline/cline">Cline</a>, powered by local and cloud LLMs (Ollama, LM Studio, and more).
 </p>
 
+<p align="center">
+<strong>Версия расширения: 0.0.5</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+</p>
+
+<div align="center">
+
+<table>
+<tbody>
+<tr>
+<td align="center"><a href="https://github.com/kabzon93region/Agentario"><strong>GitHub</strong></a></td>
+<td align="center"><a href="CHANGELOG.md"><strong>Changelog</strong></a></td>
+<td align="center"><a href="VERSIONING.md"><strong>Версии</strong></a></td>
+<td align="center"><a href="https://docs.cline.bot" target="_blank"><strong>Docs (upstream)</strong></a></td>
+</tr>
+</tbody>
+</table>
+
+</div>
+
+## Быстрый старт (VS Code)
+
+1. Соберите или скачайте VSIX: `release/agentario-0.0.5.vsix` (сборка: `build.cmd` на Windows).
+2. VS Code → Extensions → `...` → **Install from VSIX**.
+3. Провайдер **LM Studio** или **Ollama** — см. [настройку LM Studio](#lm-studio-локальная-модель) ниже.
+4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright.
+
+### Сборка (Windows)
+
+```bat
+build.cmd
+```
+
+Исходники могут лежать на сетевом диске (`Z:\` / UNC); сборка выполняется через локальную копию на `C:` (см. `scripts/build-windows.ps1`).
+
+### LM Studio (локальная модель)
+
+| Где | Что |
+|-----|-----|
+| **Сервер LM Studio** | Загрузить модель, Local Server, порт `1234`, доступ по LAN |
+| **VS Code + Agentario** | Провайдер LM Studio, URL `http://<ip>:1234`, выбрать загруженную модель |
+
+MCP и индексация codebase работают на **ПК с VS Code**, не на машине с LM Studio.
+
+### MCP
+
+```bat
+setup-mcp.cmd
+```
+
+Конфиг: `%USERPROFILE%\.cline\data\settings\cline_mcp_settings.json`. Шаблон: `config/agentario-recommended-mcp.json`.
+
+---
+
 <div align="center">
 
 <div align="center">
 <table>
 <tbody>
 <td align="center">
-<a href="https://docs.cline.bot" target="_blank"><strong>Docs</strong></a>
+<a href="https://docs.cline.bot" target="_blank"><strong>Upstream docs</strong></a>
 </td>
 <td align="center">
-<a href="https://discord.gg/cline" target="_blank"><strong>Discord</strong></a>
-</td>
-<td align="center">
-<a href="https://www.reddit.com/r/cline/" target="_blank"><strong>r/cline</strong></a>
-</td>
-<td align="center">
-<a href="https://github.com/cline/cline/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop" target="_blank"><strong>Feature Requests</strong></a>
-</td>
-<td align="center">
-<a href="https://cline.bot/join-us" target="_blank"><strong>Join us!</strong></a>
+<a href="https://github.com/cline/cline" target="_blank"><strong>Cline</strong></a>
 </td>
 </tbody>
 </table>
@@ -128,12 +172,9 @@ npm install @cline/sdk
 
 | Product | Description | Location | CHANGELOG |
 |---------|------------|--------------|--------------|
-| **SDK** | Node.js programmatic agent API and extension exports. | [`sdk/`](https://github.com/cline/cline/tree/main/sdk) | [CHANGELOG.md](https://github.com/cline/cline/blob/main/sdk/CHANGELOG.md) |
-| **CLI** | Terminal UI, headless mode, shell commands, and CLI-specific flows. | [`apps/cli/`](https://github.com/cline/cline/tree/main/apps/cli) | [CHANGELOG.md](https://github.com/cline/cline/blob/main/apps/cli/CHANGELOG.md) |
-| **VS Code Extension** | The Marketplace extension and extension host integration. | [`/`](https://github.com/cline/cline/tree/main) (WIP migrating) | [CHANGELOG.md](https://github.com/cline/cline/blob/main/CHANGELOG.md) |
-| **JetBrains Plugin** | JetBrains-hosted client that talks to the shared agent core. | Currently we are not open-sourcing JetBrains plugins | - |
-| **Kanban** | Web-based multi-agent task board. | [`cline/kanban`](https://github.com/cline/kanban) | [CHANGELOG.md](https://github.com/cline/kanban/blob/main/CHANGELOG.md) |
-| **Docs site** | Public documentation pages. | [`docs/`](https://docs.cline.bot/) | - |
+| **Agentario (VS Code)** | Форк Cline: русский UI, LM Studio, сборка Windows, MCP-шаблоны. | [`apps/vscode/`](apps/vscode/) | [CHANGELOG.md](CHANGELOG.md) |
+| **SDK** | Node.js programmatic agent API (upstream). | [`sdk/`](sdk/) | [sdk/CHANGELOG.md](sdk/CHANGELOG.md) |
+| **CLI** | Terminal UI (upstream). | [`apps/cli/`](apps/cli/) | [apps/cli/CHANGELOG.md](apps/cli/CHANGELOG.md) |
 
 ## Edits Code Across Your Project
 
@@ -232,8 +273,8 @@ cline --json "List all TODO comments" | jq -r 'select(.type == "agent_event" and
 
 ## Contributing
 
-Start with the [Contributing Guide](CONTRIBUTING.md). Join our [Discord](https://discord.gg/cline) and head to the `#contributors` channel to connect with other contributors. Check our [careers page](https://cline.bot/join-us) for full-time roles.
+Форк поддерживается в [kabzon93region/Agentario](https://github.com/kabzon93region/Agentario). Upstream: [cline/cline](https://github.com/cline/cline) — см. [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[Apache 2.0 © 2026 Cline Bot Inc.](./LICENSE)
+[Apache 2.0 © 2026 Cline Bot Inc.](./LICENSE) — форк Agentario распространяется на тех же условиях.

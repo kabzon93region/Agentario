@@ -1,0 +1,47 @@
+{
+	"mcpServers": {
+		"memory": {
+			"transport": {
+				"type": "stdio",
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-memory"]
+			},
+			"disabled": false,
+			"autoApprove": ["create_entities", "create_relations", "add_observations", "search_nodes", "open_nodes"]
+		},
+		"sequential-thinking": {
+			"transport": {
+				"type": "stdio",
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+			},
+			"disabled": false
+		},
+		"playwright": {
+			"transport": {
+				"type": "stdio",
+				"command": "npx",
+				"args": ["-y", "@playwright/mcp@latest"]
+			},
+			"disabled": false
+		},
+		"github": {
+			"transport": {
+				"type": "stdio",
+				"command": "npx",
+				"args": ["-y", "@modelcontextprotocol/server-github"]
+			},
+			"env": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_GITHUB_TOKEN>"
+			},
+			"disabled": true
+		},
+		"context7": {
+			"transport": {
+				"type": "streamableHttp",
+				"url": "https://mcp.context7.com/mcp"
+			},
+			"disabled": true
+		}
+	}
+}

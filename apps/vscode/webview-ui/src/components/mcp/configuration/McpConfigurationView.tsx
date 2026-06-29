@@ -5,6 +5,7 @@ import { convertProtoMcpServersToMcpServers } from "@shared/proto-conversions/mc
 import { useEffect, useState } from "react"
 import styled from "styled-components"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { McpServiceClient } from "@/services/grpc-client"
 import ViewHeader from "../../common/ViewHeader"
 import AddRemoteServerForm from "./tabs/add-server/AddRemoteServerForm"
@@ -54,7 +55,7 @@ const McpConfigurationView = ({ onDone, initialTab }: McpViewProps) => {
 				display: "flex",
 				flexDirection: "column",
 			}}>
-			<ViewHeader environment={environment} onDone={onDone} title="MCP Servers" />
+			<ViewHeader environment={environment} onDone={onDone} title={t("nav.mcpServers")} />
 
 			<div style={{ flex: 1, overflow: "auto" }}>
 				{/* Tabs container */}

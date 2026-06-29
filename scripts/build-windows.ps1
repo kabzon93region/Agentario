@@ -1,9 +1,16 @@
-# Agentario Windows build (runs on C: — bun crashes on network drive Z:)
+# Agentario Windows build
+# Source may be a local path, mapped drive (Z:), or UNC (\\SERVANT\reZerv\T\Agentario).
+# bun install/build on network shares fails — sources are synced to C: first.
+
 $ErrorActionPreference = "Stop"
 
-$Source = if ($env:AGENTARIO_SRC) { $env:AGENTARIO_SRC } else { Split-Path $PSScriptRoot -Parent }
+function Normalize-PathString([string]$Path) {
+    if ([string]::IsNullOrWhiteSpace($Path)) { return $Path }
+    return $Path.TrimEnd('\', '/')
+}
 
-$BuildRoot = if ($env:AGENTARIO_BUILD) { $env:AGENTARIO_BUILD } else { "C:\Users\Admin\Agentario" }
+$Source = Normalize-PathString $(if ($env:AGENTARIO_SRC) { $env:AGENTARIO_SRC } else { Split-Path $PSScriptRoot -Parent })
+$BuildRoot = Normalize-PathString $(if ($env:AGENTARIO_BUILD) { $env:AGENTARIO_BUILD } else { "C:\Users\Admin\Agentario" })
 $NodeDir = if ($env:AGENTARIO_NODE) { $env:AGENTARIO_NODE } else { "$env:USERPROFILE\tools\node-v22.14.0-win-x64" }
 $BunExe = if ($env:AGENTARIO_BUN) { $env:AGENTARIO_BUN } else { "$env:USERPROFILE\tools\bun-v1.3.13\bun.exe" }
 
@@ -17,6 +24,15 @@ if (-not (Test-Path $BunExe)) {
     Write-Error "Bun not found. Install from https://bun.sh or set AGENTARIO_BUN."
 }
 
+if (-not (Test-Path (Join-Path $Source "apps\vscode\esbuild.mjs"))) {
+    Write-Error "Invalid source: esbuild.mjs not found under $Source\apps\vscode"
+}
+
+if ($Source.StartsWith("\\")) {
+    Write-Host "Network source (UNC): $Source"
+    Write-Host "Syncing to local build folder before bun (required for network paths)."
+}
+
 $env:Path = "$NodeDir;$(Split-Path $BunExe -Parent);C:\Program Files\Git\bin;$env:Path"
 
 Write-Host "Source:  $Source"
@@ -25,11 +41,12 @@ Write-Host "Node:    $NodeDir\node.exe"
 Write-Host "Bun:     $BunExe"
 Write-Host ""
 
-Write-Host "==> Syncing sources (excluding node_modules, .git)..."
+Write-Host "==> Syncing sources to local disk (excluding node_modules, .git)..."
 New-Item -ItemType Directory -Force -Path $BuildRoot | Out-Null
 $robocopy = Join-Path $env:SystemRoot "System32\robocopy.exe"
 if (Test-Path $robocopy) {
-    & $robocopy $Source $BuildRoot /MIR /XD node_modules .git /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+    # /Z = restartable copy (safer over network), /R /W = retries for slow shares
+    & $robocopy $Source $BuildRoot /MIR /Z /R:3 /W:5 /XD node_modules .git /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
     if ($LASTEXITCODE -ge 8) {
         Write-Error "robocopy failed with exit code $LASTEXITCODE"
     }
@@ -48,7 +65,7 @@ if (Test-Path $robocopy) {
 
 $VsCodeDir = Join-Path $BuildRoot "apps\vscode"
 if (-not (Test-Path (Join-Path $VsCodeDir "esbuild.mjs"))) {
-    Write-Error "esbuild.mjs not found in $VsCodeDir"
+    Write-Error "Sync failed: esbuild.mjs not found in $VsCodeDir"
 }
 
 if (-not (Test-Path (Join-Path $BuildRoot "node_modules"))) {
@@ -85,7 +102,9 @@ if (-not $vsix) {
 
 $releaseDir = Join-Path $Source "release"
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
-$outVsix = Join-Path $releaseDir "agentario-4.0.0.vsix"
+$pkgJson = Get-Content (Join-Path $VsCodeDir "package.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$version = $pkgJson.version
+$outVsix = Join-Path $releaseDir "agentario-$version.vsix"
 Copy-Item -Path $vsix.FullName -Destination $outVsix -Force
 
 Pop-Location

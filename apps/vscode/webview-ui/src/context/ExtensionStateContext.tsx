@@ -300,7 +300,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		mcpResponsesCollapsed: false, // Default value (expanded), will be overwritten by extension state
 		yoloModeToggled: false,
 		customPrompt: undefined,
-		useAutoCondense: false,
+		useAutoCondense: true,
 		subagentsEnabled: false,
 		worktreesEnabled: { user: true, featureFlag: false },
 		favoritedModelIds: [],

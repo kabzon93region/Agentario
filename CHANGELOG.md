@@ -1,4 +1,37 @@
-# Changelog
+# Changelog — Agentario
+
+Схема версий: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
+
+## [0.0.5] — 2026-06-29
+
+Первый нумерованный релиз форка **Agentario** (база: Cline 4.x). Версия расширения VS Code: **0.0.5**.
+
+### Added
+
+- Ребрендинг UI: **Agentario**, publisher `kabzon93region`.
+- Русский интерфейс по умолчанию (onboarding, настройки, LM Studio/Ollama, MCP, чат).
+- Сборка под Windows: `build.cmd`, `scripts/build-windows.ps1` (sync на `C:`, VSIX в `release/`).
+- Рекомендуемый MCP-набор: `config/agentario-recommended-mcp.json`, установка через `setup-mcp.cmd`.
+- Глобальные правила: `config/agentario-global-rules.md`.
+- Документация форка: [VERSIONING.md](VERSIONING.md), обновлённый [README.md](README.md).
+
+### Changed
+
+- Язык агента по умолчанию: **Russian - Русский**.
+- **Авто-сжатие** истории чата включено по умолчанию (`useAutoCondense`).
+- Имя VSIX: `agentario-<version>.vsix` (версия из `package.json`).
+
+### Fixed
+
+- LM Studio: запросы больше не подставляют каталоговую модель `openai/gpt-oss-20b` вместо выбранной локальной модели.
+- Сохранение выбора модели LM Studio при первом подключении к серверу.
+- Сборка webview/esbuild на Windows (PATH, `bunx`, отключение bash prepublish).
+
+---
+
+## История upstream (Cline)
+
+Ниже — журнал изменений базового проекта [Cline](https://github.com/cline/cline) до форка Agentario.
 
 ## [4.0.0]
 

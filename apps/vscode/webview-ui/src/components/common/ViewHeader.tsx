@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button"
+import { t } from "@/i18n"
 import { getEnvironmentColor } from "@/utils/environmentColors"
 import type { Environment } from "../../../../src/shared/config-types"
 
-const ENV_DISPLAY_NAMES: Record<Environment, string> = {
-	production: "Production",
-	staging: "Staging",
-	local: "Local",
-	selfHosted: "Self-hosted",
+const ENV_DISPLAY_KEYS: Record<Environment, string> = {
+	production: "environment.production",
+	staging: "environment.staging",
+	local: "environment.local",
+	selfHosted: "environment.selfHosted",
 }
 
 type ViewHeaderProps = {
@@ -18,7 +19,7 @@ type ViewHeaderProps = {
 
 const ViewHeader = ({ title, onDone, showEnvironmentSuffix, environment }: ViewHeaderProps) => {
 	const showSubtext = showEnvironmentSuffix && environment && environment !== "production"
-	const capitalizedEnv = environment ? ENV_DISPLAY_NAMES[environment] : ""
+	const envLabel = environment ? t(ENV_DISPLAY_KEYS[environment]) : ""
 	const titleColor = getEnvironmentColor(environment)
 
 	return (
@@ -29,12 +30,12 @@ const ViewHeader = ({ title, onDone, showEnvironmentSuffix, environment }: ViewH
 				</h3>
 				{showSubtext && (
 					<span className="absolute left-0 top-8 -translate-y-1 text-xs text-description whitespace-nowrap">
-						{capitalizedEnv} environment
+						{t("environment.suffix", { env: envLabel })}
 					</span>
 				)}
 			</div>
 			<Button size="header" onClick={onDone}>
-				Done
+				{t("common.done")}
 			</Button>
 		</div>
 	)

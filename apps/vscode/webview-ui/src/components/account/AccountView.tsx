@@ -9,6 +9,7 @@ import { useInterval } from "react-use"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { type ClineUser, handleSignOut } from "@/context/ClineAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { AccountServiceClient } from "@/services/grpc-client"
 import ViewHeader from "../common/ViewHeader"
 import VSCodeButtonLink from "../common/VSCodeButtonLink"
@@ -47,7 +48,7 @@ const AccountView = ({ onDone, clineUser, organizations, activeOrganization }: A
 
 	return (
 		<div className="fixed inset-0 flex flex-col overflow-hidden">
-			<ViewHeader environment={environment} onDone={onDone} showEnvironmentSuffix title="Account" />
+			<ViewHeader environment={environment} onDone={onDone} showEnvironmentSuffix title={t("nav.account")} />
 			<div className="grow flex flex-col px-5 overflow-y-auto">
 				{clineUser?.uid ? (
 					<ClineAccountView

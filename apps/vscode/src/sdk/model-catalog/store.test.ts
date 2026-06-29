@@ -155,6 +155,25 @@ describe("createProviderConfigStore", () => {
 		})
 	})
 
+	it("preserves LM Studio custom model ids that are not in the SDK catalog", async () => {
+		const { createProviderConfigStore } = await import("./store")
+		mocks.setApiConfiguration({
+			actModeApiProvider: "lmstudio",
+			actModeLmStudioModelId: "mistralai/ministral-3-14b-reasoning",
+		})
+		const store = createProviderConfigStore()
+		const providerId = parseProviderId("lmstudio")
+
+		expect(store.readSelection(providerId, "act")).toEqual({
+			providerId,
+			modelId: "mistralai/ministral-3-14b-reasoning",
+			modelInfo: expect.objectContaining({
+				name: "mistralai/ministral-3-14b-reasoning",
+				supportsPromptCache: false,
+			}),
+		})
+	})
+
 	it("does not combine a generic provider's remembered model info with another provider's active model id", async () => {
 		const { createProviderConfigStore } = await import("./store")
 		const store = createProviderConfigStore()

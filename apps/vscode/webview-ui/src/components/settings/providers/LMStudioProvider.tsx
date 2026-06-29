@@ -7,15 +7,13 @@ import UseCustomPromptCheckbox from "@/components/settings/UseCustomPromptCheckb
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useProviderConfig } from "@/hooks/useProviderConfig"
 import { useProviderModelSelection } from "@/hooks/useProviderModelSelection"
+import { t } from "@/i18n"
 import { ModelsServiceClient } from "@/services/grpc-client"
 import { BaseUrlField } from "../common/BaseUrlField"
 import { DebouncedTextField } from "../common/DebouncedTextField"
 import { DropdownContainer } from "../common/ModelSelector"
 import { useApiConfigurationHandlers } from "../utils/useApiConfigurationHandlers"
 
-/**
- * Props for the LMStudioProvider component
- */
 interface LMStudioProviderProps {
 	showModelOptions: boolean
 	isPopup?: boolean
@@ -35,9 +33,6 @@ interface LMStudioApiModel {
 	loaded_context_length?: number
 }
 
-/**
- * The LM Studio provider configuration component
- */
 export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
 	const { apiConfiguration } = useExtensionState()
 	const { handleFieldChange } = useApiConfigurationHandlers()
@@ -104,7 +99,6 @@ export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
 		[commitModelSelection, lmStudioModels, toLmStudioModelInfo],
 	)
 
-	// Poll LM Studio models
 	const requestLmStudioModels = useCallback(async () => {
 		await ModelsServiceClient.getLmStudioModels({
 			value: endpoint,
@@ -133,6 +127,26 @@ export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
 		}
 	}, [pendingSelectedModelId, selectedModel.modelId])
 
+	const committedModelId = currentMode === "plan" ? config?.planSelection?.modelId : config?.actSelection?.modelId
+
+	// Persist the first reachable LM Studio model when nothing is committed yet.
+	// Without this, the UI can show a loaded model while the session factory falls
+	// back to the SDK catalog default (openai/gpt-oss-20b).
+	useEffect(() => {
+		if (lmStudioModels.length === 0) {
+			return
+		}
+		const trimmedCommitted = committedModelId?.trim()
+		if (trimmedCommitted && lmStudioModels.some((model) => model.id === trimmedCommitted)) {
+			return
+		}
+		const preferred = lmStudioModels.find((model) => model.state === "loaded") ?? lmStudioModels[0]
+		if (!preferred?.id) {
+			return
+		}
+		handleModelChange(preferred.id)
+	}, [committedModelId, handleModelChange, lmStudioModels])
+
 	useEffect(() => {
 		const curr = currentLMStudioModel?.loaded_context_length?.toString()
 		const max = currentLMStudioModel?.max_context_length?.toString()
@@ -153,12 +167,12 @@ export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
 		<div className="flex flex-col gap-2">
 			<BaseUrlField
 				initialValue={config?.baseUrl ?? apiConfiguration?.lmStudioBaseUrl}
-				label="Use custom base URL"
+				label={t("api.useCustomBaseUrl")}
 				onChange={handleBaseUrlChange}
-				placeholder="Default: http://localhost:1234"
+				placeholder={t("providers.lmstudio.baseUrlPlaceholder")}
 			/>
 
-			<div className="font-semibold">Model</div>
+			<div className="font-semibold">{t("api.model")}</div>
 			{lmStudioModels.length > 0 ? (
 				<DropdownContainer className="dropdown-container" zIndex={10}>
 					<VSCodeDropdown
@@ -181,35 +195,31 @@ export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
 				<DebouncedTextField
 					initialValue={displayedSelectedModelId || ""}
 					onChange={handleModelChange}
-					placeholder={"e.g. meta-llama-3.1-8b-instruct"}
+					placeholder={t("providers.lmstudio.modelPlaceholder")}
 					style={{ width: "100%" }}
 				/>
 			)}
 
-			<div className="font-semibold">Context Window</div>
+			<div className="font-semibold">{t("api.contextWindow")}</div>
 			<VSCodeTextField
 				className="w-full pointer-events-none"
 				disabled={true}
-				title="Not editable - the value is returned by the connected endpoint"
+				title={t("api.contextWindowReadonly")}
 				value={String(currentLoadedContext ?? lmStudioMaxTokens ?? "0")}
 			/>
 
 			<UseCustomPromptCheckbox providerId="lmstudio" />
 
 			<div className="text-xs text-description">
-				LM Studio allows you to run models locally on your computer. For instructions on how to get started, see their
+				{t("providers.lmstudio.introBefore")}{" "}
 				<VSCodeLink href="https://lmstudio.ai/docs" style={{ display: "inline", fontSize: "inherit" }}>
-					quickstart guide.
+					{t("providers.lmstudio.quickstart")}
 				</VSCodeLink>
-				You will also need to start LM Studio's{" "}
+				. {t("providers.lmstudio.introMiddle")}{" "}
 				<VSCodeLink className="inline" href="https://lmstudio.ai/docs/basics/server">
-					local server
+					{t("providers.lmstudio.localServer")}
 				</VSCodeLink>{" "}
-				feature with <code>lms server start</code> to use it with this extension.{" "}
-				<div className="text-error">
-					<span className="font-semibold">Note:</span> Cline uses complex prompts, so behavior can vary across models.
-					Less capable models may not work as expected.
-				</div>
+				{t("providers.lmstudio.introAfter")}
 			</div>
 		</div>
 	)
