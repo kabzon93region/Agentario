@@ -78,12 +78,17 @@ export const ru = {
 		lmstudio: {
 			baseUrlPlaceholder: "По умолчанию: http://localhost:1234",
 			modelPlaceholder: "например meta-llama-3.1-8b-instruct",
+			requestTimeout: "Таймаут запроса (мс)",
+			timeoutPlaceholder: "По умолчанию: 600000 (10 минут)",
+			timeoutHint: "Максимальное время ожидания ответа LM Studio и таймаут run_commands/search (по умолчанию 120 с для локальных моделей).",
 			introBefore: "LM Studio позволяет запускать модели локально на вашем компьютере. Инструкции по началу работы — в их",
 			quickstart: "кратком руководстве",
 			introMiddle: ". Также нужно запустить",
 			localServer: "локальный сервер",
 			introAfter:
-				'функцию командой lms server start. Примечание: Agentario использует сложные промпты, поведение зависит от модели. Слабые модели могут работать нестабильно.',
+				'функцию командой lms server start. Для вызова инструментов (read_files, editor…) нужна модель с поддержкой Tool Use / function calling в LM Studio.',
+			toolUseHint:
+				"Важно: без Tool Use модель не сможет вызывать инструменты Agentario — только текстовые ответы.",
 		},
 		ollama: {
 			baseUrlPlaceholder: "По умолчанию: http://localhost:11434",
@@ -133,7 +138,7 @@ export const ru = {
 		yoloLabel: "Режим Yolo",
 		yoloDesc:
 			"Выполнять задачи без подтверждения пользователя. Автоматически переключает Plan в Act и отключает инструмент вопросов. Используйте с осторожностью.",
-		hooksLabel: "Hooks",
+		hooksLabel: "Хуки",
 		hooksDesc: "Включить lifecycle- и tool-hooks во время выполнения задач.",
 		mcpDisplayMode: "Режим отображения MCP",
 		mcpDisplayModeDesc: "Как показывать вызовы MCP в чате.",
@@ -195,7 +200,7 @@ export const ru = {
 	},
 	featureTips: {
 		doubleCheck: 'Включите «Double-Check Completion» в настройках — Agentario проверит результат перед завершением задачи.',
-		clinerules: "Добавьте файл .clinerules в корень проекта, чтобы задать инструкции для Agentario.",
+		clinerules: "Добавьте файл .agentariorules в корень проекта, чтобы задать инструкции для Agentario.",
 		planMode: "Переключитесь в Plan Mode, чтобы обсудить план до того, как Agentario начнёт действовать.",
 		mcp: "Настройте MCP-серверы, чтобы дать Agentario доступ к внешним инструментам и API.",
 		checkpoints: "Agentario создаёт контрольные точки после изменений — можно откатиться к предыдущему состоянию.",
@@ -218,6 +223,47 @@ export const ru = {
 	},
 	worktrees: {
 		parallelHint: "отдельные окна, чтобы Agentario мог работать над несколькими задачами параллельно.",
+	},
+	customize: {
+		tooltip: "Настройка",
+		show: "Показать настройку",
+		hide: "Скрыть настройку",
+		tabRules: "Правила",
+		tabHooks: "Hooks",
+		tabSkills: "Skills",
+		rulesDesc:
+			"Правила задают постоянные инструкции для агента (глобально или для workspace). Редактируйте файлы в Documents/Agentario/Rules или .agentariorules/.",
+		skillsDesc:
+			"Skills — переиспользуемые инструкции. При совпадении задачи Agentario загружает skill через инструмент use_skill.",
+		hooksDesc:
+			"Hooks — скрипты на этапах жизненного цикла задачи (старт, завершение, до/после tool).",
+		orgRules: "Часть правил управляется организацией",
+		orgSkills: "Часть skills управляется организацией",
+		enterpriseRules: "Корпоративные правила",
+		globalRules: "Глобальные правила",
+		workspaceRules: "Правила workspace",
+		globalHooks: "Глобальные hooks",
+		enterpriseSkills: "Корпоративные skills",
+		globalSkills: "Глобальные skills",
+		localSkills: "Локальные skills",
+		docs: "Документация",
+		hooksWindowsExist: "В Windows hook выполняется, если файл hook существует.",
+		hooksUnixToggle: "Включение/выключение через chmod +x/-x.",
+		hooksWindowsBanner:
+			"Переключение hooks в Windows пока не поддерживается. Hook выполняется, если файл существует.",
+	},
+	mcp: {
+		remoteServers: "Удалённые серверы",
+		configure: "Настройка",
+	},
+	debug: {
+		resetWorkspace: "Сбросить state workspace",
+		resetGlobal: "Сбросить глобальный state",
+		resetHint: "Сбросит global state и secret storage расширения.",
+		resetOnboarding: "Сбросить onboarding",
+	},
+	marketplace: {
+		skills: "Skills",
 	},
 } as const
 

@@ -4,23 +4,46 @@ import { useMemo, useState } from "react"
 import Thumbnails from "@/components/common/Thumbnails"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TaskServiceClient } from "@/services/grpc-client"
+import MessageBubbleHeader from "./MessageBubbleHeader"
+import MessageStatsFooter from "./MessageStatsFooter"
 import { highlightText } from "./task-header/Highlights"
+import type { ClineApiReqInfo, ClineMessage } from "@shared/ExtensionMessage"
 
 interface UserMessageProps {
 	text?: string
 	files?: string[]
 	images?: string[]
 	messageTs?: number
+	message?: ClineMessage
+	stats?: ClineApiReqInfo
 	sendMessageFromChatRow?: (text: string, images: string[], files: string[]) => void
 	canRestoreWorkspace?: boolean
 }
 
-const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageTs, canRestoreWorkspace = true }) => {
+const UserMessage: React.FC<UserMessageProps> = ({
+	text,
+	images,
+	files,
+	messageTs,
+	message,
+	stats,
+	canRestoreWorkspace = true,
+}) => {
 	const [isEditing, setIsEditing] = useState(false)
 	const [editedText, setEditedText] = useState(text ?? "")
 	const [savingMode, setSavingMode] = useState<"chat" | "workspace" | undefined>()
 	const [errorMessage, setErrorMessage] = useState<string | undefined>()
 	const highlightedText = useMemo(() => highlightText(text), [text])
+	const headerMessage = useMemo(
+		(): ClineMessage =>
+			message ?? {
+				ts: messageTs ?? 0,
+				type: "say",
+				say: "user_feedback",
+				text,
+			},
+		[message, messageTs, text],
+	)
 
 	const startEditing = () => {
 		setEditedText(text ?? "")
@@ -94,6 +117,7 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 			}}
 			tabIndex={messageTs && !isEditing ? 0 : undefined}
 			title={messageTs && !isEditing ? "Edit and regenerate from here" : undefined}>
+			{!isEditing && <MessageBubbleHeader message={headerMessage} roleOverride="User" />}
 			{messageTs && !isEditing && (
 				<Tooltip>
 					<TooltipContent side="left">Edit and regenerate from here</TooltipContent>
@@ -171,6 +195,7 @@ const UserMessage: React.FC<UserMessageProps> = ({ text, images, files, messageT
 			{!isEditing && ((images && images.length > 0) || (files && files.length > 0)) && (
 				<Thumbnails files={files ?? []} images={images ?? []} style={{ marginTop: "8px" }} />
 			)}
+			{!isEditing && <MessageStatsFooter stats={stats} />}
 		</div>
 	)
 }

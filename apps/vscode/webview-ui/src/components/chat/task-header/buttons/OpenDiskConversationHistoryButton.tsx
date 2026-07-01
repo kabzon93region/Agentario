@@ -21,10 +21,10 @@ const OpenDiskConversationHistoryButton: React.FC<{
 
 	return (
 		<Tooltip>
-			<TooltipContent>Open Conversation History File</TooltipContent>
+			<TooltipContent>Экспорт чата в Markdown (.md)</TooltipContent>
 			<TooltipTrigger className={cn("flex items-center", className)}>
 				<Button
-					aria-label="Open Disk Conversation History"
+					aria-label="Экспорт чата в Markdown"
 					onClick={(e) => {
 						e.preventDefault()
 						e.stopPropagation()

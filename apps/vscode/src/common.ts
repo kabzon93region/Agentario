@@ -22,6 +22,7 @@ import { syncWorker } from "./shared/services/worker/sync"
 import { getBlobStoreSettingsFromEnv } from "./shared/services/worker/worker"
 import { getLatestAnnouncementId } from "./utils/announcements"
 import { arePathsEqual } from "./utils/path"
+import { isAgentarioStandaloneMode } from "./shared/agentario-standalone"
 
 /**
  * Performs intialization for Cline that is common to all platforms.
@@ -73,13 +74,17 @@ export async function initialize(storageContext: StorageContext): Promise<Webvie
 	await checkWorktreeAutoOpen(stateManager)
 
 	// =============== Background sync and cleanup tasks ===============
-	// Use remote config blobStoreConfig if available, otherwise fall back to env vars
-	const blobStoreSettings = stateManager.getRemoteConfigSettings()?.blobStoreConfig ?? getBlobStoreSettingsFromEnv()
-	syncWorker().init({ ...blobStoreSettings, userDistinctId: getDistinctId() })
+	// Skip cloud blob sync in standalone mode (no Cline remote config).
+	if (!isAgentarioStandaloneMode()) {
+		const blobStoreSettings = stateManager.getRemoteConfigSettings()?.blobStoreConfig ?? getBlobStoreSettingsFromEnv()
+		syncWorker().init({ ...blobStoreSettings, userDistinctId: getDistinctId() })
+	}
 	// Clean up old temp files in background (non-blocking) and start periodic cleanup every 24 hours
 	ClineTempManager.startPeriodicCleanup()
 
-	telemetryService.captureExtensionActivated()
+	if (!ClineEndpoint.isSelfHosted()) {
+		telemetryService.captureExtensionActivated()
+	}
 
 	return webview
 }

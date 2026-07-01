@@ -1,4 +1,5 @@
 import type { ClineMessage, ClineSayTool, TurnState } from "@shared/ExtensionMessage"
+import { isApiReqComplete } from "@shared/message-display"
 import type { Mode } from "@shared/storage/types"
 
 /**
@@ -129,7 +130,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	// Task lifecycle states
 	completion_result: {
 		sendingDisabled: false,
-		enableButtons: true,
+		enableButtons: false,
 		primaryText: "Start New Task",
 		secondaryText: undefined,
 		primaryAction: "new_task",
@@ -317,7 +318,7 @@ function isInertStatusMessage(message: ClineMessage): boolean {
 	if (message.say === "api_req_started") {
 		try {
 			const info = JSON.parse(message.text || "{}")
-			return info.cost != null || info.cancelReason != null || info.streamingFailedMessage != null
+			return isApiReqComplete(info)
 		} catch {
 			return false
 		}

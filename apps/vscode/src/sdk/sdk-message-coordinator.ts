@@ -1,5 +1,6 @@
 import type { CoreSessionEvent } from "@cline/core"
 import type { ClineApiReqInfo, ClineMessage } from "@shared/ExtensionMessage"
+import { isApiReqComplete } from "@shared/message-display"
 import { Logger } from "@/shared/services/Logger"
 import type { MessageIdMinter } from "./message-id-minter"
 import type { TaskProxy } from "./task-proxy"
@@ -36,9 +37,13 @@ export class SdkMessageCoordinator {
 			return
 		}
 		const epoch = minter.epoch
+		const now = Date.now()
 		for (const message of messages) {
 			message.seq = minter.nextSeq()
 			message.epoch = epoch
+			if (message.createdAtMs == null) {
+				message.createdAtMs = now
+			}
 		}
 	}
 
@@ -100,6 +105,21 @@ export class SdkMessageCoordinator {
 		this.emitSessionEvents(messages, event)
 	}
 
+	/** Finalize partial/in-flight rows after cancel so API rows stop showing "Thinking...". */
+	finalizeInFlightMessages(): void {
+		const task = this.options.getTask()
+		if (!task?.messageStateHandler) {
+			return
+		}
+
+		const messages = task.messageStateHandler.getClineMessages()
+		if (messages.length === 0) {
+			return
+		}
+
+		this.replaceMessages(this.finalizeMessagesForSave(messages))
+	}
+
 	emitHookMessage(message: ClineMessage): void {
 		this.appendMessages([message])
 		pushMessageToWebview(message).catch(() => {})
@@ -121,7 +141,7 @@ export class SdkMessageCoordinator {
 			if (updated.type === "say" && updated.say === "api_req_started") {
 				try {
 					const info: ClineApiReqInfo = JSON.parse(updated.text || "{}")
-					if (info.cost === undefined && info.cancelReason === undefined) {
+					if (!isApiReqComplete(info)) {
 						const isLast = !messages.slice(index + 1).some((m) => m.type === "say" && m.say === "api_req_started")
 						if (isLast) {
 							info.cancelReason = "user_cancelled"

@@ -25,6 +25,13 @@ import { Logger } from "@shared/services/Logger"
 import type { Settings } from "@shared/storage/state-keys"
 import type { Mode } from "@shared/storage/types"
 import { stringifyVsCodeLmModelSelector } from "@shared/vsCodeSelectorUtils"
+import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
+import { resolveAgentToolTimeoutMs } from "@/shared/agent-tool-timeout"
+import {
+	AGENTARIO_LOCAL_TOOLS_HINT,
+	AGENTARIO_PLAN_MODE_INSTRUCTIONS_RU,
+	loadAgentarioSystemPromptOverlay,
+} from "@/shared/agentario-prompt"
 import { StateManager } from "@/core/storage/StateManager"
 import { ExtensionRegistryInfo } from "@/registry"
 import { getFeatureFlagsService } from "@/services/feature-flags"
@@ -656,7 +663,18 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		Logger.log(`[SessionFactory] Built system prompt: ${systemPrompt.length} chars`)
 	} catch (error) {
 		Logger.warn("[SessionFactory] Failed to build system prompt, using minimal fallback:", error)
-		systemPrompt = "You are Cline, a highly skilled software engineer. Help the user with their request."
+		systemPrompt = "You are Agentario, a highly skilled software engineer. Help the user with their request."
+	}
+
+	if (isAgentarioStandaloneMode()) {
+		try {
+			const overlay = await loadAgentarioSystemPromptOverlay()
+			if (overlay) {
+				systemPrompt = `${overlay}\n\n${AGENTARIO_LOCAL_TOOLS_HINT}\n\n${systemPrompt}`
+			}
+		} catch (error) {
+			Logger.warn("[SessionFactory] Failed to load Agentario system prompt overlay:", error)
+		}
 	}
 
 	// Inject preferred language instructions when a non-default language is selected.
@@ -676,7 +694,17 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	// not include these guardrails, so without this the model in plan mode may
 	// still attempt to make edits instead of planning.
 	if (mode === "plan") {
-		systemPrompt = systemPrompt ? `${systemPrompt}\n\n${PLAN_MODE_INSTRUCTIONS}` : PLAN_MODE_INSTRUCTIONS
+		let planInstructions = PLAN_MODE_INSTRUCTIONS
+		try {
+			const preferredLanguageRaw = StateManager.get().getGlobalSettingsKey("preferredLanguage")
+			const preferredLanguage = getLanguageKey(preferredLanguageRaw as LanguageDisplay | undefined)
+			if (preferredLanguage?.toLowerCase().includes("russian") || preferredLanguage?.includes("Русский")) {
+				planInstructions = AGENTARIO_PLAN_MODE_INSTRUCTIONS_RU
+			}
+		} catch {
+			// keep English plan instructions
+		}
+		systemPrompt = systemPrompt ? `${systemPrompt}\n\n${planInstructions}` : planInstructions
 	}
 
 	const stateManager = StateManager.get()
@@ -688,6 +716,14 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	// own provider id spelling (e.g. "openai-compatible" rather than the
 	// extension's "openai"). Convert before handing the id to core.
 	const sdkProviderId = toSdkProviderId(providerId)
+	const configuredRequestTimeoutMs =
+		typeof apiConfig?.requestTimeoutMs === "number" && Number.isFinite(apiConfig.requestTimeoutMs) && apiConfig.requestTimeoutMs > 0
+			? Math.trunc(apiConfig.requestTimeoutMs)
+			: undefined
+	// Local providers can spend minutes on prompt prefill; a 30-60s transport timeout
+	// is often too aggressive and yields BodyTimeoutError before first token.
+	const providerRequestTimeoutMs =
+		configuredRequestTimeoutMs ?? (LOCAL_ONLY_MODEL_PROVIDERS.has(sdkProviderId) ? 10 * 60 * 1000 : undefined)
 
 	// Always pass a providerConfig so the proxy/CA-aware fetch reaches the SDK
 	// gateway; without it the agent loop uses bare global fetch and corporate
@@ -703,8 +739,13 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		modelId,
 		...(apiKey ? { apiKey } : {}),
 		...(baseUrl !== undefined ? { baseUrl } : {}),
+		...(providerRequestTimeoutMs !== undefined ? { timeoutMs: providerRequestTimeoutMs } : {}),
 		fetch,
 	}
+
+	Logger.log(`[SessionFactory] Tools enabled for session (mode=${mode}, provider=${providerId})`)
+
+	const toolTimeoutMs = resolveAgentToolTimeoutMs(providerId, apiConfig)
 
 	const config: CoreSessionConfig = {
 		providerId: sdkProviderId,
@@ -733,6 +774,8 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		mode: mode === "plan" ? "plan" : "act",
 		...reasoningConfig,
 		...(maxTokensPerTurn !== undefined ? { maxTokensPerTurn } : {}),
+		bashTimeoutMs: toolTimeoutMs,
+		searchTimeoutMs: toolTimeoutMs,
 		maxIterations: undefined,
 		logger: sdkLogger,
 		extensionContext: {

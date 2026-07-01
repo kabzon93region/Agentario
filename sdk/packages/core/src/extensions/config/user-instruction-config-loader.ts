@@ -522,7 +522,7 @@ export function createSkillsConfigDefinition(
 ): UnifiedConfigDefinition<"skill", SkillConfig> {
 	const directories = resolveSkillDirectories(options);
 	const managedRoot = options?.workspacePath
-		? join(options.workspacePath, ".cline")
+		? join(options.workspacePath, ".agentario")
 		: undefined;
 
 	return {
@@ -548,7 +548,7 @@ export function createRulesConfigDefinition(
 		options?.directories ??
 		resolveRulesConfigSearchPaths(options?.workspacePath);
 	const managedRoot = options?.workspacePath
-		? join(options.workspacePath, ".cline")
+		? join(options.workspacePath, ".agentario")
 		: undefined;
 
 	return {
@@ -556,6 +556,7 @@ export function createRulesConfigDefinition(
 		directories: managedRoot ? [...directories, managedRoot] : directories,
 		discoverFiles: discoverRulesLikeFiles,
 		includeFile: (fileName, filePath) =>
+			fileName === ".agentariorules" ||
 			fileName === ".clinerules" ||
 			isMarkdownFile(fileName) ||
 			isMarkdownFile(filePath),
@@ -575,7 +576,7 @@ export function createWorkflowsConfigDefinition(
 		options?.directories ??
 		resolveWorkflowsConfigSearchPaths(options?.workspacePath);
 	const managedRoot = options?.workspacePath
-		? join(options.workspacePath, ".cline")
+		? join(options.workspacePath, ".agentario")
 		: undefined;
 
 	return {

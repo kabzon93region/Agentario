@@ -191,6 +191,8 @@ export interface ClineMessage {
 	conversationHistoryIndex?: number
 	conversationHistoryDeletedRange?: [number, number] // for when conversation history is truncated for API requests
 	modelInfo?: ClineMessageModelInfo
+	/** Wall-clock time when the message was created (ms since epoch). */
+	createdAtMs?: number
 }
 
 export type ClineAsk =
@@ -368,6 +370,12 @@ export interface ClineApiReqInfo {
 		delaySec: number
 		errorSnippet?: string
 	}
+	/** Elapsed time for the full API request (ms), including prompt/prefill. */
+	durationMs?: number
+	/** Elapsed time for output generation only (ms), excluding prompt/prefill. */
+	generationDurationMs?: number
+	/** Output tokens per second during generation (matches LM Studio eval speed). */
+	tokensPerSecond?: number
 }
 
 export interface ClineSubagentUsageInfo {

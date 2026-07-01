@@ -58,6 +58,8 @@ export class SdkTaskControlCoordinator {
 
 		this.options.sessions.setRunning(false)
 
+		this.options.messages.finalizeInFlightMessages()
+
 		const resumeMessage: ClineMessage = {
 			ts: Date.now(),
 			type: "ask",

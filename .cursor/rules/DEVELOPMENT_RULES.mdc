@@ -1,0 +1,145 @@
+---
+alwaysApply: true
+---
+# Правила разработки — Agentario
+
+Язык общения, комментариев в документации и пользовательских сообщениях: **русский** (если пользователь не просит иное).
+
+Окончание текстовых файлов проекта: **CRLF** (Windows).
+
+---
+
+## 1. Версионирование — КРИТИЧЕСКИ ВАЖНО
+
+**После КАЖДОГО изменения кода** (функция, исправление, рефакторинг, UI, proto, конфиг расширения) **обязательно** повышать версию — **даже для незначительных правок**.
+
+Схема: [VERSIONING.md](../../VERSIONING.md) (`MAJOR.MINOR.PATCH`).
+
+### Где менять версию (Agentario)
+
+| Файл | Что обновить |
+|------|----------------|
+| `apps/vscode/package.json` | `"version"` — **источник истины** для VSIX |
+| `CHANGELOG.md` | Новая секция `[x.y.z]` с датой и пунктами Added/Changed/Fixed |
+| `release/notes/v{x.y.z}.md` | Текст **GitHub Release** (скрипт `publish-release.cmd`) |
+| `README.md` | Строка «Версия расширения» и пример `release/agentario-x.y.z.vsix` |
+
+### Когда какую цифру повышать
+
+- **PATCH** — любое исправление, мелкая доработка, правка текста/логики без нового функционала.
+- **MINOR** — новая возможность, новый экран, новый API/proto, заметное изменение поведения с обратной совместимостью.
+- **MAJOR** — только по явному решению владельца проекта.
+
+### Порядок в конце задачи
+
+1. Завершить код.
+2. Поднять версию и обновить `CHANGELOG.md` + `README.md`.
+3. При необходимости собрать: `build.cmd` → `release/agentario-<version>.vsix`.
+4. Перед публикацией на GitHub: `release/notes/v<version>.md` (см. [config/RELEASE.md](../../config/RELEASE.md)).
+
+**Не откладывать** версию «на потом» и не объединять несколько сессий без bump.
+
+---
+
+## 8. Публикация релиза на GitHub
+
+Полная инструкция: **[config/RELEASE.md](../../config/RELEASE.md)**.
+
+### Источник версии
+
+`apps/vscode/package.json` → `"version"`.
+
+### Файл описания релиза (скрипт подхватывает автоматически)
+
+Порядок поиска:
+
+1. `release/notes/v{VERSION}.md` — **рекомендуется** (копировать из `release/notes/TEMPLATE.md`)
+2. `release/notes/{VERSION}.md`
+3. Секция `## [{VERSION}]` в `CHANGELOG.md`
+
+### Запуск
+
+```bat
+publish-release.cmd
+```
+
+Делает: commit → push `main` → tag `v{VERSION}` → `gh release create` с VSIX из `release/agentario-{VERSION}.vsix`. В конце — пауза и сводка.
+
+Требования: `gh auth login`, Git remote `origin` → `kabzon93region/Agentario`.
+
+
+---
+
+## 2. Документация
+
+После изменений, влияющих на пользователя или сборку:
+
+- `CHANGELOG.md` — всегда при bump версии.
+- `README.md` — если меняются установка, сборка, возможности.
+- `VERSIONING.md` — если меняется политика версий.
+- `config/*.md` — если добавлены шаблоны (правила, промпты).
+
+Отдельный `PROGRESS.md` в Agentario не ведётся — достаточно `CHANGELOG.md`.
+
+---
+
+## 3. Окружение и сборка (Windows)
+
+- **ОС:** Windows 10+.
+- **Корень репозитория:** `Z:\T\Agentario` (или актуальный путь workspace).
+- **Сборка:** `build.cmd` — синхронизация на локальный диск (`C:\Users\Admin\Agentario`), SDK, webview, VSIX в `release/`.
+- **Не полагаться** на `bun run protos` из сетевого `Z:` без `node_modules` — использовать `build.cmd`.
+- **Node/Bun:** пути из `build.cmd` / документации README.
+
+### Proto / gRPC (VS Code extension)
+
+1. Править `.proto` в `apps/vscode/proto/`.
+2. Сборка webview генерирует типы (`build.cmd` или `bun run protos` в `apps/vscode`).
+3. Handlers: `apps/vscode/src/core/controller/<service>/`.
+4. UI: `apps/vscode/webview-ui/`.
+
+---
+
+## 4. Архитектура Agentario
+
+- **Расширение VS Code:** `apps/vscode/` — UI (webview), `SdkController`, gRPC handlers.
+- **SDK:** `sdk/packages/` — core, shared, agents.
+- **Конфиг пользователя:** `%USERPROFILE%\.agentario\`, `Documents/Agentario\`.
+- **Брендинг:** Agentario (не Cline) в пользовательских строках; upstream-идентификаторы в коде можно не трогать без необходимости.
+- **Минимальный diff:** не рефакторить и не менять несвязанный код в той же задаче.
+
+---
+
+## 5. Git и коммиты
+
+- Коммит **только по явной просьбе** пользователя.
+- Не коммитить `.env`, ключи, токены.
+- Не делать force push в main/master без явного запроса.
+
+---
+
+## 6. Качество кода
+
+- Читать окружение изменяемого файла; следовать стилю проекта.
+- После правок TypeScript — `read_lints` для затронутых файлов.
+- Для заметных изменений extension — по возможности `build.cmd`.
+- Комментарии — только для неочевидной логики; не дублировать код в комментариях.
+
+---
+
+## 7. Порядок работы агента
+
+1. Понять задачу; при необходимости прочитать `CHANGELOG.md` и связанный код.
+2. Реализовать минимально достаточное решение.
+3. **Обязательно:** bump версии + `CHANGELOG.md` (+ `README.md` при необходимости).
+4. Сообщить пользователю новую версию и путь к VSIX, если собирали.
+
+---
+
+## Ссылки
+
+- [CHANGELOG.md](../../CHANGELOG.md)
+- [VERSIONING.md](../../VERSIONING.md)
+- [config/RELEASE.md](../../config/RELEASE.md) — публикация на GitHub
+- [README.md](../../README.md)
+- Универсальный шаблон для других проектов: [config/templates/DEVELOPMENT_RULES.universal.mdc](../../config/templates/DEVELOPMENT_RULES.universal.mdc)

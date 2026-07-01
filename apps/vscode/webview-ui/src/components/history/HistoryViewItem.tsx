@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { memo, useCallback, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { TaskServiceClient } from "@/services/grpc-client"
 import { formatLargeNumber, formatSize } from "@/utils/format"
@@ -201,18 +202,23 @@ const HistoryViewItem = ({
 										<span className="font-medium text-description">Size:</span>
 										<span className="items-center gap-2 flex text-description">
 											{formatSize(item.size)}
-											<Button
-												aria-label="Export"
-												className="m-0 p-0"
-												onClick={(e) => {
-													e.stopPropagation()
-													TaskServiceClient.exportTaskWithId(
-														StringRequest.create({ value: item.id }),
-													).catch((err) => console.error("Failed to export task:", err))
-												}}
-												variant="ghost">
-												<DownloadIcon />
-											</Button>
+											<Tooltip>
+												<TooltipContent>Экспорт чата в Markdown</TooltipContent>
+												<TooltipTrigger asChild>
+													<Button
+														aria-label="Экспорт чата в Markdown"
+														className="m-0 p-0"
+														onClick={(e) => {
+															e.stopPropagation()
+															TaskServiceClient.exportTaskWithId(
+																StringRequest.create({ value: item.id }),
+															).catch((err) => console.error("Failed to export task:", err))
+														}}
+														variant="ghost">
+														<DownloadIcon />
+													</Button>
+												</TooltipTrigger>
+											</Tooltip>
 										</span>
 									</div>
 								</div>

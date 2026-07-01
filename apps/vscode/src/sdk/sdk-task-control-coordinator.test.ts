@@ -25,6 +25,7 @@ describe("SdkTaskControlCoordinator", () => {
 		expect(options.interactions.clearPending).toHaveBeenCalledWith("Task cancelled")
 		expect(activeSession.sdkHost.abort).toHaveBeenCalledWith("session-123")
 		expect(options.sessions.setRunning).toHaveBeenCalledWith(false)
+		expect(options.messages.finalizeInFlightMessages).toHaveBeenCalledOnce()
 		expect(options.messages.appendAndEmit).toHaveBeenCalledWith(
 			[expect.objectContaining({ type: "ask", ask: "resume_task" })],
 			{ type: "status", payload: { sessionId: "session-123", status: "cancelled" } },
@@ -163,6 +164,7 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 			appendAndEmit: vi.fn(),
 			appendMessages: vi.fn(),
 			cancelPendingSave: vi.fn(),
+			finalizeInFlightMessages: vi.fn(),
 			finalizeMessagesForSave: vi.fn((messages: ClineMessage[]) =>
 				messages.map((message) => {
 					if (!message.partial) {

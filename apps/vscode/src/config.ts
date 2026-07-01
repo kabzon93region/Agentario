@@ -65,7 +65,7 @@ class ClineEndpoint {
 		const endpointsConfig = await ClineEndpoint.loadEndpointsFile()
 		if (endpointsConfig) {
 			ClineEndpoint._instance.onPremiseConfig = endpointsConfig
-			Logger.log("Cline running in self-hosted mode with custom endpoints")
+			Logger.log("Agentario running in standalone (self-hosted) mode — Cline cloud disabled")
 		}
 
 		ClineEndpoint._initialized = true
@@ -124,10 +124,13 @@ class ClineEndpoint {
 
 	/**
 	 * Returns the path to the endpoints.json configuration file.
-	 * Located at ~/.cline/endpoints.json
+	 * Checks ~/.agentario/endpoints.json first, then legacy ~/.cline/endpoints.json
 	 */
-	private static getEndpointsFilePath(): string {
-		return path.join(os.homedir(), ".cline", "endpoints.json")
+	private static getUserEndpointsFilePaths(): string[] {
+		return [
+			path.join(os.homedir(), ".agentario", "endpoints.json"),
+			path.join(os.homedir(), ".cline", "endpoints.json"),
+		]
 	}
 
 	/**
@@ -173,37 +176,38 @@ class ClineEndpoint {
 			// Bundled file doesn't exist or is not accessible, try user file
 		}
 
-		// 2. Try ~/.cline/endpoints.json
-		const userPath = ClineEndpoint.getEndpointsFilePath()
-		try {
-			await fs.access(userPath)
-		} catch {
-			// File doesn't exist - not on-premise mode
-			return null
-		}
-
-		// File exists, must be valid or we fail
-		try {
-			const fileContent = await fs.readFile(userPath, "utf8")
-			let data: unknown
+		// 2. Try user endpoints files (~/.agentario, then legacy ~/.cline)
+		for (const userPath of ClineEndpoint.getUserEndpointsFilePaths()) {
+			try {
+				await fs.access(userPath)
+			} catch {
+				continue
+			}
 
 			try {
-				data = JSON.parse(fileContent)
-			} catch (parseError) {
+				const fileContent = await fs.readFile(userPath, "utf8")
+				let data: unknown
+
+				try {
+					data = JSON.parse(fileContent)
+				} catch (parseError) {
+					throw new ClineConfigurationError(
+						`Invalid JSON in user endpoints configuration file (${userPath}): ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+					)
+				}
+
+				return ClineEndpoint.validateEndpointsSchema(data, userPath)
+			} catch (error) {
+				if (error instanceof ClineConfigurationError) {
+					throw error
+				}
 				throw new ClineConfigurationError(
-					`Invalid JSON in user endpoints configuration file (${userPath}): ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+					`Failed to read user endpoints configuration file (${userPath}): ${error instanceof Error ? error.message : String(error)}`,
 				)
 			}
-
-			return ClineEndpoint.validateEndpointsSchema(data, userPath)
-		} catch (error) {
-			if (error instanceof ClineConfigurationError) {
-				throw error
-			}
-			throw new ClineConfigurationError(
-				`Failed to read user endpoints configuration file (${userPath}): ${error instanceof Error ? error.message : String(error)}`,
-			)
 		}
+
+		return null
 	}
 
 	/**

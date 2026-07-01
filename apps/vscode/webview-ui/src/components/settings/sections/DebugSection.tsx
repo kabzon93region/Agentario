@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { StateServiceClient } from "@/services/grpc-client"
 import Section from "../Section"
+import { t } from "@/i18n"
 
 interface DebugSectionProps {
 	onResetState: (resetGlobalState?: boolean) => Promise<void>
@@ -15,14 +16,12 @@ const DebugSection = ({ onResetState, renderSectionHeader }: DebugSectionProps) 
 			{renderSectionHeader("debug")}
 			<Section>
 				<Button onClick={() => onResetState()} variant="error">
-					Reset Workspace State
+					{t("debug.resetWorkspace")}
 				</Button>
 				<Button onClick={() => onResetState(true)} variant="error">
-					Reset Global State
+					{t("debug.resetGlobal")}
 				</Button>
-				<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">
-					This will reset all global state and secret storage in the extension.
-				</p>
+				<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">{t("debug.resetHint")}</p>
 			</Section>
 			<Section>
 				<Button
@@ -32,7 +31,7 @@ const DebugSection = ({ onResetState, renderSectionHeader }: DebugSectionProps) 
 							.finally(() => setShowWelcome(true))
 					}
 					variant="secondary">
-					Reset Onboarding State
+					{t("debug.resetOnboarding")}
 				</Button>
 			</Section>
 		</div>

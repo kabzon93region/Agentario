@@ -5,9 +5,11 @@ import assert from "node:assert"
 import { DIFF_VIEW_URI_SCHEME } from "@hosts/vscode/VscodeDiffViewProvider"
 import * as vscode from "vscode"
 import { Logger } from "@/shared/services/Logger"
-import { sendAccountButtonClickedEvent } from "./core/controller/ui/subscribeToAccountButtonClicked"
+import { isAgentarioStandaloneMode, migrateStandaloneProviderSettings } from "@/shared/agentario-standalone"
+import { seedAgentarioDefaults } from "@/shared/seed-agentario-defaults"
 import { sendChatButtonClickedEvent } from "./core/controller/ui/subscribeToChatButtonClicked"
 import { sendHistoryButtonClickedEvent } from "./core/controller/ui/subscribeToHistoryButtonClicked"
+import { sendIndexingButtonClickedEvent } from "./core/controller/ui/subscribeToIndexingButtonClicked"
 import { sendMarketplaceButtonClickedEvent } from "./core/controller/ui/subscribeToMarketplaceButtonClicked"
 import { sendMcpButtonClickedEvent } from "./core/controller/ui/subscribeToMcpButtonClicked"
 import { sendSettingsButtonClickedEvent } from "./core/controller/ui/subscribeToSettingsButtonClicked"
@@ -29,6 +31,7 @@ import { improveWithCline } from "./core/controller/commands/improveWithCline"
 import { sendAddToInputEvent } from "./core/controller/ui/subscribeToAddToInput"
 import { sendShowWebviewEvent } from "./core/controller/ui/subscribeToShowWebview"
 import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
+import { StateManager } from "./core/storage/StateManager"
 import {
 	cleanupMcpMarketplaceCatalogFromGlobalState,
 	cleanupOldApiKey,
@@ -80,6 +83,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	// 4. Register services and perform common initialization
 	// IMPORTANT: Must be done after host provider is setup and migrations are complete
 	const webview = (await initialize(storageContext)) as VscodeWebviewProvider
+	migrateStandaloneProviderSettings(StateManager.get())
+	await seedAgentarioDefaults(StateManager.get())
 
 	// 5. Register services and commands specific to VS Code
 	// Initialize hook discovery cache for performance optimization
@@ -129,12 +134,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 	context.subscriptions.push(vscode.commands.registerCommand(commands.McpButton, () => sendMcpButtonClickedEvent()))
+	context.subscriptions.push(vscode.commands.registerCommand(commands.IndexingButton, () => sendIndexingButtonClickedEvent()))
 	context.subscriptions.push(
 		vscode.commands.registerCommand(commands.MarketplaceButton, () => sendMarketplaceButtonClickedEvent()),
 	)
 	context.subscriptions.push(vscode.commands.registerCommand(commands.SettingsButton, () => sendSettingsButtonClickedEvent()))
 	context.subscriptions.push(vscode.commands.registerCommand(commands.HistoryButton, () => sendHistoryButtonClickedEvent()))
-	context.subscriptions.push(vscode.commands.registerCommand(commands.AccountButton, () => sendAccountButtonClickedEvent()))
+	context.subscriptions.push(
+		vscode.commands.registerCommand(commands.AccountButton, () => {
+			if (isAgentarioStandaloneMode()) {
+				void vscode.window.showInformationMessage(
+					"Agentario работает автономно. Аккаунт Cline не используется — настройте LM Studio в Settings.",
+				)
+				return
+			}
+			sendAccountButtonClickedEvent()
+		}),
+	)
 	context.subscriptions.push(vscode.commands.registerCommand(commands.WorktreesButton, () => sendWorktreesButtonClickedEvent()))
 
 	/*
@@ -528,6 +544,9 @@ ${ctx.cellJson || "{}"}
 	// This listener catches legacy secrets.json writes from older windows and
 	// triggers a re-read from providers.json via restoreRefreshTokenAndRetrieveAuthInfo().
 	const unsubSecrets = storageContext.secrets.onDidChange((event) => {
+		if (isAgentarioStandaloneMode()) {
+			return
+		}
 		if (event.key === "cline:clineAccountId") {
 			const secretValue = storageContext.secrets.get<string>(event.key)
 			const activeWebview = WebviewProvider.getVisibleInstance()

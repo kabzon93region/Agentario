@@ -162,6 +162,7 @@ export function createAgentModelFromConfig(
 		apiKey: config.apiKey ?? baseProviderConfig?.apiKey,
 		baseUrl: config.baseUrl ?? baseProviderConfig?.baseUrl,
 		headers: config.headers ?? baseProviderConfig?.headers,
+		timeoutMs: baseProviderConfig?.timeoutMs,
 		knownModels: resolveKnownModelsFromConfig(config),
 		maxOutputTokens: config.maxTokensPerTurn,
 		reasoningEffort: config.reasoningEffort,
@@ -199,6 +200,7 @@ export function createAgentModelFromConfig(
 				apiKey: normalizedProviderConfig.apiKey,
 				baseUrl: normalizedProviderConfig.baseUrl,
 				headers: normalizedProviderConfig.headers,
+				timeoutMs: normalizedProviderConfig.timeoutMs,
 				fetch: normalizedProviderConfig.fetch,
 				options: buildGatewayProviderOptions(normalizedProviderConfig),
 				models: normalizedProviderConfig.knownModels

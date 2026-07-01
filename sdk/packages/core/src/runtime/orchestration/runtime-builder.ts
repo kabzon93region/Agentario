@@ -123,6 +123,18 @@ export function createTeamName(): string {
 	return `team-${nanoid(5)}`;
 }
 
+function sessionToolTimeouts(
+	config: CoreSessionConfig,
+): Pick<CoreSessionConfig, "bashTimeoutMs" | "searchTimeoutMs"> | undefined {
+	if (config.bashTimeoutMs === undefined && config.searchTimeoutMs === undefined) {
+		return undefined;
+	}
+	return {
+		bashTimeoutMs: config.bashTimeoutMs,
+		searchTimeoutMs: config.searchTimeoutMs,
+	};
+}
+
 function createBuiltinToolsList(
 	cwd: string,
 	providerId: string,
@@ -132,6 +144,7 @@ function createBuiltinToolsList(
 	toolPolicies: CoreSessionConfig["toolPolicies"],
 	skillsExecutor?: SkillsExecutorWithMetadata,
 	executorOverrides?: Partial<ToolExecutors>,
+	toolTimeouts?: Pick<CoreSessionConfig, "bashTimeoutMs" | "searchTimeoutMs">,
 ): AgentTool[] {
 	const preset = ToolPresets[resolveToolPresetName({ mode })];
 	const toolRoutingConfig = resolveToolRoutingConfig(
@@ -147,6 +160,10 @@ function createBuiltinToolsList(
 			...preset,
 			enableSkills: !!skillsExecutor,
 			...toolRoutingConfig,
+			...(toolTimeouts?.bashTimeoutMs !== undefined ? { bashTimeoutMs: toolTimeouts.bashTimeoutMs } : {}),
+			...(toolTimeouts?.searchTimeoutMs !== undefined
+				? { searchTimeoutMs: toolTimeouts.searchTimeoutMs }
+				: {}),
 			executors: {
 				...(skillsExecutor
 					? {
@@ -448,6 +465,7 @@ export class DefaultRuntimeBuilder implements RuntimeBuilder {
 					effectiveToolPolicies,
 					undefined,
 					toolExecutors,
+					sessionToolTimeouts(config),
 				),
 			);
 			if (!normalized.disableMcpSettingsTools) {
@@ -517,6 +535,7 @@ export class DefaultRuntimeBuilder implements RuntimeBuilder {
 														)
 													: undefined,
 												toolExecutors,
+												sessionToolTimeouts(config),
 											),
 											agent,
 										)
@@ -621,6 +640,7 @@ export class DefaultRuntimeBuilder implements RuntimeBuilder {
 									effectiveToolPolicies,
 									undefined,
 									toolExecutors,
+									sessionToolTimeouts(config),
 								)
 						: undefined,
 					teammateConfigProvider: delegatedAgentConfigProvider,

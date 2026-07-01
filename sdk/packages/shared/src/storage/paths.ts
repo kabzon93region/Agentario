@@ -11,9 +11,24 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import type { PluginManifest } from "..";
 
-const DEPRECATED_CONFIG_DIR = ".clinerules";
-const CLINE_CONFIG_DIR = ".cline";
+/** Agentario-branded paths (primary). */
+export const AGENTARIO_HOME_DIR_NAME = ".agentario";
+export const AGENTARIO_RULES_DIR_NAME = ".agentariorules";
+export const AGENTARIO_IGNORE_FILE_NAME = ".agentarioignore";
+export const AGENTARIO_MCP_SETTINGS_FILE_NAME = "agentario_mcp_settings.json";
+
+/** Legacy Cline paths — still searched for backward compatibility. */
+export const LEGACY_CLINE_HOME_DIR_NAME = ".cline";
+export const LEGACY_CLINE_RULES_DIR_NAME = ".clinerules";
+export const LEGACY_CLINE_IGNORE_FILE_NAME = ".clineignore";
+
+const DEPRECATED_CONFIG_DIR = AGENTARIO_RULES_DIR_NAME;
+const LEGACY_DEPRECATED_CONFIG_DIR = LEGACY_CLINE_RULES_DIR_NAME;
+const AGENTARIO_CONFIG_DIR = AGENTARIO_HOME_DIR_NAME;
+const LEGACY_CLINE_CONFIG_DIR = LEGACY_CLINE_HOME_DIR_NAME;
 const LEGACY_AGENT_SKILLS_CONFIG_DIR = ".agents";
+const DOCUMENTS_EXTENSION_DIR_NAME = "Agentario";
+const LEGACY_DOCUMENTS_EXTENSION_DIR_NAME = "Cline";
 
 export const AGENT_CONFIG_DIRECTORY_NAME = "agents";
 export const HOOKS_CONFIG_DIRECTORY_NAME = "hooks";
@@ -97,15 +112,30 @@ export function resolveClineDir(): string {
 	if (CLINE_DIR) {
 		return CLINE_DIR;
 	}
-	const envDir = process.env.CLINE_DIR?.trim();
+	const envDir =
+		process.env.AGENTARIO_DIR?.trim() || process.env.CLINE_DIR?.trim();
 	if (envDir) {
 		return envDir;
 	}
-	return join(HOME_DIR, ".cline");
+	const agentarioDir = join(HOME_DIR, AGENTARIO_HOME_DIR_NAME);
+	const legacyDir = join(HOME_DIR, LEGACY_CLINE_HOME_DIR_NAME);
+	if (!existsSync(agentarioDir) && existsSync(legacyDir)) {
+		return legacyDir;
+	}
+	return agentarioDir;
 }
 
+export function resolveDocumentsAgentarioDirectoryPath(): string {
+	return join(HOME_DIR, "Documents", DOCUMENTS_EXTENSION_DIR_NAME);
+}
+
+/** @deprecated Use {@link resolveDocumentsAgentarioDirectoryPath}. */
 export function resolveDocumentsClineDirectoryPath(): string {
-	return join(HOME_DIR, "Documents", "Cline");
+	return resolveDocumentsAgentarioDirectoryPath();
+}
+
+function resolveLegacyDocumentsClineDirectoryPath(): string {
+	return join(HOME_DIR, "Documents", LEGACY_DOCUMENTS_EXTENSION_DIR_NAME);
 }
 
 type DocumentsExtensionName =
@@ -118,7 +148,7 @@ type DocumentsExtensionName =
 export function resolveDocumentsExtensionPath(
 	name: DocumentsExtensionName,
 ): string {
-	return join(resolveDocumentsClineDirectoryPath(), name);
+	return join(resolveDocumentsAgentarioDirectoryPath(), name);
 }
 
 export function resolveClineDataDir(): string {
@@ -210,7 +240,7 @@ export function resolveGlobalCronSpecsDir(): string {
  *   `${workspaceRoot}/.cline/cron/`
  */
 export function resolveWorkspaceCronSpecsDir(workspaceRoot: string): string {
-	return join(workspaceRoot, ".cline", "cron");
+	return join(workspaceRoot, AGENTARIO_CONFIG_DIR, "cron");
 }
 
 /**
@@ -292,12 +322,35 @@ export function resolveGlobalSettingsPath(): string {
 	return join(resolveClineDataDir(), "settings", "global-settings.json");
 }
 
+export function resolveLegacyMcpSettingsPath(): string {
+	return join(resolveClineDataDir(), "settings", CLINE_MCP_SETTINGS_FILE_NAME);
+}
+
 export function resolveMcpSettingsPath(): string {
-	const explicitPath = process.env.CLINE_MCP_SETTINGS_PATH?.trim();
+	const explicitPath =
+		process.env.AGENTARIO_MCP_SETTINGS_PATH?.trim() ||
+		process.env.CLINE_MCP_SETTINGS_PATH?.trim();
 	if (explicitPath) {
 		return explicitPath;
 	}
-	return join(resolveClineDataDir(), "settings", CLINE_MCP_SETTINGS_FILE_NAME);
+	return join(
+		resolveClineDataDir(),
+		"settings",
+		AGENTARIO_MCP_SETTINGS_FILE_NAME,
+	);
+}
+
+/** Prefer the new settings file; fall back to legacy `cline_mcp_settings.json`. */
+export function resolveEffectiveMcpSettingsPath(): string {
+	const primary = resolveMcpSettingsPath();
+	if (existsSync(primary)) {
+		return primary;
+	}
+	const legacy = resolveLegacyMcpSettingsPath();
+	if (existsSync(legacy)) {
+		return legacy;
+	}
+	return primary;
 }
 
 function dedupePaths(paths: ReadonlyArray<string>): string[] {
@@ -319,7 +372,9 @@ function getWorkspaceSkillDirectories(workspacePath?: string): string[] {
 	}
 	return [
 		DEPRECATED_CONFIG_DIR,
-		CLINE_CONFIG_DIR,
+		LEGACY_DEPRECATED_CONFIG_DIR,
+		AGENTARIO_CONFIG_DIR,
+		LEGACY_CLINE_CONFIG_DIR,
 		LEGACY_AGENT_SKILLS_CONFIG_DIR,
 	].map((dir) => join(workspacePath, dir, SKILLS_CONFIG_DIRECTORY_NAME));
 }
@@ -333,7 +388,14 @@ export function resolveAgentConfigSearchPaths(
 ): string[] {
 	return dedupePaths([
 		workspacePath
-			? join(workspacePath, CLINE_CONFIG_DIR, AGENT_CONFIG_DIRECTORY_NAME)
+			? join(workspacePath, AGENTARIO_CONFIG_DIR, AGENT_CONFIG_DIRECTORY_NAME)
+			: "",
+		workspacePath
+			? join(
+					workspacePath,
+					LEGACY_CLINE_CONFIG_DIR,
+					AGENT_CONFIG_DIRECTORY_NAME,
+				)
 			: "",
 		resolveAgentsConfigDirPath(),
 	]);
@@ -344,12 +406,19 @@ export function resolveHooksConfigSearchPaths(
 ): string[] {
 	const hooks = [
 		resolveDocumentsExtensionPath("Hooks"),
+		join(resolveLegacyDocumentsClineDirectoryPath(), "Hooks"),
 		join(resolveClineDir(), HOOKS_CONFIG_DIRECTORY_NAME),
 	];
 	if (workspacePath) {
 		hooks.push(
 			join(workspacePath, DEPRECATED_CONFIG_DIR, HOOKS_CONFIG_DIRECTORY_NAME),
-			join(workspacePath, CLINE_CONFIG_DIR, HOOKS_CONFIG_DIRECTORY_NAME),
+			join(
+				workspacePath,
+				LEGACY_DEPRECATED_CONFIG_DIR,
+				HOOKS_CONFIG_DIRECTORY_NAME,
+			),
+			join(workspacePath, AGENTARIO_CONFIG_DIR, HOOKS_CONFIG_DIRECTORY_NAME),
+			join(workspacePath, LEGACY_CLINE_CONFIG_DIR, HOOKS_CONFIG_DIRECTORY_NAME),
 		);
 	}
 	return dedupePaths(hooks);
@@ -379,7 +448,17 @@ export function resolveRulesConfigSearchPaths(
 	const wsPaths = workspacePath
 		? [
 				join(workspacePath, DEPRECATED_CONFIG_DIR),
-				join(workspacePath, CLINE_CONFIG_DIR, RULES_CONFIG_DIRECTORY_NAME),
+				join(workspacePath, LEGACY_DEPRECATED_CONFIG_DIR),
+				join(
+					workspacePath,
+					AGENTARIO_CONFIG_DIR,
+					RULES_CONFIG_DIRECTORY_NAME,
+				),
+				join(
+					workspacePath,
+					LEGACY_CLINE_CONFIG_DIR,
+					RULES_CONFIG_DIRECTORY_NAME,
+				),
 			]
 		: [];
 	const workspaceAgentsFile = workspacePath
@@ -391,6 +470,7 @@ export function resolveRulesConfigSearchPaths(
 		resolveGlobalAgentsRulesPath(),
 		join(resolveClineDir(), RULES_CONFIG_DIRECTORY_NAME),
 		resolveDocumentsExtensionPath("Rules"),
+		join(resolveLegacyDocumentsClineDirectoryPath(), "Rules"),
 	]);
 }
 
@@ -399,12 +479,27 @@ export function resolveWorkflowsConfigSearchPaths(
 ): string[] {
 	return dedupePaths([
 		workspacePath
-			? join(workspacePath, ".clinerules", WORKFLOWS_CONFIG_DIRECTORY_NAME)
+			? join(workspacePath, DEPRECATED_CONFIG_DIR, WORKFLOWS_CONFIG_DIRECTORY_NAME)
+			: "",
+		workspacePath
+			? join(
+					workspacePath,
+					LEGACY_DEPRECATED_CONFIG_DIR,
+					WORKFLOWS_CONFIG_DIRECTORY_NAME,
+				)
 			: "",
 		resolveDocumentsExtensionPath("Workflows"),
+		join(resolveLegacyDocumentsClineDirectoryPath(), "Workflows"),
 		join(resolveClineDir(), WORKFLOWS_CONFIG_DIRECTORY_NAME),
 		workspacePath
-			? join(workspacePath, ".cline", WORKFLOWS_CONFIG_DIRECTORY_NAME)
+			? join(workspacePath, AGENTARIO_CONFIG_DIR, WORKFLOWS_CONFIG_DIRECTORY_NAME)
+			: "",
+		workspacePath
+			? join(
+					workspacePath,
+					LEGACY_CLINE_CONFIG_DIR,
+					WORKFLOWS_CONFIG_DIRECTORY_NAME,
+				)
 			: "",
 	]);
 }
@@ -413,9 +508,15 @@ export function resolvePluginConfigSearchPaths(
 	workspacePath?: string,
 ): string[] {
 	return dedupePaths([
-		workspacePath ? join(workspacePath, ".cline", PLUGINS_DIRECTORY_NAME) : "",
+		workspacePath
+			? join(workspacePath, AGENTARIO_CONFIG_DIR, PLUGINS_DIRECTORY_NAME)
+			: "",
+		workspacePath
+			? join(workspacePath, LEGACY_CLINE_CONFIG_DIR, PLUGINS_DIRECTORY_NAME)
+			: "",
 		join(resolveClineDir(), PLUGINS_DIRECTORY_NAME),
 		resolveDocumentsExtensionPath("Plugins"),
+		join(resolveLegacyDocumentsClineDirectoryPath(), "Plugins"),
 	]);
 }
 

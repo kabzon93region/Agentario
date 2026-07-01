@@ -6,6 +6,7 @@ import { fileExistsAtPath, isDirectory } from "@utils/fs"
 import fs from "fs/promises"
 import os from "os"
 import * as path from "path"
+import { resolveClineDir } from "@cline/shared/storage"
 import { HostProvider } from "@/hosts/host-provider"
 import { Logger } from "@/shared/services/Logger"
 import { getDocumentsPath } from "./documents-path"
@@ -25,12 +26,18 @@ export const GlobalFileNames = {
 	groqModels: "groq_models.json",
 	basetenModels: "baseten_models.json",
 	hicapModels: "hicap_models.json",
-	mcpSettings: "cline_mcp_settings.json",
-	clineRules: ".clinerules",
-	workflows: ".clinerules/workflows",
-	hooksDir: ".clinerules/hooks",
-	clineruleSkillsDir: ".clinerules/skills",
-	clineSkillsDir: ".cline/skills",
+	mcpSettings: "agentario_mcp_settings.json",
+	legacyMcpSettings: "cline_mcp_settings.json",
+	agentarioRules: ".agentariorules",
+	workflows: ".agentariorules/workflows",
+	hooksDir: ".agentariorules/hooks",
+	agentarioRuleSkillsDir: ".agentariorules/skills",
+	legacyClineRules: ".clinerules",
+	legacyWorkflows: ".clinerules/workflows",
+	legacyHooksDir: ".clinerules/hooks",
+	legacyClineruleSkillsDir: ".clinerules/skills",
+	agentarioSkillsDir: ".agentario/skills",
+	legacyClineSkillsDir: ".cline/skills",
 	claudeSkillsDir: ".claude/skills",
 	agentsSkillsDir: ".agents/skills",
 	cursorRulesDir: ".cursor/rules",
@@ -42,16 +49,11 @@ export const GlobalFileNames = {
 }
 
 /**
- * Returns the cross-platform path to the Cline home directory (~/.cline).
- * This works on macOS, Linux, and Windows:
- * - macOS: /Users/username/.cline
- * - Linux: /home/username/.cline
- * - Windows: C:\Users\username\.cline
- *
- * This is intended to eventually replace ~/Documents/Cline as the global config location.
+ * Returns the cross-platform path to the Agentario home directory (~/.agentario).
+ * Falls back to ~/.cline when migrating from Cline.
  */
-function getClineHomePath(): string {
-	return path.join(os.homedir(), ".cline")
+function getAgentarioHomePath(): string {
+	return resolveClineDir()
 }
 
 export async function ensureTaskDirectoryExists(taskId: string): Promise<string> {
@@ -60,53 +62,53 @@ export async function ensureTaskDirectoryExists(taskId: string): Promise<string>
 
 export async function ensureRulesDirectoryExists(): Promise<string> {
 	const userDocumentsPath = await getDocumentsPath()
-	const clineRulesDir = path.join(userDocumentsPath, "Cline", "Rules")
+	const rulesDir = path.join(userDocumentsPath, "Agentario", "Rules")
 	try {
-		await fs.mkdir(clineRulesDir, { recursive: true })
+		await fs.mkdir(rulesDir, { recursive: true })
 	} catch (_error) {
-		return path.join(os.homedir(), "Documents", "Cline", "Rules") // in case creating a directory in documents fails for whatever reason (e.g. permissions) - this is fine because we will fail gracefully with a path that does not exist
+		return path.join(os.homedir(), "Documents", "Agentario", "Rules")
 	}
-	return clineRulesDir
+	return rulesDir
 }
 
 export async function ensureWorkflowsDirectoryExists(): Promise<string> {
 	const userDocumentsPath = await getDocumentsPath()
-	const clineWorkflowsDir = path.join(userDocumentsPath, "Cline", "Workflows")
+	const workflowsDir = path.join(userDocumentsPath, "Agentario", "Workflows")
 	try {
-		await fs.mkdir(clineWorkflowsDir, { recursive: true })
+		await fs.mkdir(workflowsDir, { recursive: true })
 	} catch (_error) {
-		return path.join(os.homedir(), "Documents", "Cline", "Workflows") // in case creating a directory in documents fails for whatever reason (e.g. permissions) - this is fine because we will fail gracefully with a path that does not exist
+		return path.join(os.homedir(), "Documents", "Agentario", "Workflows")
 	}
-	return clineWorkflowsDir
+	return workflowsDir
 }
 
 export async function ensureMcpServersDirectoryExists(): Promise<string> {
 	const userDocumentsPath = await getDocumentsPath()
-	const mcpServersDir = path.join(userDocumentsPath, "Cline", "MCP")
+	const mcpServersDir = path.join(userDocumentsPath, "Agentario", "MCP")
 	try {
 		await fs.mkdir(mcpServersDir, { recursive: true })
 	} catch (_error) {
-		return path.join(os.homedir(), "Documents", "Cline", "MCP") // in case creating a directory in documents fails for whatever reason (e.g. permissions) - this is fine since this path is only ever used in the system prompt
+		return path.join(os.homedir(), "Documents", "Agentario", "MCP")
 	}
 	return mcpServersDir
 }
 
 export async function ensureHooksDirectoryExists(): Promise<string> {
 	const userDocumentsPath = await getDocumentsPath()
-	const clineHooksDir = path.join(userDocumentsPath, "Cline", "Hooks")
+	const hooksDir = path.join(userDocumentsPath, "Agentario", "Hooks")
 	try {
-		await fs.mkdir(clineHooksDir, { recursive: true })
+		await fs.mkdir(hooksDir, { recursive: true })
 	} catch (_error) {
-		return path.join(os.homedir(), "Documents", "Cline", "Hooks") // in case creating a directory in documents fails for whatever reason (e.g. permissions) - this is fine because we will fail gracefully with a path that does not exist
+		return path.join(os.homedir(), "Documents", "Agentario", "Hooks")
 	}
-	return clineHooksDir
+	return hooksDir
 }
 
 /**
  * Returns the global skills directory path (~/.cline/skills) without creating it.
  */
-function getClineSkillsDirectoryPath(): string {
-	return path.join(getClineHomePath(), "skills")
+function getAgentarioSkillsDirectoryPath(): string {
+	return path.join(getAgentarioHomePath(), "skills")
 }
 
 function getAgentSkillsDirectoryPath(): string {
@@ -296,7 +298,7 @@ export function setRuntimeHooksDir(dir: string | undefined): void {
  * Gets the paths to all hooks directories to search for hooks, including:
  * 1. The runtime hooks directory (if set via --hooks-dir CLI flag)
  * 2. The global hooks directory (if it exists)
- * 3. Each workspace root's .clinerules/hooks directory (if they exist)
+ * 3. Each workspace root's .agentariorules/hooks directory (or legacy .clinerules/hooks)
  *
  * Note: Hooks from different directories may be executed concurrently.
  * No execution order is guaranteed between hooks from different directories.
@@ -325,9 +327,7 @@ export async function getAllHooksDirs(): Promise<string[]> {
 }
 
 /**
- * Gets the paths to the workspace's .clinerules/hooks directories to search for
- * hooks. A workspace may not use hooks, and the resulting array will be empty. A
- * multi-root workspace may have multiple hooks directories.
+ * Gets the paths to the workspace hooks directories (.agentariorules/hooks, legacy .clinerules/hooks).
  */
 export async function getWorkspaceHooksDirs(): Promise<string[]> {
 	const workspaceRootPaths =
@@ -335,13 +335,19 @@ export async function getWorkspaceHooksDirs(): Promise<string[]> {
 			.getGlobalStateKey("workspaceRoots")
 			?.map((root) => root.path) || []
 
+	const hookDirNames = [
+		GlobalFileNames.hooksDir,
+		GlobalFileNames.legacyHooksDir,
+	]
+
 	return (
 		await Promise.all(
-			workspaceRootPaths.map(async (workspaceRootPath) => {
-				// Look for a .clinerules/hooks folder in this workspace root.
-				const candidate = path.join(workspaceRootPath, GlobalFileNames.hooksDir)
-				return (await isDirectory(candidate)) ? candidate : undefined
-			}),
+			workspaceRootPaths.flatMap((workspaceRootPath) =>
+				hookDirNames.map(async (hooksDir) => {
+					const candidate = path.join(workspaceRootPath, hooksDir)
+					return (await isDirectory(candidate)) ? candidate : undefined
+				}),
+			),
 		)
-	).filter((path): path is string => Boolean(path))
+	).filter((hookPath): hookPath is string => Boolean(hookPath))
 }

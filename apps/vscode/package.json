@@ -2,7 +2,7 @@
 	"name": "claude-dev",
 	"displayName": "Agentario",
 	"description": "Autonomous coding agent right in your IDE, capable of creating/editing files, running commands, using the browser, and more with your permission every step of the way.",
-	"version": "0.0.5",
+	"version": "0.4.8",
 	"icon": "assets/icons/icon.png",
 	"engines": {
 		"vscode": "^1.84.0"
@@ -138,6 +138,11 @@
 				"icon": "$(server)"
 			},
 			{
+				"command": "cline.indexingButtonClicked",
+				"title": "Code Index",
+				"icon": "$(database)"
+			},
+			{
 				"command": "cline.marketplaceButtonClicked",
 				"title": "Customize",
 				"icon": "$(wrench)"
@@ -266,12 +271,17 @@
 				},
 				{
 					"command": "cline.marketplaceButtonClicked",
+					"group": "navigation@3",
+					"when": "view == claude-dev.SidebarProvider"
+				},
+				{
+					"command": "cline.indexingButtonClicked",
 					"group": "navigation@2",
 					"when": "view == claude-dev.SidebarProvider"
 				},
 				{
 					"command": "cline.historyButtonClicked",
-					"group": "navigation@3",
+					"group": "navigation@4",
 					"when": "view == claude-dev.SidebarProvider"
 				},
 				{

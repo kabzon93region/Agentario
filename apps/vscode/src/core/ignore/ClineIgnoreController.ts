@@ -3,6 +3,7 @@ import chokidar, { FSWatcher } from "chokidar"
 import fs from "fs/promises"
 import ignore, { Ignore } from "ignore"
 import path from "path"
+import { AGENTARIO_IGNORE_FILE_NAME, LEGACY_CLINE_IGNORE_FILE_NAME } from "@cline/shared/storage"
 import { Logger } from "@/shared/services/Logger"
 
 export const LOCK_TEXT_SYMBOL = "\u{1F512}"
@@ -10,7 +11,7 @@ export const LOCK_TEXT_SYMBOL = "\u{1F512}"
 /**
  * Controls LLM access to files by enforcing ignore patterns.
  * Designed to be instantiated once in Cline.ts and passed to file manipulation services.
- * Uses the 'ignore' library to support standard .gitignore syntax in .clineignore files.
+ * Uses the 'ignore' library to support standard .gitignore syntax in `.agentarioignore` (or legacy `.clineignore`).
  */
 export class ClineIgnoreController {
 	private cwd: string
@@ -37,10 +38,30 @@ export class ClineIgnoreController {
 	/**
 	 * Set up the file watcher for .clineignore changes
 	 */
-	private setupFileWatcher(): void {
-		const ignorePath = path.join(this.cwd, ".clineignore")
+	private resolveIgnoreFilePath(): string {
+		const agentarioPath = path.join(this.cwd, AGENTARIO_IGNORE_FILE_NAME)
+		return agentarioPath
+	}
 
-		this.fileWatcher = chokidar.watch(ignorePath, {
+	private async resolveActiveIgnoreFilePath(): Promise<string | undefined> {
+		const agentarioPath = path.join(this.cwd, AGENTARIO_IGNORE_FILE_NAME)
+		if (await fileExistsAtPath(agentarioPath)) {
+			return agentarioPath
+		}
+		const legacyPath = path.join(this.cwd, LEGACY_CLINE_IGNORE_FILE_NAME)
+		if (await fileExistsAtPath(legacyPath)) {
+			return legacyPath
+		}
+		return undefined
+	}
+
+	private setupFileWatcher(): void {
+		const ignorePaths = [
+			path.join(this.cwd, AGENTARIO_IGNORE_FILE_NAME),
+			path.join(this.cwd, LEGACY_CLINE_IGNORE_FILE_NAME),
+		]
+
+		this.fileWatcher = chokidar.watch(ignorePaths, {
 			persistent: true, // Keep the process running as long as files are being watched
 			ignoreInitial: true, // Don't fire 'add' events when discovering the file initially
 			awaitWriteFinish: {
@@ -65,30 +86,28 @@ export class ClineIgnoreController {
 		})
 
 		this.fileWatcher.on("error", (error) => {
-			Logger.error("Error watching .clineignore file:", error)
+			Logger.error("Error watching ignore file:", error)
 		})
 	}
 
 	/**
-	 * Load custom patterns from .clineignore if it exists.
+	 * Load custom patterns from `.agentarioignore` or legacy `.clineignore`.
 	 * Supports "!include <filename>" to load additional ignore patterns from other files.
 	 */
 	private async loadClineIgnore(): Promise<void> {
 		try {
-			// Reset ignore instance to prevent duplicate patterns
 			this.ignoreInstance = ignore()
-			const ignorePath = path.join(this.cwd, ".clineignore")
-			if (await fileExistsAtPath(ignorePath)) {
+			const ignorePath = await this.resolveActiveIgnoreFilePath()
+			if (ignorePath) {
 				const content = await fs.readFile(ignorePath, "utf8")
 				this.clineIgnoreContent = content
 				await this.processIgnoreContent(content)
-				this.ignoreInstance.add(".clineignore")
+				this.ignoreInstance.add(path.basename(ignorePath))
 			} else {
 				this.clineIgnoreContent = undefined
 			}
 		} catch (error) {
-			// Should never happen: reading file failed even though it exists
-			Logger.error("Unexpected error loading .clineignore:", error)
+			Logger.error("Unexpected error loading ignore file:", error)
 		}
 	}
 

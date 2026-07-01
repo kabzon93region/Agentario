@@ -15,7 +15,8 @@ import OpenDiskConversationHistoryButton from "./buttons/OpenDiskConversationHis
 import ContextWindow from "./ContextWindow"
 import { highlightText } from "./Highlights"
 
-const IS_DEV = process.env.IS_DEV === "true"
+const BUTTON_CLASS = "max-h-3 border-0 font-bold bg-transparent hover:opacity-100 text-foreground"
+
 interface TaskHeaderProps {
 	task: ClineMessage
 	tokensIn: number
@@ -28,8 +29,6 @@ interface TaskHeaderProps {
 	onClose: () => void
 	onSendMessage?: (command: string, files: string[], images: string[]) => void
 }
-
-const BUTTON_CLASS = "max-h-3 border-0 font-bold bg-transparent hover:opacity-100 text-foreground"
 
 const TaskHeader: React.FC<TaskHeaderProps> = ({
 	task,
@@ -146,10 +145,6 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 									taskId={currentTaskItem?.id}
 									taskSize={currentTaskItem?.size}
 								/>
-								{/* Only visible in development mode */}
-								{IS_DEV && (
-									<OpenDiskConversationHistoryButton className={BUTTON_CLASS} taskId={currentTaskItem?.id} />
-								)}
 							</div>
 						)}
 					</div>
@@ -160,7 +155,10 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							</div>
 						)}
 					</div>
-					<div className="inline-flex items-center justify-end select-none shrink-0">
+					<div className="inline-flex items-center justify-end select-none shrink-0 gap-1">
+						{currentTaskItem?.id && (
+							<OpenDiskConversationHistoryButton className={BUTTON_CLASS} taskId={currentTaskItem.id} />
+						)}
 						{isCostAvailable && (
 							<div
 								className="mx-1 px-1 py-0.25 rounded-full inline-flex shrink-0 text-badge-background bg-badge-foreground/80 items-center"

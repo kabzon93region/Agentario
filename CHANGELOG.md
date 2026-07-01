@@ -2,6 +2,152 @@
 
 Схема версий: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
 
+## [Unreleased]
+
+### Added
+
+- Документация индексации LM Studio: domain type Embedding, контекст/память, headless ([config/lmstudio-indexing.md](config/lmstudio-indexing.md)).
+- Скрипт [`scripts/lmstudio-headless-server.cmd`](scripts/lmstudio-headless-server.cmd) — LM Studio без GUI (режимы `restore` / `load`).
+- Скрипт [`publish-release.cmd`](publish-release.cmd) и [config/RELEASE.md](config/RELEASE.md) — автопубликация на GitHub + Release с VSIX.
+- Шаблон release notes: `release/notes/TEMPLATE.md`.
+
+---
+
+## [0.4.3] — 2026-06-30
+
+### Added
+
+- Индексация: выбор **embedding-модели** LM Studio (ручной ввод имени) в экране «Индексация кода».
+
+### Changed
+
+- Список проиндексированных файлов — компактные однострочные плашки.
+
+---
+
+## [0.4.2] — 2026-06-30
+
+### Changed
+
+- Global rules / system prompt: **краткие сообщения в чате**, reasoning только в Thinking, без пересказа файлов.
+- Таймаут `run_commands` и `search_codebase`: по умолчанию **120 с** для LM Studio/Ollama; настраивается через **Request Timeout (ms)** в API settings.
+
+---
+
+## [0.4.1] — 2026-06-30
+
+### Fixed
+
+- Критический баг 0.4.0: отсутствовал импорт `StateManager` в `cline-session-factory.ts` — запрос к модели не отправлялся (`ReferenceError: StateManager is not defined`).
+- UI: после ошибки старта задачи или отмены без активной сессии больше не зависает «Thinking...» (сброс `turnState`, финализация незавершённых API-строк при cancel).
+
+---
+
+## [0.4.0] — 2026-06-30
+
+### Added
+
+- Встроенный системный промпт Agentario + авто-установка global rules в `Documents/Agentario/Rules` при первом запуске.
+- Документация: [config/PROMPTS_AND_RULES.md](config/PROMPTS_AND_RULES.md).
+- Русская локализация: Customize (Rules/Hooks/Skills), MCP, Debug, onboarding LM Studio (подсказка Tool Use).
+
+### Changed
+
+- Усилены инструкции по **обязательному использованию tools** в system prompt и global rules.
+- Plan mode: русские инструкции при языке «Русский».
+- LM Studio / Ollama: capability `tools` в каталоге провайдеров.
+
+---
+
+## [0.3.0] — 2026-06-30
+
+### Added
+
+- **Автономный режим (standalone):** bundled `endpoints.json` — Agentario не требует аккаунт Cline, OAuth WorkOS и `api.cline.bot`.
+- Onboarding для LM Studio / Ollama без экрана входа в Cline.
+- Шаблон `config/agentario-endpoints.json` для пользовательского `~/.agentario/endpoints.json`.
+
+### Changed
+
+- Провайдер по умолчанию: **LM Studio** (`http://127.0.0.1:1234`), телеметрия по умолчанию **выключена**.
+- В standalone скрыты провайдеры `cline` / `cline-pass`, кнопка Account, восстановление Cline OAuth и remote config.
+- MCP из `config/agentario-recommended-mcp.json` — локальный stdio (memory, sequential-thinking, playwright); облачные серверы отключены.
+
+---
+
+## [0.2.3] — 2026-06-30
+
+### Fixed
+
+- Нормализация tool-call `editor`: строки `"null"` / `"undefined"` для `insert_line` и `old_text` приводятся к отсутствию поля; числовые строки (`"3"`) — к числу. Устраняет отказ валидации у локальных моделей LM Studio.
+
+### Changed
+
+- В `config/agentario-global-rules.md` добавлен пункт про корректный вызов `editor`.
+
+---
+
+## [0.2.2] — 2026-06-30
+
+### Fixed
+
+- Скорость `tok/s` в чате: считается по фазе **генерации** (как `eval time` в LM Studio), а не по полному времени с обработкой промпта. В stats добавлено `gen: …s` (время генерации) отдельно от `time: …s` (полное).
+
+---
+
+## [0.2.1] — 2026-06-30
+
+### Fixed
+
+- Кнопка «Экспорт чата в Markdown» всегда видна в шапке задачи (раньше только в dev-сборке и только при развёрнутой шапке).
+- Подсказки экспорта в истории задач на русском.
+
+---
+
+## [0.2.0] — 2026-06-30
+
+### Added
+
+- Экспорт чата в Markdown (диалог сохранения, `Documents/Agentario/Exports`).
+- Заголовки сообщений: роль (User / Agentario / Thinking) и дата/время.
+- Подвал статистики сообщения: tokens in/out/total, время ответа, tok/s (копируемый текст).
+- Шаблон системного промпта для LM Studio: `config/lmstudio-system-prompt.md`.
+
+### Changed
+
+- Индексация: большие файлы индексируются **частично** (статус `partial`), без жёсткого пропуска >512 KB; чтение до 2 MB, до 12 чанков на файл.
+- LM Studio: завершение API-запроса определяется по `tokensIn`, не только по `cost`.
+
+### Docs
+
+- Правила разработки: `.cursor/rules/DEVELOPMENT_RULES.mdc`, универсальный шаблон `config/templates/DEVELOPMENT_RULES.universal.mdc`.
+
+---
+
+## [0.1.0] — 2026-06-29
+
+### Added
+
+- Полноценная локальная codebase-индексация с embedding-моделью LM Studio `text-embedding-qwen3-embedding-0.6b`.
+- Новый UI `Code Index` в сайдбаре: список файлов с прокруткой и кнопками `Очистить`, `Пересоздать`, `Обновить новые`.
+- Локальное хранение embedding-индекса в `%USERPROFILE%\.agentario\data\indexes`.
+
+---
+
+## [0.0.6] — 2026-06-29
+
+### Changed
+
+- Пути Agentario: `~/.agentario`, `Documents/Agentario`, `.agentariorules`, `.agentarioignore` (legacy `.cline*` сохранены для чтения).
+- MCP settings: `agentario_mcp_settings.json`.
+
+### Fixed
+
+- MCP stdio на Windows: `spawn npx ENOENT` — `setup-mcp.cmd` находит `npx.cmd` и прописывает полный путь + PATH для VS Code.
+- Документация: Node.js обязателен для локальных MCP; context7/github работают без npx (HTTP / отключены).
+
+---
+
 ## [0.0.5] — 2026-06-29
 
 Первый нумерованный релиз форка **Agentario** (база: Cline 4.x). Версия расширения VS Code: **0.0.5**.

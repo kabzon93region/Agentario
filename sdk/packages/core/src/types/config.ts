@@ -222,4 +222,8 @@ export interface CoreSessionConfig
 	 */
 	skills?: string[];
 	workspaceMetadata?: string;
+	/** Timeout for run_commands (ms). Host may override SDK default (30s). */
+	bashTimeoutMs?: number;
+	/** Timeout for search_codebase (ms). Host may override SDK default (30s). */
+	searchTimeoutMs?: number;
 }

@@ -13,7 +13,11 @@ import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import type { BasicLogger } from "@cline/shared";
-import { resolveMcpSettingsPath } from "@cline/shared/storage";
+import {
+	resolveEffectiveMcpSettingsPath,
+	resolveLegacyMcpSettingsPath,
+	resolveMcpSettingsPath,
+} from "@cline/shared/storage";
 import { z } from "zod";
 import type {
 	McpManager,
@@ -229,7 +233,22 @@ export class McpSettingsMutatorPurityError extends Error {
 }
 
 export function resolveDefaultMcpSettingsPath(): string {
-	return resolveMcpSettingsPath();
+	return resolveEffectiveMcpSettingsPath();
+}
+
+function resolveWritableMcpSettingsPath(optionsFilePath?: string): string {
+	if (optionsFilePath?.trim()) {
+		return optionsFilePath.trim();
+	}
+	const primary = resolveMcpSettingsPath();
+	if (existsSync(primary)) {
+		return primary;
+	}
+	const legacy = resolveLegacyMcpSettingsPath();
+	if (existsSync(legacy)) {
+		return legacy;
+	}
+	return primary;
 }
 
 /**
@@ -583,7 +602,7 @@ function setOwnServerRecord(
 export function loadMcpSettingsFile(
 	options: LoadMcpSettingsOptions = {},
 ): McpSettingsFile {
-	const filePath = options.filePath ?? resolveDefaultMcpSettingsPath();
+	const filePath = resolveWritableMcpSettingsPath(options.filePath);
 	const raw = readFileSync(filePath, "utf8");
 	let parsed: unknown;
 	try {
@@ -643,7 +662,7 @@ function validateOauthState(value: unknown): McpServerOAuthState | undefined {
 export function hasMcpSettingsFile(
 	options: LoadMcpSettingsOptions = {},
 ): boolean {
-	const filePath = options.filePath ?? resolveDefaultMcpSettingsPath();
+	const filePath = resolveWritableMcpSettingsPath(options.filePath);
 	return existsSync(filePath);
 }
 
@@ -663,7 +682,7 @@ export function resolveMcpServerRegistrations(
 export function setMcpServerDisabled(
 	options: SetMcpServerDisabledOptions,
 ): void {
-	const filePath = options.filePath ?? resolveDefaultMcpSettingsPath();
+	const filePath = resolveWritableMcpSettingsPath(options.filePath);
 	const name = options.name.trim();
 	if (!name) {
 		throw new Error("MCP server settings toggle requires a server name.");
@@ -741,7 +760,7 @@ export function updateMcpServerOAuthState(
 	updater: (current: McpServerOAuthState) => McpServerOAuthState,
 	options: LoadMcpSettingsOptions = {},
 ): McpServerOAuthState {
-	const filePath = options.filePath ?? resolveDefaultMcpSettingsPath();
+	const filePath = resolveWritableMcpSettingsPath(options.filePath);
 	return updateMcpSettingsFileSync(filePath, buildOAuthStateMutator(serverName, updater));
 }
 
@@ -755,7 +774,7 @@ export async function updateMcpServerOAuthStateAsync(
 	updater: (current: McpServerOAuthState) => McpServerOAuthState,
 	options: LoadMcpSettingsOptions = {},
 ): Promise<McpServerOAuthState> {
-	const filePath = options.filePath ?? resolveDefaultMcpSettingsPath();
+	const filePath = resolveWritableMcpSettingsPath(options.filePath);
 	return updateMcpSettingsFile(filePath, buildOAuthStateMutator(serverName, updater));
 }
 

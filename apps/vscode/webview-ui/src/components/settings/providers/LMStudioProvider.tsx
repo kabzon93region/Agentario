@@ -33,7 +33,7 @@ interface LMStudioApiModel {
 	loaded_context_length?: number
 }
 
-export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
+export const LMStudioProvider = ({ currentMode, showModelOptions }: LMStudioProviderProps) => {
 	const { apiConfiguration } = useExtensionState()
 	const { handleFieldChange } = useApiConfigurationHandlers()
 	const { config, write, commitSelection } = useProviderConfig("lmstudio")
@@ -208,6 +208,24 @@ export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
 				value={String(currentLoadedContext ?? lmStudioMaxTokens ?? "0")}
 			/>
 
+			{showModelOptions && (
+				<>
+					<DebouncedTextField
+						initialValue={apiConfiguration?.requestTimeoutMs ? apiConfiguration.requestTimeoutMs.toString() : "600000"}
+						onChange={(value) => {
+							const numValue = Number.parseInt(value, 10)
+							if (!Number.isNaN(numValue) && numValue > 0) {
+								handleFieldChange("requestTimeoutMs", numValue)
+							}
+						}}
+						placeholder={t("providers.lmstudio.timeoutPlaceholder")}
+						style={{ width: "100%" }}>
+						<span className="font-semibold">{t("providers.lmstudio.requestTimeout")}</span>
+					</DebouncedTextField>
+					<p className="text-xs mt-0 text-description">{t("providers.lmstudio.timeoutHint")}</p>
+				</>
+			)}
+
 			<UseCustomPromptCheckbox providerId="lmstudio" />
 
 			<div className="text-xs text-description">
@@ -220,6 +238,7 @@ export const LMStudioProvider = ({ currentMode }: LMStudioProviderProps) => {
 					{t("providers.lmstudio.localServer")}
 				</VSCodeLink>{" "}
 				{t("providers.lmstudio.introAfter")}
+				<p className="mt-2 font-medium">{t("providers.lmstudio.toolUseHint")}</p>
 			</div>
 		</div>
 	)

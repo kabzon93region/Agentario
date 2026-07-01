@@ -22,6 +22,7 @@ import {
 import type { AgentTool } from "@cline/shared"
 import { StateManager } from "@/core/storage/StateManager"
 import type { ITerminalManager } from "@/integrations/terminal/types"
+import { resolveAgentToolTimeoutMs } from "@/shared/agent-tool-timeout"
 import { Logger } from "@/shared/services/Logger"
 import { getShellForProfile } from "@/utils/shell"
 
@@ -118,8 +119,14 @@ async function executeForeground(
  * (child_process.spawn) execution.
  */
 export function createVscodeRunCommandsTool(options: VscodeRunCommandsToolOptions): AgentTool {
+	const apiConfig = StateManager.get().getApiConfiguration()
+	const mode = StateManager.get().getGlobalSettingsKey("mode") === "plan" ? "plan" : "act"
+	const providerId = mode === "plan" ? apiConfig.planModeApiProvider : apiConfig.actModeApiProvider
+	const bashTimeoutMs = resolveAgentToolTimeoutMs(providerId, apiConfig)
+
 	return createShellTool(createVscodeShellExecutor(options), {
 		cwd: options.cwd,
+		bashTimeoutMs,
 	})
 }
 

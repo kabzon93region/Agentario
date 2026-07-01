@@ -223,6 +223,7 @@ export {
 	truncateStr,
 } from "./parse/string";
 export { formatHumanReadableDate, formatUptime } from "./parse/time";
+export { normalizeEditorToolInput, normalizeToolInput } from "./parse/tool-input-normalize";
 export { validateWithZod, zodToJsonSchema } from "./parse/zod";
 export type { ClineSystemPromptOptions } from "./prompt/cline";
 export { buildClineSystemPrompt } from "./prompt/cline";

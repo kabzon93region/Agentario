@@ -101,6 +101,31 @@ function normalizeUsageEvent(usageEvent: {
 	}
 }
 
+function buildApiReqInfoFromUsage(
+	usageEvent: NormalizedUsage,
+	state: MessageTranslatorState,
+): ClineApiReqInfo {
+	const durationMs = state.getIterationDurationMs()
+	const generationDurationMs = state.getGenerationDurationMs()
+	const tokensOut = usageEvent.tokensOut ?? 0
+	const speedDurationMs = generationDurationMs ?? durationMs
+	const tokensPerSecond =
+		speedDurationMs != null && speedDurationMs > 0 && tokensOut > 0
+			? Math.round((tokensOut / speedDurationMs) * 1000 * 10) / 10
+			: undefined
+
+	return {
+		tokensIn: usageEvent.tokensIn,
+		tokensOut: usageEvent.tokensOut,
+		cacheWrites: usageEvent.cacheWrites,
+		cacheReads: usageEvent.cacheReads,
+		cost: usageEvent.totalCost,
+		durationMs,
+		generationDurationMs,
+		tokensPerSecond,
+	}
+}
+
 // ---------------------------------------------------------------------------
 // State tracking for partial messages
 // ---------------------------------------------------------------------------
@@ -126,6 +151,10 @@ export class MessageTranslatorState {
 	private approvedToolMessageTsByCallId = new Map<string, number>()
 	/** Tool calls rejected by the user; they should not render as red tool failures. */
 	private deniedToolApprovalsByCallId = new Map<string, { toolName: string; reason: string }>()
+	/** Wall-clock start of the current API iteration (for duration stats). */
+	private iterationStartedAtMs: number | undefined
+	/** Wall-clock start of the first streamed model output (generation / eval phase). */
+	private generationStartedAtMs: number | undefined
 	/**
 	 * Process-wide id/seq/epoch authority. Shared with the interaction coordinator and history
 	 * rendering so that message ids never collide across generators. See message-id-minter.ts.
@@ -152,6 +181,33 @@ export class MessageTranslatorState {
 	/** Generate a unique message id (identity). Pure monotonic counter; never reads the clock. */
 	nextTs(): number {
 		return this.minter.nextId()
+	}
+
+	markIterationStart(): void {
+		this.iterationStartedAtMs = Date.now()
+		this.generationStartedAtMs = undefined
+	}
+
+	markGenerationStartIfNeeded(): void {
+		if (this.generationStartedAtMs == null) {
+			this.generationStartedAtMs = Date.now()
+		}
+	}
+
+	getIterationDurationMs(nowMs: number = Date.now()): number | undefined {
+		if (this.iterationStartedAtMs == null) {
+			return undefined
+		}
+		const durationMs = nowMs - this.iterationStartedAtMs
+		return durationMs > 0 ? durationMs : undefined
+	}
+
+	getGenerationDurationMs(nowMs: number = Date.now()): number | undefined {
+		if (this.generationStartedAtMs == null) {
+			return undefined
+		}
+		const durationMs = nowMs - this.generationStartedAtMs
+		return durationMs > 0 ? durationMs : undefined
 	}
 
 	/** Get and increment for streaming text */
@@ -900,6 +956,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 		case "content_start": {
 			switch (event.contentType) {
 				case "text": {
+					state.markGenerationStartIfNeeded()
 					// The SDK emits MULTIPLE content_start events for streaming text.
 					// Each has `text` (the delta) and `accumulated` (full text so far).
 					// We use `accumulated` so the webview can update the message in-place
@@ -917,6 +974,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 					break
 				}
 				case "reasoning": {
+					state.markGenerationStartIfNeeded()
 					// SDK reasoning content_start events are deltas. The webview renders
 					// reasoning from `text`, so keep `text` and `reasoning` populated with
 					// the accumulated content for smooth in-place streaming.
@@ -933,6 +991,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 					break
 				}
 				case "tool": {
+					state.markGenerationStartIfNeeded()
 					const toolName = event.toolName ?? "unknown"
 					const input = event.input
 
@@ -1349,6 +1408,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 		case "iteration_start": {
 			// New iteration — reset streaming state for the new turn
 			state.reset()
+			state.markIterationStart()
 
 			// Emit an api_req_started message before each API request so the
 			// webview shows its request spinner and cost display.
@@ -1386,13 +1446,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 			// api_req_started message's ClineApiReqInfo, so emit a follow-up
 			// api_req_started update carrying the usage data for cost display.
 			const usageEvent = normalizeUsageEvent(event)
-			const apiReqInfo: ClineApiReqInfo = {
-				tokensIn: usageEvent.tokensIn,
-				tokensOut: usageEvent.tokensOut,
-				cacheWrites: usageEvent.cacheWrites,
-				cacheReads: usageEvent.cacheReads,
-				cost: usageEvent.totalCost,
-			}
+			const apiReqInfo = buildApiReqInfoFromUsage(usageEvent, state)
 			messages.push({
 				ts: state.nextTs(),
 				type: "say",
@@ -1708,13 +1762,7 @@ function appendPersistedMetricsMessage(
 		ts: state.nextTs(),
 		type: "say",
 		say: "api_req_started",
-		text: JSON.stringify({
-			tokensIn: usage.tokensIn,
-			tokensOut: usage.tokensOut,
-			cacheWrites: usage.cacheWrites,
-			cacheReads: usage.cacheReads,
-			cost: usage.totalCost,
-		} satisfies ClineApiReqInfo),
+		text: JSON.stringify(buildApiReqInfoFromUsage(usage, state)),
 		partial: false,
 	})
 }

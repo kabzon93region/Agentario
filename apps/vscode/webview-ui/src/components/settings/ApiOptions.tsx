@@ -7,6 +7,7 @@ import { useInterval } from "react-use"
 import styled from "styled-components"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { AGENTARIO_CLOUD_PROVIDER_IDS, isStandaloneEnvironment } from "@/constants/standalone"
 import { PLATFORM_CONFIG, PlatformType } from "@/config/platform.config"
 import { CLINE_PASS_FEATURE_FLAG } from "@/constants/featureFlags"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -96,11 +97,13 @@ const ApiOptions = ({
 	initialModelTab,
 }: ApiOptionsProps) => {
 	// Use full context state for immediate save payload
-	const { apiConfiguration, remoteConfigSettings } = useExtensionState()
+	const { apiConfiguration, remoteConfigSettings, environment } = useExtensionState()
+	const isStandalone = isStandaloneEnvironment(environment)
 	const isClinePassEnabled = useHasFeatureFlag(CLINE_PASS_FEATURE_FLAG)
 
 	const selectedProviderRaw =
-		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) || "anthropic"
+		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) ||
+		(isStandalone ? "lmstudio" : "anthropic")
 	// Fall back from cline-pass to cline when the feature flag is off.
 	const selectedProvider = selectedProviderRaw === "cline-pass" && !isClinePassEnabled ? "cline" : selectedProviderRaw
 	const { providers: catalogProviderListings } = useProviderListings()
@@ -167,6 +170,9 @@ const ApiOptions = ({
 		if (!isClinePassEnabled) {
 			providers = providers.filter((option) => option.value !== "cline-pass")
 		}
+		if (isStandalone) {
+			providers = providers.filter((option) => !AGENTARIO_CLOUD_PROVIDER_IDS.has(option.value))
+		}
 		// Filter by platform
 		if (PLATFORM_CONFIG.type !== PlatformType.VSCODE) {
 			// Don't include VS Code LM API for non-VSCode platforms
@@ -180,7 +186,7 @@ const ApiOptions = ({
 		}
 
 		return providers
-	}, [catalogProviderListings, isClinePassEnabled, remoteConfigSettings])
+	}, [catalogProviderListings, isClinePassEnabled, remoteConfigSettings, isStandalone])
 
 	const currentProviderLabel = useMemo(() => {
 		return providerOptions.find((option) => option.value === selectedProvider)?.label || selectedProvider

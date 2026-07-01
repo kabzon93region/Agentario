@@ -12,6 +12,7 @@ import {
 	type AiSdkFormatterPart,
 	captureSdkError,
 	formatMessagesForAiSdk,
+	normalizeToolInput,
 	sanitizeSurrogates,
 } from "@cline/shared";
 import { jsonSchema, streamText } from "ai";
@@ -382,9 +383,10 @@ function toAiSdkTools(
 					normalizeAiSdkToolInputSchema(definition.inputSchema),
 					{
 						validate: async (value) => {
+							const normalizedValue = normalizeToolInput(definition.name, value);
 							const result = await z
 								.fromJSONSchema(definition.inputSchema)
-								.safeParseAsync(value);
+								.safeParseAsync(normalizedValue);
 							return result.success
 								? { success: true, value: result.data }
 								: { success: false, error: result.error };

@@ -5,11 +5,11 @@
 <h1 align="center">Agentario</h1>
 
 <p align="center">
-Autonomous coding agent for VS Code — fork of <a href="https://github.com/cline/cline">Cline</a>, powered by local and cloud LLMs (Ollama, LM Studio, and more).
+Autonomous coding agent for VS Code — **автономный продукт** для локальных LLM (LM Studio, Ollama). Без аккаунта Cline и без обязательного интернета.
 </p>
 
 <p align="center">
-<strong>Версия расширения: 0.0.5</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+<strong>Версия расширения: 0.4.0</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
 </p>
 
 <div align="center">
@@ -29,18 +29,32 @@ Autonomous coding agent for VS Code — fork of <a href="https://github.com/clin
 
 ## Быстрый старт (VS Code)
 
-1. Соберите или скачайте VSIX: `release/agentario-0.0.5.vsix` (сборка: `build.cmd` на Windows).
+1. Соберите или скачайте VSIX: `release/agentario-0.4.0.vsix` (сборка: `build.cmd` на Windows).
 2. VS Code → Extensions → `...` → **Install from VSIX**.
 3. Провайдер **LM Studio** или **Ollama** — см. [настройку LM Studio](#lm-studio-локальная-модель) ниже.
 4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright.
 
+### Автономный режим (без Cline cloud)
+
+Agentario поставляется с `endpoints.json` в VSIX → режим **selfHosted**:
+
+- **Не нужен** аккаунт Cline, OAuth и интернет для работы чата (достаточно LM Studio / Ollama).
+- Облачные провайдеры Cline (`cline`, `cline-pass`) скрыты; телеметрия и remote config отключены.
+- MCP — локальные процессы через `npx` (первый запуск может потребовать npm; для offline см. `setup-mcp.cmd` с кэшем пакетов).
+- Свой `~/.agentario/endpoints.json` — см. `config/agentario-endpoints.json`.
+- **Системный промпт и Rules:** см. [config/PROMPTS_AND_RULES.md](config/PROMPTS_AND_RULES.md).
+
 ### Сборка (Windows)
+
+### Сборка и релиз (Windows)
 
 ```bat
 build.cmd
+publish-release.cmd
 ```
 
-Исходники могут лежать на сетевом диске (`Z:\` / UNC); сборка выполняется через локальную копию на `C:` (см. `scripts/build-windows.ps1`).
+- **`build.cmd`** → `release/agentario-<version>.vsix`
+- **`publish-release.cmd`** → GitHub: commit, tag, Release + VSIX ([config/RELEASE.md](config/RELEASE.md))
 
 ### LM Studio (локальная модель)
 
@@ -51,13 +65,51 @@ build.cmd
 
 MCP и индексация codebase работают на **ПК с VS Code**, не на машине с LM Studio.
 
+#### Индексация (embeddings)
+
+- Нужна модель в **embedding-слоте** LM Studio (type `embeddings` в API), не chat-модель из LLM-слота.
+- Модель вроде `lfm2.5-embedding-350m`: **My Models → ⚙️ → Domain Type → Embedding**, затем Load в Developer.
+- После смены domain контекст embedding-модели может уменьшиться (например 120k → 20k) — это нормально для экономии VRAM.
+- Подробно: [`config/lmstudio-indexing.md`](config/lmstudio-indexing.md).
+
+#### LM Studio без GUI (headless)
+
+На ПК с сервером LM Studio можно не держать окно приложения:
+
+```bat
+scripts\lmstudio-headless-server.cmd
+```
+
+Режим `restore` — `lms daemon up` + `lms server start` (последние настройки загрузки из LM Studio).  
+Режим `load` — явная загрузка chat + embedding с `--context-length` из скрипта.  
+Документация LM Studio: [headless](https://lmstudio.ai/docs/developer/core/headless), [lms CLI](https://lmstudio.ai/docs/cli).
+
 ### MCP
+
+**Требуется Node.js LTS** (для stdio-серверов: memory, sequential-thinking, playwright). VS Code не видит `npx`, если Node не в **системном** PATH — скрипт `setup-mcp.cmd` прописывает полный путь к `npx.cmd`.
 
 ```bat
 setup-mcp.cmd
 ```
 
-Конфиг: `%USERPROFILE%\.cline\data\settings\cline_mcp_settings.json`. Шаблон: `config/agentario-recommended-mcp.json`.
+Конфиг: `%USERPROFILE%\.agentario\data\settings\agentario_mcp_settings.json` (legacy: `.cline\...\cline_mcp_settings.json`). Шаблон: `config/agentario-recommended-mcp.json`.
+
+Playwright MCP (опционально):
+
+```powershell
+& "C:\path\to\npx.cmd" playwright install chromium
+```
+
+### Правила и конфигурация
+
+| Область | Путь |
+|---------|------|
+| Глобальные правила | `Documents\Agentario\Rules\` |
+| Данные расширения | `%USERPROFILE%\.agentario\` |
+| Правила проекта | `.agentariorules` или `.agentario\rules\` |
+| Исключения файлов | `.agentarioignore` (legacy: `.clineignore`) |
+
+Старые пути Cline (`.cline`, `.clinerules`, `Documents\Cline`) по-прежнему читаются для совместимости.
 
 ---
 

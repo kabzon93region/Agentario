@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	AGENT_CONFIG_DIRECTORY_NAME,
+	AGENTARIO_MCP_SETTINGS_FILE_NAME,
 	CLINE_CONNECTOR_SETTINGS_FILE_NAME,
 	CLINE_MCP_SETTINGS_FILE_NAME,
 	HOOKS_CONFIG_DIRECTORY_NAME,
@@ -154,13 +155,13 @@ describe("storage path resolution", () => {
 		);
 	});
 
-	it("falls back to CLINE_DATA_DIR/settings/cline_mcp_settings.json for MCP settings", () => {
+	it("falls back to CLINE_DATA_DIR/settings/agentario_mcp_settings.json for MCP settings", () => {
 		snapshot = captureEnv();
 		delete process.env.CLINE_MCP_SETTINGS_PATH;
 		process.env.CLINE_DATA_DIR = "/tmp/cline-data";
 
 		expect(resolveMcpSettingsPath()).toBe(
-			join("/tmp/cline-data", "settings", CLINE_MCP_SETTINGS_FILE_NAME),
+			join("/tmp/cline-data", "settings", AGENTARIO_MCP_SETTINGS_FILE_NAME),
 		);
 	});
 
@@ -212,9 +213,12 @@ describe("storage path resolution", () => {
 		const paths = resolveWorkflowsConfigSearchPaths(workspacePath);
 
 		expect(paths).toEqual([
+			join(workspacePath, ".agentariorules", "workflows"),
 			join(workspacePath, ".clinerules", "workflows"),
+			expect.stringContaining(join("Documents", "Agentario", "Workflows")),
 			expect.stringContaining(join("Documents", "Cline", "Workflows")),
 			join("/tmp/home", ".cline", "workflows"),
+			join(workspacePath, ".agentario", "workflows"),
 			join(workspacePath, ".cline", "workflows"),
 		]);
 	});

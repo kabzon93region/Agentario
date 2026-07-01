@@ -35,6 +35,7 @@ import {
 import { MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
 import { canRestoreWorkspaceFromMessage } from "@/components/chat/chat-view/utils/messageUtils"
+import { findFollowingApiStats } from "@shared/message-display"
 import { OptionsButtons } from "@/components/chat/OptionsButtons"
 import { WithCopyButton } from "@/components/common/CopyButton"
 import McpResponseDisplay from "@/components/mcp/chat-display/McpResponseDisplay"
@@ -61,6 +62,8 @@ import SearchResultsDisplay from "./SearchResultsDisplay"
 import SubagentStatusRow from "./SubagentStatusRow"
 import { ThinkingRow } from "./ThinkingRow"
 import UserMessage from "./UserMessage"
+import MessageBubbleHeader from "./MessageBubbleHeader"
+import MessageStatsFooter from "./MessageStatsFooter"
 
 const HEADER_CLASSNAMES = "flex items-center gap-2.5 mb-3"
 
@@ -157,6 +160,7 @@ export const ChatRowContent = memo(
 			selectedText: "",
 		})
 		const contentRef = useRef<HTMLDivElement>(null)
+		const messageApiStats = useMemo(() => findFollowingApiStats(clineMessages, message.ts), [clineMessages, message.ts])
 
 		// Command output expansion state (for all messages, but only used by command messages)
 		const [isOutputFullyExpanded, setIsOutputFullyExpanded] = useState(false)
@@ -854,24 +858,28 @@ export const ChatRowContent = memo(
 						)
 					case "text": {
 						return (
-							<WithCopyButton
-								onMouseUp={handleMouseUp}
-								position="bottom-right"
-								ref={contentRef}
-								textToCopy={message.text}>
-								<div className="flex items-center">
-									<div className={cn("flex-1 min-w-0 pl-1")}>
-										<MarkdownRow markdown={message.text} showCursor={false} />
+							<div>
+								<MessageBubbleHeader message={message} />
+								<WithCopyButton
+									onMouseUp={handleMouseUp}
+									position="bottom-right"
+									ref={contentRef}
+									textToCopy={message.text}>
+									<div className="flex items-center">
+										<div className={cn("flex-1 min-w-0 pl-1")}>
+											<MarkdownRow markdown={message.text} showCursor={false} />
+										</div>
 									</div>
-								</div>
-								{quoteButtonState.visible && (
-									<QuoteButton
-										left={quoteButtonState.left}
-										onClick={handleQuoteClick}
-										top={quoteButtonState.top}
-									/>
-								)}
-							</WithCopyButton>
+									{quoteButtonState.visible && (
+										<QuoteButton
+											left={quoteButtonState.left}
+											onClick={handleQuoteClick}
+											top={quoteButtonState.top}
+										/>
+									)}
+								</WithCopyButton>
+								<MessageStatsFooter stats={messageApiStats} />
+							</div>
 						)
 					}
 					case "reasoning": {
@@ -881,6 +889,7 @@ export const ChatRowContent = memo(
 						const showFeatureTip = isReasoningStreaming
 						return (
 							<div>
+								<MessageBubbleHeader message={message} roleOverride="Thinking" />
 								<ThinkingRow
 									isExpanded={(isReasoningStreaming && hasReasoningText) || isExpanded}
 									isStreaming={isReasoningStreaming}
@@ -892,6 +901,7 @@ export const ChatRowContent = memo(
 									title={isReasoningStreaming ? "Thinking..." : "Thinking"}
 								/>
 								{isReasoningStreaming && showFeatureTips !== false && <FeatureTip />}
+								{!isReasoningStreaming && <MessageStatsFooter stats={messageApiStats} />}
 							</div>
 						)
 					}
@@ -901,8 +911,10 @@ export const ChatRowContent = memo(
 								canRestoreWorkspace={canRestoreWorkspaceFromMessage(clineMessages, message.ts)}
 								files={message.files}
 								images={message.images}
+								message={message}
 								messageTs={message.ts}
 								sendMessageFromChatRow={sendMessageFromChatRow}
+								stats={messageApiStats}
 								text={message.text}
 							/>
 						)
@@ -936,12 +948,16 @@ export const ChatRowContent = memo(
 						const text = hasChanges ? message.text?.slice(0, -COMPLETION_RESULT_CHANGES_FLAG.length) : message.text
 
 						return (
-							<CompletionOutputRow
-								handleQuoteClick={handleQuoteClick}
-								headClassNames={HEADER_CLASSNAMES}
-								quoteButtonState={quoteButtonState}
-								text={text || ""}
-							/>
+							<div>
+								<MessageBubbleHeader message={message} />
+								<CompletionOutputRow
+									handleQuoteClick={handleQuoteClick}
+									headClassNames={HEADER_CLASSNAMES}
+									quoteButtonState={quoteButtonState}
+									text={text || ""}
+								/>
+								<MessageStatsFooter stats={messageApiStats} />
+							</div>
 						)
 					case "shell_integration_warning":
 						return (

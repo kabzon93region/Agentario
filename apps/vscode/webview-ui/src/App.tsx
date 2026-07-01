@@ -3,12 +3,15 @@ import { useCallback, useEffect } from "react"
 import AccountView from "./components/account/AccountView"
 import ChatView from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
+import IndexingView from "./components/indexing/IndexingView"
 import MarketplaceView from "./components/marketplace/MarketplaceView"
 import McpView from "./components/mcp/configuration/McpConfigurationView"
 import { openClinePassSubscriptionIfPending } from "./components/onboarding/clinePassSubscribe"
 import OnboardingView from "./components/onboarding/OnboardingView"
+import AgentarioStandaloneOnboarding from "./components/onboarding/AgentarioStandaloneOnboarding"
 import SettingsView from "./components/settings/SettingsView"
 import WorktreesView from "./components/worktrees/WorktreesView"
+import { Environment } from "@shared/config-types"
 import { useClineAuth } from "./context/ClineAuthContext"
 import { useExtensionState } from "./context/ExtensionStateContext"
 import { Providers } from "./Providers"
@@ -27,6 +30,7 @@ const AppContent = () => {
 		showHistory,
 		showAccount,
 		showWorktrees,
+		showIndexing,
 		showAnnouncement,
 		setShowAnnouncement,
 		setShouldShowAnnouncement,
@@ -36,8 +40,10 @@ const AppContent = () => {
 		hideHistory,
 		hideAccount,
 		hideWorktrees,
+		hideIndexing,
 		closeMarketplaceView,
 		hideAnnouncement,
+		environment,
 	} = useExtensionState()
 
 	const { clineUser, organizations, activeOrganization } = useClineAuth()
@@ -63,17 +69,18 @@ const AppContent = () => {
 	// Open the ClinePass subscription page once auth completes. Lives here (not in OnboardingView)
 	// because handleAuthCallback unmounts onboarding before the clineUser update arrives.
 	useEffect(() => {
-		if (clineUser?.uid) {
-			openClinePassSubscriptionIfPending(clineUser.appBaseUrl)
+		if (environment === Environment.selfHosted || !clineUser?.uid) {
+			return
 		}
-	}, [clineUser?.uid, clineUser?.appBaseUrl])
+		openClinePassSubscriptionIfPending(clineUser.appBaseUrl)
+	}, [clineUser?.uid, clineUser?.appBaseUrl, environment])
 
 	if (!didHydrateState) {
 		return null
 	}
 
 	if (showWelcome) {
-		return <OnboardingView />
+		return environment === Environment.selfHosted ? <AgentarioStandaloneOnboarding /> : <OnboardingView />
 	}
 
 	return (
@@ -82,7 +89,7 @@ const AppContent = () => {
 			{showHistory && <HistoryView onDone={hideHistory} />}
 			{showMarketplace && <MarketplaceView initialType={mcpTab ? "mcp" : undefined} onDone={closeMarketplaceView} />}
 			{showMcp && <McpView initialTab={mcpTab} onDone={closeMcpView} />}
-			{showAccount && (
+			{showAccount && environment !== Environment.selfHosted && (
 				<AccountView
 					activeOrganization={activeOrganization}
 					clineUser={clineUser}
@@ -91,10 +98,11 @@ const AppContent = () => {
 				/>
 			)}
 			{showWorktrees && <WorktreesView onDone={hideWorktrees} />}
+			{showIndexing && <IndexingView onDone={hideIndexing} />}
 			{/* Do not conditionally load ChatView, it's expensive and there's state we don't want to lose (user input, disableInput, askResponse promise, etc.) */}
 			<ChatView
 				hideAnnouncement={hideAnnouncement}
-				isHidden={showSettings || showHistory || showMarketplace || showMcp || showAccount || showWorktrees}
+				isHidden={showSettings || showHistory || showMarketplace || showMcp || showAccount || showWorktrees || showIndexing}
 				showAnnouncement={showAnnouncement}
 				showHistoryView={navigateToHistory}
 			/>

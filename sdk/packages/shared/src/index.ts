@@ -144,6 +144,27 @@ export {
 } from "./llms/ai-sdk-format";
 export * from "./llms/gateway";
 export {
+	buildEmbeddingRequestModelIds,
+	fetchLmStudioModels,
+	formatLmStudioEmbeddingLoadError,
+	formatLmStudioNonEmbeddingModelError,
+	isLmStudioEmbeddingModelType,
+	isLmStudioModelLoaded,
+	isLmStudioNoModelLoadedError,
+	listLmStudioEmbeddingCapableModels,
+	lmStudioApiUrl,
+	lmStudioModelBaseName,
+	lmStudioModelMatches,
+	LmStudioEmbeddingClient,
+	pickLmStudioEmbeddingCandidate,
+	recordMatchesRequested,
+	requestLmStudioEmbeddings,
+	resolveLmStudioEmbeddingModelId,
+	type LmStudioEmbeddingEndpoint,
+	type LmStudioEmbeddingsResult,
+	type LmStudioModelRecord,
+} from "./llms/lm-studio-embedding";
+export {
 	createMediaBudgetState,
 	DEFAULT_MAX_IMAGE_BASE64_BYTES,
 	DEFAULT_MAX_IMAGE_DECODED_BYTES,
@@ -237,6 +258,7 @@ export {
 	truncateStr,
 } from "./parse/string";
 export { formatHumanReadableDate, formatUptime } from "./parse/time";
+export { normalizeEditorToolInput, normalizeToolInput } from "./parse/tool-input-normalize";
 export { validateWithZod, zodToJsonSchema } from "./parse/zod";
 export type { ClineSystemPromptOptions } from "./prompt/cline";
 export { buildClineSystemPrompt, processWorkspaceInfo } from "./prompt/cline";

@@ -1,9 +1,12 @@
+import { resolveClineDir } from "@cline/shared/storage"
 import os from "os"
 import * as path from "path"
 
 const SKILL_DIRECTORY_NAMES = {
-	clineruleSkillsDir: ".clinerules/skills",
-	clineSkillsDir: ".cline/skills",
+	agentarioRuleSkillsDir: ".agentariorules/skills",
+	legacyClineruleSkillsDir: ".clinerules/skills",
+	agentarioSkillsDir: ".agentario/skills",
+	legacyClineSkillsDir: ".cline/skills",
 	claudeSkillsDir: ".claude/skills",
 	agentsSkillsDir: ".agents/skills",
 } as const
@@ -13,12 +16,8 @@ export type SkillsScanDirectory = {
 	source: "project" | "global"
 }
 
-function getClineHomePath(): string {
-	return path.join(os.homedir(), ".cline")
-}
-
-function getClineSkillsDirectoryPath(): string {
-	return path.join(getClineHomePath(), "skills")
+function getAgentarioSkillsDirectoryPath(): string {
+	return path.join(resolveClineDir(), "skills")
 }
 
 function getAgentSkillsDirectoryPath(): string {
@@ -31,11 +30,13 @@ function getAgentSkillsDirectoryPath(): string {
  */
 export function getSkillsDirectoriesForScan(cwd: string): SkillsScanDirectory[] {
 	return [
-		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.clineruleSkillsDir), source: "project" },
-		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.clineSkillsDir), source: "project" },
+		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.agentarioRuleSkillsDir), source: "project" },
+		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.legacyClineruleSkillsDir), source: "project" },
+		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.agentarioSkillsDir), source: "project" },
+		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.legacyClineSkillsDir), source: "project" },
 		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.claudeSkillsDir), source: "project" },
 		{ path: path.join(cwd, SKILL_DIRECTORY_NAMES.agentsSkillsDir), source: "project" },
-		{ path: getClineSkillsDirectoryPath(), source: "global" },
+		{ path: getAgentarioSkillsDirectoryPath(), source: "global" },
 		{ path: getAgentSkillsDirectoryPath(), source: "global" },
 	]
 }

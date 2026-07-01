@@ -1,5 +1,6 @@
-import { FALLBACK_CLINE_RECOMMENDED_MODELS, fetchClineRecommendedModels } from "@cline/core"
 import { ClineEnv } from "@/config"
+import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
+import { FALLBACK_CLINE_RECOMMENDED_MODELS, fetchClineRecommendedModels } from "@cline/core"
 import { fetch } from "@/shared/net"
 
 interface ClineRecommendedModelData {
@@ -21,6 +22,10 @@ let pendingRefresh: Promise<ClineRecommendedModelsData> | null = null
 let inMemoryCache: { data: ClineRecommendedModelsData; timestamp: number } | null = null
 
 export async function refreshClineRecommendedModels(): Promise<ClineRecommendedModelsData> {
+	if (isAgentarioStandaloneMode()) {
+		return FALLBACK_CLINE_RECOMMENDED_MODELS
+	}
+
 	if (inMemoryCache && Date.now() - inMemoryCache.timestamp <= RECOMMENDED_MODELS_CACHE_TTL_MS) {
 		return inMemoryCache.data
 	}

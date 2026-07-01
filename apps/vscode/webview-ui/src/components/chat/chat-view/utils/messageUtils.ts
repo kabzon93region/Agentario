@@ -9,6 +9,7 @@ import type {
 	ClineSayBrowserAction,
 	ClineSayTool,
 } from "@shared/ExtensionMessage"
+import { isApiReqComplete } from "@shared/message-display"
 import { FileIcon, FolderOpenDotIcon, FolderOpenIcon, SearchIcon, ShapesIcon, WrenchIcon } from "lucide-react"
 
 /**
@@ -373,7 +374,7 @@ export function getToolsNotInCurrentActivities(toolGroupMessages: ClineMessage[]
 	let mostRecentHasCost = false
 	try {
 		const info = JSON.parse(mostRecentApiReq.text)
-		mostRecentHasCost = info.cost != null
+		mostRecentHasCost = isApiReqComplete(info)
 	} catch {
 		return toolGroupMessages
 	}

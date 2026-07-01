@@ -5,6 +5,7 @@
  * and are used for both validation and JSON Schema generation.
  */
 
+import { normalizeEditorToolInput } from "@cline/shared";
 import { z } from "zod";
 
 export const INPUT_ARG_CHAR_LIMIT = 6000;
@@ -169,36 +170,39 @@ export const FetchWebContentInputSchema = z.object({
 /**
  * Schema for editor tool input
  */
-export const EditFileInputSchema = z
-	.object({
-		path: z
-			.string()
-			.min(1)
-			.describe("The absolute file path for the action to be performed on"),
-		old_text: z
-			.string()
-			.nullable()
-			.optional()
-			.describe(
-				`Exact text to replace (must match exactly once). Omit this when creating a missing file or inserting via insert_line. Keep this at or below ${INPUT_ARG_CHAR_LIMIT} characters when possible; larger payloads should be split across multiple tool calls to avoid timeouts.`,
-			),
-		new_text: z
-			.string()
-			.describe(
-				`The new content to write when creating a missing file, the replacement text for edits, or the inserted text when insert_line is provided. Keep this at or below ${INPUT_ARG_CHAR_LIMIT} characters when possible; for large edits, use multiple calls with small chunks of old_text and new_text to iteratively edit the file.`,
-			),
-		insert_line: z
-			.number()
-			.int()
-			.nullable()
-			.optional()
-			.describe(
-				"Optional positive one-based boundary line. When provided, the tool inserts new_text before that line instead of performing a replacement edit; use line_count + 1 to append at EOF.",
-			),
-	})
-	.describe(
-		"Edit a text file by replacing old_text with new_text, create the file with new_text if it does not exist, or insert new_text at insert_line when insert_line is provided. Prefer using this tool for file edits over shell commands. IMPORTANT: large edits can time out, so use small chunks and multiple calls when possible.",
-	);
+const EditFileInputBaseSchema = z.object({
+	path: z
+		.string()
+		.min(1)
+		.describe("The absolute file path for the action to be performed on"),
+	old_text: z
+		.string()
+		.nullable()
+		.optional()
+		.describe(
+			`Exact text to replace (must match exactly once). Omit this when creating a missing file or inserting via insert_line. Keep this at or below ${INPUT_ARG_CHAR_LIMIT} characters when possible; larger payloads should be split across multiple tool calls to avoid timeouts.`,
+		),
+	new_text: z
+		.string()
+		.describe(
+			`The new content to write when creating a missing file, the replacement text for edits, or the inserted text when insert_line is provided. Keep this at or below ${INPUT_ARG_CHAR_LIMIT} characters when possible; for large edits, use multiple calls with small chunks of old_text and new_text to iteratively edit the file.`,
+		),
+	insert_line: z
+		.number()
+		.int()
+		.nullable()
+		.optional()
+		.describe(
+			"Optional positive one-based boundary line. When provided, the tool inserts new_text before that line instead of performing a replacement edit; use line_count + 1 to append at EOF.",
+		),
+});
+
+export const EditFileInputSchema = z.preprocess(
+	normalizeEditorToolInput,
+	EditFileInputBaseSchema,
+).describe(
+	"Edit a text file by replacing old_text with new_text, create the file with new_text if it does not exist, or insert new_text at insert_line when insert_line is provided. Prefer using this tool for file edits over shell commands. IMPORTANT: large edits can time out, so use small chunks and multiple calls when possible.",
+);
 
 /**
  * Schema for apply_patch tool input

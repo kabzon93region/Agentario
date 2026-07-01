@@ -66,6 +66,22 @@ describe("SdkMessageCoordinator", () => {
 		expect(JSON.parse(finalized[2].text ?? "{}")).toEqual({ cancelReason: "user_cancelled" })
 	})
 
+	it("finalizes in-flight messages on the active task", () => {
+		const task = createTaskProxy("session-123", vi.fn(), vi.fn())
+		const coordinator = new SdkMessageCoordinator({ getTask: () => task })
+		task.messageStateHandler.addMessages([
+			{ ts: 1, type: "say", say: "api_req_started", text: JSON.stringify({}), partial: true },
+			{ ts: 2, type: "say", say: "reasoning", text: "thinking", partial: true },
+		])
+
+		coordinator.finalizeInFlightMessages()
+
+		const messages = task.messageStateHandler.getClineMessages()
+		expect(messages[0].partial).toBeUndefined()
+		expect(JSON.parse(messages[0].text ?? "{}")).toEqual({ cancelReason: "user_cancelled" })
+		expect(messages[1].partial).toBeUndefined()
+	})
+
 	it("stamps seq and epoch from the shared minter on append", () => {
 		const minter = new MessageIdMinter()
 		const task = createTaskProxy("session-123", vi.fn(), vi.fn())

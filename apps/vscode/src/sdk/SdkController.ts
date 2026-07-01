@@ -16,7 +16,8 @@ import {
 	type UserInstructionConfigService,
 } from "@cline/core"
 import { formatDisplayUserInput, type RemoteConfig, type RemoteConfigBundle } from "@cline/shared"
-import type { ApiConfiguration, ModelInfo } from "@shared/api"
+import { resolveDocumentsAgentarioDirectoryPath } from "@cline/shared/storage"
+import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
 import type { ChatContent } from "@shared/ChatContent"
 import { CLINE_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/ClineAccount"
 import { mentionRegexGlobal } from "@shared/context-mentions"
@@ -42,9 +43,10 @@ import { ClineError } from "@/services/error/ClineError"
 import { McpHub } from "@/services/mcp/McpHub"
 import { telemetryService } from "@/services/telemetry"
 import type { ClineExtensionContext } from "@/shared/cline"
-import { ShowMessageRequest, ShowMessageType } from "@/shared/proto/host/window"
+import { ShowMessageRequest, ShowMessageType, ShowSaveDialogRequest } from "@/shared/proto/host/window"
 import { Logger } from "@/shared/services/Logger"
 import { arePathsEqual, getDesktopDir } from "@/utils/path"
+import { exportChatToMarkdown } from "@/services/chat/export-chat-markdown"
 import { ClineAccountService } from "./account-service"
 import { AuthService, LogoutReason } from "./auth-service"
 import { buildStartSessionInput, createHistoryItemFromSession } from "./cline-session-factory"
@@ -503,17 +505,20 @@ export class Controller {
 		this.onSessionEvent(this.grpcBridge.createListener())
 
 		// Restore auth state from secrets on startup, then start the remote
-		// config polling timer (enterprise policy enforcement). The timer must
-		// start after auth is restored so remote config can identify the user's
-		// organization and apply org-level policies.
-		this.authService
-			.restoreRefreshTokenAndRetrieveAuthInfo()
-			.then(() => {
-				this.startRemoteConfigTimer()
-			})
-			.catch((err) => {
-				Logger.error("[SdkController] Failed to restore auth state:", err)
-			})
+		// config polling timer (enterprise policy enforcement). Skipped in
+		// Agentario standalone mode — no Cline cloud account required.
+		if (!isAgentarioStandaloneMode()) {
+			this.authService
+				.restoreRefreshTokenAndRetrieveAuthInfo()
+				.then(() => {
+					this.startRemoteConfigTimer()
+				})
+				.catch((err) => {
+					Logger.error("[SdkController] Failed to restore auth state:", err)
+				})
+		} else {
+			Logger.log("[SdkController] Standalone mode: skipping Cline auth restore and remote config")
+		}
 
 		Logger.log("[SdkController] Initialized with SDK adapter layer + gRPC bridge + auth services")
 	}
@@ -580,6 +585,9 @@ export class Controller {
 	 * MCP server management, OpenTelemetry, etc.).
 	 */
 	private startRemoteConfigTimer(): void {
+		if (isAgentarioStandaloneMode()) {
+			return
+		}
 		// Initial fetch
 		this.refreshRemoteConfig().catch((err) => Logger.error("[SdkController] Initial remote config refresh failed:", err))
 		// Set up 1-hour interval
@@ -976,7 +984,14 @@ export class Controller {
 		this.turnStateTracker.set("streaming")
 		// Clear the previous turn's completion signal so this turn's phase is computed fresh.
 		this.messageTranslatorState.clearTurnOutcome()
-		return this.taskStart.initTask(prompt, images, files, historyItem, taskSettings)
+		const sessionId = await this.taskStart.initTask(prompt, images, files, historyItem, taskSettings)
+		if (!sessionId) {
+			// initTask sets streaming before the session starts; reset so the webview does not
+			// keep showing the in-list "Thinking..." loader when config/start failed.
+			this.turnStateTracker.set("idle")
+			await this.postStateToWebview()
+		}
+		return sessionId
 	}
 
 	async reinitExistingTaskFromId(taskId: string): Promise<void> {
@@ -989,7 +1004,8 @@ export class Controller {
 		// Fence first: mark resumable before aborting so any straggler events from the aborted
 		// turn land on the wrong side of the UI mode. (Full fence-before-abort epoch bump lands
 		// in S6; this sets the authoritative phase now.)
-		this.turnStateTracker.set("resumable")
+		const hasActiveSession = !!this.sessions.getActiveSession()
+		this.turnStateTracker.set(hasActiveSession ? "resumable" : "idle")
 		await this.taskControl.cancelTask()
 	}
 
@@ -1529,23 +1545,69 @@ export class Controller {
 	}
 
 	async exportTaskWithId(id: string): Promise<void> {
-		const historyItem = (await this.taskHistory.listHistory({ hydrate: false })).find((item) => item.sessionId === id)
+		const historyRecords = await this.taskHistory.listHistory({ hydrate: false })
+		const historyItem = historyRecords.find((item) => item.sessionId === id)
 		if (!historyItem) {
 			throw new Error(`Task not found in history: ${id}`)
 		}
 
-		// SDK-backed tasks are no longer stored under VS Code's globalStorageFsPath/tasks.
-		// The SDK owns session persistence and exposes the persisted messages artifact path
-		// on the session history record; open that artifact's containing session directory.
-		const taskDirPath = historyItem.messagesPath ? path.dirname(historyItem.messagesPath) : undefined
-		if (!taskDirPath) {
-			throw new Error(`Task history item has no SDK artifact path: ${id}`)
+		let messages: ClineMessage[]
+		if (this.task?.taskId === id) {
+			messages = this.task.messageStateHandler.getClineMessages()
+		} else {
+			messages = await this.taskHistory.getClineMessages(id)
 		}
 
-		await fs.access(taskDirPath)
-		Logger.log(`[EXPORT] Opening SDK task directory: ${taskDirPath}`)
-		const open = (await import("open")).default
-		await open(taskDirPath)
+		if (messages.length === 0) {
+			throw new Error(`No messages to export for task: ${id}`)
+		}
+
+		const title = formatDisplayUserInput(
+			metadataString(historyItem.metadata, "title") ??
+				historyItem.prompt ??
+				messages.find((message) => message.type === "say" && message.say === "task")?.text ??
+				"chat",
+		) || "chat"
+
+		const exportsDir = path.join(resolveDocumentsAgentarioDirectoryPath(), "Exports")
+		await fs.mkdir(exportsDir, { recursive: true })
+
+		const safeTitle = title
+			.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
+			.replace(/\s+/g, "_")
+			.slice(0, 60)
+		const defaultPath = path.join(exportsDir, `${safeTitle}-${id.slice(0, 8)}.md`)
+
+		const saveDialog = await HostProvider.window.showSaveDialog(
+			ShowSaveDialogRequest.create({
+				options: {
+					defaultPath,
+					filters: {
+						Markdown: { extensions: ["md"] },
+					},
+				},
+			}),
+		)
+
+		if (!saveDialog.selectedPath) {
+			return
+		}
+
+		const markdown = exportChatToMarkdown(messages, { title, exportedAt: new Date() })
+		await fs.writeFile(saveDialog.selectedPath, markdown, "utf8")
+		Logger.log(`[EXPORT] Wrote chat markdown: ${saveDialog.selectedPath}`)
+
+		await HostProvider.window.showTextDocument({
+			path: saveDialog.selectedPath,
+			options: {},
+		})
+
+		await HostProvider.window.showMessage(
+			ShowMessageRequest.create({
+				type: ShowMessageType.INFORMATION,
+				message: `Chat exported to ${saveDialog.selectedPath}`,
+			}),
+		)
 	}
 
 	async deleteTaskFromState(id: string): Promise<HistoryItem[]> {

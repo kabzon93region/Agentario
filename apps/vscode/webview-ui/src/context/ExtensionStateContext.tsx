@@ -75,6 +75,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	showHistory: boolean
 	showAccount: boolean
 	showWorktrees: boolean
+	showIndexing: boolean
 	showAnnouncement: boolean
 	expandTaskHeader: boolean
 
@@ -124,6 +125,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	navigateToHistory: () => void
 	navigateToAccount: () => void
 	navigateToWorktrees: () => void
+	navigateToIndexing: () => void
 	navigateToChat: () => void
 
 	// Hide functions
@@ -131,6 +133,7 @@ export interface ExtensionStateContextType extends ExtensionState {
 	hideHistory: () => void
 	hideAccount: () => void
 	hideWorktrees: () => void
+	hideIndexing: () => void
 	hideAnnouncement: () => void
 	closeMarketplaceView: () => void
 	closeMcpView: () => void
@@ -154,6 +157,7 @@ export const ExtensionStateContextProvider: React.FC<{
 	const [showHistory, setShowHistory] = useState(false)
 	const [showAccount, setShowAccount] = useState(false)
 	const [showWorktrees, setShowWorktrees] = useState(false)
+	const [showIndexing, setShowIndexing] = useState(false)
 	const [showAnnouncement, setShowAnnouncement] = useState(false)
 
 	// Helper for MCP view
@@ -174,6 +178,7 @@ export const ExtensionStateContextProvider: React.FC<{
 	const hideHistory = useCallback(() => setShowHistory(false), [setShowHistory])
 	const hideAccount = useCallback(() => setShowAccount(false), [setShowAccount])
 	const hideWorktrees = useCallback(() => setShowWorktrees(false), [setShowWorktrees])
+	const hideIndexing = useCallback(() => setShowIndexing(false), [setShowIndexing])
 	const hideAnnouncement = useCallback(() => setShowAnnouncement(false), [setShowAnnouncement])
 
 	// Navigation functions
@@ -183,13 +188,14 @@ export const ExtensionStateContextProvider: React.FC<{
 			setShowHistory(false)
 			setShowAccount(false)
 			setShowWorktrees(false)
+			setShowIndexing(false)
 			closeMcpView()
 			if (tab) {
 				setMcpTab(tab)
 			}
 			setShowMarketplace(true)
 		},
-		[closeMcpView, setMcpTab, setShowSettings, setShowHistory, setShowAccount, setShowWorktrees],
+		[closeMcpView, setMcpTab, setShowSettings, setShowHistory, setShowAccount, setShowWorktrees, setShowIndexing],
 	)
 
 	const navigateToMarketplace = useCallback(() => {
@@ -198,8 +204,9 @@ export const ExtensionStateContextProvider: React.FC<{
 		setShowHistory(false)
 		setShowAccount(false)
 		setShowWorktrees(false)
+		setShowIndexing(false)
 		setShowMarketplace(true)
-	}, [closeMcpView])
+	}, [closeMcpView, setShowIndexing])
 
 	const navigateToSettings = useCallback(
 		(targetSection?: string) => {
@@ -208,11 +215,12 @@ export const ExtensionStateContextProvider: React.FC<{
 			closeMcpView()
 			setShowAccount(false)
 			setShowWorktrees(false)
+			setShowIndexing(false)
 			setSettingsTargetSection(targetSection)
 			setSettingsInitialModelTab(undefined)
 			setShowSettings(true)
 		},
-		[closeMarketplaceView, closeMcpView],
+		[closeMarketplaceView, closeMcpView, setShowIndexing],
 	)
 
 	const navigateToSettingsModelPicker = useCallback(
@@ -222,11 +230,12 @@ export const ExtensionStateContextProvider: React.FC<{
 			closeMcpView()
 			setShowAccount(false)
 			setShowWorktrees(false)
+			setShowIndexing(false)
 			setSettingsTargetSection(opts.targetSection)
 			setSettingsInitialModelTab(opts.initialModelTab)
 			setShowSettings(true)
 		},
-		[closeMarketplaceView, closeMcpView],
+		[closeMarketplaceView, closeMcpView, setShowIndexing],
 	)
 
 	const navigateToHistory = useCallback(() => {
@@ -235,8 +244,9 @@ export const ExtensionStateContextProvider: React.FC<{
 		closeMcpView()
 		setShowAccount(false)
 		setShowWorktrees(false)
+		setShowIndexing(false)
 		setShowHistory(true)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowAccount, setShowWorktrees, setShowHistory])
+	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowAccount, setShowWorktrees, setShowIndexing, setShowHistory])
 
 	const navigateToAccount = useCallback(() => {
 		closeMarketplaceView()
@@ -244,8 +254,9 @@ export const ExtensionStateContextProvider: React.FC<{
 		closeMcpView()
 		setShowHistory(false)
 		setShowWorktrees(false)
+		setShowIndexing(false)
 		setShowAccount(true)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowWorktrees, setShowAccount])
+	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowWorktrees, setShowIndexing, setShowAccount])
 
 	const navigateToWorktrees = useCallback(() => {
 		closeMarketplaceView()
@@ -253,8 +264,19 @@ export const ExtensionStateContextProvider: React.FC<{
 		closeMcpView()
 		setShowHistory(false)
 		setShowAccount(false)
+		setShowIndexing(false)
 		setShowWorktrees(true)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowWorktrees])
+	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowIndexing, setShowWorktrees])
+
+	const navigateToIndexing = useCallback(() => {
+		closeMarketplaceView()
+		setShowSettings(false)
+		closeMcpView()
+		setShowHistory(false)
+		setShowAccount(false)
+		setShowWorktrees(false)
+		setShowIndexing(true)
+	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowWorktrees, setShowIndexing])
 
 	const navigateToChat = useCallback(() => {
 		closeMarketplaceView()
@@ -263,7 +285,8 @@ export const ExtensionStateContextProvider: React.FC<{
 		setShowHistory(false)
 		setShowAccount(false)
 		setShowWorktrees(false)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowWorktrees])
+		setShowIndexing(false)
+	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowWorktrees, setShowIndexing])
 
 	const [state, setState] = useState<ExtensionState>({
 		version: "",
@@ -413,6 +436,7 @@ export const ExtensionStateContextProvider: React.FC<{
 
 	const marketplaceButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const mcpButtonUnsubscribeRef = useRef<(() => void) | null>(null)
+	const indexingButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const historyButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
 	const chatButtonUnsubscribeRef = useRef<(() => void) | null>(null)
 	const accountButtonClickedSubscriptionRef = useRef<(() => void) | null>(null)
@@ -523,6 +547,19 @@ export const ExtensionStateContextProvider: React.FC<{
 				},
 			},
 		)
+
+		indexingButtonUnsubscribeRef.current = UiServiceClient.subscribeToIndexingButtonClicked(EmptyRequest.create({}), {
+			onResponse: () => {
+				console.log("[DEBUG] Received indexingButtonClicked event from gRPC stream")
+				navigateToIndexing()
+			},
+			onError: (error: any) => {
+				console.error("Error in indexingButtonClicked subscription:", error)
+			},
+			onComplete: () => {
+				console.log("indexingButtonClicked subscription completed")
+			},
+		})
 
 		marketplaceButtonUnsubscribeRef.current = UiServiceClient.subscribeToMarketplaceButtonClicked(EmptyRequest.create({}), {
 			onResponse: () => {
@@ -742,6 +779,10 @@ export const ExtensionStateContextProvider: React.FC<{
 				mcpButtonUnsubscribeRef.current()
 				mcpButtonUnsubscribeRef.current = null
 			}
+			if (indexingButtonUnsubscribeRef.current) {
+				indexingButtonUnsubscribeRef.current()
+				indexingButtonUnsubscribeRef.current = null
+			}
 			if (marketplaceButtonUnsubscribeRef.current) {
 				marketplaceButtonUnsubscribeRef.current()
 				marketplaceButtonUnsubscribeRef.current = null
@@ -897,6 +938,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		showHistory,
 		showAccount,
 		showWorktrees,
+		showIndexing,
 		showAnnouncement,
 		globalClineRulesToggles: state.globalClineRulesToggles || {},
 		localClineRulesToggles: state.localClineRulesToggles || {},
@@ -917,6 +959,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		navigateToHistory,
 		navigateToAccount,
 		navigateToWorktrees,
+		navigateToIndexing,
 		navigateToChat,
 
 		// Hide functions
@@ -924,6 +967,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		hideHistory,
 		hideAccount,
 		hideWorktrees,
+		hideIndexing,
 		hideAnnouncement,
 		closeMarketplaceView,
 		setShowAnnouncement,

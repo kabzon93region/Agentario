@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package cline;
+
+import "cline/common.proto";
+
+option go_package = "github.com/cline/grpc-go/cline";
+option java_multiple_files = true;
+option java_package = "bot.cline.proto";
+
+service IndexingService {
+  rpc getIndexStatus(EmptyRequest) returns (CodebaseIndex);
+  rpc clearIndex(EmptyRequest) returns (CodebaseIndex);
+  rpc rebuildIndex(EmptyRequest) returns (CodebaseIndex);
+  rpc updateIndex(EmptyRequest) returns (CodebaseIndex);
+}
+
+enum IndexedFileStatus {
+  INDEXED_FILE_STATUS_PENDING = 0;
+  INDEXED_FILE_STATUS_INDEXED = 1;
+  INDEXED_FILE_STATUS_SKIPPED = 2;
+  INDEXED_FILE_STATUS_ERROR = 3;
+  // First N chunks only — file is larger than the per-file chunk budget.
+  INDEXED_FILE_STATUS_PARTIAL = 4;
+}
+
+message IndexedFile {
+  string path = 1;
+  IndexedFileStatus status = 2;
+  int64 size = 3;
+  int64 mtime_ms = 4;
+  int32 chunks = 5;
+  int32 embedding_count = 6;
+  optional string error = 7;
+}
+
+message CodebaseIndex {
+  string workspace_path = 1;
+  string index_path = 2;
+  string embedding_model = 3;
+  string base_url = 4;
+  int64 updated_at_ms = 5;
+  bool is_indexing = 6;
+  int32 total_files = 7;
+  int32 indexed_files = 8;
+  int32 skipped_files = 9;
+  int32 error_files = 10;
+  optional string last_error = 11;
+  repeated IndexedFile files = 12;
+}

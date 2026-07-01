@@ -1660,6 +1660,52 @@ describe("default editor tool", () => {
 		);
 	});
 
+	it("accepts insert_line null string from local models when creating a file", async () => {
+		const execute = vi.fn(async () => "created");
+		const tools = createDefaultTools({
+			executors: {
+				editor: execute,
+			},
+			enableReadFiles: false,
+			enableSearch: false,
+			enableBash: false,
+			enableWebFetch: false,
+			enableSkills: false,
+			enableAskQuestion: false,
+			enableApplyPatch: false,
+			enableEditor: true,
+		});
+		const editorTool = tools.find((tool) => tool.name === "editor");
+		expect(editorTool).toBeDefined();
+		if (!editorTool) {
+			throw new Error("Expected editor tool to be defined.");
+		}
+
+		const result = await editorTool.execute(
+			{
+				path: "/tmp/example.ts",
+				new_text: "created",
+				insert_line: "null",
+			},
+			{
+				agentId: "agent-1",
+				conversationId: "conv-1",
+				iteration: 1,
+			},
+		);
+
+		expect(result.success).toBe(true);
+		expect(execute).toHaveBeenCalledWith(
+			expect.objectContaining({
+				path: "/tmp/example.ts",
+				new_text: "created",
+			}),
+			process.cwd(),
+			expect.anything(),
+		);
+		expect(execute.mock.calls[0]?.[0]).not.toHaveProperty("insert_line");
+	});
+
 	it("treats insert_line as an insert operation", async () => {
 		const execute = vi.fn(async () => "patched");
 		const tools = createDefaultTools({

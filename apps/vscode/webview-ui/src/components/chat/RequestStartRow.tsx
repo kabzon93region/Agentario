@@ -1,4 +1,5 @@
 import type { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
+import { isApiReqComplete } from "@shared/message-display"
 import type { Mode } from "@shared/storage/types"
 import type { LucideIcon } from "lucide-react"
 import type React from "react"
@@ -99,7 +100,7 @@ const findCurrentApiReq = (messages: ClineMessage[]): { index: number; hasCost: 
 		if (msg.say === "api_req_started" && msg.text) {
 			try {
 				const info = JSON.parse(msg.text)
-				return { index: i, hasCost: info.cost != null }
+				return { index: i, hasCost: isApiReqComplete(info) }
 			} catch {
 				return null
 			}
@@ -115,7 +116,7 @@ const findPrevCompletedApiReq = (messages: ClineMessage[], beforeIdx: number): n
 		if (msg.say === "api_req_started" && msg.text) {
 			try {
 				const info = JSON.parse(msg.text)
-				if (info.cost != null) {
+				if (isApiReqComplete(info)) {
 					return i
 				}
 			} catch {
@@ -143,20 +144,29 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 }) => {
 	// Derive explicit state
 	const hasError = !!(apiRequestFailedMessage || apiReqStreamingFailedMessage)
-	const hasCost = cost != null
+	const apiReqComplete = useMemo(() => {
+		if (message.say === "api_req_started" && message.text) {
+			try {
+				return isApiReqComplete(JSON.parse(message.text))
+			} catch {
+				return cost != null
+			}
+		}
+		return cost != null
+	}, [cost, message.say, message.text])
 	const hasReasoning = !!reasoningContent
 	const hasCompletionResult = clineMessages.some(
 		(msg) => msg.ask === "completion_result" || msg.say === "completion_result" || msg.ask === "plan_mode_respond",
 	)
 
-	const apiReqState: ApiReqState = hasError ? "error" : hasCost ? "final" : hasReasoning ? "thinking" : "pre"
+	const apiReqState: ApiReqState = hasError ? "error" : apiReqComplete ? "final" : hasReasoning ? "thinking" : "pre"
 
 	// While reasoning is streaming, keep the Brain ThinkingBlock exactly as-is.
 	// Once response content starts (any text/tool/command), collapse into a compact
 	// "🧠 Thinking" row that can be expanded to show the reasoning only.
 	const showStreamingThinking = useMemo(
-		() => hasReasoning && !hasError && !cost && !responseStarted,
-		[hasReasoning, hasError, cost, responseStarted],
+		() => hasReasoning && !hasError && !apiReqComplete && !responseStarted,
+		[hasReasoning, hasError, apiReqComplete, responseStarted],
 	)
 
 	// Check if this api_req will be absorbed into a tool group (reasoning will disappear)
@@ -193,7 +203,7 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 					if (prevMsg.say === "api_req_started" && prevMsg.text) {
 						try {
 							const info = JSON.parse(prevMsg.text)
-							return info.cost != null
+							return isApiReqComplete(info)
 						} catch {
 							return false
 						}
@@ -228,7 +238,7 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 				</div>
 			)}
 			{reasoningContent &&
-				(!hasCost ? (
+				(!apiReqComplete ? (
 					// Still streaming - show "Thinking..." text with shimmer
 					<div className="ml-1 pl-0 mb-1 -mt-1.25 pt-1">
 						<div className="inline-flex justify-baseline gap-0.5 text-left select-none px-0 w-full">

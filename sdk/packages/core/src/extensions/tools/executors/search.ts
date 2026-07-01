@@ -5,9 +5,12 @@
  */
 
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
+import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentToolContext } from "@cline/shared";
+import { requestLmStudioEmbeddings } from "@cline/shared";
 import { getFileIndex } from "../../../services/workspace";
 import type { SearchExecutor } from "../types";
 import { MAX_SEARCH_OUTPUT_CHARS } from "./output-limits";
@@ -120,6 +123,23 @@ interface SearchMatch {
 	context: string[];
 }
 
+interface SemanticChunk {
+	text: string;
+	embedding: number[];
+}
+
+interface SemanticFile {
+	path: string;
+	status: string;
+	chunks: SemanticChunk[];
+}
+
+interface SemanticIndex {
+	embeddingModel: string;
+	baseUrl: string;
+	files: SemanticFile[];
+}
+
 let rgAvailable: boolean | null = null;
 
 function checkRipgrepAvailable(): Promise<boolean> {
@@ -154,6 +174,118 @@ function checkRipgrepAvailable(): Promise<boolean> {
 			}
 		}, 1000);
 	});
+}
+
+function getSemanticIndexPath(cwd: string): string {
+	const workspaceHash = createHash("sha1")
+		.update(cwd.toLowerCase())
+		.digest("hex")
+		.slice(0, 16);
+	return path.join(
+		os.homedir(),
+		".agentario",
+		"data",
+		"indexes",
+		`${workspaceHash}.embeddings.json`,
+	);
+}
+
+async function readSemanticIndex(cwd: string): Promise<SemanticIndex | undefined> {
+	try {
+		const raw = await fs.readFile(getSemanticIndexPath(cwd), "utf8");
+		return JSON.parse(raw) as SemanticIndex;
+	} catch {
+		return undefined;
+	}
+}
+
+async function requestQueryEmbedding(
+	baseUrl: string,
+	model: string,
+	query: string,
+	abortSignal?: AbortSignal,
+): Promise<number[] | undefined> {
+	try {
+		const result = await requestLmStudioEmbeddings(baseUrl, model, query, fetch, {
+			abortSignal,
+		});
+		return result.embeddings[0];
+	} catch {
+		return undefined;
+	}
+}
+
+function cosineSimilarity(a: number[], b: number[]): number {
+	let dot = 0;
+	let aNorm = 0;
+	let bNorm = 0;
+	const len = Math.min(a.length, b.length);
+	for (let i = 0; i < len; i++) {
+		const av = a[i] ?? 0;
+		const bv = b[i] ?? 0;
+		dot += av * bv;
+		aNorm += av * av;
+		bNorm += bv * bv;
+	}
+	if (aNorm === 0 || bNorm === 0) {
+		return 0;
+	}
+	return dot / (Math.sqrt(aNorm) * Math.sqrt(bNorm));
+}
+
+async function searchSemanticIndex(
+	query: string,
+	cwd: string,
+	maxResults: number,
+	abortSignal?: AbortSignal,
+): Promise<string | undefined> {
+	const index = await readSemanticIndex(cwd);
+	if (!index || index.files.length === 0) {
+		return undefined;
+	}
+	const queryEmbedding = await requestQueryEmbedding(
+		index.baseUrl,
+		index.embeddingModel,
+		query,
+		abortSignal,
+	);
+	if (!queryEmbedding || queryEmbedding.length === 0) {
+		return undefined;
+	}
+	const results: Array<{ file: string; score: number; text: string }> = [];
+	for (const file of index.files) {
+		if (file.status !== "indexed" && file.status !== "partial") {
+			continue;
+		}
+		for (const chunk of file.chunks) {
+			if (!chunk.embedding?.length) {
+				continue;
+			}
+			results.push({
+				file: file.path,
+				score: cosineSimilarity(queryEmbedding, chunk.embedding),
+				text: chunk.text,
+			});
+		}
+	}
+	const topResults = results
+		.sort((a, b) => b.score - a.score)
+		.slice(0, Math.min(maxResults, 10))
+		.filter((result) => result.score > 0);
+	if (topResults.length === 0) {
+		return undefined;
+	}
+	const lines = [
+		`No exact pattern matches found for: ${query}`,
+		`Semantic results from Agentario code index (${index.embeddingModel}):`,
+		"",
+	];
+	for (const result of topResults) {
+		lines.push(`${result.file} (score ${result.score.toFixed(3)})`);
+		lines.push(result.text.slice(0, 1200));
+		lines.push("");
+	}
+	return capSearchOutput(lines.join("\n"));
 }
 
 function searchWithRipgrep(
@@ -365,6 +497,16 @@ export function createSearchExecutor(
 			}
 
 			return capSearchOutput(resultLines.join("\n"));
+		}
+
+		const semanticResults = await searchSemanticIndex(
+			query,
+			cwd,
+			maxResults,
+			context.signal,
+		);
+		if (semanticResults) {
+			return semanticResults;
 		}
 
 		// Fallback to manual regex search

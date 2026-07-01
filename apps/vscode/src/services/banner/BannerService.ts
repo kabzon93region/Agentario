@@ -1,6 +1,7 @@
 import type { Banner, BannerAction, BannerRules, BannersResponse } from "@shared/ClineBanner"
 import { BannerActionType, type BannerCardData } from "@shared/cline/banner"
 import { ClineEnv } from "@/config"
+import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
 import { Controller } from "@/core/controller"
 import { StateManager } from "@/core/storage/StateManager"
 import { HostInfo, HostRegistryInfo } from "@/registry"
@@ -245,6 +246,9 @@ export class BannerService {
 	}
 
 	public async sendBannerEvent(bannerId: string, eventType: "dismiss"): Promise<void> {
+		if (isAgentarioStandaloneMode()) {
+			return
+		}
 		try {
 			const url = new URL("/banners/v2/messages", ClineEnv.config().apiBaseUrl).toString()
 			const ideType = this.getIdeType()
@@ -286,6 +290,9 @@ export class BannerService {
 	}
 
 	private async doFetch(): Promise<Banner[]> {
+		if (isAgentarioStandaloneMode()) {
+			return []
+		}
 		// Do not fetch banners when feature flag is off
 		if (!featureFlagsService.getBooleanFlagEnabled(FeatureFlag.REMOTE_BANNERS)) {
 			return []

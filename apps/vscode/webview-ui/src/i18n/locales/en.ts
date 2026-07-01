@@ -78,13 +78,17 @@ export const en = {
 		lmstudio: {
 			baseUrlPlaceholder: "Default: http://localhost:1234",
 			modelPlaceholder: "e.g. meta-llama-3.1-8b-instruct",
+			requestTimeout: "Request Timeout (ms)",
+			timeoutPlaceholder: "Default: 600000 (10 minutes)",
+			timeoutHint:
+				"Maximum wait for LM Studio responses and run_commands/search timeouts (default 120s for local models).",
 			introBefore: "LM Studio allows you to run models locally on your computer. For instructions on how to get started, see their",
 			quickstart: "quickstart guide",
 			introMiddle: ". You will also need to start LM Studio's",
 			localServer: "local server",
 			introAfter:
 				"feature with lms server start to use it with this extension. Note: Agentario uses complex prompts, so behavior can vary across models. Less capable models may not work as expected.",
-			note: "Note:",
+			toolUseHint: "Important: without Tool Use the model cannot call Agentario tools — only text replies.",
 		},
 		ollama: {
 			baseUrlPlaceholder: "Default: http://localhost:11434",
@@ -194,7 +198,7 @@ export const en = {
 	},
 	featureTips: {
 		doubleCheck: 'Enable "Double-Check Completion" in settings to have Agentario verify its work before finishing a task.',
-		clinerules: "Add a .clinerules file to your project root to give Agentario project-specific instructions.",
+		clinerules: "Add a .agentariorules file to your project root to give Agentario project-specific instructions.",
 		planMode: "Switch to Plan Mode to discuss and plan an approach before Agentario takes action.",
 		mcp: "Set up MCP Servers to give Agentario access to external tools and APIs.",
 		checkpoints: "Agentario creates checkpoints after changes — you can always restore to a previous state.",
@@ -217,5 +221,44 @@ export const en = {
 	},
 	worktrees: {
 		parallelHint: "their own windows so Agentario can work on multiple tasks in parallel.",
+	},
+	customize: {
+		tooltip: "Customize",
+		show: "Show Customize",
+		hide: "Hide Customize",
+		tabRules: "Rules",
+		tabHooks: "Hooks",
+		tabSkills: "Skills",
+		rulesDesc:
+			"Rules provide persistent instructions for the agent (global or workspace). Edit files in Documents/Agentario/Rules or .agentariorules/.",
+		skillsDesc:
+			"Skills are reusable instruction sets. Agentario loads them via the use_skill tool when a task matches.",
+		hooksDesc: "Hooks run scripts at lifecycle points (task start, tool use, completion).",
+		orgRules: "Your organization manages some rules",
+		orgSkills: "Your organization manages some skills",
+		enterpriseRules: "Enterprise Rules",
+		globalRules: "Global Rules",
+		workspaceRules: "Workspace Rules",
+		globalHooks: "Global Hooks",
+		enterpriseSkills: "Enterprise Skills",
+		globalSkills: "Global Skills",
+		localSkills: "Local Skills",
+		docs: "Docs",
+		hooksWindowsExist: "On Windows, hooks run when the hook file exists.",
+		hooksUnixToggle: "Toggle to enable/disable (chmod +x/-x).",
+		hooksWindowsBanner: "Hook toggling on Windows is not yet supported. Hooks run when the file exists.",
+	},
+	mcp: {
+		remoteServers: "Remote Servers",
+		configure: "Configure",
+	},
+	debug: {
+		resetWorkspace: "Reset Workspace State",
+		resetGlobal: "Reset Global State",
+		resetHint: "This will reset global state and secret storage in the extension.",
+		resetOnboarding: "Reset Onboarding State",
+	},
+	marketplace: {
+		skills: "Skills",
 	},
 }

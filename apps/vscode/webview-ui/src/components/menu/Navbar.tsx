@@ -1,4 +1,5 @@
 import { HistoryIcon, PlusIcon, PuzzleIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
+import { Environment } from "@shared/config-types"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -6,7 +7,7 @@ import { TaskServiceClient } from "@/services/grpc-client"
 import { useExtensionState } from "../../context/ExtensionStateContext"
 
 export const Navbar = () => {
-	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMarketplace, navigateToChat } =
+	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMarketplace, navigateToChat, environment } =
 		useExtensionState()
 
 	const SETTINGS_TABS = useMemo(
@@ -57,11 +58,16 @@ export const Navbar = () => {
 		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMarketplace, navigateToSettings],
 	)
 
+	const visibleTabs = useMemo(
+		() => (environment === Environment.selfHosted ? SETTINGS_TABS.filter((tab) => tab.id !== "account") : SETTINGS_TABS),
+		[SETTINGS_TABS, environment],
+	)
+
 	return (
 		<nav
 			className="flex-none inline-flex justify-end bg-transparent gap-2 mb-1 z-10 border-none items-center mr-4!"
 			id="cline-navbar-container">
-			{SETTINGS_TABS.map((tab) => (
+			{visibleTabs.map((tab) => (
 				<Tooltip key={`navbar-tooltip-${tab.id}`}>
 					<TooltipContent side="bottom">{tab.tooltip}</TooltipContent>
 					<TooltipTrigger asChild>

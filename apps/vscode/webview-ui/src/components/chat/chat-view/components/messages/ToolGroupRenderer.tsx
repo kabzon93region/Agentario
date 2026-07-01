@@ -1,4 +1,5 @@
 import { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
+import { isApiReqComplete } from "@shared/message-display"
 import { StringRequest } from "@shared/proto/cline/common"
 import { memo, useCallback, useMemo, useState } from "react"
 import { TypewriterText } from "@/components/chat/TypewriterText"
@@ -70,8 +71,8 @@ const getCurrentActivities = (allMessages: ClineMessage[]): ClineMessage[] => {
 		if (msg.say === "api_req_started" && msg.text) {
 			try {
 				const info = JSON.parse(msg.text)
-				const hasCost = info.cost != null
-				if (!hasCost) {
+				const complete = isApiReqComplete(info)
+				if (!complete) {
 					currentApiReqIndex = i
 					break
 				}
