@@ -202,6 +202,15 @@ function readKnownModelInfoForProvider(providerId: ProviderId, modelId: string):
 	return undefined
 }
 
+function readStoredModelInfoFromExtras(providerId: ProviderId): ModelInfo | undefined {
+	const extras = getProviderSettings(providerId).extras
+	if (!isRecord(extras)) {
+		return undefined
+	}
+	const modelInfo = extras.modelInfo
+	return isModelInfo(modelInfo) ? modelInfo : undefined
+}
+
 function readSelectionFromProviderSettings(providerId: ProviderId): ModelSelection | undefined {
 	const modelId = readProviderSettingsModelId(providerId)
 	if (!modelId) {
@@ -211,7 +220,10 @@ function readSelectionFromProviderSettings(providerId: ProviderId): ModelSelecti
 	return {
 		providerId,
 		modelId,
-		modelInfo: readKnownModelInfoForProvider(providerId, modelId) ?? fallbackModelInfo(modelId),
+		modelInfo:
+			readStoredModelInfoFromExtras(providerId) ??
+			readKnownModelInfoForProvider(providerId, modelId) ??
+			fallbackModelInfo(modelId),
 	}
 }
 
@@ -408,6 +420,11 @@ function writeSelectionToProviderSettings(providerId: ProviderId, selection: Mod
 	// Prune model metadata that earlier builds may have written to providers.json.
 	delete next.contextWindow
 	delete next.maxTokens
+
+	if (!modelInfoKeysByProvider[providerKey(providerId)] && selection.modelInfo) {
+		const existingExtras = isRecord(next.extras) ? next.extras : {}
+		next.extras = { ...existingExtras, modelInfo: selection.modelInfo }
+	}
 
 	saveProviderSettings(providerId, next)
 }

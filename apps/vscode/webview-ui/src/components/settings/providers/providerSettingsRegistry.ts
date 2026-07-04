@@ -32,6 +32,7 @@ const CUSTOM_PROVIDER_SETTINGS_IDS = new Set([
 	"vertex",
 	"vscode-lm",
 	"xai",
+	"xiaomi",
 	"zai",
 ])
 
@@ -96,7 +97,12 @@ const GENERIC_PROVIDER_PRESENTATION_OVERRIDES: Record<string, GenericProviderPre
 	wandb: {
 		signupUrl: "https://wandb.ai",
 	},
-	xiaomi: {},
+	xiaomi: {
+		baseUrlField: {
+			label: "Base URL",
+			placeholder: "https://api.xiaomimimo.com/v1",
+		},
+	},
 	"zai-coding-plan": {},
 }
 

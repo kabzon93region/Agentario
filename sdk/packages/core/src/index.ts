@@ -758,6 +758,12 @@ export async function loadOpenTelemetryAdapter() {
 export { Agent, createAgentRuntime } from "@cline/agents";
 export { createContextCompactionPrepareTurn } from "./extensions/context/compaction";
 export {
+	CONTEXT_BUDGET_NOTICE_KIND,
+	estimateContextBudget,
+	type ContextBudgetBreakdown,
+	type ContextBudgetRuleDetail,
+} from "./extensions/context/context-budget";
+export {
 	ALL_DEFAULT_TOOL_NAMES,
 	type AskQuestionExecutor,
 	type BuiltinToolAvailabilityContext,

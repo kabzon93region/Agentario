@@ -10,14 +10,17 @@ import { Controller } from ".."
 /**
  * Fetches available models from the OpenAI API
  * @param controller The controller instance
- * @param request Request containing the base URL and API key
+ * @param request Request containing the base URL, optional API key, and provider id for stored secrets
  * @returns Array of model names
  */
 export async function refreshOpenAiModels(controller: Controller, request: OpenAiModelsRequest): Promise<StringArray> {
 	try {
-		const providerConfig = controller.getProviderConfigStore().read(parseProviderId("openai"))
-		const baseUrl = request.baseUrl || providerConfig.baseUrl
-		const apiKey = request.apiKey || providerConfig.apiKey
+		const requestedProviderId = request.providerId?.trim()
+		const providerId = requestedProviderId ? parseProviderId(requestedProviderId) : parseProviderId("openai")
+		const providerConfig = controller.getProviderConfigStore().read(providerId)
+		const baseUrl = request.baseUrl?.trim() || providerConfig.baseUrl
+		const requestApiKey = request.apiKey?.trim()
+		const apiKey = requestApiKey || providerConfig.apiKey
 
 		if (!baseUrl) {
 			return StringArray.create({ values: [] })

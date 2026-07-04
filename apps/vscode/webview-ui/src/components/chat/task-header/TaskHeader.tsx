@@ -1,4 +1,5 @@
 import { ClineMessage } from "@shared/ExtensionMessage"
+import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import React, { useCallback, useLayoutEffect, useMemo, useState } from "react"
 import Thumbnails from "@/components/common/Thumbnails"
@@ -26,6 +27,7 @@ interface TaskHeaderProps {
 	cacheReads?: number
 	totalCost: number
 	lastApiReqTotalTokens?: number
+	contextBudget?: ContextBudgetBreakdown
 	onClose: () => void
 	onSendMessage?: (command: string, files: string[], images: string[]) => void
 }
@@ -38,6 +40,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	cacheReads,
 	totalCost,
 	lastApiReqTotalTokens,
+	contextBudget,
 	onClose,
 	onSendMessage,
 }) => {
@@ -48,6 +51,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 		expandTaskHeader: isTaskExpanded,
 		setExpandTaskHeader: setIsTaskExpanded,
 		environment,
+		useAutoCondense,
 	} = useExtensionState()
 
 	const [isHighlightedTextExpanded, setIsHighlightedTextExpanded] = useState(false)
@@ -202,12 +206,13 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 						<ContextWindow
 							cacheReads={cacheReads}
 							cacheWrites={cacheWrites}
+							contextBudget={contextBudget}
 							contextWindow={selectedModelInfo?.contextWindow}
 							lastApiReqTotalTokens={lastApiReqTotalTokens}
 							onSendMessage={onSendMessage}
 							tokensIn={tokensIn}
 							tokensOut={tokensOut}
-							useAutoCondense={false} // Disable auto-condense configuration in UI for now
+							useAutoCondense={useAutoCondense ?? false}
 						/>
 					</div>
 				)}

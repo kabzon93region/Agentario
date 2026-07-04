@@ -1,26 +1,25 @@
 import { EmptyRequest } from "@shared/proto/cline/common"
+import { UpdateSettingsRequest } from "@shared/proto/cline/state"
 import { CodebaseIndex, IndexedFile, IndexedFileStatus } from "@shared/proto/cline/indexing"
 import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { DebouncedTextField } from "@/components/settings/common/DebouncedTextField"
 import { DropdownContainer } from "@/components/settings/common/ModelSelector"
 import { useExtensionState } from "@/context/ExtensionStateContext"
-import { useApiConfigurationHandlers } from "@/components/settings/utils/useApiConfigurationHandlers"
-import { IndexingServiceClient, ModelsServiceClient } from "@/services/grpc-client"
+import { IndexingServiceClient, ModelsServiceClient, StateServiceClient } from "@/services/grpc-client"
+import {
+	formatLmStudioEmbeddingModelLabel,
+	isEmbeddingLmStudioType,
+	sortLmStudioModelsForPicker,
+	type LmStudioApiModel,
+} from "@/utils/lmStudioModelLabel"
 import ViewHeader from "../common/ViewHeader"
+import { logAgentarioScreenView } from "@/utils/agentario-ui-logger"
 
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-qwen3-embedding-0.6b"
 
 type IndexingViewProps = {
 	onDone: () => void
-}
-
-interface LmStudioApiModel {
-	id: string
-	type?: string
-	state?: string
-	key?: string
-	loadedInstanceIds?: string[]
 }
 
 function statusLabel(status: IndexedFileStatus): string {
@@ -63,35 +62,30 @@ function formatBytes(size: number): string {
 	return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function isEmbeddingCapableType(type?: string): boolean {
-	const normalized = type?.toLowerCase()
-	return normalized === "embedding" || normalized === "embeddings"
-}
-
-function formatLmStudioModelLabel(model: LmStudioApiModel): string {
-	const tags: string[] = []
-	if (model.type) {
-		tags.push(model.type)
-	}
-	if (model.state === "loaded") {
-		tags.push("loaded")
-	}
-	if (!isEmbeddingCapableType(model.type)) {
-		tags.push("не для /embeddings")
-	}
-	return tags.length > 0 ? `${model.id} (${tags.join(", ")})` : model.id
-}
-
 const IndexingView = ({ onDone }: IndexingViewProps) => {
-	const { apiConfiguration, environment } = useExtensionState()
-	const { handleFieldChange } = useApiConfigurationHandlers()
+	const {
+		apiConfiguration,
+		environment,
+		codebaseIndexMode = "local",
+		codebaseIndexAiBackend = "lmstudio",
+		codebaseIndexBaseUrl,
+		codebaseIndexEmbeddingModelId,
+	} = useExtensionState()
 	const [index, setIndex] = useState<CodebaseIndex | undefined>(undefined)
 	const [isWorking, setIsWorking] = useState(false)
+	const [clearConfirmPending, setClearConfirmPending] = useState(false)
 	const [error, setError] = useState<string | undefined>(undefined)
 	const [lmStudioModels, setLmStudioModels] = useState<LmStudioApiModel[]>([])
 
 	const lmStudioBaseUrl = apiConfiguration?.lmStudioBaseUrl?.trim() || "http://localhost:1234"
-	const configuredEmbeddingModel = apiConfiguration?.lmStudioEmbeddingModelId?.trim() || DEFAULT_EMBEDDING_MODEL
+	const configuredEmbeddingModel =
+		codebaseIndexEmbeddingModelId?.trim() || apiConfiguration?.lmStudioEmbeddingModelId?.trim() || DEFAULT_EMBEDDING_MODEL
+	const usesAiEmbeddings = codebaseIndexMode !== "local"
+	const showRemoteUrl = codebaseIndexMode === "remote-ai" || (codebaseIndexMode === "local-ai" && codebaseIndexAiBackend === "ollama")
+
+	const persistIndexSetting = useCallback(async (request: UpdateSettingsRequest) => {
+		await StateServiceClient.updateSettings(request)
+	}, [])
 
 	const loadLmStudioModels = useCallback(async () => {
 		try {
@@ -112,18 +106,36 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 
 	const runAction = useCallback(
 		async (action: "clear" | "rebuild" | "update") => {
+			if (action === "clear" && !clearConfirmPending) {
+				setClearConfirmPending(true)
+				setError(undefined)
+				return
+			}
 			setIsWorking(true)
 			setError(undefined)
 			try {
 				if (action === "clear") {
-					const confirmed = window.confirm("Очистить локальный embedding-индекс для этого workspace?")
-					if (!confirmed) {
-						return
-					}
-					setIndex(await IndexingServiceClient.clearIndex(EmptyRequest.create({})))
+					setClearConfirmPending(false)
+					const cleared = await IndexingServiceClient.clearIndex(EmptyRequest.create({}))
+					setIndex({
+						...cleared,
+						files: cleared.files ?? [],
+						totalFiles: 0,
+						indexedFiles: 0,
+						skippedFiles: 0,
+						errorFiles: 0,
+						indexSizeBytes: 0,
+						isIndexing: false,
+						progressCurrent: 0,
+						progressTotal: 0,
+						progressPath: undefined,
+						updatedAtMs: 0,
+					})
 				} else if (action === "rebuild") {
+					setClearConfirmPending(false)
 					setIndex(await IndexingServiceClient.rebuildIndex(EmptyRequest.create({})))
 				} else {
+					setClearConfirmPending(false)
 					setIndex(await IndexingServiceClient.updateIndex(EmptyRequest.create({})))
 				}
 			} catch (caught) {
@@ -132,33 +144,44 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 				setIsWorking(false)
 			}
 		},
-		[],
+		[clearConfirmPending],
 	)
+
+	useEffect(() => {
+		logAgentarioScreenView("indexing", codebaseIndexMode, { backend: codebaseIndexAiBackend })
+	}, [codebaseIndexMode, codebaseIndexAiBackend])
 
 	useEffect(() => {
 		loadStatus().catch((caught) => setError(caught instanceof Error ? caught.message : String(caught)))
 	}, [loadStatus])
 
 	useEffect(() => {
+		if (!index?.isIndexing) {
+			return
+		}
+		const timer = window.setInterval(() => {
+			loadStatus().catch((caught) => console.error(caught))
+		}, 1000)
+		return () => window.clearInterval(timer)
+	}, [index?.isIndexing, loadStatus])
+
+	useEffect(() => {
+		if (!usesAiEmbeddings || codebaseIndexAiBackend !== "lmstudio") {
+			return
+		}
 		loadLmStudioModels().catch((caught) => console.error(caught))
-	}, [loadLmStudioModels])
+	}, [loadLmStudioModels, usesAiEmbeddings, codebaseIndexAiBackend])
 
 	const selectedEmbeddingModelId = configuredEmbeddingModel
 	const embeddingModelOptions = useMemo(() => {
 		if (lmStudioModels.length === 0) {
 			return []
 		}
-		const embeddingOnly = lmStudioModels.filter((model) => isEmbeddingCapableType(model.type))
+		const embeddingOnly = lmStudioModels.filter((model) => isEmbeddingLmStudioType(model.type))
 		const pool = embeddingOnly.length > 0 ? embeddingOnly : lmStudioModels
-		const sorted = [...pool].sort((a, b) => {
-			if (a.state === "loaded" && b.state !== "loaded") {
-				return -1
-			}
-			if (b.state === "loaded" && a.state !== "loaded") {
-				return 1
-			}
-			return (a.key ?? a.id).localeCompare(b.key ?? b.id)
-		})
+		const sorted = sortLmStudioModelsForPicker(pool).sort((a, b) =>
+			(a.key ?? a.id).localeCompare(b.key ?? b.id),
+		)
 		const hasSelected = sorted.some(
 			(model) =>
 				model.id === selectedEmbeddingModelId ||
@@ -182,18 +205,23 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 		[lmStudioModels, selectedEmbeddingModelId],
 	)
 	const selectedIsNonEmbedding =
-		selectedModelRecord !== undefined && !isEmbeddingCapableType(selectedModelRecord.type)
+		selectedModelRecord !== undefined && !isEmbeddingLmStudioType(selectedModelRecord.type)
 
 	const files: IndexedFile[] = index?.files ?? []
 	const partialCount = files.filter((file) => file.status === IndexedFileStatus.INDEXED_FILE_STATUS_PARTIAL).length
 	const updatedAt = index?.updatedAtMs ? new Date(Number(index.updatedAtMs)).toLocaleString() : "never"
 	const busy = isWorking || index?.isIndexing
+	const progressCurrent = Number(index?.progressCurrent ?? 0)
+	const progressTotal = Number(index?.progressTotal ?? 0)
+	const progressPercent =
+		progressTotal > 0 ? Math.min(100, Math.round((progressCurrent / progressTotal) * 100)) : busy ? 0 : 100
+	const indexSizeBytes = Number(index?.indexSizeBytes ?? 0)
 	const activeEmbeddingModel = index?.embeddingModel || configuredEmbeddingModel
 	const loadedEmbeddingHint =
-		lmStudioModels.filter((model) => model.state === "loaded" && isEmbeddingCapableType(model.type)).length > 0
+		lmStudioModels.filter((model) => model.state === "loaded" && isEmbeddingLmStudioType(model.type)).length > 0
 			? lmStudioModels
-					.filter((model) => model.state === "loaded" && isEmbeddingCapableType(model.type))
-					.map((model) => formatLmStudioModelLabel(model))
+					.filter((model) => model.state === "loaded" && isEmbeddingLmStudioType(model.type))
+					.map((model) => formatLmStudioEmbeddingModelLabel(model))
 					.join(", ")
 			: "нет загруженных embedding-моделей"
 
@@ -205,9 +233,85 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 					<div className="truncate" title={index?.workspacePath}>
 						Workspace: {index?.workspacePath || "unknown"}
 					</div>
-					<div>LM Studio: {index?.baseUrl || lmStudioBaseUrl}</div>
+					<div>
+						Режим:{" "}
+						{codebaseIndexMode === "local"
+							? "локальный (без AI)"
+							: codebaseIndexMode === "local-ai"
+								? `локальный AI (${codebaseIndexAiBackend})`
+								: `удалённый AI (${codebaseIndexAiBackend})`}
+					</div>
+					<div>Endpoint: {index?.baseUrl || (usesAiEmbeddings ? codebaseIndexBaseUrl || lmStudioBaseUrl : "local")}</div>
 					<div>Updated: {updatedAt}</div>
 				</div>
+				<div className="mb-2 grid gap-2">
+					<DropdownContainer className="dropdown-container" zIndex={30}>
+						<VSCodeDropdown
+							className="w-full"
+							onChange={(event: any) => {
+								const value = event?.target?.value
+								if (typeof value === "string") {
+									void persistIndexSetting(
+										UpdateSettingsRequest.create({
+											codebaseIndexMode: value,
+										}),
+									)
+								}
+							}}
+							value={codebaseIndexMode}>
+							<VSCodeOption value="local">Локальный (без AI, ripgrep/файлы)</VSCodeOption>
+							<VSCodeOption value="local-ai">Локальный AI (127.0.0.1)</VSCodeOption>
+							<VSCodeOption value="remote-ai">Удалённый AI (IP/URL)</VSCodeOption>
+						</VSCodeDropdown>
+						<p className="mt-0.5 text-[11px] font-medium">Режим индексации</p>
+					</DropdownContainer>
+					{usesAiEmbeddings && (
+						<DropdownContainer className="dropdown-container" zIndex={20}>
+							<VSCodeDropdown
+								className="w-full"
+								onChange={(event: any) => {
+									const value = event?.target?.value
+									if (value === "lmstudio" || value === "ollama") {
+										void persistIndexSetting(
+											UpdateSettingsRequest.create({
+												codebaseIndexAiBackend: value,
+											}),
+										)
+									}
+								}}
+								value={codebaseIndexAiBackend}>
+								<VSCodeOption value="lmstudio">LM Studio</VSCodeOption>
+								<VSCodeOption value="ollama">Ollama</VSCodeOption>
+							</VSCodeDropdown>
+							<p className="mt-0.5 text-[11px] font-medium">Backend embeddings</p>
+						</DropdownContainer>
+					)}
+					{usesAiEmbeddings && showRemoteUrl && (
+						<DebouncedTextField
+							initialValue={codebaseIndexBaseUrl ?? ""}
+							onChange={(value) =>
+								void persistIndexSetting(
+									UpdateSettingsRequest.create({
+										codebaseIndexBaseUrl: value.trim(),
+									}),
+								)
+							}
+							placeholder={
+								codebaseIndexAiBackend === "ollama" ? "http://127.0.0.1:11434" : "http://192.168.1.10:1234"
+							}
+							style={{ width: "100%" }}>
+							<span className="text-[11px] font-medium">
+								{codebaseIndexMode === "remote-ai" ? "URL сервера embeddings" : "URL Ollama (если не localhost)"}
+							</span>
+						</DebouncedTextField>
+					)}
+					{usesAiEmbeddings && codebaseIndexMode === "local-ai" && codebaseIndexAiBackend === "lmstudio" && (
+						<p className="text-[10px] text-description leading-tight">
+							LM Studio URL берётся из Settings → API ({lmStudioBaseUrl}), если поле URL выше пустое.
+						</p>
+					)}
+				</div>
+				{usesAiEmbeddings && (
 				<div className="mb-2">
 					{embeddingModelOptions.length > 0 ? (
 						<DropdownContainer className="dropdown-container" zIndex={10}>
@@ -222,13 +326,17 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 												model.key === value ||
 												model.loadedInstanceIds?.includes(value),
 										)
-										handleFieldChange("lmStudioEmbeddingModelId", (selected?.key ?? value).trim() || undefined)
+										void persistIndexSetting(
+											UpdateSettingsRequest.create({
+												codebaseIndexEmbeddingModelId: (selected?.key ?? value).trim() || undefined,
+											}),
+										)
 									}
 								}}
 								value={selectedEmbeddingModelId}>
 								{embeddingModelOptions.map((model) => (
 									<VSCodeOption className="w-full" key={model.id} value={model.key ?? model.id}>
-										{formatLmStudioModelLabel(model)}
+										{formatLmStudioEmbeddingModelLabel(model)}
 									</VSCodeOption>
 								))}
 							</VSCodeDropdown>
@@ -236,11 +344,19 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 						</DropdownContainer>
 					) : (
 						<DebouncedTextField
-							initialValue={apiConfiguration?.lmStudioEmbeddingModelId ?? ""}
-							onChange={(value) => handleFieldChange("lmStudioEmbeddingModelId", value.trim() || undefined)}
+							initialValue={configuredEmbeddingModel}
+							onChange={(value) =>
+								void persistIndexSetting(
+									UpdateSettingsRequest.create({
+										codebaseIndexEmbeddingModelId: value.trim() || undefined,
+									}),
+								)
+							}
 							placeholder={DEFAULT_EMBEDDING_MODEL}
 							style={{ width: "100%" }}>
-							<span className="text-[11px] font-medium">Embedding-модель (LM Studio)</span>
+							<span className="text-[11px] font-medium">
+								Embedding-модель ({codebaseIndexAiBackend === "ollama" ? "Ollama" : "LM Studio"})
+							</span>
 						</DebouncedTextField>
 					)}
 					<p className="mt-0.5 text-[10px] text-description leading-tight">
@@ -255,6 +371,7 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 						</p>
 					)}
 				</div>
+				)}
 				<div className="mb-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] leading-tight">
 					<span>Total: {index?.totalFiles ?? 0}</span>
 					<span>
@@ -263,14 +380,46 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 					</span>
 					<span>Skipped: {index?.skippedFiles ?? 0}</span>
 					<span>Errors: {index?.errorFiles ?? 0}</span>
+					<span>Index size: {formatBytes(indexSizeBytes)}</span>
 				</div>
+				{busy && progressTotal > 0 && (
+					<div className="mb-2 text-[11px] leading-tight">
+						<div className="mb-1 flex items-center justify-between gap-2">
+							<span>
+								Progress: {progressCurrent} / {progressTotal} ({progressPercent}%)
+							</span>
+						</div>
+						<div className="h-1.5 overflow-hidden rounded bg-[var(--vscode-editor-inactiveSelectionBackground)]">
+							<div
+								className="h-full bg-[var(--vscode-progressBar-background)] transition-[width] duration-300"
+								style={{ width: `${progressPercent}%` }}
+							/>
+						</div>
+						{index?.progressPath && (
+							<div className="mt-1 truncate text-[10px] text-description" title={index.progressPath}>
+								{index.progressPath}
+							</div>
+						)}
+					</div>
+				)}
 				<div className="mb-2 text-[10px] text-description leading-tight">
-					Большие файлы — частично: до 12 чанков (~24 KB) или первые 2 MB.
+					Чанк ~3072 симв. (~1024 tok), нахлёст 17.5%, batch до 2048 tok. Большие файлы — первые 2 MB.
 				</div>
 				<div className="flex flex-wrap gap-1.5">
-					<VSCodeButton appearance="secondary" disabled={busy} onClick={() => runAction("clear")}>
-						Очистить
-					</VSCodeButton>
+					{clearConfirmPending ? (
+						<>
+							<VSCodeButton disabled={busy} onClick={() => runAction("clear")}>
+								Подтвердить очистку
+							</VSCodeButton>
+							<VSCodeButton appearance="secondary" disabled={busy} onClick={() => setClearConfirmPending(false)}>
+								Отмена
+							</VSCodeButton>
+						</>
+					) : (
+						<VSCodeButton appearance="secondary" disabled={busy} onClick={() => runAction("clear")}>
+							Очистить
+						</VSCodeButton>
+					)}
 					<VSCodeButton disabled={busy} onClick={() => runAction("rebuild")}>
 						Пересоздать
 					</VSCodeButton>
@@ -284,10 +433,17 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 						Обновить модели LM Studio
 					</VSCodeButton>
 				</div>
+				{clearConfirmPending && (
+					<div className="mt-2 text-[11px] text-[var(--vscode-editorWarning-foreground)]">
+						Будет удалён локальный embedding-индекс для этого workspace. Нажмите «Подтвердить очистку».
+					</div>
+				)}
 				{busy && (
 					<div className="mt-2 flex items-center gap-1.5 text-[11px] text-description">
 						<VSCodeProgressRing style={{ height: 12, width: 12 }} />
-						Идёт индексация…
+						{progressTotal > 0
+							? `Индексация: ${progressCurrent}/${progressTotal} (${progressPercent}%) · ${formatBytes(indexSizeBytes)}`
+							: "Идёт индексация…"}
 					</div>
 				)}
 				{(error || index?.lastError) && (

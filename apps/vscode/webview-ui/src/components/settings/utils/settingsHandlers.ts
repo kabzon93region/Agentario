@@ -40,3 +40,12 @@ export const updateSetting = (field: keyof UpdateSettingsRequest, value: any) =>
 		console.error(`Failed to update setting ${field}:`, error)
 	})
 }
+
+/** Patch settings fields that may exist in proto before TS types are regenerated. */
+export const updateSettingsPatch = (patch: Record<string, unknown>) => {
+	StateServiceClient.updateSettings(
+		UpdateSettingsRequest.create(patch as unknown as UpdateSettingsRequest),
+	).catch((error) => {
+		console.error("Failed to update settings patch:", error)
+	})
+}

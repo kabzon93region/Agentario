@@ -73,7 +73,8 @@
 
 | Переменная | По умолчанию | Назначение |
 |------------|--------------|------------|
-| `AGENTARIO_SKIP_BUILD` | — | `1` — не запускать `build.cmd` |
+| `AGENTARIO_GH_REPO` | `kabzon93region/Agentario` | репозиторий для `gh release` |
+| `AGENTARIO_SKIP_BUILD` | — | `1` — не запускать сборку |
 | `AGENTARIO_SKIP_GIT` | — | `1` — не commit/push/tag |
 | `AGENTARIO_GIT_REMOTE` | `origin` | remote для push |
 | `AGENTARIO_GIT_BRANCH` | `main` | ветка |

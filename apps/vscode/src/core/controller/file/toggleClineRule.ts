@@ -1,6 +1,7 @@
 import { getWorkspaceBasename } from "@core/workspace"
 import type { ToggleClineRuleRequest } from "@shared/proto/cline/file"
 import { RuleScope, ToggleClineRules } from "@shared/proto/cline/file"
+import * as path from "path"
 import { telemetryService } from "@/services/telemetry"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"
@@ -13,6 +14,7 @@ import type { Controller } from "../index"
  */
 export async function toggleClineRule(controller: Controller, request: ToggleClineRuleRequest): Promise<ToggleClineRules> {
 	const { scope, rulePath, enabled } = request
+	const normalizedRulePath = path.normalize(rulePath)
 
 	if (!rulePath || typeof enabled !== "boolean" || scope === undefined) {
 		Logger.error("toggleClineRule: Missing or invalid parameters", {
@@ -27,13 +29,19 @@ export async function toggleClineRule(controller: Controller, request: ToggleCli
 	switch (scope) {
 		case RuleScope.GLOBAL: {
 			const toggles = controller.stateManager.getGlobalSettingsKey("globalClineRulesToggles")
-			toggles[rulePath] = enabled
+			if (normalizedRulePath !== rulePath) {
+				delete toggles[rulePath]
+			}
+			toggles[normalizedRulePath] = enabled
 			controller.stateManager.setGlobalState("globalClineRulesToggles", toggles)
 			break
 		}
 		case RuleScope.LOCAL: {
 			const toggles = controller.stateManager.getWorkspaceStateKey("localClineRulesToggles")
-			toggles[rulePath] = enabled
+			if (normalizedRulePath !== rulePath) {
+				delete toggles[rulePath]
+			}
+			toggles[normalizedRulePath] = enabled
 			controller.stateManager.setWorkspaceState("localClineRulesToggles", toggles)
 			break
 		}
@@ -50,7 +58,7 @@ export async function toggleClineRule(controller: Controller, request: ToggleCli
 	// Track rule toggle telemetry with current task context
 	if (controller.task?.ulid) {
 		// Extract just the filename for privacy (no full paths)
-		const ruleFileName = getWorkspaceBasename(rulePath, "Controller.toggleClineRule")
+		const ruleFileName = getWorkspaceBasename(normalizedRulePath, "Controller.toggleClineRule")
 		const isGlobal = scope === RuleScope.GLOBAL
 		telemetryService.captureClineRuleToggled(controller.task.ulid, ruleFileName, enabled, isGlobal)
 	}

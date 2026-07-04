@@ -1,7 +1,10 @@
 import { synchronizeRuleToggles } from "@core/context/instructions/user-instructions/rule-helpers"
-import { ensureRulesDirectoryExists, GlobalFileNames } from "@core/storage/disk"
+import {
+	ensureRulesDirectoryExists,
+	LOCAL_RULES_EXCLUDED_SUBPATHS,
+	resolveLocalRulesDirectory,
+} from "@core/storage/disk"
 import { ClineRulesToggles } from "@shared/cline-rules"
-import path from "path"
 import { Controller } from "@/core/controller"
 
 export async function refreshClineRulesToggles(
@@ -19,12 +22,13 @@ export async function refreshClineRulesToggles(
 
 	// Local toggles
 	const localClineRulesToggles = controller.stateManager.getWorkspaceStateKey("localClineRulesToggles")
-	const localClineRulesFilePath = path.resolve(workingDirectory, GlobalFileNames.clineRules)
-	const updatedLocalToggles = await synchronizeRuleToggles(localClineRulesFilePath, localClineRulesToggles, "", [
-		[".clinerules", "workflows"],
-		[".clinerules", "hooks"],
-		[".clinerules", "skills"],
-	])
+	const localClineRulesFilePath = await resolveLocalRulesDirectory(workingDirectory)
+	const updatedLocalToggles = await synchronizeRuleToggles(
+		localClineRulesFilePath,
+		localClineRulesToggles,
+		"",
+		LOCAL_RULES_EXCLUDED_SUBPATHS,
+	)
 	controller.stateManager.setWorkspaceState("localClineRulesToggles", updatedLocalToggles)
 
 	return {

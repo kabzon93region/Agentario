@@ -1,7 +1,9 @@
 /**
  * Applies the `ModelInfo` fields the extension owns locally, on top of
- * an adapted SDK `ModelInfo`. Today this is just Vertex's
- * `supportsGlobalEndpoint` allowlist (see `./vertex-global-endpoint.ts`).
+ * an adapted SDK `ModelInfo`. Today this is Vertex's
+ * `supportsGlobalEndpoint` allowlist (see `./vertex-global-endpoint.ts`)
+ * and live context-window values for dynamic local providers (LM Studio,
+ * Ollama) that the SDK catalog cannot know without polling the runtime.
  *
  * Both the model-list resolution path (`resolveSdkModels`) and the
  * single-model lookup path (`resolveModelInfo`) pass adapted
@@ -10,13 +12,50 @@
  * flags upstream, the override and this file can be removed together.
  */
 
-import type { ModelInfo } from "@shared/api"
+import type { ApiConfiguration, ModelInfo } from "@shared/api"
 import type { ProviderId } from "./contracts"
 import { vertexModelSupportsGlobalEndpoint } from "./vertex-global-endpoint"
 
-export function applyHostModelInfoOverrides(providerId: ProviderId, modelId: string, modelInfo: ModelInfo): ModelInfo {
-	if (providerId === "vertex" && vertexModelSupportsGlobalEndpoint(providerId, modelId)) {
-		return { ...modelInfo, supportsGlobalEndpoint: true }
+function parsePositiveInt(value: string | undefined): number | undefined {
+	if (!value?.trim()) {
+		return undefined
+	}
+	const parsed = Number.parseInt(value.trim(), 10)
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+function applyDynamicProviderContextWindow(
+	providerId: ProviderId,
+	modelInfo: ModelInfo,
+	apiConfiguration?: Pick<ApiConfiguration, "lmStudioMaxTokens" | "ollamaApiOptionsCtxNum">,
+): ModelInfo {
+	if (!apiConfiguration) {
+		return modelInfo
+	}
+	if (providerId === "lmstudio") {
+		const contextWindow = parsePositiveInt(apiConfiguration.lmStudioMaxTokens)
+		if (contextWindow) {
+			return { ...modelInfo, contextWindow }
+		}
+	}
+	if (providerId === "ollama") {
+		const contextWindow = parsePositiveInt(apiConfiguration.ollamaApiOptionsCtxNum)
+		if (contextWindow) {
+			return { ...modelInfo, contextWindow }
+		}
 	}
 	return modelInfo
+}
+
+export function applyHostModelInfoOverrides(
+	providerId: ProviderId,
+	modelId: string,
+	modelInfo: ModelInfo,
+	apiConfiguration?: Pick<ApiConfiguration, "lmStudioMaxTokens" | "ollamaApiOptionsCtxNum">,
+): ModelInfo {
+	let result = modelInfo
+	if (providerId === "vertex" && vertexModelSupportsGlobalEndpoint(providerId, modelId)) {
+		result = { ...result, supportsGlobalEndpoint: true }
+	}
+	return applyDynamicProviderContextWindow(providerId, result, apiConfiguration)
 }

@@ -6,8 +6,9 @@ import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { t } from "@/i18n"
+import { DebouncedTextField } from "../common/DebouncedTextField"
 import Section from "../Section"
-import { updateSetting } from "../utils/settingsHandlers"
+import { updateSetting, updateSettingsPatch } from "../utils/settingsHandlers"
 
 // Reusable checkbox component for feature settings
 interface FeatureCheckboxProps {
@@ -154,6 +155,9 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 		mcpDisplayMode,
 		yoloModeToggled,
 		useAutoCondense,
+		compactionStrategy,
+		compactionSummarizerProviderId,
+		compactionSummarizerModelId,
 		subagentsEnabled,
 		worktreesEnabled,
 		remoteConfigSettings,
@@ -201,6 +205,52 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 									onChange={(checked) => updateSetting(feature.settingKey, checked)}
 								/>
 							))}
+							<div className="mt-3 space-y-3 border-t border-editor-widget-border/40 pt-3">
+								<div className="space-y-1">
+									<Label className="text-sm font-semibold">{t("features.compactionStrategyLabel")}</Label>
+									<p className="text-xs text-description">{t("features.compactionStrategyDesc")}</p>
+									<Select
+										onValueChange={(value) =>
+											updateSettingsPatch({
+												compactionStrategy: value === "basic" ? "basic" : "agentic",
+											})
+										}
+										value={compactionStrategy === "basic" ? "basic" : "agentic"}>
+										<SelectTrigger className="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="agentic">{t("features.compactionStrategyAgentic")}</SelectItem>
+											<SelectItem value="basic">{t("features.compactionStrategyBasic")}</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="space-y-1">
+									<Label className="text-sm font-semibold">{t("features.compactionSummarizerLabel")}</Label>
+									<p className="text-xs text-description">{t("features.compactionSummarizerDesc")}</p>
+									<DebouncedTextField
+										initialValue={compactionSummarizerModelId ?? ""}
+										onChange={(value) =>
+											updateSettingsPatch({
+												compactionSummarizerModelId: value.trim(),
+											})
+										}
+										placeholder={t("features.compactionSummarizerPlaceholder")}
+										style={{ width: "100%" }}
+									/>
+									<DebouncedTextField
+										initialValue={compactionSummarizerProviderId ?? ""}
+										onChange={(value) =>
+											updateSettingsPatch({
+												compactionSummarizerProviderId: value.trim(),
+											})
+										}
+										placeholder="lmstudio"
+										style={{ width: "100%" }}>
+										<span className="text-xs text-description">Provider ID (optional)</span>
+									</DebouncedTextField>
+								</div>
+							</div>
 						</div>
 					</div>
 

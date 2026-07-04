@@ -3,7 +3,7 @@ import { combineCommandSequences } from "@shared/combineCommandSequences"
 import { combineErrorRetryMessages } from "@shared/combineErrorRetryMessages"
 import { combineHookSequences } from "@shared/combineHookSequences"
 import type { ClineMessage } from "@shared/ExtensionMessage"
-import { getApiMetrics, getLastApiReqTotalTokens } from "@shared/getApiMetrics"
+import { getApiMetrics, getLastApiReqTotalTokens, getLastContextBudget } from "@shared/getApiMetrics"
 import { BooleanRequest, StringRequest } from "@shared/proto/cline/common"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { useMount } from "react-use"
@@ -130,6 +130,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
 
 	const lastApiReqTotalTokens = useMemo(() => getLastApiReqTotalTokens(modifiedMessages) || undefined, [modifiedMessages])
+	const lastContextBudget = useMemo(() => getLastContextBudget(modifiedMessages), [modifiedMessages])
 	const lastAppliedCheckpointRestoreSessionId = useRef<string | undefined>(checkpointRestoreInput?.sessionId)
 
 	useEffect(() => {
@@ -373,6 +374,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 				{task ? (
 					<TaskSection
 						apiMetrics={apiMetrics}
+						contextBudget={lastContextBudget}
 						lastApiReqTotalTokens={lastApiReqTotalTokens}
 						messageHandlers={messageHandlers}
 						selectedModelInfo={{

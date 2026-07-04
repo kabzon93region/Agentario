@@ -3,7 +3,7 @@ import type { MessageWithMetadata } from "@cline/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CoreCompactionContext } from "../../types/config";
 import { runBasicCompaction } from "./basic-compaction";
-import { createContextCompactionPrepareTurn } from "./compaction";
+import { createContextCompactionPrepareTurn, resolveAdaptivePreserveRecentTokens } from "./compaction";
 import {
 	createTokenEstimator,
 	resolveSummarizerConfig,
@@ -2110,5 +2110,17 @@ describe("createContextCompactionPrepareTurn", () => {
 					: undefined,
 		});
 		expect(secondResult).toBeUndefined();
+	});
+});
+
+describe("resolveAdaptivePreserveRecentTokens", () => {
+	it("caps preserve window for small context models", () => {
+		expect(
+			resolveAdaptivePreserveRecentTokens({
+				maxInputTokens: 8_192,
+				mode: "auto",
+				triggerTokens: 7_000,
+			}),
+		).toBe(2_048);
 	});
 });

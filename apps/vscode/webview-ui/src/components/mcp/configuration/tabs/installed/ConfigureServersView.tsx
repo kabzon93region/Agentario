@@ -1,11 +1,14 @@
 import { EmptyRequest } from "@shared/proto/cline/common"
 import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { isStandaloneEnvironment } from "@/constants/standalone"
 import { McpServiceClient } from "@/services/grpc-client"
+import { sortAgentarioMcpServers } from "@/utils/agentario-mcp-display"
 import ServersToggleList from "./ServersToggleList"
 
 const ConfigureServersView = () => {
-	const { mcpServers: servers, navigateToSettings, remoteConfigSettings } = useExtensionState()
+	const { mcpServers: servers, navigateToSettings, remoteConfigSettings, environment } = useExtensionState()
+	const sortedServers = isStandaloneEnvironment(environment) ? sortAgentarioMcpServers(servers) : servers
 
 	// Check if there are remote MCP servers configured
 	const hasRemoteMCPServers = remoteConfigSettings?.remoteMCPServers && remoteConfigSettings.remoteMCPServers.length > 0
@@ -42,7 +45,7 @@ const ConfigureServersView = () => {
 				</div>
 			)}
 
-			<ServersToggleList hasTrashIcon={false} isExpandable={true} servers={servers} />
+			<ServersToggleList hasTrashIcon={false} isExpandable={true} servers={sortedServers} />
 
 			{/* Settings Section */}
 			<div style={{ marginBottom: "20px", marginTop: 10 }}>

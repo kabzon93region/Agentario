@@ -281,6 +281,8 @@ message OpenAiModelsRequest {
   Metadata metadata = 1;
   string base_url = 2;
   string api_key = 3;
+  // Provider whose stored api_key/base_url/headers are used when the request omits them.
+  string provider_id = 4;
 }
 
 // Request for fetching SAP AI Core models

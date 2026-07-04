@@ -3,6 +3,7 @@ dist
 dist-standalone
 node_modules
 tmp
+Exports/
 .vscode-test/
 *.vsix
 
@@ -41,6 +42,7 @@ coverage-unit
 apps/vscode/src/generated/
 apps/vscode/src/shared/proto/
 apps/vscode/webview-ui/src/services/grpc-client.ts
+cursor_vscode_extension_development_app.md
 *.tsbuildinfo
 
 # E2E Tests

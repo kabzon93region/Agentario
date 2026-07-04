@@ -48,6 +48,7 @@ describe("providerSettingsRegistry", () => {
 		expect(hasCustomProviderSettings("cerebras")).toBe(false)
 		expect(hasCustomProviderSettings("minimax")).toBe(false)
 		expect(hasCustomProviderSettings("together")).toBe(false)
+		expect(hasCustomProviderSettings("xiaomi")).toBe(true)
 		expect(getGenericProviderSettings("openai", listing({ id: "openai", name: "OpenAI" }))).toBeUndefined()
 	})
 
@@ -72,7 +73,6 @@ describe("providerSettingsRegistry", () => {
 			["vercel-ai-gateway", "Vercel AI Gateway", "https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai"],
 			["v0", "Vercel v0", undefined],
 			["wandb", "W&B", "https://wandb.ai"],
-			["xiaomi", "Xiaomi", undefined],
 			["zai-coding-plan", "Z.AI Coding Plan", undefined],
 		] as const
 

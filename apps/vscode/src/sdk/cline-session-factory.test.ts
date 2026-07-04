@@ -464,7 +464,7 @@ describe("buildSessionConfig", () => {
 		expect(config.providerConfig).not.toHaveProperty("apiKey")
 	})
 
-	it("passes OpenAI Compatible max output tokens as an explicit request limit", async () => {
+	it("passes OpenAI Compatible max output tokens and knownModels from committed model info", async () => {
 		mocks.stateManager.getApiConfiguration.mockReturnValue({
 			actModeApiProvider: "openai",
 			actModeOpenAiModelId: "custom-reasoner",
@@ -485,10 +485,39 @@ describe("buildSessionConfig", () => {
 
 		expect(config.providerId).toBe("openai-compatible")
 		expect(config.modelId).toBe("custom-reasoner")
-		expect(config.knownModels).toBeUndefined()
-		expect((config.providerConfig as any).knownModels).toBeUndefined()
+		expect(config.knownModels?.["custom-reasoner"]?.contextWindow).toBe(16_000)
+		expect(config.knownModels?.["custom-reasoner"]?.capabilities ?? []).not.toContain("images")
+		expect((config.providerConfig as any).knownModels?.["custom-reasoner"]?.contextWindow).toBe(16_000)
 		expect((config.providerConfig as any).maxOutputTokens).toBeUndefined()
 		expect((config as any).maxTokensPerTurn).toBe(4_096)
+	})
+
+	it("reads Xiaomi Token Plan base URL from providers.json when legacy state has no field", async () => {
+		mocks.providerSettingsManager.getProviderSettings.mockReturnValue({
+			provider: "xiaomi",
+			baseUrl: "https://token-plan-cn.xiaomimimo.com/v1",
+			apiKey: "tp-test",
+			model: "mimo-v2.5-pro",
+			extras: {
+				modelInfo: {
+					name: "mimo-v2.5-pro",
+					contextWindow: 1_048_576,
+					maxTokens: -1,
+					supportsImages: false,
+					supportsPromptCache: false,
+				},
+			},
+		} as any)
+		mocks.stateManager.getApiConfiguration.mockReturnValue({
+			actModeApiProvider: "xiaomi",
+			actModeApiModelId: "mimo-v2.5-pro",
+		} as any)
+
+		const config = await buildSessionConfig({ cwd: "/tmp/workspace" })
+
+		expect(config.providerId).toBe("xiaomi")
+		expect(config.baseUrl).toBe("https://token-plan-cn.xiaomimimo.com/v1")
+		expect(config.knownModels?.["mimo-v2.5-pro"]?.contextWindow).toBe(1_048_576)
 	})
 
 	it("passes OCA reasoning effort from legacy mode settings to SDK sessions", async () => {
@@ -670,7 +699,7 @@ describe("buildSessionConfig", () => {
 		expect(config.providerConfig).not.toHaveProperty("apiKey")
 	})
 
-	it("enables basic SDK compaction when global useAutoCondense is true", async () => {
+	it("enables agentic SDK compaction when global useAutoCondense is true", async () => {
 		mocks.stateManager.getGlobalSettingsKey.mockImplementation((key: string) => {
 			if (key === "useAutoCondense") {
 				return true
@@ -685,7 +714,7 @@ describe("buildSessionConfig", () => {
 
 		expect(config.compaction).toEqual({
 			enabled: true,
-			strategy: "basic",
+			strategy: "agentic",
 		})
 	})
 
@@ -723,7 +752,7 @@ describe("buildSessionConfig", () => {
 		expect(disabledConfig.compaction).toBeUndefined()
 		expect(enabledConfig.compaction).toEqual({
 			enabled: true,
-			strategy: "basic",
+			strategy: "agentic",
 		})
 	})
 })

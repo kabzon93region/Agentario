@@ -60,6 +60,33 @@ export async function ensureTaskDirectoryExists(taskId: string): Promise<string>
 	return getGlobalStorageDir("tasks", taskId)
 }
 
+/** Subdirectories under workspace rules folders that are not plain rule files. */
+export const LOCAL_RULES_EXCLUDED_SUBPATHS: string[][] = [
+	[".agentariorules", "workflows"],
+	[".agentariorules", "hooks"],
+	[".agentariorules", "skills"],
+	[".clinerules", "workflows"],
+	[".clinerules", "hooks"],
+	[".clinerules", "skills"],
+]
+
+/**
+ * Resolves the workspace-local Agentario rules directory (.agentariorules, legacy .clinerules).
+ * Prefers an existing folder; defaults to .agentariorules for new projects.
+ */
+export async function resolveLocalRulesDirectory(workingDirectory: string): Promise<string> {
+	const agentarioPath = path.resolve(workingDirectory, GlobalFileNames.agentarioRules)
+	const legacyPath = path.resolve(workingDirectory, GlobalFileNames.legacyClineRules)
+
+	if (await fileExistsAtPath(agentarioPath)) {
+		return agentarioPath
+	}
+	if (await fileExistsAtPath(legacyPath)) {
+		return legacyPath
+	}
+	return agentarioPath
+}
+
 export async function ensureRulesDirectoryExists(): Promise<string> {
 	const userDocumentsPath = await getDocumentsPath()
 	const rulesDir = path.join(userDocumentsPath, "Agentario", "Rules")

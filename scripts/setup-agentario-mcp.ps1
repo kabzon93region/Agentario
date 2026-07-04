@@ -189,18 +189,24 @@ if (Test-Path $RulesTemplate) {
 	Write-Host "==> Global rules: $RulesDest" -ForegroundColor Green
 }
 $SystemPromptTemplate = Join-Path $RepoRoot "config\lmstudio-system-prompt.md"
-$SystemPromptDest = Join-Path $AgentarioRules "agentario-system-prompt-reference.md"
+$AgentarioDocs = Join-Path $env:USERPROFILE "Documents\Agentario\docs"
+$SystemPromptDest = Join-Path $AgentarioDocs "lmstudio-system-prompt-reference.md"
 if (Test-Path $SystemPromptTemplate) {
+	New-Item -ItemType Directory -Force -Path $AgentarioDocs | Out-Null
 	Copy-Item $SystemPromptTemplate $SystemPromptDest -Force
-	Write-Host "==> LM Studio prompt reference: $SystemPromptDest" -ForegroundColor Green
+	Write-Host "==> LM Studio prompt reference (docs, not Rules): $SystemPromptDest" -ForegroundColor Green
 }
 
 if ($NpxPath) {
 	Write-Host "==> Pre-downloading MCP packages (npm cache)..." -ForegroundColor Cyan
 	$packages = @(
 		"@modelcontextprotocol/server-memory",
+		"memory-slim@latest",
 		"@modelcontextprotocol/server-sequential-thinking",
-		"@playwright/mcp"
+		"sequential-thinking-slim@latest",
+		"@ticktockbent/charlotte",
+		"@playwright/mcp",
+		"trueline-mcp"
 	)
 	foreach ($pkg in $packages) {
 		Write-Host "  npm cache add $pkg ..."

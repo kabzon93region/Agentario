@@ -17,6 +17,9 @@ service StateService {
   rpc subscribeToState(EmptyRequest) returns (stream State);
   rpc toggleFavoriteModel(StringRequest) returns (Empty);
   rpc resetState(ResetStateRequest) returns (Empty);
+  rpc resetAgentario(EmptyRequest) returns (Empty);
+  rpc openAgentarioLogsFolder(EmptyRequest) returns (Empty);
+  rpc logAgentarioUiEvent(StringRequest) returns (Empty);
   rpc togglePlanActModeProto(TogglePlanActModeRequest) returns (Boolean);
   rpc updateAutoApprovalSettings(AutoApprovalSettingsRequest) returns (Empty);
   rpc updateSettings(UpdateSettingsRequest) returns (Empty);
@@ -284,6 +287,9 @@ message Settings {
   optional string act_mode_cline_model_id = 180;
   optional OpenRouterModelInfo act_mode_cline_model_info = 181;
   optional bool show_feature_tips = 182;
+  optional string compaction_strategy = 183;
+  optional string compaction_summarizer_provider_id = 184;
+  optional string compaction_summarizer_model_id = 185;
 }
 
 message State {
@@ -425,6 +431,16 @@ message UpdateSettingsRequest {
   optional bool opt_out_of_remote_config = 39;
   optional bool worktrees_enabled = 40;
   optional bool show_feature_tips = 42;
+  optional string compaction_strategy = 44;
+  optional string compaction_summarizer_provider_id = 45;
+  optional string compaction_summarizer_model_id = 46;
+  optional string model_profile_presets_json = 47;
+  optional string apply_model_profile_preset_id = 48;
+  optional string capture_model_profile_preset_name = 49;
+  optional string codebase_index_mode = 50;
+  optional string codebase_index_ai_backend = 51;
+  optional string codebase_index_base_url = 52;
+  optional string codebase_index_embedding_model_id = 53;
 }
 
 message UpdateTerminalConnectionTimeoutRequest {

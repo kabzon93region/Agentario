@@ -159,19 +159,69 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 			context,
 			providerConfig,
 			summarizer: compaction?.summarizer,
-			preserveRecentTokens:
-				mode === "manual"
-					? Math.min(
-							compaction?.preserveRecentTokens ??
-								DEFAULT_PRESERVE_RECENT_TOKENS,
-							context.triggerTokens,
-						)
-					: (compaction?.preserveRecentTokens ??
-						DEFAULT_PRESERVE_RECENT_TOKENS),
+			preserveRecentTokens: resolveAdaptivePreserveRecentTokens({
+				maxInputTokens: context.maxInputTokens,
+				configPreserve: compaction?.preserveRecentTokens,
+				mode,
+				triggerTokens: context.triggerTokens,
+			}),
 			estimateMessageTokens,
 			logger,
 		}),
 } satisfies Record<CoreCompactionStrategy, BuiltinCompactionStrategyRunner>;
+
+export function resolveAdaptivePreserveRecentTokens(input: {
+	maxInputTokens: number;
+	configPreserve?: number;
+	mode: ContextCompactionMode;
+	triggerTokens: number;
+}): number {
+	const configured = input.configPreserve ?? DEFAULT_PRESERVE_RECENT_TOKENS;
+	const adaptiveCap = Math.max(
+		1_024,
+		Math.floor(input.maxInputTokens * 0.25),
+	);
+	const base = Math.min(configured, adaptiveCap);
+	if (input.mode === "manual") {
+		return Math.min(base, input.triggerTokens);
+	}
+	return base;
+}
+
+async function runBuiltinStrategyWithFallback(
+	options: BuiltinCompactionStrategyOptions,
+): Promise<CoreCompactionResult | undefined> {
+	const strategy = options.compaction?.strategy ?? "basic";
+	if (strategy !== "agentic") {
+		const result = BUILTIN_COMPACTION_STRATEGIES.basic(options);
+		return result instanceof Promise ? await result : result;
+	}
+
+	try {
+		const agenticResult = await BUILTIN_COMPACTION_STRATEGIES.agentic(options);
+		if (agenticResult?.messages) {
+			return agenticResult;
+		}
+		options.logger?.log?.(
+			"Agentic compaction returned no result; falling back to basic",
+			{ severity: "warn" },
+		);
+	} catch (error) {
+		options.logger?.error?.(
+			"Agentic compaction failed; falling back to basic",
+			{ error, severity: "warn" },
+		);
+		if (!options.logger?.error) {
+			options.logger?.log?.(
+				"Agentic compaction failed; falling back to basic",
+				{ severity: "warn" },
+			);
+		}
+	}
+
+	const basicResult = BUILTIN_COMPACTION_STRATEGIES.basic(options);
+	return basicResult instanceof Promise ? await basicResult : basicResult;
+}
 
 function resolveTriggerState(input: {
 	inputTokens: number;
@@ -305,7 +355,6 @@ export function createContextCompactionPrepareTurn(
 		} as ProviderConfig);
 	const estimateMessageTokens = createTokenEstimator();
 	const strategy = userCompaction?.strategy ?? "basic";
-	const runBuiltinStrategy = BUILTIN_COMPACTION_STRATEGIES[strategy];
 	const mode = options.mode ?? "auto";
 	const telemetryStrategy: TelemetryCompactionStrategy = userCompaction?.compact
 		? "custom"
@@ -401,7 +450,7 @@ export function createContextCompactionPrepareTurn(
 
 		const result = userCompaction?.compact
 			? await userCompaction.compact(compactionContext)
-			: await runBuiltinStrategy({
+			: await runBuiltinStrategyWithFallback({
 					context: compactionContext,
 					providerConfig: {
 						...providerConfig,

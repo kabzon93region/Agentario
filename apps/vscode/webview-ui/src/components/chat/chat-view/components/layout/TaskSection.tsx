@@ -1,3 +1,4 @@
+import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
 import { ClineMessage } from "@shared/ExtensionMessage"
 import React from "react"
 import TaskHeader from "@/components/chat/task-header/TaskHeader"
@@ -13,6 +14,7 @@ interface TaskSectionProps {
 		totalCost: number
 	}
 	lastApiReqTotalTokens?: number
+	contextBudget?: ContextBudgetBreakdown
 	selectedModelInfo: {
 		supportsPromptCache: boolean
 		supportsImages: boolean
@@ -28,6 +30,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 	task,
 	apiMetrics,
 	lastApiReqTotalTokens,
+	contextBudget,
 	selectedModelInfo,
 	messageHandlers,
 }) => {
@@ -36,6 +39,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 			cacheReads={apiMetrics.totalCacheReads}
 			cacheWrites={apiMetrics.totalCacheWrites}
 			doesModelSupportPromptCache={selectedModelInfo.supportsPromptCache}
+			contextBudget={contextBudget}
 			lastApiReqTotalTokens={lastApiReqTotalTokens}
 			onClose={messageHandlers.handleTaskCloseButtonClick}
 			onSendMessage={messageHandlers.handleSendMessage}

@@ -1,32 +1,105 @@
 import { ClineRulesToggles } from "@shared/cline-rules"
 import { GlobalInstructionsFile } from "@shared/remote-config/schema"
-import { fileExistsAtPath, isDirectory, readDirectory } from "@utils/fs"
+import { resolveLocalRulesDirectory } from "@core/storage/disk"
+import { fileExistsAtPath, isDirectory } from "@utils/fs"
 import fs from "fs/promises"
 import * as path from "path"
 import { Logger } from "@/shared/services/Logger"
 import { parseYamlFrontmatter } from "./frontmatter"
 import { evaluateRuleConditionals, RuleEvaluationContext } from "./rule-conditionals"
 
+const OS_GENERATED_FILES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"])
+
+/** Not user rules — system prompt is built into VSIX; LM Studio reference is docs-only. */
+export const GLOBAL_RULES_EXCLUDED_FILENAMES = new Set([
+	"agentario-system-prompt.md",
+	"agentario-system-prompt-reference.md",
+	"lmstudio-system-prompt.md",
+])
+
+function isExcludedRuleFilename(filePath: string): boolean {
+	return GLOBAL_RULES_EXCLUDED_FILENAMES.has(path.basename(filePath))
+}
+
+function normalizeRuleToggleKeys(toggles: ClineRulesToggles): ClineRulesToggles {
+	const normalized: ClineRulesToggles = {}
+	for (const [key, enabled] of Object.entries(toggles)) {
+		normalized[path.normalize(key)] = enabled
+	}
+	return normalized
+}
+
+function isExcludedRulePath(absolutePath: string, excludedPaths: string[][]): boolean {
+	for (const excludedPathList of excludedPaths) {
+		const pathToSearchFor = path.sep + excludedPathList.join(path.sep) + path.sep
+		if (absolutePath.includes(pathToSearchFor)) {
+			return true
+		}
+	}
+	return false
+}
+
 /**
- * Recursively traverses directory and finds all files, including checking for optional whitelisted file extension
+ * Lists rule files under a directory without workspace-relative resolution.
+ * Works for global rules (Documents/Agentario/Rules) and workspace .agentariorules/.
  */
 async function readDirectoryRecursive(
 	directoryPath: string,
 	allowedFileExtension: string,
 	excludedPaths: string[][] = [],
 ): Promise<string[]> {
-	try {
-		const entries = await readDirectory(directoryPath, excludedPaths)
-		const results: string[] = []
-		for (const entry of entries) {
-			if (allowedFileExtension !== "") {
-				const fileExtension = path.extname(entry)
-				if (fileExtension !== allowedFileExtension) {
-					continue
-				}
-			}
-			results.push(entry)
+	const results: string[] = []
+	const normalizedRoot = path.normalize(directoryPath)
+
+	async function walk(currentDir: string): Promise<void> {
+		let entries: Awaited<ReturnType<typeof fs.readdir>>
+		try {
+			entries = await fs.readdir(currentDir, { withFileTypes: true })
+		} catch (error) {
+			Logger.error(`Error reading directory ${currentDir}: ${error}`)
+			return
 		}
+
+		for (const entry of entries) {
+			if (OS_GENERATED_FILES.has(entry.name)) {
+				continue
+			}
+
+			const absolutePath = path.normalize(path.join(currentDir, entry.name))
+			if (isExcludedRulePath(absolutePath, excludedPaths)) {
+				continue
+			}
+
+			if (entry.isDirectory()) {
+				await walk(absolutePath)
+				continue
+			}
+
+			if (!entry.isFile()) {
+				continue
+			}
+
+			if (allowedFileExtension !== "" && path.extname(entry.name) !== allowedFileExtension) {
+				continue
+			}
+
+			if (isExcludedRuleFilename(absolutePath)) {
+				continue
+			}
+
+			results.push(absolutePath)
+		}
+	}
+
+	try {
+		const pathExists = await fileExistsAtPath(normalizedRoot)
+		if (!pathExists) {
+			return []
+		}
+		if (!(await isDirectory(normalizedRoot))) {
+			return [normalizedRoot]
+		}
+		await walk(normalizedRoot)
 		return results
 	} catch (error) {
 		Logger.error(`Error reading directory ${directoryPath}: ${error}`)
@@ -43,8 +116,8 @@ export async function synchronizeRuleToggles(
 	allowedFileExtension = "",
 	excludedPaths: string[][] = [],
 ): Promise<ClineRulesToggles> {
-	// Create a copy of toggles to modify
-	const updatedToggles = { ...currentToggles }
+	// Create a copy of toggles to modify (normalize keys so disable/enable survives sync)
+	const updatedToggles = normalizeRuleToggleKeys({ ...currentToggles })
 
 	try {
 		const pathExists = await fileExistsAtPath(rulesDirectoryPath)
@@ -58,7 +131,7 @@ export async function synchronizeRuleToggles(
 				const existingRulePaths = new Set<string>()
 
 				for (const filePath of filePaths) {
-					const ruleFilePath = path.resolve(rulesDirectoryPath, filePath)
+					const ruleFilePath = path.normalize(filePath)
 					existingRulePaths.add(ruleFilePath)
 
 					const pathHasToggle = ruleFilePath in updatedToggles
@@ -148,8 +221,8 @@ const getRuleFilesTotalContent = async (rulesFilePaths: string[], basePath: stri
 }
 
 const LOCAL_RULE_PATHS = {
-	clineRules: ".clinerules",
-	workflows: ".clinerules/workflows",
+	workflows: ".agentariorules/workflows",
+	legacyWorkflows: ".clinerules/workflows",
 } as const
 
 type ActivatedConditionalRule = {
@@ -352,7 +425,7 @@ export const createRuleFile = async (isGlobal: boolean, filename: string, cwd: s
 				filePath = path.join(globalClineRulesFilePath, filename)
 			}
 		} else {
-			const localClineRulesFilePath = path.resolve(cwd, LOCAL_RULE_PATHS.clineRules)
+			const localClineRulesFilePath = await resolveLocalRulesDirectory(cwd)
 
 			const hasError = await ensureLocalClineDirExists(localClineRulesFilePath, "default-rules.md")
 			if (hasError === true) {
@@ -363,15 +436,21 @@ export const createRuleFile = async (isGlobal: boolean, filename: string, cwd: s
 
 			if (type === "workflow") {
 				const localWorkflowsFilePath = path.resolve(cwd, LOCAL_RULE_PATHS.workflows)
+				const legacyWorkflowsFilePath = path.resolve(cwd, LOCAL_RULE_PATHS.legacyWorkflows)
+				const workflowsPath = (await fileExistsAtPath(localWorkflowsFilePath))
+					? localWorkflowsFilePath
+					: (await fileExistsAtPath(legacyWorkflowsFilePath))
+						? legacyWorkflowsFilePath
+						: localWorkflowsFilePath
 
-				const hasError = await ensureLocalClineDirExists(localWorkflowsFilePath, "default-workflows.md")
+				const hasError = await ensureLocalClineDirExists(workflowsPath, "default-workflows.md")
 				if (hasError === true) {
 					return { filePath: null, fileExists: false }
 				}
 
-				await fs.mkdir(localWorkflowsFilePath, { recursive: true })
+				await fs.mkdir(workflowsPath, { recursive: true })
 
-				filePath = path.join(localWorkflowsFilePath, filename)
+				filePath = path.join(workflowsPath, filename)
 			} else {
 				// clinerules file creation
 				filePath = path.join(localClineRulesFilePath, filename)
@@ -386,7 +465,7 @@ export const createRuleFile = async (isGlobal: boolean, filename: string, cwd: s
 
 		await fs.writeFile(filePath, "", "utf8")
 
-		return { filePath, fileExists: false }
+		return { filePath: path.normalize(filePath), fileExists: false }
 	} catch (_error) {
 		return { filePath: null, fileExists: false }
 	}

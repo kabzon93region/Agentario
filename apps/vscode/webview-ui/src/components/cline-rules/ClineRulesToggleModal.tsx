@@ -481,7 +481,7 @@ const ClineRulesToggleModal: React.FC = () => {
 										listGap="small"
 										rules={localRules}
 										ruleType={"cline"}
-										showNewRule={false}
+										showNewRule={true}
 										showNoRules={false}
 										toggleRule={(rulePath, enabled) => toggleRule(false, rulePath, enabled)}
 									/>

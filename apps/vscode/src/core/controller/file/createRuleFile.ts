@@ -7,6 +7,7 @@ import { HostProvider } from "@/hosts/host-provider"
 import { ShowMessageType } from "@/shared/proto/host/window"
 import { Logger } from "@/shared/services/Logger"
 import { getCwd, getDesktopDir } from "@/utils/path"
+import path from "path"
 import { Controller } from ".."
 import { openFile } from "./openFile"
 
@@ -40,6 +41,7 @@ export async function createRuleFile(controller: Controller, request: RuleFileRe
 		throw new Error("Failed to create file.")
 	}
 
+	const normalizedFilePath = path.normalize(filePath)
 	const fileTypeName = request.type === "workflow" ? "workflow" : "rule"
 
 	if (fileExists) {
@@ -48,17 +50,35 @@ export async function createRuleFile(controller: Controller, request: RuleFileRe
 			type: ShowMessageType.WARNING,
 			message,
 		})
-		// Still open it for editing
-		await openFile(controller, { value: filePath })
+		await openFile(controller, { value: normalizedFilePath })
 	} else {
 		if (request.type === "workflow") {
 			await refreshWorkflowToggles(controller, cwd)
+			if (request.isGlobal) {
+				const toggles = { ...controller.stateManager.getGlobalSettingsKey("globalWorkflowToggles") }
+				toggles[normalizedFilePath] = true
+				controller.stateManager.setGlobalState("globalWorkflowToggles", toggles)
+			} else {
+				const toggles = { ...controller.stateManager.getWorkspaceStateKey("workflowToggles") }
+				toggles[normalizedFilePath] = true
+				controller.stateManager.setWorkspaceState("workflowToggles", toggles)
+			}
 		} else {
 			await refreshClineRulesToggles(controller, cwd)
+			if (request.isGlobal) {
+				const toggles = { ...controller.stateManager.getGlobalSettingsKey("globalClineRulesToggles") }
+				toggles[normalizedFilePath] = true
+				controller.stateManager.setGlobalState("globalClineRulesToggles", toggles)
+			} else {
+				const toggles = { ...controller.stateManager.getWorkspaceStateKey("localClineRulesToggles") }
+				toggles[normalizedFilePath] = true
+				controller.stateManager.setWorkspaceState("localClineRulesToggles", toggles)
+			}
 		}
+
 		await controller.postStateToWebview()
 
-		await openFile(controller, { value: filePath })
+		await openFile(controller, { value: normalizedFilePath })
 
 		const message = `Created new ${request.isGlobal ? "global" : "workspace"} ${fileTypeName} file: ${request.filename}`
 		HostProvider.window.showMessage({
@@ -68,8 +88,8 @@ export async function createRuleFile(controller: Controller, request: RuleFileRe
 	}
 
 	return RuleFile.create({
-		filePath: filePath,
-		displayName: getWorkspaceBasename(filePath, "Controller.createRuleFile"),
+		filePath: normalizedFilePath,
+		displayName: getWorkspaceBasename(normalizedFilePath, "Controller.createRuleFile"),
 		alreadyExists: fileExists,
 	})
 }

@@ -9,7 +9,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 </p>
 
 <p align="center">
-<strong>Версия расширения: 0.4.0</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+<strong>Версия расширения: 0.5.12</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
 </p>
 
 <div align="center">
@@ -32,7 +32,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 1. Соберите или скачайте VSIX: `release/agentario-0.4.0.vsix` (сборка: `build.cmd` на Windows).
 2. VS Code → Extensions → `...` → **Install from VSIX**.
 3. Провайдер **LM Studio** или **Ollama** — см. [настройку LM Studio](#lm-studio-локальная-модель) ниже.
-4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright.
+4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright, trueline (правка файлов).
 
 ### Автономный режим (без Cline cloud)
 

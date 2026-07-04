@@ -1,4 +1,7 @@
+import type { ContextBudgetBreakdown } from "@cline/shared"
 import { ClineMessage } from "./ExtensionMessage"
+
+export type { ContextBudgetBreakdown }
 
 interface ApiMetrics {
 	totalTokensIn: number
@@ -85,10 +88,23 @@ export function getLastApiReqTotalTokens(messages: ClineMessage[]): number {
 		const msg = messages[i]
 		if (msg.type === "say" && msg.say === "api_req_started" && msg.text) {
 			try {
-				const { tokensIn, tokensOut, cacheWrites, cacheReads } = JSON.parse(msg.text)
-				const total = (tokensIn || 0) + (tokensOut || 0) + (cacheWrites || 0) + (cacheReads || 0)
+				const parsed = JSON.parse(msg.text) as {
+					tokensIn?: number
+					tokensOut?: number
+					cacheWrites?: number
+					cacheReads?: number
+					contextBudget?: ContextBudgetBreakdown
+				}
+				const total =
+					(parsed.tokensIn || 0) +
+					(parsed.tokensOut || 0) +
+					(parsed.cacheWrites || 0) +
+					(parsed.cacheReads || 0)
 				if (total > 0) {
 					return total
+				}
+				if (parsed.contextBudget?.totalEstimated) {
+					return parsed.contextBudget.totalEstimated
 				}
 			} catch {
 				// Ignore JSON parse errors, continue searching
@@ -96,4 +112,37 @@ export function getLastApiReqTotalTokens(messages: ClineMessage[]): number {
 		}
 	}
 	return 0
+}
+
+function isContextBudgetBreakdown(value: unknown): value is ContextBudgetBreakdown {
+	if (!value || typeof value !== "object") {
+		return false
+	}
+	const candidate = value as ContextBudgetBreakdown
+	return (
+		typeof candidate.contextWindow === "number" &&
+		typeof candidate.totalEstimated === "number" &&
+		candidate.categories !== undefined &&
+		typeof candidate.categories.system === "number" &&
+		typeof candidate.categories.rules === "number" &&
+		typeof candidate.categories.tools === "number" &&
+		typeof candidate.categories.chat === "number"
+	)
+}
+
+export function getLastContextBudget(messages: ClineMessage[]): ContextBudgetBreakdown | undefined {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const msg = messages[i]
+		if (msg.type === "say" && msg.say === "api_req_started" && msg.text) {
+			try {
+				const parsed = JSON.parse(msg.text) as { contextBudget?: unknown }
+				if (isContextBudgetBreakdown(parsed.contextBudget)) {
+					return parsed.contextBudget
+				}
+			} catch {
+				// Ignore JSON parse errors, continue searching
+			}
+		}
+	}
+	return undefined
 }

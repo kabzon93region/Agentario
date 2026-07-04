@@ -109,6 +109,15 @@ export interface ExtensionState {
 	mcpResponsesCollapsed?: boolean
 	yoloModeToggled?: boolean
 	useAutoCondense?: boolean
+	compactionStrategy?: "basic" | "agentic"
+	compactionSummarizerProviderId?: string
+	compactionSummarizerModelId?: string
+	modelProfilePresets?: import("./model-profile-presets").ModelProfilePreset[]
+	activeModelProfilePresetId?: string
+	codebaseIndexMode?: "local" | "local-ai" | "remote-ai"
+	codebaseIndexAiBackend?: "lmstudio" | "ollama"
+	codebaseIndexBaseUrl?: string
+	codebaseIndexEmbeddingModelId?: string
 	subagentsEnabled?: boolean
 	worktreesEnabled?: ClineFeatureSetting
 	customPrompt?: string
@@ -376,6 +385,8 @@ export interface ClineApiReqInfo {
 	generationDurationMs?: number
 	/** Output tokens per second during generation (matches LM Studio eval speed). */
 	tokensPerSecond?: number
+	/** Estimated context budget breakdown (system / rules / tools / chat). */
+	contextBudget?: import("@cline/shared").ContextBudgetBreakdown
 }
 
 export interface ClineSubagentUsageInfo {

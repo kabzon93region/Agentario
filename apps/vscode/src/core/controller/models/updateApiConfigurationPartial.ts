@@ -2,6 +2,7 @@ import { Empty } from "@shared/proto/cline/common"
 import { UpdateApiConfigurationPartialRequest } from "@shared/proto/cline/models"
 import { convertProtoToApiConfiguration } from "@shared/proto-conversions/models/api-configuration-conversion"
 import { Logger } from "@/shared/services/Logger"
+import { wasModelProfilePresetAppliedRecently } from "../state/modelProfilePresets"
 import type { Controller } from "../index"
 import { clearOrganizationForClinePassProviderSelection } from "./handleClinePassProviderSelection"
 import { normalizeProviderSwitchModel } from "./providerSwitchNormalization"
@@ -23,6 +24,13 @@ export async function updateApiConfigurationPartial(
 	request: UpdateApiConfigurationPartialRequest,
 ): Promise<Empty> {
 	try {
+		if (wasModelProfilePresetAppliedRecently(controller.stateManager)) {
+			Logger.log(
+				`[updateApiConfigurationPartial] Ignoring stale partial update (${request.updateMask?.join(", ") ?? "?"}) — preset was applied recently`,
+			)
+			return Empty.create()
+		}
+
 		// Validate request
 		if (!request.updateMask || request.updateMask.length === 0) {
 			throw new Error("update_mask is required and must contain at least one field")
@@ -52,8 +60,6 @@ export async function updateApiConfigurationPartial(
 			controller.task.api = createTaskApiModelShim(modelId)
 		}
 		controller.handleApiConfigurationChanged(currentConfig, normalizedConfig)
-
-		// Notify webview
 		await controller.postStateToWebview()
 
 		return Empty.create()

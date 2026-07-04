@@ -8,8 +8,9 @@ import {
 	WriteProviderConfigRequest,
 } from "@shared/proto/cline/models"
 import { toProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { ProviderId } from "@/context/ExtensionStateContext"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 import { ModelsServiceClient } from "@/services/grpc-client"
 import type { ModelInfo } from "../../../src/shared/api"
 
@@ -37,17 +38,34 @@ function toWriteProviderConfigPatch(patch: ProviderConfigWritePatch): WriteProvi
 }
 
 export function useProviderConfig(providerId: ProviderId) {
+	const { activeModelProfilePresetId, apiConfiguration } = useExtensionState()
+	const providerStateKey = [
+		activeModelProfilePresetId ?? "",
+		apiConfiguration?.planModeApiProvider ?? "",
+		apiConfiguration?.planModeApiModelId ?? "",
+		apiConfiguration?.actModeApiProvider ?? "",
+		apiConfiguration?.actModeApiModelId ?? "",
+	].join("|")
 	const [config, setConfig] = useState<ProviderConfigResponse | undefined>(undefined)
+	const [isLoading, setIsLoading] = useState(true)
+	const isFirstLoadRef = useRef(true)
 
 	const read = useCallback(async () => {
+		if (isFirstLoadRef.current) {
+			setIsLoading(true)
+		}
 		const response = await ModelsServiceClient.readProviderConfig(StringRequest.create({ value: providerId }))
 		setConfig(response)
+		if (isFirstLoadRef.current) {
+			setIsLoading(false)
+			isFirstLoadRef.current = false
+		}
 		return response
 	}, [providerId])
 
 	useEffect(() => {
 		void read()
-	}, [read])
+	}, [read, providerStateKey])
 
 	const write = useCallback(
 		async (patch: ProviderConfigWritePatch) => {
@@ -82,5 +100,5 @@ export function useProviderConfig(providerId: ProviderId) {
 		[providerId, read],
 	)
 
-	return { config, write, commitSelection }
+	return { config, isLoading, read, write, commitSelection }
 }

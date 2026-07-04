@@ -67,6 +67,11 @@ import { createAgentRuntimeConfig } from "../config/agent-runtime-config-builder
 import { LoopDetectionTracker } from "../safety/loop-detection";
 import { MistakeTracker } from "../safety/mistake-tracker";
 import { RuntimeEventAdapter } from "./runtime-event-adapter";
+import {
+	CONTEXT_BUDGET_NOTICE_KIND,
+	estimateContextBudget,
+} from "../../extensions/context/context-budget";
+import { DEFAULT_MAX_INPUT_TOKENS } from "../../extensions/context/compaction-shared";
 
 function formatToolResultError(output: unknown): string {
 	if (typeof output === "string") {
@@ -312,6 +317,12 @@ export class SessionRuntime {
 		Message[]
 	>;
 	private extensionsInitialized = false;
+	/** Base/rules split for the active run — used by context budget estimates. */
+	private currentSystemPromptParts: {
+		base: string;
+		rules: Array<{ name: string; content: string }>;
+		combined: string;
+	} | null = null;
 	private readonly listeners = new Set<SessionEventListener>();
 	private readonly createAgentRuntimeImpl: (
 		config: Parameters<typeof createAgentRuntime>[0],
@@ -654,15 +665,30 @@ export class SessionRuntime {
 	// Private implementation
 	// -------------------------------------------------------------------
 
-	private async composeSystemPrompt(): Promise<string> {
-		const rules: string[] = [];
+	private async composeSystemPromptParts(): Promise<{
+		base: string;
+		rules: Array<{ name: string; content: string }>;
+		combined: string;
+	}> {
+		const rules: Array<{ name: string; content: string }> = [];
 		for (const rule of this.contributionRegistry.getRegisteredRules()) {
 			const content = await resolveRuleContent(rule);
 			if (content) {
-				rules.push(content);
+				rules.push({
+					name: rule.source ?? rule.id,
+					content,
+				});
 			}
 		}
-		return mergeSystemPromptRules(this.config.systemPrompt, rules);
+		const combined = mergeSystemPromptRules(
+			this.config.systemPrompt,
+			rules.map((entry) => entry.content),
+		);
+		return {
+			base: this.config.systemPrompt.trim(),
+			rules,
+			combined,
+		};
 	}
 
 	private executeRun(input: {
@@ -738,7 +764,9 @@ export class SessionRuntime {
 		}
 
 		// Build the AgentRuntime for this turn.
-		const systemPrompt = await this.composeSystemPrompt();
+		const promptParts = await this.composeSystemPromptParts();
+		this.currentSystemPromptParts = promptParts;
+		const systemPrompt = promptParts.combined;
 		const agentModel = createAgentModelFromConfig(
 			this.config,
 			this.logger,
@@ -944,32 +972,52 @@ export class SessionRuntime {
 				| undefined
 		  >)
 		| undefined {
-		const prepareTurn = this.config.prepareTurn;
-		if (!prepareTurn) {
-			return undefined;
-		}
+		const userPrepareTurn = this.config.prepareTurn;
 
 		return async (context) => {
 			const messages = agentMessagesToMessagesWithMetadata(context.messages);
 			const apiMessages = await this.prepareProviderMessagesForApi(messages);
-			const result = await prepareTurn({
-				agentId: context.agentId,
-				conversationId:
-					context.conversationId ?? this.conversation.getConversationId(),
-				parentAgentId: context.parentAgentId ?? null,
-				iteration: context.iteration,
-				messages,
-				apiMessages,
-				abortSignal: context.signal ?? new AbortController().signal,
-				systemPrompt: context.systemPrompt ?? "",
-				tools,
-				model: {
-					id: this.config.modelId,
-					provider: this.config.providerId,
-					info: modelInfo,
-				},
-				emitStatusNotice: context.emitStatusNotice,
-			});
+			const result = userPrepareTurn
+				? await userPrepareTurn({
+						agentId: context.agentId,
+						conversationId:
+							context.conversationId ?? this.conversation.getConversationId(),
+						parentAgentId: context.parentAgentId ?? null,
+						iteration: context.iteration,
+						messages,
+						apiMessages,
+						abortSignal: context.signal ?? new AbortController().signal,
+						systemPrompt: context.systemPrompt ?? "",
+						tools,
+						model: {
+							id: this.config.modelId,
+							provider: this.config.providerId,
+							info: modelInfo,
+						},
+						emitStatusNotice: context.emitStatusNotice,
+					})
+				: undefined;
+
+			const finalMessagesWithMetadata = result?.messages ?? apiMessages;
+			const promptParts = this.currentSystemPromptParts;
+			if (promptParts) {
+				const contextWindow =
+					modelInfo?.contextWindow ??
+					modelInfo?.maxInputTokens ??
+					DEFAULT_MAX_INPUT_TOKENS;
+				const breakdown = estimateContextBudget({
+					contextWindow,
+					systemPromptBase: promptParts.base,
+					rules: promptParts.rules,
+					tools,
+					messages: finalMessagesWithMetadata,
+				});
+				context.emitStatusNotice?.(CONTEXT_BUDGET_NOTICE_KIND, {
+					kind: CONTEXT_BUDGET_NOTICE_KIND,
+					...breakdown,
+				});
+			}
+
 			if (!result) {
 				return undefined;
 			}

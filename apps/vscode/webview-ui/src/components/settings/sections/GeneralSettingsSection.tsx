@@ -5,6 +5,7 @@ import { t } from "@/i18n"
 import PreferredLanguageSetting from "../PreferredLanguageSetting"
 import Section from "../Section"
 import { updateSetting } from "../utils/settingsHandlers"
+import AgentarioMaintenanceSection from "./AgentarioMaintenanceSection"
 
 interface GeneralSettingsSectionProps {
 	renderSectionHeader: (tabId: string) => JSX.Element | null
@@ -61,6 +62,8 @@ const GeneralSettingsSection = ({ renderSectionHeader }: GeneralSettingsSectionP
 					</p>
 				</div>
 			</Section>
+
+			<AgentarioMaintenanceSection />
 		</div>
 	)
 }

@@ -246,7 +246,38 @@ describe("resolveModelInfo", () => {
 		expect(response.modelInfo?.contextWindow).toBe(128_000)
 	})
 
-	it("returns unknown for an unknown provider without throwing", async () => {
+	it("applies lmStudioMaxTokens to contextWindow for lmstudio committed selection", async () => {
+		const { resolveModelInfo } = await import("../resolveModelInfo")
+		const providerId = parseProviderId("lmstudio")
+		const store = makeStore({ providerId })
+		vi.mocked(store.readSelection).mockImplementation((_, mode) =>
+			mode === "act"
+				? {
+						providerId,
+						modelId: "qwen-test",
+						modelInfo: { name: "qwen-test", supportsPromptCache: false, contextWindow: 128_000 },
+					}
+				: undefined,
+		)
+		const catalog = makeCatalog()
+		const controller = {
+			...makeController(store, catalog),
+			stateManager: {
+				setGlobalStateBatch: vi.fn(),
+				getApiConfiguration: () => ({ lmStudioMaxTokens: "32768" }),
+			},
+		}
+
+		const response = await resolveModelInfo(controller, {
+			providerId: "lmstudio",
+			modelId: "qwen-test",
+		})
+
+		expect(response.source).toBe("committed-selection")
+		expect(response.modelInfo?.contextWindow).toBe(32_768)
+	})
+
+	it("returns unknown source for unsupported provider", async () => {
 		const { resolveModelInfo } = await import("../resolveModelInfo")
 		const store = makeStore({ providerId: parseProviderId("not-real-provider") })
 		const catalog = makeCatalog()

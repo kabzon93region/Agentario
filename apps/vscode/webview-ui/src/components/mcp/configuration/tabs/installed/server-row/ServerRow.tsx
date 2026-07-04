@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { cn } from "@/lib/utils"
+import { getAgentarioMcpDisplayName } from "@/utils/agentario-mcp-display"
 import { McpServiceClient } from "@/services/grpc-client"
 import type { MarketplaceMcpMetadata } from "../ServersToggleList"
 import McpPromptRow from "./McpPromptRow"
@@ -221,7 +222,9 @@ const ServerRow = ({
 					/>
 				)}
 				<span className="flex-1 min-w-0 overflow-hidden break-words whitespace-normal">
-					<span className="block font-medium">{marketplaceMetadata?.name || server.name}</span>
+					<span className="block font-medium">
+						{marketplaceMetadata?.name || getAgentarioMcpDisplayName(server.name)}
+					</span>
 					{marketplaceMetadata?.description && (
 						<span className="block mt-0.5 text-xs text-description">{marketplaceMetadata.description}</span>
 					)}

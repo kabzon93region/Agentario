@@ -6,6 +6,8 @@ export type LmStudioModelRecord = {
 	selectedVariant?: string
 	loadedInstanceIds?: string[]
 	variants?: string[]
+	max_context_length?: number
+	loaded_context_length?: number
 }
 
 export type LmStudioEmbeddingsResult = {
@@ -23,13 +25,16 @@ type LmStudioV1Model = {
 	key?: string
 	selected_variant?: string
 	variants?: string[]
-	loaded_instances?: Array<{ id?: string }>
+	max_context_length?: number
+	loaded_instances?: Array<{ id?: string; config?: { context_length?: number } }>
 }
 
 type LmStudioV0Model = {
 	id?: string
 	type?: string
 	state?: string
+	max_context_length?: number
+	loaded_context_length?: number
 }
 
 export function isLmStudioEmbeddingModelType(type?: string): boolean {
@@ -190,6 +195,7 @@ function normalizeV1Models(models: LmStudioV1Model[]): LmStudioModelRecord[] {
 			.map((instance) => instance.id?.trim())
 			.filter((id): id is string => Boolean(id))
 		const loaded = loadedInstanceIds.length > 0
+		const loadedContextLength = model.loaded_instances?.[0]?.config?.context_length
 		const id = loadedInstanceIds[0] ?? model.selected_variant ?? model.key
 		return [
 			{
@@ -200,6 +206,8 @@ function normalizeV1Models(models: LmStudioV1Model[]): LmStudioModelRecord[] {
 				loadedInstanceIds,
 				variants: model.variants ?? [],
 				selectedVariant: model.selected_variant,
+				max_context_length: model.max_context_length,
+				loaded_context_length: loadedContextLength,
 			},
 		]
 	})
@@ -210,14 +218,18 @@ function normalizeV0Models(models: LmStudioV0Model[]): LmStudioModelRecord[] {
 		if (!model.id) {
 			return []
 		}
+		const loaded = model.state === "loaded"
 		return [
 			{
 				id: model.id,
 				key: model.id,
 				type: model.type,
 				state: model.state,
-				loadedInstanceIds: model.state === "loaded" ? [model.id] : [],
+				loadedInstanceIds: loaded ? [model.id] : [],
 				variants: [],
+				max_context_length: model.max_context_length,
+				loaded_context_length:
+					model.loaded_context_length ?? (loaded ? model.max_context_length : undefined),
 			},
 		]
 	})
@@ -240,6 +252,12 @@ function mergeLmStudioCatalog(v1Models: LmStudioModelRecord[], v0Models: LmStudi
 				if (!existing.loadedInstanceIds.includes(existing.id)) {
 					existing.id = record.id
 				}
+			}
+			if (record.max_context_length && !existing.max_context_length) {
+				existing.max_context_length = record.max_context_length
+			}
+			if (record.loaded_context_length) {
+				existing.loaded_context_length = record.loaded_context_length
 			}
 			continue
 		}

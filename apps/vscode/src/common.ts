@@ -23,6 +23,7 @@ import { getBlobStoreSettingsFromEnv } from "./shared/services/worker/worker"
 import { getLatestAnnouncementId } from "./utils/announcements"
 import { arePathsEqual } from "./utils/path"
 import { isAgentarioStandaloneMode } from "./shared/agentario-standalone"
+import { appendAgentarioExtensionRawLine } from "./shared/agentario-file-logger"
 
 /**
  * Performs intialization for Cline that is common to all platforms.
@@ -41,6 +42,12 @@ export async function initialize(storageContext: StorageContext): Promise<Webvie
 	// Throws ClineConfigurationError if config file exists but is invalid
 	const { ClineEndpoint } = await import("./config")
 	await ClineEndpoint.initialize(HostProvider.get().extensionFsPath)
+
+	if (isAgentarioStandaloneMode()) {
+		Logger.subscribe((msg: string) => {
+			void appendAgentarioExtensionRawLine(msg)
+		})
+	}
 
 	try {
 		await StateManager.initialize(storageContext)

@@ -1,8 +1,11 @@
+import { EmptyRequest, StringRequest } from "@shared/proto/cline/common"
+import { RefreshedRules } from "@shared/proto/cline/file"
 import { CreateHookRequest, CreateSkillRequest, RuleFileRequest } from "@shared/proto/index.cline"
 import { PlusIcon } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useClickAway } from "react-use"
 import { Button } from "@/components/ui/button"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 import { cn } from "@/lib/utils"
 import { FileServiceClient } from "@/services/grpc-client"
 
@@ -29,8 +32,34 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType, existingHoo
 	const [filename, setFilename] = useState("")
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [error, setError] = useState<string | null>(null)
+	const {
+		setGlobalClineRulesToggles,
+		setLocalClineRulesToggles,
+		setGlobalWorkflowToggles,
+		setLocalWorkflowToggles,
+	} = useExtensionState()
 
 	const componentRef = useRef<HTMLDivElement>(null)
+
+	const applyRefreshedRules = (response: RefreshedRules) => {
+		if (response.globalClineRulesToggles?.toggles) {
+			setGlobalClineRulesToggles(response.globalClineRulesToggles.toggles)
+		}
+		if (response.localClineRulesToggles?.toggles) {
+			setLocalClineRulesToggles(response.localClineRulesToggles.toggles)
+		}
+		if (response.globalWorkflowToggles?.toggles) {
+			setGlobalWorkflowToggles(response.globalWorkflowToggles.toggles)
+		}
+		if (response.localWorkflowToggles?.toggles) {
+			setLocalWorkflowToggles(response.localWorkflowToggles.toggles)
+		}
+	}
+
+	const refreshRulesList = async () => {
+		const response = await FileServiceClient.refreshRules({} as EmptyRequest)
+		applyRefreshedRules(response)
+	}
 
 	// Calculate available hook types by filtering out existing hooks
 	const availableHookTypes = useMemo(() => HOOK_TYPES.filter((type) => !existingHooks.includes(type.name)), [existingHooks])
@@ -81,60 +110,66 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType, existingHoo
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
 
-		if (filename.trim()) {
-			const trimmedFilename = filename.trim()
+		const trimmedFilename = filename.trim()
+		if (!trimmedFilename) {
+			setError("Введите имя файла")
+			return
+		}
 
-			// Skills use directory names, not file extensions
-			if (ruleType === "skill") {
-				// Validate skill name - only allow alphanumeric, dashes, underscores
-				if (!/^[a-zA-Z0-9_-]+$/.test(trimmedFilename)) {
-					setError("Skill name can only contain letters, numbers, dashes, and underscores")
-					return
-				}
-
-				try {
-					await FileServiceClient.createSkillFile(
-						CreateSkillRequest.create({
-							skillName: trimmedFilename,
-							isGlobal,
-						}),
-					)
-					setFilename("")
-					setError(null)
-					setIsExpanded(false)
-				} catch (err) {
-					setError(err instanceof Error ? err.message : "Failed to create skill")
-				}
+		// Skills use directory names, not file extensions
+		if (ruleType === "skill") {
+			// Validate skill name - only allow alphanumeric, dashes, underscores
+			if (!/^[a-zA-Z0-9_-]+$/.test(trimmedFilename)) {
+				setError("Skill name can only contain letters, numbers, dashes, and underscores")
 				return
-			}
-
-			const extension = getExtension(trimmedFilename)
-
-			if (!isValidExtension(extension)) {
-				setError("Only .md, .txt, or no file extension allowed")
-				return
-			}
-
-			let finalFilename = trimmedFilename
-			if (extension === "") {
-				finalFilename = `${trimmedFilename}.md`
 			}
 
 			try {
-				await FileServiceClient.createRuleFile(
-					RuleFileRequest.create({
+				await FileServiceClient.createSkillFile(
+					CreateSkillRequest.create({
+						skillName: trimmedFilename,
 						isGlobal,
-						filename: finalFilename,
-						type: ruleType || "cline",
 					}),
 				)
+				setFilename("")
+				setError(null)
+				setIsExpanded(false)
 			} catch (err) {
-				console.error("Error creating rule file:", err)
+				setError(err instanceof Error ? err.message : "Failed to create skill")
 			}
+			return
+		}
 
+		const extension = getExtension(trimmedFilename)
+
+		if (!isValidExtension(extension)) {
+			setError("Only .md, .txt, or no file extension allowed")
+			return
+		}
+
+		let finalFilename = trimmedFilename
+		if (extension === "") {
+			finalFilename = `${trimmedFilename}.md`
+		}
+
+		try {
+			const result = await FileServiceClient.createRuleFile(
+				RuleFileRequest.create({
+					isGlobal,
+					filename: finalFilename,
+					type: ruleType || "cline",
+				}),
+			)
+			await refreshRulesList()
+			if (result.filePath) {
+				await FileServiceClient.openFile(StringRequest.create({ value: result.filePath }))
+			}
 			setFilename("")
 			setError(null)
 			setIsExpanded(false)
+		} catch (err) {
+			console.error("Error creating rule file:", err)
+			setError(err instanceof Error ? err.message : "Не удалось создать файл правил")
 		}
 	}
 
@@ -203,7 +238,7 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType, existingHoo
 							</select>
 						</>
 					) : (
-						<form className="flex flex-1 items-center" onSubmit={handleSubmit}>
+						<form className="flex flex-1 items-center" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
 							<input
 								className={cn(
 									"flex-1 bg-input-background text-input-foreground border-0 outline-0 rounded focus:outline-none focus:ring-0 focus:border-transparent",
@@ -247,6 +282,7 @@ const NewRuleRow: React.FC<NewRuleRowProps> = ({ isGlobal, ruleType, existingHoo
 									e.stopPropagation()
 									if (!isExpanded) {
 										setIsExpanded(true)
+										setError(null)
 									}
 								}}
 								size="icon"

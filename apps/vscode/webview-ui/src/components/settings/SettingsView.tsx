@@ -13,6 +13,7 @@ import {
 	Wrench,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { logAgentarioScreenView, logAgentarioUiClick } from "@/utils/agentario-ui-logger"
 import { useEvent } from "react-use"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { type ClineUser, useClineAuth } from "@/context/ClineAuthContext"
@@ -200,6 +201,10 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 		}
 	}, [targetSection])
 
+	useEffect(() => {
+		logAgentarioScreenView("settings", activeTab)
+	}, [activeTab])
+
 	// Memoized tab item renderer
 	const renderTabItem = useCallback(
 		(tab: ReturnType<typeof getSettingsTabs>[0]) => {
@@ -214,7 +219,8 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 										"opacity-100 border-l-2 border-l-foreground border-t-0 border-r-0 border-b-0 bg-selection":
 											activeTab === tab.id,
 									},
-								)}>
+								)}
+								onClick={() => logAgentarioUiClick("settings.tabs", tab.id)}>
 								<tab.icon className="w-4 h-4" />
 								<span className="hidden sm:block">{tab.name}</span>
 							</div>

@@ -1,6 +1,10 @@
-# LM Studio — системный промпт (Agentario)
+# LM Studio — справка (устаревший вариант)
 
-Скопируйте блок ниже в **System Prompt** модели в LM Studio (или в глобальные правила Agentario). Подходит для большинства instruct/chat моделей (Qwen, Llama, Mistral, Gemma и т.д.).
+> **Не используется Agentario.** Системный промпт встроен в расширение (`apps/vscode/agentario-system-prompt.md`).
+> Дополнительные инструкции — в `Documents/Agentario/Rules/agentario-global-rules.md`.
+> В LM Studio оставьте **System Prompt модели пустым**.
+
+Ниже — исторический шаблон для ручной вставки в LM Studio (до встроенного промпта Agentario).
 
 ---
 

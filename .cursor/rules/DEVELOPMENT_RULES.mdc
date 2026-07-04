@@ -3,13 +3,19 @@ alwaysApply: true
 ---
 # Правила разработки — Agentario
 
+**!!! КРИТИЧЕСКИ ВАЖНО — НЕ ИГНОРИРОВАТЬ НИКОГДА !!!**
+
+**ПОСЛЕ КАЖДОГО ИЗМЕНЕНИЯ КОДА (даже мелкого фикса, рефакторинга, UI, proto) — ОБЯЗАТЕЛЬНО BUMP ВЕРСИИ.**  
+**НЕ ОТКЛАДЫВАТЬ. НЕ ОБЪЕДИНЯТЬ СЕССИИ БЕЗ BUMP.**  
+**Нарушение = блокировка задачи.**
+
 Язык общения, комментариев в документации и пользовательских сообщениях: **русский** (если пользователь не просит иное).
 
 Окончание текстовых файлов проекта: **CRLF** (Windows).
 
 ---
 
-## 1. Версионирование — КРИТИЧЕСКИ ВАЖНО
+## 1. Версионирование — КРИТИЧЕСКИ ВАЖНО (ПРИОРИТЕТ МАКСИМАЛЬНЫЙ)
 
 **После КАЖДОГО изменения кода** (функция, исправление, рефакторинг, UI, proto, конфиг расширения) **обязательно** повышать версию — **даже для незначительных правок**.
 
@@ -63,7 +69,7 @@ alwaysApply: true
 publish-release.cmd
 ```
 
-Делает: commit → push `main` → tag `v{VERSION}` → `gh release create` с VSIX из `release/agentario-{VERSION}.vsix`. В конце — пауза и сводка.
+Делает: commit → push `main` → tag `v{VERSION}` → `gh release create` с VSIX из `release/agentario-{VERSION}.vsix`. В конце — задержка 15 с и сводка.
 
 Требования: `gh auth login`, Git remote `origin` → `kabzon93region/Agentario`.
 
@@ -88,6 +94,7 @@ publish-release.cmd
 - **ОС:** Windows 10+.
 - **Корень репозитория:** `Z:\T\Agentario` (или актуальный путь workspace).
 - **Сборка:** `build.cmd` — синхронизация на локальный диск (`C:\Users\Admin\Agentario`), SDK, webview, VSIX в `release/`.
+- **Не использовать `pause` / `Read-Host`** в корневых `.cmd` и `scripts/*.ps1` для ожидания пользователя. В конце скрипта (успех или ошибка) — **задержка 15 секунд**: `scripts/wait-before-exit.cmd` (из `.cmd`) или `scripts/wait-before-exit.ps1` / `Start-Sleep -Seconds 15` (из `.ps1`). Так фоновые сборки не висят часами.
 - **Не полагаться** на `bun run protos` из сетевого `Z:` без `node_modules` — использовать `build.cmd`.
 - **Node/Bun:** пути из `build.cmd` / документации README.
 

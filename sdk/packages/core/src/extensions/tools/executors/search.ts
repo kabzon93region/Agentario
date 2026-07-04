@@ -5,12 +5,10 @@
  */
 
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentToolContext } from "@cline/shared";
-import { requestLmStudioEmbeddings } from "@cline/shared";
+import { loadSemanticSearchIndex, requestLmStudioEmbeddings } from "@cline/shared";
 import { getFileIndex } from "../../../services/workspace";
 import type { SearchExecutor } from "../types";
 import { MAX_SEARCH_OUTPUT_CHARS } from "./output-limits";
@@ -176,27 +174,8 @@ function checkRipgrepAvailable(): Promise<boolean> {
 	});
 }
 
-function getSemanticIndexPath(cwd: string): string {
-	const workspaceHash = createHash("sha1")
-		.update(cwd.toLowerCase())
-		.digest("hex")
-		.slice(0, 16);
-	return path.join(
-		os.homedir(),
-		".agentario",
-		"data",
-		"indexes",
-		`${workspaceHash}.embeddings.json`,
-	);
-}
-
 async function readSemanticIndex(cwd: string): Promise<SemanticIndex | undefined> {
-	try {
-		const raw = await fs.readFile(getSemanticIndexPath(cwd), "utf8");
-		return JSON.parse(raw) as SemanticIndex;
-	} catch {
-		return undefined;
-	}
+	return loadSemanticSearchIndex(cwd);
 }
 
 async function requestQueryEmbedding(

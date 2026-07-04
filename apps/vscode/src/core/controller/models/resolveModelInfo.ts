@@ -1,8 +1,14 @@
+import type { ModelInfo } from "@shared/api"
 import type { ProviderModelsResult } from "@/sdk/model-catalog/contracts"
 import { providerAllowsCustomModelIds } from "@/sdk/model-catalog/custom-model-ids"
+import { applyHostModelInfoOverrides } from "@/sdk/model-catalog/host-overrides"
 import { ResolveModelInfoRequest, ResolveModelInfoResponse } from "@/shared/proto/cline/models"
 import { toProtobufModelInfo } from "@/shared/proto-conversions/models/typeConversion"
-import { type ProviderCatalogController, parseProviderIdRequest } from "./providerCatalogShared"
+import {
+	hasProviderCatalogStateController,
+	type ProviderCatalogController,
+	parseProviderIdRequest,
+} from "./providerCatalogShared"
 
 /**
  * Resolve a single (provider, model) pair for the webview's status /
@@ -39,27 +45,32 @@ export async function resolveModelInfo(
 ): Promise<ResolveModelInfoResponse> {
 	const providerId = parseProviderIdRequest(request.providerId)
 	const requestedModelId = request.modelId?.trim() || ""
+	const apiConfiguration = hasProviderCatalogStateController(controller)
+		? controller.stateManager.getApiConfiguration?.()
+		: undefined
+
+	const finalize = (
+		modelId: string,
+		modelInfo: ModelInfo,
+		source: ResolveModelInfoResponse["source"],
+	): ResolveModelInfoResponse =>
+		ResolveModelInfoResponse.create({
+			providerId,
+			modelId,
+			modelInfo: toProtobufModelInfo(applyHostModelInfoOverrides(providerId, modelId, modelInfo, apiConfiguration)),
+			source,
+		})
 
 	const store = controller.getProviderConfigStore()
 	if (requestedModelId) {
 		const actSelection = store.readSelection(providerId, "act")
 		if (actSelection?.modelId === requestedModelId) {
-			return ResolveModelInfoResponse.create({
-				providerId,
-				modelId: actSelection.modelId,
-				modelInfo: toProtobufModelInfo(actSelection.modelInfo),
-				source: "committed-selection",
-			})
+			return finalize(actSelection.modelId, actSelection.modelInfo, "committed-selection")
 		}
 
 		const planSelection = store.readSelection(providerId, "plan")
 		if (planSelection?.modelId === requestedModelId) {
-			return ResolveModelInfoResponse.create({
-				providerId,
-				modelId: planSelection.modelId,
-				modelInfo: toProtobufModelInfo(planSelection.modelInfo),
-				source: "committed-selection",
-			})
+			return finalize(planSelection.modelId, planSelection.modelInfo, "committed-selection")
 		}
 	}
 
@@ -75,12 +86,7 @@ export async function resolveModelInfo(
 	if (cached?.ok) {
 		const hit = pickFromCatalog(cached, requestedModelId, allowCustomModelIds)
 		if (hit) {
-			return ResolveModelInfoResponse.create({
-				providerId,
-				modelId: hit.modelId,
-				modelInfo: toProtobufModelInfo(hit.modelInfo),
-				source: hit.matchedRequested ? "sdk-known-models" : "sdk-default",
-			})
+			return finalize(hit.modelId, hit.modelInfo, hit.matchedRequested ? "sdk-known-models" : "sdk-default")
 		}
 	}
 
@@ -91,12 +97,7 @@ export async function resolveModelInfo(
 	if (resolved?.ok) {
 		const hit = pickFromCatalog(resolved, requestedModelId, allowCustomModelIds)
 		if (hit) {
-			return ResolveModelInfoResponse.create({
-				providerId,
-				modelId: hit.modelId,
-				modelInfo: toProtobufModelInfo(hit.modelInfo),
-				source: hit.matchedRequested ? "sdk-known-models" : "sdk-default",
-			})
+			return finalize(hit.modelId, hit.modelInfo, hit.matchedRequested ? "sdk-known-models" : "sdk-default")
 		}
 	}
 

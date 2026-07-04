@@ -1,6 +1,10 @@
+import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import React, { memo, useCallback, useMemo, useState } from "react"
+import { t } from "@/i18n"
 import { formatLargeNumber as formatTokenNumber } from "@/utils/format"
+import type { ContextBudgetSegmentKey } from "./StructuredContextBar"
+import { SEGMENT_COLORS } from "./StructuredContextBar"
 
 interface TokenUsageInfoProps {
 	tokensIn?: number
@@ -9,22 +13,14 @@ interface TokenUsageInfoProps {
 	cacheReads?: number
 }
 
-interface TokenDetail {
-	title: string
-	value?: number
-	icon: string
-}
-
 interface TaskContextWindowButtonsProps extends TokenUsageInfoProps {
 	percentage: number
 	tokenUsed: number
 	contextWindow: number
-	autoCompactThreshold?: number
-	isThresholdChanged?: boolean
-	isThresholdFadingOut?: boolean
+	contextBudget?: ContextBudgetBreakdown
+	useAutoCondense?: boolean
 }
 
-// New accordion item component
 const AccordionItem = memo<{
 	title: string
 	value: React.ReactNode
@@ -58,32 +54,41 @@ const AccordionItem = memo<{
 })
 AccordionItem.displayName = "AccordionItem"
 
-// Constants
-const TOKEN_DETAILS_CONFIG: Omit<TokenDetail, "value">[] = [
-	{ title: "Prompt Tokens", icon: "codicon-arrow-up" },
-	{ title: "Completion Tokens", icon: "codicon-arrow-down" },
-	{ title: "Cache Writes", icon: "codicon-arrow-left" },
-	{ title: "Cache Reads", icon: "codicon-arrow-right" },
-]
+const CATEGORY_KEYS: ContextBudgetSegmentKey[] = ["system", "rules", "tools", "chat"]
+
+const CATEGORY_LABELS: Record<ContextBudgetSegmentKey, () => string> = {
+	system: () => t("contextWindow.categorySystem"),
+	rules: () => t("contextWindow.categoryRules"),
+	tools: () => t("contextWindow.categoryTools"),
+	chat: () => t("contextWindow.categoryChat"),
+}
 
 const TokenUsageDetails = memo<TokenUsageInfoProps>(({ tokensIn, tokensOut, cacheWrites, cacheReads }) => {
-	const contextTokenDetails = useMemo(() => {
-		const values = [tokensIn, tokensOut, cacheWrites || 0, cacheReads || 0]
-		return TOKEN_DETAILS_CONFIG.map((config, index) => ({ ...config, value: values[index] })).filter((item) => item.value)
-	}, [tokensIn, tokensOut, cacheWrites, cacheReads])
-
 	if (!tokensIn) {
-		return <div>No token usage data available</div>
+		return <div>{t("contextWindow.noTokenUsage")}</div>
 	}
-
 	return (
 		<div className="space-y-1">
-			{contextTokenDetails.map((item) => (
+			<div className="flex justify-between">
+				<span>{t("contextWindow.promptTokens")}</span>
+				<span className="font-mono">{formatTokenNumber(tokensIn)}</span>
+			</div>
+			<div className="flex justify-between">
+				<span>{t("contextWindow.completionTokens")}</span>
+				<span className="font-mono">{formatTokenNumber(tokensOut || 0)}</span>
+			</div>
+			{(cacheWrites || 0) > 0 && (
 				<div className="flex justify-between">
-					<span>{item.title}</span>
-					<span className="font-mono">{formatTokenNumber(item.value || 0)}</span>
+					<span>{t("contextWindow.cacheWrites")}</span>
+					<span className="font-mono">{formatTokenNumber(cacheWrites || 0)}</span>
 				</div>
-			))}
+			)}
+			{(cacheReads || 0) > 0 && (
+				<div className="flex justify-between">
+					<span>{t("contextWindow.cacheReads")}</span>
+					<span className="font-mono">{formatTokenNumber(cacheReads || 0)}</span>
+				</div>
+			)}
 		</div>
 	)
 })
@@ -97,10 +102,10 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 	cacheWrites,
 	cacheReads,
 	percentage,
-	autoCompactThreshold = 0,
+	contextBudget,
+	useAutoCondense = false,
 }) => {
-	// Accordion state
-	const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+	const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["categories"]))
 
 	const toggleSection = useCallback((section: string, event?: React.MouseEvent) => {
 		if (event) {
@@ -120,52 +125,97 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 
 	const totalTokens = (tokensIn || 0) + (tokensOut || 0) + (cacheWrites || 0) + (cacheReads || 0)
 
+	const categoryRows = useMemo(() => {
+		if (!contextBudget) {
+			return []
+		}
+		return CATEGORY_KEYS.map((key) => ({
+			key,
+			label: CATEGORY_LABELS[key](),
+			tokens: contextBudget.categories[key],
+			colorClass: SEGMENT_COLORS[key],
+			compressible: key === "chat",
+		})).filter((row) => row.tokens > 0)
+	}, [contextBudget])
+
 	return (
-		<div className="context-window-tooltip-content flex flex-col gap-2 bg-menu rounded shadow-sm z-100 w-60 p-1">
-			{autoCompactThreshold > 0 && (
-				<AccordionItem
-					isExpanded={expandedSections.has("threshold")}
-					onToggle={(event) => toggleSection("threshold", event)}
-					title="Auto Condense Threshold"
-					value={<span className="text-muted-foreground">{`${(autoCompactThreshold * 100).toFixed(0)}%`}</span>}>
-					<div className="space-y-1">
-						<p className="text-xs leading-relaxed text-white">
-							Click on the context window bar to set a new threshold.
-						</p>
-						<p className="text-xs leading-relaxed mt-0 mb-0">
-							When the context window usage exceeds this threshold, the task will be automatically condensed.
-						</p>
-					</div>
-				</AccordionItem>
+		<div className="context-window-tooltip-content flex flex-col gap-2 bg-menu rounded shadow-sm z-100 w-72 p-1">
+			{useAutoCondense && (
+				<div className="text-xs text-muted-foreground px-0.5">{t("contextWindow.autoCompactEnabled")}</div>
 			)}
 
 			<AccordionItem
 				isExpanded={expandedSections.has("context")}
 				onToggle={(event) => toggleSection("context", event)}
-				title="Context Window"
+				title={t("contextWindow.summaryTitle")}
 				value={percentage ? `${percentage.toFixed(1)}%` : formatTokenNumber(contextWindow)}>
 				<div className="space-y-1">
 					<div className="flex justify-between">
-						<span>Used:</span>
-						<span className="font-mono">{formatTokenNumber(tokenUsed)}</span>
+						<span>{t("contextWindow.usedLabel")}</span>
+						<span className="font-mono">
+							{formatTokenNumber(tokenUsed)}
+							{contextBudget ? " ≈" : ""}
+						</span>
 					</div>
 					<div className="flex justify-between">
-						<span>Total:</span>
+						<span>{t("contextWindow.totalLabel")}</span>
 						<span className="font-mono">{formatTokenNumber(contextWindow)}</span>
 					</div>
-					<div className="flex justify-between">
-						<span>Remaining:</span>
-						<span className="font-mono">{formatTokenNumber(contextWindow - tokenUsed)}</span>
-					</div>
+					{contextBudget && (
+						<>
+							<div className="flex justify-between">
+								<span>{t("contextWindow.pinnedLabel")}</span>
+								<span className="font-mono">≈ {formatTokenNumber(contextBudget.pinnedEstimated)}</span>
+							</div>
+							<div className="flex justify-between">
+								<span>{t("contextWindow.compressibleLabel")}</span>
+								<span className="font-mono">≈ {formatTokenNumber(contextBudget.compressibleEstimated)}</span>
+							</div>
+						</>
+					)}
 				</div>
 			</AccordionItem>
+
+			{categoryRows.length > 0 && (
+				<AccordionItem
+					isExpanded={expandedSections.has("categories")}
+					onToggle={(event) => toggleSection("categories", event)}
+					title={t("contextWindow.categoriesTitle")}
+					value={`≈ ${formatTokenNumber(contextBudget?.totalEstimated ?? tokenUsed)}`}>
+					<div className="space-y-1">
+						{categoryRows.map((row) => (
+							<div className="flex justify-between items-center gap-2" key={row.key}>
+								<span className="flex items-center gap-1.5">
+									<span className={`inline-block size-2 rounded-full ${row.colorClass}`} />
+									{row.label}
+									{row.compressible ? ` (${t("contextWindow.compressibleShort")})` : ""}
+								</span>
+								<span className="font-mono">≈ {formatTokenNumber(row.tokens)}</span>
+							</div>
+						))}
+						{contextBudget?.rulesDetail && contextBudget.rulesDetail.length > 0 && (
+							<div className="mt-2 space-y-0.5 border-t border-foreground/10 pt-1">
+								{contextBudget.rulesDetail.map((rule) => (
+									<div className="flex justify-between pl-3" key={rule.name}>
+										<span className="truncate max-w-[9rem]" title={rule.name}>
+											{rule.name}
+										</span>
+										<span className="font-mono">≈ {formatTokenNumber(rule.tokens)}</span>
+									</div>
+								))}
+							</div>
+						)}
+						<p className="text-[10px] leading-snug pt-1">{t("contextWindow.estimatedHint")}</p>
+					</div>
+				</AccordionItem>
+			)}
 
 			{totalTokens > 0 && (
 				<AccordionItem
 					isExpanded={expandedSections.has("tokens")}
 					onToggle={(event) => toggleSection("tokens", event)}
-					title="Token Usage"
-					value={`${formatTokenNumber(totalTokens)}`}>
+					title={t("contextWindow.tokenUsageTitle")}
+					value={formatTokenNumber(totalTokens)}>
 					<TokenUsageDetails
 						cacheReads={cacheReads}
 						cacheWrites={cacheWrites}

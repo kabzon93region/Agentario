@@ -13,11 +13,12 @@
 
 При установке Agentario **0.4.0+** (standalone):
 
-1. В `%USERPROFILE%\Documents\Agentario\Rules\` создаются файлы:
-   - `agentario-global-rules.md` — правила для всех проектов
-   - `agentario-system-prompt.md` — копия для справки (редактируемая)
-2. В API-запрос к модели добавляется встроенный системный промпт из VSIX (`agentario-system-prompt.md`).
-3. Rules из папки **подмешиваются** к system prompt автоматически (если включены в Customize → Rules).
+1. В `%USERPROFILE%\Documents\Agentario\Rules\` создаётся файл:
+   - `agentario-global-rules.md` — правила для всех проектов (включаются в Customize → Rules)
+2. В API-запрос к модели добавляется **встроенный** системный промпт из VSIX (`apps/vscode/agentario-system-prompt.md`) — его **не** нужно дублировать в Rules или LM Studio.
+3. Rules из папки подмешиваются к system prompt автоматически (если включены в Customize → Rules).
+
+Файлы `agentario-system-prompt*.md` и `lmstudio-system-prompt.md` **не** являются rules — они не показываются в списке Rules. Справка для LM Studio UI: `config/lmstudio-system-prompt.md` (System Prompt в LM Studio оставьте пустым).
 
 Переустановка VSIX не затирает ваши правки в `Documents/Agentario/Rules/` — только дополняет отсутствующие файлы.
 
@@ -47,8 +48,39 @@
 
 | Режим | Tools |
 |-------|--------|
-| **Act** | Полный набор: read, search, bash, editor, MCP… |
+| **Act** | Полный набор: read, search, bash, editor, MCP (trueline…)… |
 | **Plan** | Read/search/bash — да; **editor** — нет (только планирование). Переключение в Act: tool `switch_to_act_mode` после согласования плана. |
+
+## Контекст и сжатие (0.5.0+)
+
+Полоска контекста в плашке задания показывает **четыре категории**:
+
+| Категория | Источник | Сжимается? |
+|-----------|----------|------------|
+| **System** | встроенный prompt Agentario + Plan overlay | Нет |
+| **Rules** | включённые `.md` из Customize → Rules | Нет |
+| **Tools** | JSON schemas активных инструментов | Нет |
+| **Chat** | сообщения user / assistant / tool results | Да |
+
+**Pinned** (System + Rules + Tools) не попадает в compaction. Сжимается только **Chat**.
+
+### Авто-сжатие (Settings → Features)
+
+- **Авто-сжатие** (`useAutoCondense`) — включает compaction перед API-запросом, когда chat приближается к лимиту.
+- **Стратегия:**
+  - **Agentic (LLM summary)** — отдельный запрос к модели-суммаризатору; старый чат заменяется кратким summary (по умолчанию).
+  - **Basic (truncate)** — усечение старых сообщений без LLM.
+- **Модель для summary** — опционально provider + model ID. Пусто = та же модель, что у агента. Для LM Studio удобно указать лёгкую модель, чтобы не выгружать основную.
+
+При ошибке agentic summary SDK автоматически откатывается на Basic.
+
+Оценки токенов в tooltip — **приблизительные** (chars/4); после ответа провайдера total уточняется по usage.
+
+## MCP trueline (правка файлов)
+
+В шаблоне `config/agentario-recommended-mcp.json` включён **trueline-mcp** — hash-verified правки (`trueline_read` → `trueline_edit`). После обновления Agentario выполните `setup-mcp.cmd`, перезапустите VS Code и проверьте **MCP Servers**.
+
+Системный промпт и global rules описывают, когда использовать `editor`, а когда trueline.
 
 ## Скрипт setup
 

@@ -47,4 +47,8 @@ message CodebaseIndex {
   int32 error_files = 10;
   optional string last_error = 11;
   repeated IndexedFile files = 12;
+  int64 index_size_bytes = 13;
+  int32 progress_current = 14;
+  int32 progress_total = 15;
+  optional string progress_path = 16;
 }

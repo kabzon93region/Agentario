@@ -2,6 +2,8 @@ import React from "react"
 import ChatTextArea from "@/components/chat/ChatTextArea"
 import QuotedMessagePreview from "@/components/chat/QuotedMessagePreview"
 import { useExtensionState } from "@/context/ExtensionStateContext"
+import { t } from "@/i18n"
+import { isAgentTaskRunning } from "../../utils/taskRunning"
 import { ChatState, MessageHandlers, ScrollBehavior } from "../../types/chatTypes"
 
 interface InputSectionProps {
@@ -47,6 +49,7 @@ export const InputSection: React.FC<InputSectionProps> = ({
 		(lastMessage?.partial === true || (lastMessage?.type === "say" && lastMessage.say === "api_req_started"))
 	const allowQueuedSubmit = turnState?.phase === "streaming" || turnState?.phase === "awaiting_approval" || legacyTaskRunning
 	const submitDisabled = sendingDisabled && !allowQueuedSubmit
+	const showStopButton = isAgentTaskRunning(turnState, lastMessage)
 
 	return (
 		<>
@@ -71,6 +74,9 @@ export const InputSection: React.FC<InputSectionProps> = ({
 				}}
 				onSelectFilesAndImages={selectFilesAndImages}
 				onSend={() => messageHandlers.handleSendMessage(inputValue, selectedImages, selectedFiles)}
+				onStop={() => {
+					void messageHandlers.executeButtonAction("cancel")
+				}}
 				placeholderText={placeholderText}
 				ref={textAreaRef}
 				selectedFiles={selectedFiles}
@@ -80,6 +86,8 @@ export const InputSection: React.FC<InputSectionProps> = ({
 				setSelectedFiles={setSelectedFiles}
 				setSelectedImages={setSelectedImages}
 				shouldDisableFilesAndImages={shouldDisableFilesAndImages}
+				showStopButton={showStopButton}
+				stopButtonTitle={t("chat.stopAgentTitle")}
 			/>
 		</>
 	)

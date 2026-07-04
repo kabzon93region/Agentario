@@ -1,9 +1,7 @@
 import { StringArray, type StringRequest } from "@shared/proto/cline/common"
-import { StringArray, type StringRequest } from "@shared/proto/cline/common"
 import { fetchLmStudioModels } from "@cline/shared"
 import { fetch } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"
-import type { Controller } from ".."
 import type { Controller } from ".."
 
 /**
@@ -25,6 +23,8 @@ export async function getLmStudioModels(_controller: Controller, request: String
 					key: model.key,
 					loadedInstanceIds: model.loadedInstanceIds,
 					variants: model.variants,
+					max_context_length: model.max_context_length,
+					loaded_context_length: model.loaded_context_length,
 				}),
 			),
 		})

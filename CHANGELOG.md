@@ -6,10 +6,281 @@
 
 ### Added
 
+- Шаблон release notes: `release/notes/TEMPLATE.md`.
+
+---
+
+## [0.5.12] — 2026-07-04
+
+### Fixed
+
+- **Таймаут bash-команд:** `resolveAgentToolTimeoutMs` теперь ограничен максимум 5 минутами (300 000 мс). Раньше `requestTimeoutMs` из настроек API применялся напрямую к терминальным командам — при больших значениях (например, для медленной LM Studio) bash-команды могли ждать часами. Теперь API-таймаут и tool-таймаут разделены: API может быть 10+ минут, а bash/search — максимум 5 минут.
+
+---
+
+## [0.5.11] — 2026-07-04
+
+### Fixed
+
+- **Xiaomi — список моделей:** `refreshOpenAiModels` теперь принимает `provider_id` и подставляет сохранённый API-ключ из настроек нужного провайдера (раньше всегда брал ключ из `openai`, из-за чего после выбора модели или переключения Plan/Act список моделей пропадал).
+- **Settings → API Configuration:** `apiOptionsKey` больше не включает ID моделей — выбор модели не remount-ит весь экран настроек и не сбрасывает загруженный список.
+
+---
+
+## [0.5.10] — 2026-07-04
+
+### Fixed
+
+- **Пресеты — stale partial update:** `updateApiConfigurationPartial` и `commitModelSelection` теперь полностью игнорируют запросы в течение 2 с после применения пресета (раньше пропускался только `postStateToWebview`, но состояние на бэкенде всё равно перезаписывалось старыми данными от размонтируемого UI провайдера). Это устраняет ситуацию, когда первый клик на пресет LM Studio показывал настройки Xiaomi.
+
+---
+
+## [0.5.9] — 2026-07-04
+
+### Fixed
+
+- **Пресеты — race condition:** `applyModelProfilePreset` теперь сам вызывает `postStateToWebview` сразу после применения настроек, а `updateApiConfigurationPartial` и `commitModelSelection` пропускают свой `postStateToWebview`/`handleApiConfigurationChanged`, если пресет был применён менее 1 с назад. Это устраняет промежуточный экран с дефолтными настройками Xiaomi при переключении между пресетами.
+- **updateSettings:** дублирующий `postStateToWebview` в конце `updateSettings` пропускается, если пресет уже отправил состояние.
+
+---
+
+## [0.5.8] — 2026-07-04
+
+### Fixed
+
+- **Пресеты модели:** UI-обновления отдельных полей (`lmStudioMaxTokens`, reasoning, provider и т.п.) теперь отправляются через `updateApiConfigurationPartial`, а не полной stale-копией `apiConfiguration`; это устраняет откат с LM Studio пресета обратно на старый Xiaomi после первого клика.
+- **Plan/Act:** частичные обновления больше не перезаписывают соседний режим старыми данными при переключении вкладок.
+
+---
+
+## [0.5.7] — 2026-07-04
+
+### Fixed
+
+- **Пресеты модели:** provider settings из пресета теперь напрямую закрепляются в `providers.json` после синхронизации выбора модели; это предотвращает возврат UI к дефолтному Xiaomi при первом переключении на LM Studio.
+- **Settings → API Configuration:** переключение Plan/Act больше не remount-ит весь `ApiOptions`, поэтому список моделей Xiaomi не сбрасывается в ручное текстовое поле.
+- Добавлен лог `[ModelProfilePreset] Provider config persisted...` для проверки Base URL/API line при применении пресета.
+
+---
+
+## [0.5.6] — 2026-07-04
+
+### Fixed
+
+- **Пресеты модели:** поля с debounced-сохранением больше не записывают `initialValue` обратно в backend при применении пресета; Base URL Xiaomi из пресета закрепляется после синхронизации выбора модели.
+- **Индексация:** список режимов индексации отображается поверх появляющегося выбора backend для локального AI.
+
+---
+
+## [0.5.5] — 2026-07-04
+
+### Fixed
+
+- **MCP:** seed и merge шаблона теперь пишут в `~/.agentario/data/settings/agentario_mcp_settings.json` (тот же файл, что читает McpHub), с миграцией из legacy VS Code globalStorage; после обновления шаблона v3 — перезагрузка списка серверов.
+- **Пресеты модели:** провайдер-конфиг применяется до смены API; счётчик `modelProfilePresetApplySeq` форсирует remount формы; блокировка UI на «Загрузка…» до readProviderConfig; синхронизация Base URL при смене пресета.
+
+---
+
+## [0.5.4] — 2026-07-04
+
+### Added
+
+- Файловые логи расширения и UI: `~/.agentario/data/logs/extension/` и `logs/ui/` (клики, экраны настроек, индексации).
+- gRPC `logAgentarioUiEvent` — webview пишет события UI в файл.
+- Режимы индексации: **локальный (без AI)**, **локальный AI** (LM Studio/Ollama на 127.0.0.1), **удалённый AI** (URL/IP); выбор backend и embedding-модели.
+- Автодобавление MCP из шаблона v2 (`memory-slim`, `sequential-thinking-slim`, `charlotte`) с перезагрузкой списка серверов после merge.
+
+### Fixed
+
+- Кнопка **«Открыть папку логов»** открывает `~/.agentario/data/logs` через проводник ОС.
+- Переключение пресетов модели: сброс кеша провайдера и remount формы API при смене пресета (один клик — корректные настройки).
+
+### Changed
+
+- Подсказка к кнопке логов описывает новую структуру каталога `logs/`.
+
+---
+
+## [0.5.3] — 2026-07-03
+
+### Added
+
+- **Сброс Agentario** (Settings → Общие): полная очистка настроек, кеша, индексации, истории чатов и MCP; пользовательские правила сохраняются, стандартный `agentario-global-rules.md` восстанавливается.
+- Кнопка **«Открыть папку логов»** — быстрый доступ к `~/.agentario/data/tasks` для отладки и передачи логов разработчикам.
+- Альтернативные MCP при установке: `memory-slim`, `sequential-thinking-slim`, **Charlotte**; подписи standard / alternate light в списке MCP.
+- Автоматическая установка рекомендуемого набора MCP при первом запуске расширения (без `setup-mcp.cmd`).
+
+### Changed
+
+- MCP по умолчанию включены только **sequential-thinking** и **Context7**; memory, playwright, trueline и альтернативы — выключены.
+- Сообщение по кнопке аккаунта упоминает LM Studio, Xiaomi MiMo и другие OpenAI-compatible API.
+
+---
+
+## [0.5.2] — 2026-07-03
+
+### Added
+
+- **Пресеты модели:** сохранение полного набора настроек Plan/Act (провайдер, модель, Base URL, Model Configuration) и быстрое переключение из чата под названием модели.
+- Экран управления пресетами в Settings → API Configuration.
+
+### Changed
+
+- Placeholder Base URL для Xiaomi — общий `api.xiaomimimo.com`, без привязки к Token Plan endpoint в дефолтах UI.
+
+---
+
+## [0.5.1] — 2026-07-03
+
+### Added
+
+- **MiMo Token Plan:** кнопки быстрой настройки (Token Plan / Pay-as-you-go) в провайдерах **Xiaomi** и **OpenAI Compatible** — Base URL, Model ID, контекст 1M, Supports Images выкл.
+- Отдельный экран настроек **Xiaomi** с Base URL, Model Configuration и пресетами подписки.
+
+### Fixed
+
+- **MiMo / Xiaomi:** Base URL из `providers.json` применяется в сессии чата (раньше запросы уходили на дефолтный `api.xiaomimimo.com` или OpenAI).
+- **Контекст 128K:** `knownModels` с пользовательским `modelInfo` (context window, supports images) передаётся в SDK-сессию.
+- **Supports Images:** переключатель в Model Configuration не включается обратно сам (локальный draft + `Switch` вместо `VSCodeCheckbox`).
+- Сохранение `modelInfo` в `providers.json` (`extras`) для провайдеров без legacy-полей в state.
+
+---
+
+## [0.5.0] — 2026-07-03
+
+### Added
+
+- **Структурная полоска контекста** в плашке задания: сегменты System / Rules / Tools / Chat (compressible); tooltip с разбивкой по категориям и списком rules по файлам.
+- **Оценка бюджета контекста** (`estimateContextBudget`) в SDK — эмитится перед каждым API-запросом и отображается в UI (≈ heuristic).
+- **Agentic compaction (LLM summary)** для чата по умолчанию; fallback на Basic при ошибке summarizer.
+- **Настройки сжатия:** Settings → Features — стратегия (Basic / Agentic), отдельная модель для summary (provider + model ID).
+
+### Changed
+
+- Авто-сжатие (`useAutoCondense`) использует стратегию **agentic** вместо basic; manual `/compact` читает strategy и summarizer из session config.
+- `preserveRecentTokens` адаптируется к малым context window (LM Studio 8k–32k).
+
+---
+
+## [0.4.20] — 2026-07-03
+
+### Fixed
+
+- **Полоска контекста в плашке задания:** для LM Studio (и Ollama) отображается фактический размер окна модели (`loaded_context_length` / `lmStudioMaxTokens`), а не дефолтные 128K.
+- **Rules:** файлы системного промпта (`agentario-system-prompt*.md`, `lmstudio-system-prompt.md`) исключены из списка Rules — их можно отключить/удалить без автоповторного включения; при первом запуске сидится только `agentario-global-rules.md`.
+
+### Changed
+
+- Обновлены `agentario-global-rules.md` (единый шаблон для config и VSIX).
+- `config/lmstudio-system-prompt.md` и setup-скрипт: справка переносится в `Documents/Agentario/docs/`, не в Rules.
+
+---
+
+### Added
+
+- **trueline-mcp** в рекомендуемом MCP-шаблоне (`config/agentario-recommended-mcp.json`) — hash-verified правки файлов.
+- **LM Studio (агент):** в списке моделей отображаются тип (llm, embedding…) и статус `loaded`; загруженные модели — первыми (как в индексации).
+
+### Changed
+
+- Системный промпт и global rules: запрет записи файлов через shell; workflow `editor` / trueline для правок.
+
+---
+
+## [0.4.18] — 2026-07-02
+
+### Fixed
+
+- **Правила (Rules):** после создания файла через «+» список обновляется сразу, файл открывается в редакторе; исправлены пути `.agentariorules` / глобальная папка `Documents/Agentario/Rules` и сканирование каталогов вне workspace.
+
+---
+
+## [0.4.17] — 2026-07-02
+
+### Added
+
+- **Кнопка «Стоп» в чате:** во время работы агента (стриминг, ожидание подтверждения инструмента) рядом с отправкой появляется кнопка остановки; также «Стоп» вместо «Cancel» над полем ввода. Горячая клавиша Esc по-прежнему прерывает задачу.
+
+---
+
+## [0.4.16] — 2026-07-02
+
+### Changed
+
+- **Скрипты сборки:** `pause` в `build.cmd`, `publish-release.cmd`, `setup-mcp.cmd` заменён на задержку 15 с (`scripts/wait-before-exit.cmd` / `.ps1`); правило зафиксировано в `DEVELOPMENT_RULES.mdc`.
+
+---
+
+## [0.4.15] — 2026-07-02
+
+### Fixed
+
+- **Кнопка «Очистить» (индексация):** `window.confirm` в webview VS Code не вызывал backend — очистка не выполнялась. Заменено на двухшаговое подтверждение в UI («Очистить» → «Подтвердить очистку»).
+- **Удаление индекса:** повторная попытка удаления по найденному hash, если после первого прохода индекс остался на диске.
+
+---
+
+## [0.4.14] — 2026-07-02
+
+### Fixed
+
+- **LM Studio / BodyTimeoutError:** настройка «Таймаут запроса» теперь реально применяется к HTTP-стримингу (undici `bodyTimeout`/`headersTimeout`). Раньше Node обрывал длинные ответы через ~300 с (`UND_ERR_BODY_TIMEOUT`), даже при дефолте 600000 мс в UI.
+
+---
+
+## [0.4.13] — 2026-07-02
+
+### Fixed
+
+- **Очистка индекса:** удаление учитывает `realpath` workspace (Z: vs UNC), несколько вариантов хеша, каталоги `~/.agentario` и `~/.cline`; после очистки проверяется, что индекс действительно удалён.
+- **Размер контекста LM Studio в настройках:** снова отображается `max_context_length` и `loaded_context_length` из `/api/v1/models` и `/api/v0/models` (раньше поля не парсились и не передавались в webview).
+
+---
+
+## [0.4.12] — 2026-07-02
+
+### Fixed
+
+- **Кнопка «Очистить» (индексация):** при отмене диалога подтверждения кнопка оставалась заблокированной (`isWorking=true`) — теперь `setIsWorking(false)` вызывается перед `return`, и кнопка разблокируется.
+- **Диагностика очистки индекса:** добавлено логирование в `clearIndex` контроллер и `CodebaseIndexService.clear()` для отладки проблем с удалением файлов.
+
+### Changed
+
+- **Индексация больших файлов:** текстовые и кодовые форматы (`.ts`, `.js`, `.py`, `.md`, `.html` и др.) теперь читаются **полностью без лимита 2 МБ**. Лимит сохранён только для структурированных форматов (`.json`, `.sql`).
+
+---
+
+## [0.4.10] — 2026-07-02
+
+### Fixed
+
+- **Кнопка «Очистить» (индексация):** при отмене диалога подтверждения кнопка оставалась заблокированной (`isWorking=true`) — теперь `setIsWorking(false)` вызывается перед `return`, и кнопка разблокируется.
+- **Диагностика очистки индекса:** добавлено логирование в `clearIndex` контроллер и `CodebaseIndexService.clear()` для отладки проблем с удалением файлов.
+
+### Changed
+
+- **Индексация больших файлов:** текстовые и кодовые форматы (`.ts`, `.js`, `.py`, `.md`, `.html` и др.) теперь читаются **полностью без лимита 2 МБ**. Лимит сохранён только для структурированных форматов (`.json`, `.sql`).
+
+---
+
+## [0.4.9] — 2026-07-02
+
+### Fixed
+
+- **Индексация больших проектов** (мобильные/Flutter/Android): ошибка `Invalid string length` при `JSON.stringify` финального индекса — заменено на **шардированное хранение** (meta.json + один JSON на файл в `indexes/{hash}/files/`). Без лимита размера.
+- **«Очистить»** не удалял файлы индекса и не прерывал активную индексацию — теперь `deleteAllIndexesForWorkspace` сканирует по `workspacePath` (включая legacy), прерывает сборку и ждёт завершения.
+- **Прогресс индексации** в UI: текущий файл, процент, размер индекса на диске в реальном времени.
+
+### Changed
+
+- **Чанки для embedding-моделей с контекстом 2048 / eval batch 2048**: размер чанка ~1024 tok (~3072 симв.), нахлёст **17.5 %** (15–20 %), batch запросов суммарно ≤ 2048 tok. Лимит MAX_CHUNKS_PER_FILE снят.
+- Версия bumped после каждого изменения (правило усилено в DEVELOPMENT_RULES.mdc).
+
+### Added
+
 - Документация индексации LM Studio: domain type Embedding, контекст/память, headless ([config/lmstudio-indexing.md](config/lmstudio-indexing.md)).
 - Скрипт [`scripts/lmstudio-headless-server.cmd`](scripts/lmstudio-headless-server.cmd) — LM Studio без GUI (режимы `restore` / `load`).
 - Скрипт [`publish-release.cmd`](publish-release.cmd) и [config/RELEASE.md](config/RELEASE.md) — автопубликация на GitHub + Release с VSIX.
-- Шаблон release notes: `release/notes/TEMPLATE.md`.
 
 ---
 

@@ -52,6 +52,7 @@ import { VercelAIGatewayProvider } from "./providers/VercelAIGatewayProvider"
 import { VertexProvider } from "./providers/VertexProvider"
 import { VSCodeLmProvider } from "./providers/VSCodeLmProvider"
 import { XaiProvider } from "./providers/XaiProvider"
+import { XiaomiProviderSettings } from "./providers/XiaomiProviderSettings"
 import { ZAiProvider } from "./providers/ZAiProvider"
 import { useApiConfigurationHandlers } from "./utils/useApiConfigurationHandlers"
 
@@ -442,7 +443,11 @@ const ApiOptions = ({
 				<OpenRouterProvider currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />
 			)}
 
-			{apiConfiguration && genericProviderSettings && (
+			{apiConfiguration && selectedProvider === "xiaomi" && (
+				<XiaomiProviderSettings currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />
+			)}
+
+			{apiConfiguration && genericProviderSettings && selectedProvider !== "xiaomi" && (
 				<GenericProviderSettings
 					{...genericProviderSettings}
 					currentMode={currentMode}

@@ -1,7 +1,7 @@
 import { describe, it } from "bun:test"
 import { strict as assert } from "node:assert"
 import type { ClineMessage } from "../ExtensionMessage"
-import { getApiMetrics, getLastApiReqTotalTokens } from "../getApiMetrics"
+import { getApiMetrics, getLastApiReqTotalTokens, getLastContextBudget } from "../getApiMetrics"
 
 describe("getApiMetrics", () => {
 	it("includes subagent_usage in aggregate totals", () => {
@@ -99,5 +99,78 @@ describe("getLastApiReqTotalTokens", () => {
 
 		const total = getLastApiReqTotalTokens(messages)
 		assert.equal(total, 23)
+	})
+
+	it("falls back to contextBudget.totalEstimated when usage tokens are zero", () => {
+		const messages: ClineMessage[] = [
+			{
+				ts: 1,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({
+					tokensIn: 0,
+					tokensOut: 0,
+					contextBudget: {
+						contextWindow: 32_000,
+						totalEstimated: 12_345,
+						pinnedEstimated: 4_000,
+						compressibleEstimated: 8_345,
+						categories: { system: 1_000, rules: 500, tools: 2_500, chat: 8_345 },
+					},
+				}),
+			},
+		]
+
+		assert.equal(getLastApiReqTotalTokens(messages), 12_345)
+	})
+})
+
+describe("getLastContextBudget", () => {
+	it("returns the latest valid contextBudget from api_req_started", () => {
+		const budget = {
+			contextWindow: 128_000,
+			totalEstimated: 50_000,
+			pinnedEstimated: 10_000,
+			compressibleEstimated: 40_000,
+			categories: { system: 2_000, rules: 3_000, tools: 5_000, chat: 40_000 },
+			rulesDetail: [{ name: "agentario-global-rules.md", tokens: 3_000 }],
+		}
+		const messages: ClineMessage[] = [
+			{
+				ts: 1,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({ contextBudget: budget }),
+			},
+			{
+				ts: 2,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({
+					contextBudget: {
+						...budget,
+						totalEstimated: 55_000,
+						categories: { ...budget.categories, chat: 45_000 },
+					},
+				}),
+			},
+		]
+
+		const latest = getLastContextBudget(messages)
+		assert.equal(latest?.totalEstimated, 55_000)
+		assert.equal(latest?.categories.chat, 45_000)
+	})
+
+	it("ignores malformed or incomplete contextBudget payloads", () => {
+		const messages: ClineMessage[] = [
+			{
+				ts: 1,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({ contextBudget: { totalEstimated: 100 } }),
+			},
+		]
+
+		assert.equal(getLastContextBudget(messages), undefined)
 	})
 })

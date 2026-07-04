@@ -40,6 +40,15 @@ export async function getStateToPostToWebview(controller: {
 	const mode = stateManager.getGlobalSettingsKey("mode")
 	const yoloModeToggled = stateManager.getGlobalSettingsKey("yoloModeToggled")
 	const useAutoCondense = stateManager.getGlobalSettingsKey("useAutoCondense")
+	const compactionStrategy = stateManager.getGlobalSettingsKey("compactionStrategy")
+	const compactionSummarizerProviderId = stateManager.getGlobalSettingsKey("compactionSummarizerProviderId")
+	const compactionSummarizerModelId = stateManager.getGlobalSettingsKey("compactionSummarizerModelId")
+	const modelProfilePresets = stateManager.getGlobalSettingsKey("modelProfilePresets") ?? []
+	const activeModelProfilePresetId = stateManager.getGlobalSettingsKey("activeModelProfilePresetId")
+	const codebaseIndexMode = stateManager.getGlobalSettingsKey("codebaseIndexMode") ?? "local"
+	const codebaseIndexAiBackend = stateManager.getGlobalSettingsKey("codebaseIndexAiBackend") ?? "lmstudio"
+	const codebaseIndexBaseUrl = stateManager.getGlobalSettingsKey("codebaseIndexBaseUrl")
+	const codebaseIndexEmbeddingModelId = stateManager.getGlobalSettingsKey("codebaseIndexEmbeddingModelId")
 	const subagentsEnabled = stateManager.getGlobalSettingsKey("subagentsEnabled")
 	const userInfo = stateManager.getGlobalStateKey("userInfo")
 	const mcpMarketplaceEnabled = stateManager.getGlobalStateKey("mcpMarketplaceEnabled")
@@ -47,9 +56,9 @@ export async function getStateToPostToWebview(controller: {
 	const telemetrySetting = stateManager.getGlobalSettingsKey("telemetrySetting")
 	const planActSeparateModelsSetting = stateManager.getGlobalSettingsKey("planActSeparateModelsSetting")
 	const enableCheckpointsSetting = stateManager.getGlobalSettingsKey("enableCheckpointsSetting")
-	const globalClineRulesToggles = stateManager.getGlobalStateKey("globalClineRulesToggles")
-	const globalWorkflowToggles = stateManager.getGlobalStateKey("globalWorkflowToggles")
-	const globalSkillsToggles = stateManager.getGlobalStateKey("globalSkillsToggles")
+	const globalClineRulesToggles = stateManager.getGlobalSettingsKey("globalClineRulesToggles")
+	const globalWorkflowToggles = stateManager.getGlobalSettingsKey("globalWorkflowToggles")
+	const globalSkillsToggles = stateManager.getGlobalSettingsKey("globalSkillsToggles")
 	const localSkillsToggles = stateManager.getWorkspaceStateKey("localSkillsToggles")
 	const remoteRulesToggles = stateManager.getGlobalStateKey("remoteRulesToggles")
 	const remoteWorkflowToggles = stateManager.getGlobalStateKey("remoteWorkflowToggles")
@@ -118,6 +127,15 @@ export async function getStateToPostToWebview(controller: {
 		mode,
 		yoloModeToggled,
 		useAutoCondense,
+		compactionStrategy,
+		compactionSummarizerProviderId,
+		compactionSummarizerModelId,
+		modelProfilePresets,
+		activeModelProfilePresetId,
+		codebaseIndexMode,
+		codebaseIndexAiBackend,
+		codebaseIndexBaseUrl,
+		codebaseIndexEmbeddingModelId,
 		subagentsEnabled,
 		userInfo,
 		mcpMarketplaceEnabled,

@@ -37,10 +37,15 @@ import { ExtensionRegistryInfo } from "@/registry"
 import { getFeatureFlagsService } from "@/services/feature-flags"
 import { getDistinctId } from "@/services/logging/distinctId"
 import { fetch } from "@/shared/net"
+import { createFetchWithStreamingTimeouts } from "@/shared/streaming-fetch"
 import { FeatureFlag } from "@/shared/services/feature-flags/feature-flags"
 import { type BedrockProviderConfig, buildBedrockProviderConfig } from "./bedrock-config"
 import { buildAgentHooks } from "./hooks-adapter"
 import { readTaskHistory, resolveDataDir } from "./legacy-state-reader"
+import { buildCompactionConfig } from "./compaction-settings"
+import { buildEffectiveProviderConfig } from "./model-catalog/effective-config"
+import type { ProviderId } from "./model-catalog/contracts"
+import { resolveSessionKnownModels } from "./model-catalog/session-model-info"
 import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
 import { providerAllowsCustomModelIds } from "./model-catalog/custom-model-ids"
 import { getProviderSettingsManager } from "./provider-migration"
@@ -523,7 +528,19 @@ export function resolveBaseUrl(providerId: string, config: ApiConfiguration): st
 
 	const field = baseUrlMap[providerId]
 	if (field) {
-		return normalizeSdkBaseUrl(providerId, config[field])
+		const fromLegacy = normalizeSdkBaseUrl(providerId, config[field])
+		if (fromLegacy) {
+			return fromLegacy
+		}
+	}
+
+	try {
+		const effective = buildEffectiveProviderConfig(providerId as ProviderId)
+		if (effective.baseUrl) {
+			return normalizeSdkBaseUrl(providerId, effective.baseUrl)
+		}
+	} catch {
+		Logger.warn(`[SessionFactory] Failed to read ${providerId} base URL from providers.json`)
 	}
 
 	return undefined
@@ -716,6 +733,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	// own provider id spelling (e.g. "openai-compatible" rather than the
 	// extension's "openai"). Convert before handing the id to core.
 	const sdkProviderId = toSdkProviderId(providerId)
+	const compactionConfig = buildCompactionConfig(stateManager, sdkProviderId, useAutoCondense)
 	const configuredRequestTimeoutMs =
 		typeof apiConfig?.requestTimeoutMs === "number" && Number.isFinite(apiConfig.requestTimeoutMs) && apiConfig.requestTimeoutMs > 0
 			? Math.trunc(apiConfig.requestTimeoutMs)
@@ -731,6 +749,13 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	// additionally need structured options (region/project/auth/SAP OAuth), which core
 	// reads from providerConfig in createAgentModelFromConfig.
 	const cloudProviderConfig = bedrockProviderConfig ?? vertexProviderConfig ?? sapProviderConfig
+	const providerFetch =
+		providerRequestTimeoutMs !== undefined
+			? createFetchWithStreamingTimeouts({
+					bodyTimeoutMs: providerRequestTimeoutMs,
+					headersTimeoutMs: providerRequestTimeoutMs,
+				})
+			: fetch
 	// Spread the cloud config first so the explicit fields below — notably the
 	// proxy/CA-aware fetch — can never be clobbered if those types gain matching keys.
 	const providerConfig = {
@@ -740,18 +765,23 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		...(apiKey ? { apiKey } : {}),
 		...(baseUrl !== undefined ? { baseUrl } : {}),
 		...(providerRequestTimeoutMs !== undefined ? { timeoutMs: providerRequestTimeoutMs } : {}),
-		fetch,
+		fetch: providerFetch,
 	}
 
 	Logger.log(`[SessionFactory] Tools enabled for session (mode=${mode}, provider=${providerId})`)
 
 	const toolTimeoutMs = resolveAgentToolTimeoutMs(providerId, apiConfig)
+	const knownModels = resolveSessionKnownModels(providerId, mode, modelId, apiConfig)
+	if (knownModels) {
+		;(providerConfig as Record<string, unknown>).knownModels = knownModels
+	}
 
 	const config: CoreSessionConfig = {
 		providerId: sdkProviderId,
 		modelId,
 		apiKey,
 		baseUrl,
+		knownModels,
 		providerConfig,
 		cwd,
 		workspaceRoot,
@@ -762,14 +792,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		},
 		enableSpawnAgent: false,
 		enableAgentTeams: false,
-		...(useAutoCondense
-			? {
-					compaction: {
-						enabled: true,
-						strategy: "basic",
-					},
-				}
-			: {}),
+		...(compactionConfig ? { compaction: compactionConfig } : {}),
 		disableMcpSettingsTools: true,
 		mode: mode === "plan" ? "plan" : "act",
 		...reasoningConfig,

@@ -164,6 +164,8 @@ export {
 	type LmStudioEmbeddingsResult,
 	type LmStudioModelRecord,
 } from "./llms/lm-studio-embedding";
+export * from "./indexing";
+export * from "./context/context-budget";
 export {
 	createMediaBudgetState,
 	DEFAULT_MAX_IMAGE_BASE64_BYTES,

@@ -4,6 +4,7 @@ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import type React from "react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useExtensionState } from "../../../../../context/ExtensionStateContext"
+import { t } from "@/i18n"
 import { ButtonActionType, getButtonConfigFromState } from "../../shared/buttonConfig"
 import type { ChatState, MessageHandlers } from "../../types/chatTypes"
 
@@ -117,7 +118,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ task, messages, ch
 	}
 
 	const { primaryText, secondaryText, primaryAction, secondaryAction, enableButtons } = buttonConfig
-	const hasButtons = primaryText || secondaryText
+	const resolvedSecondaryText =
+		secondaryAction === "cancel" ? t("chat.stopAgentShort") : secondaryText
+	const hasButtons = primaryText || resolvedSecondaryText
 	const isStreaming = task.partial === true
 	const canInteract = enableButtons && !isProcessing
 
@@ -132,19 +135,19 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({ task, messages, ch
 			{primaryText && primaryAction && (
 				<VSCodeButton
 					appearance="primary"
-					className={secondaryText ? "flex-1 mr-[6px]" : "flex-2"}
+					className={resolvedSecondaryText ? "flex-1 mr-[6px]" : "flex-2"}
 					disabled={!canInteract}
 					onClick={() => handleActionClick(primaryAction, inputValue, selectedImages, selectedFiles)}>
 					{primaryText}
 				</VSCodeButton>
 			)}
-			{secondaryText && secondaryAction && (
+			{resolvedSecondaryText && secondaryAction && (
 				<VSCodeButton
 					appearance="secondary"
 					className={primaryText ? "flex-1" : "flex-2"}
 					disabled={!canInteract}
 					onClick={() => handleActionClick(secondaryAction, inputValue, selectedImages, selectedFiles)}>
-					{secondaryText}
+					{resolvedSecondaryText}
 				</VSCodeButton>
 			)}
 		</div>

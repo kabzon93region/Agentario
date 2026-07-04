@@ -107,9 +107,48 @@ function Invoke-External([string]$FilePath, [string[]]$Arguments) {
 	}
 }
 
+function Test-GhReleaseExists([string]$TagName, [string]$Repo) {
+	$prevNative = $PSNativeCommandUseErrorActionPreference
+	$PSNativeCommandUseErrorActionPreference = $false
+	try {
+		& gh release view $TagName --repo $Repo 2>$null | Out-Null
+		return ($LASTEXITCODE -eq 0)
+	} finally {
+		$PSNativeCommandUseErrorActionPreference = $prevNative
+	}
+}
+
+function Invoke-GhReleaseCreate(
+	[string]$TagName,
+	[string]$Repo,
+	[string]$Version,
+	[string]$NotesPath,
+	[string]$VsixFile
+) {
+	Invoke-External "gh" @(
+		"release", "create", $TagName,
+		$VsixFile,
+		"--repo", $Repo,
+		"--title", "Agentario v$Version",
+		"--notes-file", $NotesPath
+	)
+}
+
+function Invoke-GhReleaseUpdate(
+	[string]$TagName,
+	[string]$Repo,
+	[string]$Version,
+	[string]$NotesPath,
+	[string]$VsixFile
+) {
+	Invoke-External "gh" @("release", "edit", $TagName, "--repo", $Repo, "--title", "Agentario v$Version", "--notes-file", $NotesPath)
+	Invoke-External "gh" @("release", "upload", $TagName, $VsixFile, "--repo", $Repo, "--clobber")
+}
+
 $RepoRoot = Get-RepoRoot
 $Version = Get-PackageVersion -RepoRoot $RepoRoot
 $Tag = "v$Version"
+$GhRepo = if ($env:AGENTARIO_GH_REPO) { $env:AGENTARIO_GH_REPO } else { "kabzon93region/Agentario" }
 $Remote = if ($env:AGENTARIO_GIT_REMOTE) { $env:AGENTARIO_GIT_REMOTE } else { "origin" }
 $Branch = if ($env:AGENTARIO_GIT_BRANCH) { $env:AGENTARIO_GIT_BRANCH } else { "main" }
 $VsixPath = Join-Path $RepoRoot "release\agentario-$Version.vsix"
@@ -178,13 +217,16 @@ try {
 					git reset HEAD -- $secret 2>$null | Out-Null
 				}
 			}
-			$status = git status --porcelain
-			if ($status) {
+			$staged = git diff --cached --name-only
+			if ($staged) {
 				$commitMsg = "Release v$Version"
 				git commit -m $commitMsg
+				if ($LASTEXITCODE -ne 0) {
+					throw "git commit failed (exit $LASTEXITCODE)"
+				}
 				Write-Ok "Committed: $commitMsg"
 			} else {
-				Write-Ok "Working tree clean - nothing to commit"
+				Write-Ok "Nothing staged to commit"
 			}
 
 			Write-Step "Pushing to $Remote/$Branch"
@@ -226,25 +268,17 @@ try {
 		Write-Ok "VSIX: $VsixPath ($([math]::Round((Get-Item $VsixPath).Length / 1MB, 2)) MB)"
 
 		Write-Step "Publishing GitHub Release $Tag"
-		$releaseView = gh release view $Tag 2>$null
-		if ($LASTEXITCODE -eq 0) {
+		if (Test-GhReleaseExists -TagName $Tag -Repo $GhRepo) {
 			Write-Warn "Release $Tag already exists - updating notes and VSIX asset"
-			Invoke-External "gh" @("release", "edit", $Tag, "--title", "Agentario v$Version", "--notes-file", $notes.Path)
-			Invoke-External "gh" @("release", "upload", $Tag, $VsixPath, "--clobber")
+			Invoke-GhReleaseUpdate -TagName $Tag -Repo $GhRepo -Version $Version -NotesPath $notes.Path -VsixFile $VsixPath
 			Write-Ok "Release updated"
 		} else {
-			Invoke-External "gh" @(
-				"release", "create", $Tag,
-				$VsixPath,
-				"--repo", "kabzon93region/Agentario",
-				"--title", "Agentario v$Version",
-				"--notes-file", $notes.Path
-			)
+			Invoke-GhReleaseCreate -TagName $Tag -Repo $GhRepo -Version $Version -NotesPath $notes.Path -VsixFile $VsixPath
 			Write-Ok "Release created"
 		}
 		$Summary.ReleaseCreated = $true
 
-		$releaseJson = gh release view $Tag --repo kabzon93region/Agentario --json url -q .url
+		$releaseJson = gh release view $Tag --repo $GhRepo --json url -q .url 2>$null
 		if ($releaseJson) {
 			$Summary.ReleaseUrl = $releaseJson.Trim()
 		}

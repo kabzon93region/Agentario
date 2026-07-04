@@ -15,15 +15,22 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useDynamicProviderSelection } from "@/hooks/useDynamicProviderSelection"
 import { useProviderConfig } from "@/hooks/useProviderConfig"
 import { ModelsServiceClient } from "@/services/grpc-client"
-import { getAsVar, VSC_DESCRIPTION_FOREGROUND } from "@/utils/vscStyles"
 import { ApiKeyField } from "../common/ApiKeyField"
 import { BaseUrlField } from "../common/BaseUrlField"
 import { DebouncedTextField } from "../common/DebouncedTextField"
 import { ModelInfoView } from "../common/ModelInfoView"
 import ReasoningEffortSelector from "../ReasoningEffortSelector"
-import { parsePrice } from "../utils/pricingUtils"
 import { useApiConfigurationHandlers } from "../utils/useApiConfigurationHandlers"
 import { useProviderApiKeyField } from "../utils/useProviderApiKeyField"
+import {
+	createMimoTokenPlanModelInfo,
+	getMimoPresetApiKeyHint,
+	getMimoPresetBaseUrl,
+	MIMO_PRESET_LABELS,
+	MIMO_TOKEN_PLAN_MODEL_ID,
+	type MimoPresetId,
+} from "./mimo-presets"
+import { OpenAiCompatibleModelConfiguration } from "./OpenAiCompatibleModelConfiguration"
 
 /**
  * Props for the OpenAICompatibleProvider component
@@ -48,7 +55,6 @@ export const OpenAICompatibleProvider = ({
 	const { handleFieldChange, handleModeFieldChange } = useApiConfigurationHandlers()
 	const { config, write, commitSelection } = useProviderConfig(providerId)
 
-	const [modelConfigurationSelected, setModelConfigurationSelected] = useState(false)
 	const [isCustomOpenAiModelEntryVisible, setIsCustomOpenAiModelEntryVisible] = useState(false)
 	const [availableOpenAiModels, setAvailableOpenAiModels] = useState<string[]>([])
 	const [isRefreshingOpenAiModels, setIsRefreshingOpenAiModels] = useState(false)
@@ -95,7 +101,7 @@ export const OpenAICompatibleProvider = ({
 	const openAiModelInfo: OpenAiCompatibleModelInfo = selectedModelInfo
 
 	const commitOpenAiSelection = useCallback(
-		(modelId: string, modelInfo = openAiModelInfo ?? openAiModelInfoSafeDefaults) => {
+		(modelId: string, modelInfo: OpenAiCompatibleModelInfo) => {
 			if (!modelId.trim()) {
 				return
 			}
@@ -109,7 +115,7 @@ export const OpenAICompatibleProvider = ({
 				},
 			}).catch((error) => handleProviderConfigWriteError("model selection", error))
 		},
-		[commitSelection, currentMode, handleProviderConfigWriteError, openAiModelInfo],
+		[commitSelection, currentMode, handleProviderConfigWriteError, providerId],
 	)
 
 	const handleOpenAiModelInfoChange = useCallback(
@@ -153,6 +159,7 @@ export const OpenAICompatibleProvider = ({
 				OpenAiModelsRequest.create({
 					baseUrl: trimmedBaseUrl,
 					apiKey,
+					providerId,
 				}),
 			)
 
@@ -187,14 +194,15 @@ export const OpenAICompatibleProvider = ({
 
 	useEffect(() => {
 		void refreshOpenAiModels(config?.baseUrl, latestOpenAiApiKeyRef.current)
-	}, [config?.baseUrl, refreshOpenAiModels])
+	}, [config?.baseUrl, config?.apiKeyLength, refreshOpenAiModels])
 
 	const toOpenAiModelInfo = useCallback(
 		(modelId: string): ModelInfo => ({
 			...openAiModelInfoSafeDefaults,
+			...(openAiModelInfo ?? {}),
 			name: modelId,
 		}),
-		[],
+		[openAiModelInfo],
 	)
 
 	const handleOpenAiModelSelection = useCallback(
@@ -217,6 +225,41 @@ export const OpenAICompatibleProvider = ({
 		providerName: "OpenAI Compatible",
 		write,
 	})
+
+	const applyMimoPreset = useCallback(
+		async (preset: MimoPresetId) => {
+			const baseUrl = getMimoPresetBaseUrl(preset)
+			const modelId = MIMO_TOKEN_PLAN_MODEL_ID
+			const modelInfo = createMimoTokenPlanModelInfo(modelId)
+
+			latestOpenAiBaseUrlRef.current = baseUrl
+			try {
+				await write({ baseUrl })
+				if (isOpenAiProvider) {
+					handleModeFieldChange({ plan: "planModeOpenAiModelId", act: "actModeOpenAiModelId" }, modelId, currentMode)
+				}
+				commitOpenAiSelection(modelId, modelInfo)
+				if (isOpenAiProvider) {
+					handleModeFieldChange(
+						{ plan: "planModeOpenAiModelInfo", act: "actModeOpenAiModelInfo" },
+						modelInfo,
+						currentMode,
+					)
+				}
+				debouncedRefreshOpenAiModels(baseUrl, latestOpenAiApiKeyRef.current)
+			} catch (error) {
+				console.error("Failed to apply MiMo preset:", error)
+			}
+		},
+		[
+			commitOpenAiSelection,
+			currentMode,
+			debouncedRefreshOpenAiModels,
+			handleModeFieldChange,
+			isOpenAiProvider,
+			write,
+		],
+	)
 
 	return (
 		<div>
@@ -253,6 +296,25 @@ export const OpenAICompatibleProvider = ({
 			</Tooltip>
 
 			<ApiKeyField initialValue={savedApiKeyMask} onChange={handleApiKeyChange} providerName="OpenAI Compatible" />
+
+			<div style={{ marginBottom: 12 }}>
+				<div style={{ fontWeight: 500, marginBottom: 6 }}>Быстрая настройка MiMo (Xiaomi)</div>
+				<div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+					{(["token-plan", "payg"] as MimoPresetId[]).map((preset) => (
+						<VSCodeButton key={preset} appearance="secondary" onClick={() => void applyMimoPreset(preset)}>
+							{MIMO_PRESET_LABELS[preset]}
+						</VSCodeButton>
+					))}
+				</div>
+				<p
+					style={{
+						fontSize: 12,
+						marginTop: 8,
+						color: "var(--vscode-descriptionForeground)",
+					}}>
+					{getMimoPresetApiKeyHint("token-plan")}. После автозаполнения вставьте API-ключ и нажмите «Готово».
+				</p>
+			</div>
 
 			{isRefreshingOpenAiModels && <div role="status">Loading models…</div>}
 			{openAiModelsError && <div role="alert">{openAiModelsError}</div>}
@@ -440,136 +502,11 @@ export const OpenAICompatibleProvider = ({
 				Use Azure Identity Authentication
 			</VSCodeCheckbox>
 
-			<div
-				onClick={() => setModelConfigurationSelected((val) => !val)}
-				style={{
-					color: getAsVar(VSC_DESCRIPTION_FOREGROUND),
-					display: "flex",
-					margin: "10px 0",
-					cursor: "pointer",
-					alignItems: "center",
-				}}>
-				<span
-					className={`codicon ${modelConfigurationSelected ? "codicon-chevron-down" : "codicon-chevron-right"}`}
-					style={{
-						marginRight: "4px",
-					}}
-				/>
-				<span
-					style={{
-						fontWeight: 700,
-						textTransform: "uppercase",
-					}}>
-					Model Configuration
-				</span>
-			</div>
-
-			{modelConfigurationSelected && (
-				<>
-					<VSCodeCheckbox
-						checked={!!openAiModelInfo?.supportsImages}
-						onChange={(e: any) => {
-							const isChecked = e.target.checked === true
-							const modelInfo = openAiModelInfo ? { ...openAiModelInfo } : { ...openAiModelInfoSafeDefaults }
-							modelInfo.supportsImages = isChecked
-							handleOpenAiModelInfoChange(modelInfo)
-						}}>
-						Supports Images
-					</VSCodeCheckbox>
-
-					<VSCodeCheckbox
-						checked={!!openAiModelInfo?.isR1FormatRequired}
-						onChange={(e: any) => {
-							const isChecked = e.target.checked === true
-							let modelInfo = openAiModelInfo ? { ...openAiModelInfo } : { ...openAiModelInfoSafeDefaults }
-							modelInfo = { ...modelInfo, isR1FormatRequired: isChecked }
-
-							handleOpenAiModelInfoChange(modelInfo)
-						}}>
-						Enable R1 messages format
-					</VSCodeCheckbox>
-
-					<div style={{ display: "flex", gap: 10, marginTop: "5px" }}>
-						<DebouncedTextField
-							initialValue={
-								openAiModelInfo?.contextWindow
-									? openAiModelInfo.contextWindow.toString()
-									: (openAiModelInfoSafeDefaults.contextWindow?.toString() ?? "")
-							}
-							onChange={(value) => {
-								const modelInfo = openAiModelInfo ? { ...openAiModelInfo } : { ...openAiModelInfoSafeDefaults }
-								modelInfo.contextWindow = Number(value)
-								handleOpenAiModelInfoChange(modelInfo)
-							}}
-							style={{ flex: 1 }}>
-							<span style={{ fontWeight: 500 }}>Context Window Size</span>
-						</DebouncedTextField>
-
-						<DebouncedTextField
-							initialValue={
-								openAiModelInfo?.maxTokens
-									? openAiModelInfo.maxTokens.toString()
-									: (openAiModelInfoSafeDefaults.maxTokens?.toString() ?? "")
-							}
-							onChange={(value) => {
-								const modelInfo = openAiModelInfo ? { ...openAiModelInfo } : { ...openAiModelInfoSafeDefaults }
-								modelInfo.maxTokens = Number(value)
-								handleOpenAiModelInfoChange(modelInfo)
-							}}
-							style={{ flex: 1 }}>
-							<span style={{ fontWeight: 500 }}>Max Output Tokens</span>
-						</DebouncedTextField>
-					</div>
-
-					<div style={{ display: "flex", gap: 10, marginTop: "5px" }}>
-						<DebouncedTextField
-							initialValue={
-								openAiModelInfo?.inputPrice
-									? openAiModelInfo.inputPrice.toString()
-									: (openAiModelInfoSafeDefaults.inputPrice?.toString() ?? "")
-							}
-							onChange={(value) => {
-								const modelInfo = openAiModelInfo ? { ...openAiModelInfo } : { ...openAiModelInfoSafeDefaults }
-								modelInfo.inputPrice = parsePrice(value, openAiModelInfoSafeDefaults.inputPrice ?? 0)
-								handleOpenAiModelInfoChange(modelInfo)
-							}}
-							style={{ flex: 1 }}>
-							<span style={{ fontWeight: 500 }}>Input Price / 1M tokens</span>
-						</DebouncedTextField>
-
-						<DebouncedTextField
-							initialValue={
-								openAiModelInfo?.outputPrice
-									? openAiModelInfo.outputPrice.toString()
-									: (openAiModelInfoSafeDefaults.outputPrice?.toString() ?? "")
-							}
-							onChange={(value) => {
-								const modelInfo = openAiModelInfo ? { ...openAiModelInfo } : { ...openAiModelInfoSafeDefaults }
-								modelInfo.outputPrice = parsePrice(value, openAiModelInfoSafeDefaults.outputPrice ?? 0)
-								handleOpenAiModelInfoChange(modelInfo)
-							}}
-							style={{ flex: 1 }}>
-							<span style={{ fontWeight: 500 }}>Output Price / 1M tokens</span>
-						</DebouncedTextField>
-					</div>
-
-					<div style={{ display: "flex", gap: 10, marginTop: "5px" }}>
-						<DebouncedTextField
-							initialValue={
-								openAiModelInfo?.temperature
-									? openAiModelInfo.temperature.toString()
-									: (openAiModelInfoSafeDefaults.temperature?.toString() ?? "")
-							}
-							onChange={(value) => {
-								const modelInfo = openAiModelInfo ? { ...openAiModelInfo } : { ...openAiModelInfoSafeDefaults }
-								modelInfo.temperature = parsePrice(value, openAiModelInfoSafeDefaults.temperature ?? 0)
-								handleOpenAiModelInfoChange(modelInfo)
-							}}>
-							<span style={{ fontWeight: 500 }}>Temperature</span>
-						</DebouncedTextField>
-					</div>
-				</>
-			)}
+			<OpenAiCompatibleModelConfiguration
+				committedModelInfo={openAiModelInfo}
+				onModelInfoChange={handleOpenAiModelInfoChange}
+				selectedModelId={selectedModelId || ""}
+			/>
 
 			<p
 				style={{

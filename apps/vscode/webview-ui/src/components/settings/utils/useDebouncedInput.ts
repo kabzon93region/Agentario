@@ -20,10 +20,12 @@ export function useDebouncedInput<T>(
 
 	// Track previous initialValue to detect external changes
 	const prevInitialValueRef = useRef<T>(initialValue)
+	const userChangedRef = useRef(false)
 
 	// Sync local state when initialValue changes externally (e.g., when switching Plan/Act tabs)
 	useEffect(() => {
 		if (prevInitialValueRef.current !== initialValue) {
+			userChangedRef.current = false
 			setLocalValue(initialValue)
 			prevInitialValueRef.current = initialValue
 		}
@@ -32,11 +34,21 @@ export function useDebouncedInput<T>(
 	// Debounced backend save - saves after user stops changing value
 	useDebounceEffect(
 		() => {
+			if (!userChangedRef.current) {
+				return
+			}
+			userChangedRef.current = false
 			onChange(localValue)
 		},
 		debounceMs,
 		[localValue],
 	)
 
-	return [localValue, setLocalValue]
+	return [
+		localValue,
+		(value: T) => {
+			userChangedRef.current = true
+			setLocalValue(value)
+		},
+	]
 }

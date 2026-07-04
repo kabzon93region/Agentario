@@ -7,9 +7,20 @@
 | **Чат (Agentario)** | Модель в **LLM/VLM-слоте** (например `qwen/qwen3.5-9b`) |
 | **Индексация (embeddings)** | Модель в **embedding-слоте** (type: `embeddings` в API) |
 | **Настройка в Agentario** | Индексация кода → выбор embedding-модели |
-| **Индекс на диске** | `%USERPROFILE%\.agentario\data\indexes\` |
+| **Индекс на диске** | `%USERPROFILE%\.agentario\data\indexes\{hash}\` (meta.json + files/*.json) |
 
 Семантическая индексация строит **векторы** через API LM Studio (`/api/v0/embeddings`, `/v1/embeddings`). Chat-модель из того же списка, что и qwen, **не заменяет** embedding-модель — даже если в имени есть слово «embedding».
+
+### Параметры чанков (под context 2048 / eval batch 2048)
+
+| Параметр | Значение |
+|----------|----------|
+| Контекст модели | 2048 tok (из 2248 n_ctx) |
+| Размер чанка | ~1024 tok (~3072 симв.) |
+| Нахлёст | 17.5% (~537 симв.) |
+| Batch embeddings | до 2048 tok суммарно на запрос |
+| Большие файлы | первые 2 MB, без лимита числа чанков |
+| Хранение | без лимита размера — один JSON на файл |
 
 ---
 
@@ -36,7 +47,7 @@
 - Стало Embedding: ~20k context (типично меньше из‑за другого режима работы).
 - Это **нормально** и часто всё равно выгоднее, чем `text-embedding-qwen3-embedding-0.6b` (~6k context при нехватке VRAM).
 
-Для индексации Agentario режет файлы на чанки (~2 KB, до 12 на файл) — 20k context для embedding обычно достаточно.
+Для индексации Agentario нарезает файлы на чанки (~3072 симв., нахлёст 17.5%) и шлёт embeddings батчами до 2048 tok — под eval batch size в LM Studio.
 
 ---
 

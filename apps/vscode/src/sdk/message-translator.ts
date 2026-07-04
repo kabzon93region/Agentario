@@ -27,7 +27,8 @@
 
 import type { CoreSessionEvent } from "@cline/core"
 import type { Message as SdkMessage } from "@cline/llms"
-import type { AgentEvent } from "@cline/shared"
+import type { AgentEvent, ContextBudgetBreakdown } from "@cline/shared"
+import { CONTEXT_BUDGET_NOTICE_KIND } from "@cline/shared"
 import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
 import type {
 	ClineApiReqInfo,
@@ -123,7 +124,31 @@ function buildApiReqInfoFromUsage(
 		durationMs,
 		generationDurationMs,
 		tokensPerSecond,
+		...(state.getPendingContextBudget()
+			? { contextBudget: state.getPendingContextBudget() }
+			: {}),
 	}
+}
+
+function parseContextBudgetMetadata(metadata: Record<string, unknown>): ContextBudgetBreakdown | undefined {
+	const categories = metadata.categories
+	if (!categories || typeof categories !== "object") {
+		return undefined
+	}
+	const categoryRecord = categories as Record<string, unknown>
+	if (
+		typeof metadata.contextWindow !== "number" ||
+		typeof metadata.totalEstimated !== "number" ||
+		typeof metadata.pinnedEstimated !== "number" ||
+		typeof metadata.compressibleEstimated !== "number" ||
+		typeof categoryRecord.system !== "number" ||
+		typeof categoryRecord.rules !== "number" ||
+		typeof categoryRecord.tools !== "number" ||
+		typeof categoryRecord.chat !== "number"
+	) {
+		return undefined
+	}
+	return metadata as unknown as ContextBudgetBreakdown
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +180,8 @@ export class MessageTranslatorState {
 	private iterationStartedAtMs: number | undefined
 	/** Wall-clock start of the first streamed model output (generation / eval phase). */
 	private generationStartedAtMs: number | undefined
+	/** Latest estimated context budget for the active iteration. */
+	private pendingContextBudget: ContextBudgetBreakdown | undefined
 	/**
 	 * Process-wide id/seq/epoch authority. Shared with the interaction coordinator and history
 	 * rendering so that message ids never collide across generators. See message-id-minter.ts.
@@ -186,6 +213,15 @@ export class MessageTranslatorState {
 	markIterationStart(): void {
 		this.iterationStartedAtMs = Date.now()
 		this.generationStartedAtMs = undefined
+		this.pendingContextBudget = undefined
+	}
+
+	setPendingContextBudget(budget: ContextBudgetBreakdown | undefined): void {
+		this.pendingContextBudget = budget
+	}
+
+	getPendingContextBudget(): ContextBudgetBreakdown | undefined {
+		return this.pendingContextBudget
 	}
 
 	markGenerationStartIfNeeded(): void {
@@ -1430,6 +1466,25 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 		}
 
 		case "notice": {
+			const metadataKind =
+				typeof event.metadata?.kind === "string" ? event.metadata.kind : undefined
+			const isContextBudgetNotice =
+				metadataKind === CONTEXT_BUDGET_NOTICE_KIND ||
+				event.message === CONTEXT_BUDGET_NOTICE_KIND
+			if (isContextBudgetNotice && event.metadata) {
+				const budget = parseContextBudgetMetadata(event.metadata)
+				if (budget) {
+					state.setPendingContextBudget(budget)
+					messages.push({
+						ts: state.nextTs(),
+						type: "say",
+						say: "api_req_started",
+						text: JSON.stringify({ contextBudget: budget }),
+						partial: false,
+					})
+				}
+				break
+			}
 			// Agent notices are informational
 			messages.push({
 				ts: state.nextTs(),

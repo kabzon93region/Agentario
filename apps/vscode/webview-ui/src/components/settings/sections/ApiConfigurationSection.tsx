@@ -1,13 +1,14 @@
 import { UpdateSettingsRequest } from "@shared/proto/cline/state"
 import { Mode } from "@shared/storage/types"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { t } from "@/i18n"
 import { StateServiceClient } from "@/services/grpc-client"
 import { TabButton } from "../../mcp/configuration/McpConfigurationView"
 import ApiOptions from "../ApiOptions"
 import Section from "../Section"
+import { ModelProfilePresetsSection } from "./ModelProfilePresetsSection"
 import { syncModeConfigurations } from "../utils/providerUtils"
 import { useApiConfigurationHandlers } from "../utils/useApiConfigurationHandlers"
 
@@ -17,9 +18,16 @@ interface ApiConfigurationSectionProps {
 }
 
 const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiConfigurationSectionProps) => {
-	const { planActSeparateModelsSetting, mode, apiConfiguration } = useExtensionState()
+	const { planActSeparateModelsSetting, mode, apiConfiguration, activeModelProfilePresetId } = useExtensionState()
 	const [currentTab, setCurrentTab] = useState<Mode>(mode)
 	const { handleFieldsChange } = useApiConfigurationHandlers()
+
+	const apiOptionsKey = [
+		activeModelProfilePresetId ?? "none",
+		apiConfiguration?.planModeApiProvider ?? "",
+		apiConfiguration?.actModeApiProvider ?? "",
+		planActSeparateModelsSetting,
+	].join("-")
 	return (
 		<div>
 			{renderSectionHeader?.("api-config")}
@@ -50,11 +58,21 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 						</div>
 
 						<div className="-mb-3">
-							<ApiOptions currentMode={currentTab} initialModelTab={initialModelTab} showModelOptions={true} />
+							<ApiOptions
+								currentMode={currentTab}
+								initialModelTab={initialModelTab}
+								key={apiOptionsKey}
+								showModelOptions={true}
+							/>
 						</div>
 					</div>
 				) : (
-					<ApiOptions currentMode={mode} initialModelTab={initialModelTab} showModelOptions={true} />
+					<ApiOptions
+						currentMode={mode}
+						initialModelTab={initialModelTab}
+						key={apiOptionsKey}
+						showModelOptions={true}
+					/>
 				)}
 
 				<div className="mb-[5px]">
@@ -80,6 +98,8 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 					</VSCodeCheckbox>
 					<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">{t("api.separateModelsHint")}</p>
 				</div>
+
+				<ModelProfilePresetsSection />
 			</Section>
 		</div>
 	)

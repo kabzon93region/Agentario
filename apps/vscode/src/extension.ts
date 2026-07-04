@@ -7,6 +7,7 @@ import * as vscode from "vscode"
 import { Logger } from "@/shared/services/Logger"
 import { isAgentarioStandaloneMode, migrateStandaloneProviderSettings } from "@/shared/agentario-standalone"
 import { seedAgentarioDefaults } from "@/shared/seed-agentario-defaults"
+import { seedAgentarioMcpSettings } from "@/shared/agentario-data-helpers"
 import { sendChatButtonClickedEvent } from "./core/controller/ui/subscribeToChatButtonClicked"
 import { sendHistoryButtonClickedEvent } from "./core/controller/ui/subscribeToHistoryButtonClicked"
 import { sendIndexingButtonClickedEvent } from "./core/controller/ui/subscribeToIndexingButtonClicked"
@@ -85,6 +86,18 @@ export async function activate(context: vscode.ExtensionContext) {
 	const webview = (await initialize(storageContext)) as VscodeWebviewProvider
 	migrateStandaloneProviderSettings(StateManager.get())
 	await seedAgentarioDefaults(StateManager.get())
+	const mcpSeed = await seedAgentarioMcpSettings(StateManager.get())
+	if (mcpSeed.added.length > 0 || mcpSeed.templateUpgraded) {
+		try {
+			await webview.controller.mcpHub.reloadSettingsFromDisk()
+			await webview.controller.postStateToWebview()
+			Logger.log(
+				`[Agentario] MCP reloaded (${mcpSeed.added.length} new): ${mcpSeed.added.join(", ") || "template upgrade"}`,
+			)
+		} catch (error) {
+			Logger.warn("[Agentario] Failed to reload MCP after template merge:", error)
+		}
+	}
 
 	// 5. Register services and commands specific to VS Code
 	// Initialize hook discovery cache for performance optimization
@@ -144,7 +157,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(commands.AccountButton, () => {
 			if (isAgentarioStandaloneMode()) {
 				void vscode.window.showInformationMessage(
-					"Agentario работает автономно. Аккаунт Cline не используется — настройте LM Studio в Settings.",
+					"Agentario работает автономно. Аккаунт Cline не используется — выберите провайдера в Settings (LM Studio, Xiaomi MiMo и другие OpenAI-compatible API).",
 				)
 				return
 			}

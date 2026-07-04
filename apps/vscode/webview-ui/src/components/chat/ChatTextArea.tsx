@@ -43,6 +43,7 @@ import {
 	validateSlashCommand,
 } from "@/utils/slash-commands"
 import ClineRulesToggleModal from "../cline-rules/ClineRulesToggleModal"
+import { ModelPresetPickerModal } from "./ModelPresetPickerModal"
 import ServersToggleModal from "./ServersToggleModal"
 
 const { MAX_IMAGES_AND_FILES_PER_MESSAGE } = CHAT_CONSTANTS
@@ -79,6 +80,9 @@ interface ChatTextAreaProps {
 	setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>
 	setSelectedFiles: React.Dispatch<React.SetStateAction<string[]>>
 	onSend: () => void
+	onStop?: () => void
+	showStopButton?: boolean
+	stopButtonTitle?: string
 	onSelectFilesAndImages: () => void
 	shouldDisableFilesAndImages: boolean
 	onHeightChange?: (height: number) => void
@@ -206,6 +210,9 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			setSelectedImages,
 			setSelectedFiles,
 			onSend,
+			onStop,
+			showStopButton = false,
+			stopButtonTitle = "Stop",
 			onSelectFilesAndImages,
 			shouldDisableFilesAndImages,
 			onHeightChange,
@@ -1547,7 +1554,17 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					<div
 						className="absolute flex items-end bottom-4.5 right-5 z-10 h-8 text-xs"
 						style={{ height: textAreaBaseHeight }}>
-						<div className="flex flex-row items-center">
+						<div className="flex flex-row items-center gap-1">
+							{showStopButton && onStop ? (
+								<div
+									aria-label={stopButtonTitle}
+									className="input-icon-button codicon codicon-debug-stop text-sm"
+									data-testid="stop-button"
+									onClick={() => onStop()}
+									style={{ color: "var(--vscode-errorForeground)" }}
+									title={stopButtonTitle}
+								/>
+							) : null}
 							<div
 								className={cn("input-icon-button", { disabled: sendingDisabled }, "codicon codicon-send text-sm")}
 								data-testid="send-button"
@@ -1606,21 +1623,22 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							<ServersToggleModal />
 
 							<ClineRulesToggleModal />
-
-							<ModelContainer>
-								<ModelButtonWrapper>
-									<ModelDisplayButton
-										disabled={false}
-										onClick={handleModelButtonClick}
-										role="button"
-										tabIndex={0}
-										title="Open API Settings">
-										<ModelButtonContent className="text-xs">{modelDisplayName}</ModelButtonContent>
-									</ModelDisplayButton>
-								</ModelButtonWrapper>
-							</ModelContainer>
 						</ButtonGroup>
 					</div>
+					<div className="flex items-center gap-1 shrink-0 ml-2">
+						<ModelContainer>
+							<ModelButtonWrapper>
+								<ModelDisplayButton
+									disabled={false}
+									onClick={handleModelButtonClick}
+									role="button"
+									tabIndex={0}
+									title="Open API Settings">
+									<ModelButtonContent className="text-xs">{modelDisplayName}</ModelButtonContent>
+								</ModelDisplayButton>
+							</ModelButtonWrapper>
+						</ModelContainer>
+						<ModelPresetPickerModal />
 					{/* Tooltip for Plan/Act toggle remains outside the conditional rendering */}
 					<Tooltip>
 						<TooltipContent
@@ -1651,6 +1669,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							</SwitchContainer>
 						</TooltipTrigger>
 					</Tooltip>
+					</div>
 				</div>
 			</div>
 		)

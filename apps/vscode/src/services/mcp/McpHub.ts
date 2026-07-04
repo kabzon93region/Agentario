@@ -174,6 +174,14 @@ export class McpHub {
 		this.lastConnectionFingerprint = this.computeConnectionFingerprint(servers)
 	}
 
+	/** Перечитывает agentario_mcp_settings.json и обновляет список серверов в UI. */
+	public async reloadSettingsFromDisk(): Promise<void> {
+		const settings = await this.readAndValidateMcpSettingsFile()
+		if (settings?.mcpServers) {
+			await this.updateServerConnections(settings.mcpServers as Record<string, McpServerConfig>)
+		}
+	}
+
 	private async readPostWriteMcpSettings(): Promise<z.infer<typeof McpSettingsSchema>> {
 		const settings = await this.readAndValidateMcpSettingsFile()
 		if (!settings) {

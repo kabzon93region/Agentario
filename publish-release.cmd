@@ -21,5 +21,5 @@ if not "%ERR%"=="0" (
 )
 
 echo.
-pause
+call "%~dp0scripts\wait-before-exit.cmd"
 exit /b %ERR%

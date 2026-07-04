@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import { Empty } from "@shared/proto/cline/common"
 import { PlanActMode, McpDisplayMode as ProtoMcpDisplayMode, UpdateSettingsRequest } from "@shared/proto/cline/state"
 import { convertProtoToApiProvider } from "@shared/proto-conversions/models/api-configuration-conversion"
@@ -14,6 +15,8 @@ import { Controller } from ".."
 import { accountLogoutClicked } from "../account/accountLogoutClicked"
 import { normalizeProviderSwitchModel } from "../models/providerSwitchNormalization"
 import { createTaskApiModelShim, resolveActiveModelIdFromApiConfiguration } from "../models/taskApiModel"
+import { applyModelProfilePreset, buildModelProfilePresetFromCurrentSettings, readModelProfilePresets, saveModelProfilePresets } from "./modelProfilePresets"
+import type { ModelProfilePreset } from "@shared/model-profile-presets"
 
 /**
  * Updates multiple extension settings in a single request
@@ -179,6 +182,70 @@ export async function updateSettings(controller: Controller, request: UpdateSett
 			controller.stateManager.setGlobalState("useAutoCondense", request.useAutoCondense)
 		}
 
+		if (request.compactionStrategy !== undefined) {
+			const strategy = request.compactionStrategy === "basic" ? "basic" : "agentic"
+			controller.stateManager.setGlobalState("compactionStrategy", strategy)
+		}
+		if (request.compactionSummarizerProviderId !== undefined) {
+			const trimmed = request.compactionSummarizerProviderId.trim()
+			controller.stateManager.setGlobalState("compactionSummarizerProviderId", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.compactionSummarizerModelId !== undefined) {
+			const trimmed = request.compactionSummarizerModelId.trim()
+			controller.stateManager.setGlobalState("compactionSummarizerModelId", trimmed.length > 0 ? trimmed : undefined)
+		}
+
+		if (request.modelProfilePresetsJson !== undefined) {
+			try {
+				const parsed = JSON.parse(request.modelProfilePresetsJson) as {
+					presets?: ModelProfilePreset[]
+					activePresetId?: string
+				}
+				if (Array.isArray(parsed.presets)) {
+					saveModelProfilePresets(controller, parsed.presets, parsed.activePresetId)
+				}
+			} catch (error) {
+				Logger.warn("[updateSettings] Failed to parse model_profile_presets_json:", error)
+			}
+		}
+
+		let presetApplied = false
+		if (request.applyModelProfilePresetId !== undefined && request.applyModelProfilePresetId.trim().length > 0) {
+			await applyModelProfilePreset(controller, request.applyModelProfilePresetId.trim())
+			presetApplied = true
+		}
+
+		if (request.captureModelProfilePresetName !== undefined && request.captureModelProfilePresetName.trim().length > 0) {
+			const preset = buildModelProfilePresetFromCurrentSettings(
+				controller,
+				randomUUID(),
+				request.captureModelProfilePresetName.trim(),
+			)
+			const presets = [...readModelProfilePresets(controller), preset]
+			saveModelProfilePresets(controller, presets, preset.id)
+		}
+
+		if (request.codebaseIndexMode !== undefined && request.codebaseIndexMode.trim()) {
+			const mode = request.codebaseIndexMode.trim()
+			if (mode === "local" || mode === "local-ai" || mode === "remote-ai") {
+				controller.stateManager.setGlobalState("codebaseIndexMode", mode)
+			}
+		}
+		if (request.codebaseIndexAiBackend !== undefined && request.codebaseIndexAiBackend.trim()) {
+			const backend = request.codebaseIndexAiBackend.trim()
+			if (backend === "lmstudio" || backend === "ollama") {
+				controller.stateManager.setGlobalState("codebaseIndexAiBackend", backend)
+			}
+		}
+		if (request.codebaseIndexBaseUrl !== undefined) {
+			const trimmed = request.codebaseIndexBaseUrl.trim()
+			controller.stateManager.setGlobalState("codebaseIndexBaseUrl", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.codebaseIndexEmbeddingModelId !== undefined) {
+			const trimmed = request.codebaseIndexEmbeddingModelId.trim()
+			controller.stateManager.setGlobalState("codebaseIndexEmbeddingModelId", trimmed.length > 0 ? trimmed : undefined)
+		}
+
 		// Update custom prompt choice
 		if (request.customPrompt !== undefined) {
 			const value = request.customPrompt === "compact" ? "compact" : undefined
@@ -265,8 +332,11 @@ export async function updateSettings(controller: Controller, request: UpdateSett
 			controller.stateManager.setGlobalState("showFeatureTips", request.showFeatureTips)
 		}
 
-		// Post updated state to webview
-		await controller.postStateToWebview()
+		// Post updated state to webview — skip if preset was applied since
+		// applyModelProfilePreset already called postStateToWebview directly.
+		if (!presetApplied) {
+			await controller.postStateToWebview()
+		}
 
 		return Empty.create()
 	} catch (error) {

@@ -16,10 +16,10 @@ set "ERR=%ERRORLEVEL%"
 if not "%ERR%"=="0" (
     echo.
     echo BUILD FAILED with exit code %ERR%
-    pause
+    call "%~dp0scripts\wait-before-exit.cmd"
     exit /b %ERR%
 )
 
 echo.
-pause
+call "%~dp0scripts\wait-before-exit.cmd"
 exit /b 0

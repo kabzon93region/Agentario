@@ -27,8 +27,8 @@ export function toProtoCodebaseIndex(state: CodebaseIndexState): CodebaseIndex {
 			status: toProtoStatus(file.status),
 			size: file.size,
 			mtimeMs: Math.trunc(file.mtimeMs),
-			chunks: file.chunks.length,
-			embeddingCount: file.chunks.filter((chunk) => chunk.embedding.length > 0).length,
+			chunks: file.chunkCount ?? file.chunks.length,
+			embeddingCount: file.embeddingCount ?? file.chunks.filter((chunk) => chunk.embedding.length > 0).length,
 			error: file.error,
 		}),
 	)
@@ -44,6 +44,10 @@ export function toProtoCodebaseIndex(state: CodebaseIndexState): CodebaseIndex {
 		skippedFiles: state.files.filter((file) => file.status === "skipped").length,
 		errorFiles: state.files.filter((file) => file.status === "error").length,
 		lastError: state.lastError,
+		indexSizeBytes: state.indexSizeBytes,
+		progressCurrent: state.progressCurrent,
+		progressTotal: state.progressTotal,
+		progressPath: state.progressPath,
 		files,
 	})
 }

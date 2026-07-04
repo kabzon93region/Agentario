@@ -10,7 +10,7 @@ export type ButtonActionType =
 	| "reject" // Send noButtonClicked
 	| "proceed" // Send messageResponse or yesButtonClicked
 	| "new_task" // Start a new task
-	| "cancel" // Cancel streaming
+	| "cancel" // Cancel streaming / stop agent
 	| "utility" // Execute utility function (condense, report_bug)
 	| "retry" // Retry the last action
 
