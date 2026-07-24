@@ -1,9 +1,9 @@
-import { formatMessageTimestamp, getMessageBubbleRole } from "@shared/message-display"
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import { formatMessageTimestamp, getMessageBubbleRole } from "@shared/message-display"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 
 interface MessageBubbleHeaderProps {
-	message: ClineMessage
+	message: AgentarioMessage
 	roleOverride?: string
 }
 

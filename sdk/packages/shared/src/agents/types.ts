@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Agent Types and Zod Schemas
  *
  * Canonical type definitions for agent configuration, events, hooks,
  * extensions, and results.
  *
  * ProviderConfig is left as `unknown` here so that shared stays
- * dependency-free of @cline/llms. Consuming packages narrow it
+ * dependency-free of @agentario/llms. Consuming packages narrow it
  * via re-exports. ModelInfo lives in shared (../llms/model-info)
  * and is used directly.
  */
@@ -583,6 +583,8 @@ export interface AgentPrepareTurnContext {
 		message: string,
 		metadata?: Record<string, unknown>,
 	) => void;
+	/** Agentario: реальные inputTokens от модели (из предыдущего ответа). */
+	lastInputTokens?: number;
 }
 
 export interface AgentPrepareTurnResult {

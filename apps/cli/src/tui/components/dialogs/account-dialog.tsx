@@ -1,5 +1,5 @@
-// @jsxImportSource @opentui/react
-import type { ClineAccountOrganization } from "@cline/core";
+﻿// @jsxImportSource @opentui/react
+import type { ClineAccountOrganization } from "@agentario/core";
 import type { ChoiceContext } from "@opentui-ui/dialog";
 import { useDialogKeyboard } from "@opentui-ui/dialog/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -7,7 +7,7 @@ import {
 	type ClineAccountSnapshot,
 	formatClineCredits,
 	isClineAccountAuthErrorMessage,
-} from "../../cline-account";
+} from "../../agentario-account";
 import { palette } from "../../palette";
 
 export type AccountDialogAction =

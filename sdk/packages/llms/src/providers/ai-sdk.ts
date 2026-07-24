@@ -6,15 +6,16 @@ import type {
 	GatewayProviderFactory,
 	GatewayResolvedProviderConfig,
 	GatewayStreamRequest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	type AiSdkFormatterMessage,
 	type AiSdkFormatterPart,
 	captureSdkError,
+	createThinkTagFilter,
 	formatMessagesForAiSdk,
 	normalizeToolInput,
 	sanitizeSurrogates,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { jsonSchema, streamText } from "ai";
 import { nanoid } from "nanoid";
 import { z } from "zod";
@@ -867,6 +868,7 @@ async function* emitAiSdkEvents(
 	let streamError: string | undefined;
 	let finishUsage: unknown;
 	let finishProviderMetadata: unknown;
+	const thinkFilter = createThinkTagFilter();
 
 	try {
 		if (stream.fullStream) {
@@ -877,7 +879,13 @@ async function* emitAiSdkEvents(
 						(part.text as string | undefined) ??
 						(part.delta as string | undefined);
 					if (text) {
-						yield { type: "text-delta", text };
+						const { textParts, reasoningParts } = thinkFilter.processChunk(text);
+						for (const t of textParts) {
+							yield { type: "text-delta", text: t };
+						}
+						for (const r of reasoningParts) {
+							yield { type: "reasoning-delta", text: r };
+						}
 					}
 					continue;
 				}
@@ -985,13 +993,28 @@ async function* emitAiSdkEvents(
 			}
 		} else if (stream.textStream) {
 			for await (const text of stream.textStream) {
-				yield { type: "text-delta", text };
+				const { textParts, reasoningParts } = thinkFilter.processChunk(text);
+				for (const t of textParts) {
+					yield { type: "text-delta", text: t };
+				}
+				for (const r of reasoningParts) {
+					yield { type: "reasoning-delta", text: r };
+				}
 			}
 		}
 	} catch (error) {
 		// Prefer the real provider error from onError over the generic
 		// NoOutputGeneratedError the AI SDK throws when 0 steps are recorded.
 		streamError = capturedError?.current ?? extractErrorMessage(error);
+	}
+
+	// Flush any remaining buffered content from the think-tag filter
+	const flushResult = thinkFilter.flush();
+	for (const t of flushResult.textParts) {
+		yield { type: "text-delta", text: t };
+	}
+	for (const r of flushResult.reasoningParts) {
+		yield { type: "reasoning-delta", text: r };
 	}
 
 	// Prefer stream.usage (has raw cost data) over finish part usage.

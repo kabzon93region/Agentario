@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+﻿import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -105,7 +105,7 @@ async function writeMessagesFile(
 	messages: unknown[] = [{ role: "user", content: "hi" }],
 ): Promise<string> {
 	if (!tempSessionDataDir) {
-		tempSessionDataDir = await mkdtemp(join(tmpdir(), "cline-core-history-"));
+		tempSessionDataDir = await mkdtemp(join(tmpdir(), "agentario-core-history-"));
 	}
 	const path = join(tempSessionDataDir, filename);
 	await writeFile(
@@ -450,7 +450,7 @@ describe("session history", () => {
 	});
 
 	it("lists directly from a session backend without a runtime host", async () => {
-		tempSessionDataDir = await mkdtemp(join(tmpdir(), "cline-core-history-"));
+		tempSessionDataDir = await mkdtemp(join(tmpdir(), "agentario-core-history-"));
 		const messagesPath = join(tempSessionDataDir, "messages.json");
 		await writeFile(
 			messagesPath,
@@ -482,7 +482,7 @@ describe("session history", () => {
 	});
 
 	it("merges manifest fallback rows when the backend list is short", async () => {
-		tempSessionDataDir = await mkdtemp(join(tmpdir(), "cline-core-history-"));
+		tempSessionDataDir = await mkdtemp(join(tmpdir(), "agentario-core-history-"));
 		process.env.CLINE_SESSION_DATA_DIR = tempSessionDataDir;
 		const manifestMessagesPath = join(
 			tempSessionDataDir,

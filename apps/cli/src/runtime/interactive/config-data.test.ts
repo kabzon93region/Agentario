@@ -1,4 +1,4 @@
-import {
+﻿import {
 	chmod,
 	mkdir,
 	mkdtemp,
@@ -8,7 +8,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { UserInstructionConfigService } from "@cline/core";
+import type { UserInstructionConfigService } from "@agentario/core";
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	buildSlashCommandRegistry,
@@ -45,21 +45,21 @@ function createConfig(cwd: string): Config {
 describe("interactive config data loader", () => {
 	const tempRoots: string[] = [];
 	const envSnapshot = {
-		CLINE_GLOBAL_SETTINGS_PATH: process.env.CLINE_GLOBAL_SETTINGS_PATH,
-		CLINE_MCP_SETTINGS_PATH: process.env.CLINE_MCP_SETTINGS_PATH,
+		CLINE_GLOBAL_SETTINGS_PATH: process.env.agentario_GLOBAL_SETTINGS_PATH,
+		CLINE_MCP_SETTINGS_PATH: process.env.agentario_MCP_SETTINGS_PATH,
 	};
 
 	afterEach(async () => {
-		if (envSnapshot.CLINE_GLOBAL_SETTINGS_PATH === undefined) {
-			delete process.env.CLINE_GLOBAL_SETTINGS_PATH;
+		if (envSnapshot.agentario_GLOBAL_SETTINGS_PATH === undefined) {
+			delete process.env.agentario_GLOBAL_SETTINGS_PATH;
 		} else {
-			process.env.CLINE_GLOBAL_SETTINGS_PATH =
-				envSnapshot.CLINE_GLOBAL_SETTINGS_PATH;
+			process.env.agentario_GLOBAL_SETTINGS_PATH =
+				envSnapshot.agentario_GLOBAL_SETTINGS_PATH;
 		}
-		if (envSnapshot.CLINE_MCP_SETTINGS_PATH === undefined) {
-			delete process.env.CLINE_MCP_SETTINGS_PATH;
+		if (envSnapshot.agentario_MCP_SETTINGS_PATH === undefined) {
+			delete process.env.agentario_MCP_SETTINGS_PATH;
 		} else {
-			process.env.CLINE_MCP_SETTINGS_PATH = envSnapshot.CLINE_MCP_SETTINGS_PATH;
+			process.env.agentario_MCP_SETTINGS_PATH = envSnapshot.agentario_MCP_SETTINGS_PATH;
 		}
 		await Promise.all(
 			tempRoots.map((dir) => rm(dir, { recursive: true, force: true })),
@@ -68,7 +68,7 @@ describe("interactive config data loader", () => {
 	});
 
 	async function writeSettingsPlugin(tempRoot: string): Promise<string> {
-		const pluginsDir = join(tempRoot, ".cline", "plugins");
+		const pluginsDir = join(tempRoot, ".agentario", "plugins");
 		await mkdir(pluginsDir, { recursive: true });
 		const pluginPath = join(pluginsDir, "settings-plugin.js");
 		await writeFile(
@@ -92,7 +92,7 @@ describe("interactive config data loader", () => {
 	}
 
 	async function writeMcpSettingsPlugin(tempRoot: string): Promise<string> {
-		const pluginsDir = join(tempRoot, ".cline", "plugins");
+		const pluginsDir = join(tempRoot, ".agentario", "plugins");
 		await mkdir(pluginsDir, { recursive: true });
 		const pluginPath = join(pluginsDir, "settings-mcp-plugin.js");
 		await writeFile(
@@ -278,7 +278,7 @@ Find installable skills.`,
 	it("keeps plugin tool toggle behavior", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
@@ -298,7 +298,7 @@ Find installable skills.`,
 
 		const data = await loader.onToggleConfigItem(item);
 		const settings = JSON.parse(
-			await readFile(process.env.CLINE_GLOBAL_SETTINGS_PATH, "utf8"),
+			await readFile(process.env.agentario_GLOBAL_SETTINGS_PATH, "utf8"),
 		) as { disabledTools?: string[] };
 
 		expect(settings.disabledTools).toEqual(["plugin-tool"]);
@@ -308,7 +308,7 @@ Find installable skills.`,
 	it("can skip plugin tool imports for fast settings open", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
@@ -328,7 +328,7 @@ Find installable skills.`,
 	it("loads plugin tools when requested", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
@@ -352,7 +352,7 @@ Find installable skills.`,
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
 		const settingsPath = join(tempRoot, "cline_mcp_settings.json");
-		process.env.CLINE_MCP_SETTINGS_PATH = settingsPath;
+		process.env.agentario_MCP_SETTINGS_PATH = settingsPath;
 		const pluginPath = await writeMcpSettingsPlugin(tempRoot);
 		await writeFile(
 			settingsPath,
@@ -397,7 +397,7 @@ Find installable skills.`,
 	it("does not load plugin MCP rows directly from plugin diagnostics", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
@@ -415,11 +415,11 @@ Find installable skills.`,
 	it("keeps failed plugins visible with their load error", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
-		const pluginsDir = join(tempRoot, ".cline", "plugins");
+		const pluginsDir = join(tempRoot, ".agentario", "plugins");
 		await mkdir(pluginsDir, { recursive: true });
 		const pluginPath = join(pluginsDir, "broken-plugin.js");
 		const invalidPluginPath = join(pluginsDir, "invalid-plugin.js");
@@ -491,7 +491,7 @@ Find installable skills.`,
 	it("toggles every SDK tool name for a displayed built-in tool", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
@@ -511,7 +511,7 @@ Find installable skills.`,
 
 		await loader.onToggleConfigItem(item);
 		const settings = JSON.parse(
-			await readFile(process.env.CLINE_GLOBAL_SETTINGS_PATH, "utf8"),
+			await readFile(process.env.agentario_GLOBAL_SETTINGS_PATH, "utf8"),
 		) as { disabledTools?: string[] };
 
 		expect(settings.disabledTools).toEqual(["apply_patch", "editor"]);
@@ -520,16 +520,16 @@ Find installable skills.`,
 	it("loads and toggles plugin enabled state from global settings", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
-		const pluginsDir = join(tempRoot, ".cline", "plugins");
+		const pluginsDir = join(tempRoot, ".agentario", "plugins");
 		await mkdir(pluginsDir, { recursive: true });
 		const pluginPath = join(pluginsDir, "workspace-plugin.js");
 		await writeFile(pluginPath, "export default {};\n");
 		await writeFile(
-			process.env.CLINE_GLOBAL_SETTINGS_PATH,
+			process.env.agentario_GLOBAL_SETTINGS_PATH,
 			JSON.stringify({ disabledPlugins: [pluginPath] }, null, 2),
 		);
 		const loader = createInteractiveConfigDataLoader({
@@ -546,7 +546,7 @@ Find installable skills.`,
 		const nextData = await loader.onToggleConfigItem(plugin);
 		const refreshedData = await loader.loadConfigData();
 		const settings = JSON.parse(
-			await readFile(process.env.CLINE_GLOBAL_SETTINGS_PATH, "utf8"),
+			await readFile(process.env.agentario_GLOBAL_SETTINGS_PATH, "utf8"),
 		) as { disabledPlugins?: string[] };
 
 		expect(settings.disabledPlugins).toBeUndefined();
@@ -559,11 +559,11 @@ Find installable skills.`,
 	it("deletes a package-backed plugin and refreshes bundled slash commands", async () => {
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
-		const packageDir = join(tempRoot, ".cline", "plugins", "delete-plugin");
+		const packageDir = join(tempRoot, ".agentario", "plugins", "delete-plugin");
 		const pluginPath = join(packageDir, "index.ts");
 		const skillPath = join(packageDir, "skills", "erase", "SKILL.md");
 		await mkdir(join(packageDir, "skills", "erase"), { recursive: true });
@@ -589,7 +589,7 @@ name: erase
 Erase stale plugin commands.`,
 		);
 		await writeFile(
-			process.env.CLINE_GLOBAL_SETTINGS_PATH,
+			process.env.agentario_GLOBAL_SETTINGS_PATH,
 			JSON.stringify({ disabledPlugins: [pluginPath] }, null, 2),
 		);
 		const refreshCalls: string[] = [];
@@ -645,7 +645,7 @@ Erase stale plugin commands.`,
 			includePluginTools: false,
 		});
 		const settings = JSON.parse(
-			await readFile(process.env.CLINE_GLOBAL_SETTINGS_PATH, "utf8"),
+			await readFile(process.env.agentario_GLOBAL_SETTINGS_PATH, "utf8"),
 		) as { disabledPlugins?: string[] };
 
 		await expect(readFile(pluginPath, "utf8")).rejects.toThrow();
@@ -667,7 +667,7 @@ Erase stale plugin commands.`,
 		tempRoots.push(tempRoot);
 		const packageDir = join(
 			tempRoot,
-			".cline",
+			".agentario",
 			"plugins",
 			"_installed",
 			"git",
@@ -706,7 +706,7 @@ Erase stale plugin commands.`,
 		tempRoots.push(tempRoot);
 		const installRoot = join(
 			tempRoot,
-			".cline",
+			".agentario",
 			"plugins",
 			"_installed",
 			"git",
@@ -792,7 +792,7 @@ Review with the bundled skill.`,
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
 		const settingsPath = join(tempRoot, "cline_mcp_settings.json");
-		process.env.CLINE_MCP_SETTINGS_PATH = settingsPath;
+		process.env.agentario_MCP_SETTINGS_PATH = settingsPath;
 		await writeFile(
 			settingsPath,
 			`${JSON.stringify(
@@ -836,11 +836,11 @@ Review with the bundled skill.`,
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
 		const settingsPath = join(tempRoot, "cline_mcp_settings.json");
-		process.env.CLINE_GLOBAL_SETTINGS_PATH = join(
+		process.env.agentario_GLOBAL_SETTINGS_PATH = join(
 			tempRoot,
 			"global-settings.json",
 		);
-		process.env.CLINE_MCP_SETTINGS_PATH = settingsPath;
+		process.env.agentario_MCP_SETTINGS_PATH = settingsPath;
 		const pluginPath = await writeMcpSettingsPlugin(tempRoot);
 		await writeFile(
 			settingsPath,
@@ -914,8 +914,8 @@ Review with the bundled skill.`,
 			tempRoots.push(tempRoot);
 			const settingsPath = join(tempRoot, "cline_mcp_settings.json");
 			const globalSettingsPath = join(tempRoot, "global-settings.json");
-			process.env.CLINE_GLOBAL_SETTINGS_PATH = globalSettingsPath;
-			process.env.CLINE_MCP_SETTINGS_PATH = settingsPath;
+			process.env.agentario_GLOBAL_SETTINGS_PATH = globalSettingsPath;
+			process.env.agentario_MCP_SETTINGS_PATH = settingsPath;
 			const pluginPath = await writeMcpSettingsPlugin(tempRoot);
 			await writeFile(
 				settingsPath,
@@ -972,7 +972,7 @@ Review with the bundled skill.`,
 		const tempRoot = await mkdtemp(join(tmpdir(), "cli-config-data-"));
 		tempRoots.push(tempRoot);
 		const settingsPath = join(tempRoot, "cline_mcp_settings.json");
-		process.env.CLINE_MCP_SETTINGS_PATH = settingsPath;
+		process.env.agentario_MCP_SETTINGS_PATH = settingsPath;
 		await writeFile(
 			settingsPath,
 			`${JSON.stringify(

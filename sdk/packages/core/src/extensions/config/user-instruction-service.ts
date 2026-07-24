@@ -1,4 +1,4 @@
-import type { AgentExtension } from "@cline/shared";
+import type { AgentExtension } from "@agentario/shared";
 import type { SkillsExecutorWithMetadata } from "../tools";
 import {
 	type AvailableRuntimeCommand,

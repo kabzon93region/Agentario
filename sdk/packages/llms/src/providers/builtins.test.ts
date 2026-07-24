@@ -1,4 +1,4 @@
-import { CLINE_ENVIRONMENT_ENV, CLINE_ENVIRONMENTS } from "@cline/shared";
+﻿import { CLINE_ENVIRONMENT_ENV, CLINE_ENVIRONMENTS } from "@agentario/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { BUILTIN_SPECS } from "./builtins";
 import { getModelsForProvider, getProvider } from "./model-registry";
@@ -67,13 +67,13 @@ describe("cline builtin models", () => {
 	});
 });
 
-describe("cline-pass builtin spec", () => {
+describe("agentario-pass builtin spec", () => {
 	it("registers a distinct Cline-compatible provider with a custom model list", async () => {
-		const models = await getModelsForProvider("cline-pass");
-		const provider = await getProvider("cline-pass");
+		const models = await getModelsForProvider("agentario-pass");
+		const provider = await getProvider("agentario-pass");
 
 		expect(provider).toMatchObject({
-			id: "cline-pass",
+			id: "agentario-pass",
 			name: "ClinePass",
 			baseUrl: `${CLINE_ENVIRONMENTS.production.apiBaseUrl}/api/v1`,
 			client: "openai-compatible",

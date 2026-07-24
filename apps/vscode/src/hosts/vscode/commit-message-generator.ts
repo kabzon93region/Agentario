@@ -1,4 +1,4 @@
-import * as path from "path"
+﻿import * as path from "path"
 import * as vscode from "vscode"
 import { Controller } from "@/core/controller"
 import { HostProvider } from "@/hosts/host-provider"
@@ -192,7 +192,7 @@ async function generateCommitMsgForRepository(controller: Controller, repository
 
 async function performCommitMsgGeneration(controller: Controller, gitDiff: string, inputBox: GitRepositoryInputBox) {
 	try {
-		vscode.commands.executeCommand("setContext", "cline.isGeneratingCommit", true)
+		vscode.commands.executeCommand("setContext", "agentario.isGeneratingCommit", true)
 
 		const prompts = [PROMPT.instruction]
 
@@ -255,13 +255,13 @@ async function performCommitMsgGeneration(controller: Controller, gitDiff: strin
 			message: `Failed to generate commit message: ${errorMessage}`,
 		})
 	} finally {
-		vscode.commands.executeCommand("setContext", "cline.isGeneratingCommit", false)
+		vscode.commands.executeCommand("setContext", "agentario.isGeneratingCommit", false)
 	}
 }
 
 export function abortCommitGeneration() {
 	commitGenerationAbortController?.abort()
-	vscode.commands.executeCommand("setContext", "cline.isGeneratingCommit", false)
+	vscode.commands.executeCommand("setContext", "agentario.isGeneratingCommit", false)
 }
 
 /**

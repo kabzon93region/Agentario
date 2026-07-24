@@ -58,7 +58,7 @@ function shouldBuildHubWebview(): boolean {
 
 if (shouldBuildHubWebview()) {
 	console.log("Building Cline Hub webview...");
-	await $`bun -F @cline/cline-hub build:webview`.cwd(repoRoot);
+	await $`bun -F @agentario/cline-hub build:webview`.cwd(repoRoot);
 }
 
 const result = await Bun.build({

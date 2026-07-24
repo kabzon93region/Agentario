@@ -1,4 +1,4 @@
-import { StringRequest } from "@shared/proto/cline/common"
+﻿import { StringRequest } from "@shared/proto/agentario/common"
 import type { Mode } from "@shared/storage/types"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import Fuse from "fuse.js"
@@ -22,8 +22,8 @@ import { AskSageProvider } from "./providers/AskSageProvider"
 import { BasetenProvider } from "./providers/BasetenProvider"
 import { BedrockProvider } from "./providers/BedrockProvider"
 import { ClaudeCodeProvider } from "./providers/ClaudeCodeProvider"
-import { ClinePassProvider } from "./providers/ClinePassProvider"
-import { ClineProvider } from "./providers/ClineProvider"
+import { AgentarioPassProvider } from "./providers/AgentarioPassProvider"
+import { AgentarioProvider } from "./providers/AgentarioProvider"
 import { DifyProvider } from "./providers/DifyProvider"
 import { GenericProviderSettings } from "./providers/GenericProviderSettings"
 import { GroqProvider } from "./providers/GroqProvider"
@@ -100,13 +100,13 @@ const ApiOptions = ({
 	// Use full context state for immediate save payload
 	const { apiConfiguration, remoteConfigSettings, environment } = useExtensionState()
 	const isStandalone = isStandaloneEnvironment(environment)
-	const isClinePassEnabled = useHasFeatureFlag(CLINE_PASS_FEATURE_FLAG)
+	const isAgentarioPassEnabled = useHasFeatureFlag(CLINE_PASS_FEATURE_FLAG)
 
 	const selectedProviderRaw =
 		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) ||
 		(isStandalone ? "lmstudio" : "anthropic")
-	// Fall back from cline-pass to cline when the feature flag is off.
-	const selectedProvider = selectedProviderRaw === "cline-pass" && !isClinePassEnabled ? "cline" : selectedProviderRaw
+	// Fall back from agentario-pass to cline when the feature flag is off.
+	const selectedProvider = selectedProviderRaw === "agentario-pass" && !isAgentarioPassEnabled ? "cline" : selectedProviderRaw
 	const { providers: catalogProviderListings } = useProviderListings()
 	const catalogProviderListing = useMemo(
 		() => catalogProviderListings.find((provider) => provider.id === selectedProvider),
@@ -168,8 +168,8 @@ const ApiOptions = ({
 			value: provider.id,
 			label: provider.name,
 		}))
-		if (!isClinePassEnabled) {
-			providers = providers.filter((option) => option.value !== "cline-pass")
+		if (!isAgentarioPassEnabled) {
+			providers = providers.filter((option) => option.value !== "agentario-pass")
 		}
 		if (isStandalone) {
 			providers = providers.filter((option) => !AGENTARIO_CLOUD_PROVIDER_IDS.has(option.value))
@@ -187,7 +187,7 @@ const ApiOptions = ({
 		}
 
 		return providers
-	}, [catalogProviderListings, isClinePassEnabled, remoteConfigSettings, isStandalone])
+	}, [catalogProviderListings, isAgentarioPassEnabled, remoteConfigSettings, isStandalone])
 
 	const currentProviderLabel = useMemo(() => {
 		return providerOptions.find((option) => option.value === selectedProvider)?.label || selectedProvider
@@ -399,7 +399,7 @@ const ApiOptions = ({
 			)}
 
 			{apiConfiguration && selectedProvider === "cline" && (
-				<ClineProvider
+				<AgentarioProvider
 					currentMode={currentMode}
 					initialModelTab={initialModelTab}
 					isPopup={isPopup}
@@ -407,8 +407,8 @@ const ApiOptions = ({
 				/>
 			)}
 
-			{apiConfiguration && isClinePassEnabled && selectedProvider === "cline-pass" && (
-				<ClinePassProvider currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />
+			{apiConfiguration && isAgentarioPassEnabled && selectedProvider === "agentario-pass" && (
+				<AgentarioPassProvider currentMode={currentMode} isPopup={isPopup} showModelOptions={showModelOptions} />
 			)}
 
 			{apiConfiguration && selectedProvider === "asksage" && (

@@ -9,13 +9,14 @@ const NewTaskButton: React.FC<{
 }> = ({ className, onClick }) => {
 	return (
 		<Tooltip>
-			<TooltipContent side="left">Start a New Task</TooltipContent>
+			<TooltipContent side="left">Закрыть таск</TooltipContent>
 			<TooltipTrigger className={cn("flex items-center", className)}>
 				<Button
-					aria-label="New Task"
+					aria-label="Закрыть таск"
 					onClick={(e) => {
 						e.preventDefault()
 						e.stopPropagation()
+						console.log("[NewTaskButton] clicked")
 						onClick()
 					}}
 					size="icon"

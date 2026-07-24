@@ -3,7 +3,7 @@ import {
 	formatMessagesForAiSdk,
 	type Message,
 	type ToolResultContent,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { describe, expect, it } from "vitest";
 import {
 	agentMessagesToMessages,

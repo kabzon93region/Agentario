@@ -1,4 +1,4 @@
-import type {
+﻿import type {
 	AgentMode,
 	CoreSessionConfig,
 	Llms,
@@ -7,8 +7,8 @@ import type {
 	SessionLineage,
 	SessionManifest,
 	ToolPolicy,
-} from "@cline/core";
-import type { Message } from "@cline/shared";
+} from "@agentario/core";
+import type { Message } from "@agentario/shared";
 
 export type CliOutputMode = "text" | "json";
 export type CliAgentMode = AgentMode;

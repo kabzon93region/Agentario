@@ -1,4 +1,4 @@
-// Integration-style tests for the plan/act mode toggle flow.
+﻿// Integration-style tests for the plan/act mode toggle flow.
 //
 // These tests verify the Controller → gRPC handler boundary for mode toggling:
 // 1. togglePlanActModeProto correctly decodes the PlanActMode enum to "plan"/"act"
@@ -7,7 +7,7 @@
 //    - `false` when mode is unchanged (no-op)
 // 3. The delegated controller.togglePlanActMode() is called with the decoded mode.
 
-import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/cline/state"
+import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/agentario/state"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 // Silence the Logger output during tests

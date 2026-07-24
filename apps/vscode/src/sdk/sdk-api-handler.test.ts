@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+﻿import { beforeEach, describe, expect, it, vi } from "vitest"
 import { buildSdkProviderConfig } from "./sdk-api-handler"
 
 const mocks = vi.hoisted(() => {
@@ -42,15 +42,15 @@ describe("buildSdkProviderConfig", () => {
 
 		const providerConfig = buildSdkProviderConfig(
 			{
-				actModeApiProvider: "cline-pass",
-				actModeClinePassModelId: "cline-pass/glm-5.1",
+				actModeApiProvider: "agentario-pass",
+				actModeAgentarioPassModelId: "agentario-pass/glm-5.1",
 			},
 			"act",
 		)
 
 		expect(providerConfig).toMatchObject({
-			providerId: "cline-pass",
-			modelId: "cline-pass/glm-5.1",
+			providerId: "agentario-pass",
+			modelId: "agentario-pass/glm-5.1",
 			apiKey: "workos:shared-cline-token",
 		})
 		expect(mocks.providerSettingsManager.getProviderSettings).toHaveBeenCalledWith("cline")

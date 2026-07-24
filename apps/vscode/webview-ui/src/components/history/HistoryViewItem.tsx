@@ -1,5 +1,6 @@
 import { HistoryItem } from "@shared/HistoryItem"
-import { StringRequest } from "@shared/proto/cline/common"
+import { StringRequest } from "@shared/proto/agentario/common"
+import { TaskColorRequest } from "@shared/proto/agentario/task"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import {
 	ArrowDownIcon,
@@ -9,6 +10,7 @@ import {
 	ChevronsDownUpIcon,
 	ChevronsUpDownIcon,
 	DownloadIcon,
+	PaletteIcon,
 	StarIcon,
 	TrashIcon,
 } from "lucide-react"
@@ -18,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils"
 import { TaskServiceClient } from "@/services/grpc-client"
 import { formatLargeNumber, formatSize } from "@/utils/format"
+import ColorPickerPopup from "@/components/common/ColorPickerPopup"
 
 type HistoryViewItemProps = {
 	item: HistoryItem
@@ -38,6 +41,7 @@ const HistoryViewItem = ({
 	selectedItems,
 }: HistoryViewItemProps) => {
 	const [expanded, setExpanded] = useState(false)
+	const [showColorPicker, setShowColorPicker] = useState(false)
 
 	const isFavoritedItem = useMemo(
 		() => pendingFavoriteToggles[item.id] ?? item.isFavorited,
@@ -49,6 +53,30 @@ const HistoryViewItem = ({
 			console.error("Error showing task:", error),
 		)
 	}, [])
+
+	const handleContextMenu = useCallback((e: React.MouseEvent) => {
+		e.preventDefault()
+		e.stopPropagation()
+		setShowColorPicker(true)
+	}, [])
+
+	const handleColorSelect = useCallback((hex: string) => {
+		console.log(`[HistoryViewItem] handleColorSelect: taskId=${item.id}, hex=${hex}`)
+		TaskServiceClient.setTaskColor(
+			TaskColorRequest.create({ taskId: item.id, taskColor: hex }),
+		).then(() => {
+			console.log(`[HistoryViewItem] setTaskColor OK: taskId=${item.id}, hex=${hex}`)
+		}).catch((err) => console.error(`[HistoryViewItem] setTaskColor FAILED:`, err))
+	}, [item.id])
+
+	const handleRemoveColor = useCallback(() => {
+		console.log(`[HistoryViewItem] handleRemoveColor: taskId=${item.id}`)
+		TaskServiceClient.setTaskColor(
+			TaskColorRequest.create({ taskId: item.id, taskColor: "" }),
+		).then(() => {
+			console.log(`[HistoryViewItem] removeColor OK: taskId=${item.id}`)
+		}).catch((err) => console.error(`[HistoryViewItem] removeColor FAILED:`, err))
+	}, [item.id])
 
 	const formatDate = useCallback((timestamp: number) => {
 		const date = new Date(timestamp)
@@ -77,7 +105,11 @@ const HistoryViewItem = ({
 	}, [])
 
 	return (
-		<div className="history-item cursor-pointer flex group mb-1 hover:bg-list-hover border-b border-accent/10" key={item.id}>
+		<div
+			className="history-item cursor-pointer flex group mb-1 hover:bg-list-hover border-b border-accent/10"
+			key={item.id}
+			onContextMenu={handleContextMenu}
+			style={item.taskColor ? { borderLeft: `3px solid #${item.taskColor}` } : undefined}>
 			<VSCodeCheckbox
 				checked={selectedItems.includes(item.id)}
 				className="pl-3 pr-1 py-auto self-start mt-3"
@@ -202,6 +234,17 @@ const HistoryViewItem = ({
 										<span className="font-medium text-description">Size:</span>
 										<span className="items-center gap-2 flex text-description">
 											{formatSize(item.size)}
+											{/* Кнопка выбора цвета */}
+											<button
+												className="p-0.5 rounded hover:bg-foreground/10 cursor-pointer border-0 bg-transparent"
+												onClick={(e) => {
+													e.stopPropagation()
+													setShowColorPicker(true)
+												}}
+												style={item.taskColor ? { color: `#${item.taskColor}` } : { color: "var(--vscode-descriptionForeground)" }}
+												title="Выбрать цвет">
+												<PaletteIcon size={14} />
+											</button>
 											<Tooltip>
 												<TooltipContent>Экспорт чата в Markdown</TooltipContent>
 												<TooltipTrigger asChild>
@@ -227,6 +270,29 @@ const HistoryViewItem = ({
 					</Button>
 				)}
 			</div>
+
+			{/* Color picker popup */}
+			{showColorPicker && (
+				<div className="relative">
+					<div className="absolute right-0 bottom-full mb-1 z-50">
+						<ColorPickerPopup
+							onClose={() => setShowColorPicker(false)}
+							onSelect={handleColorSelect}
+						/>
+						{item.taskColor && (
+							<button
+								className="w-full mt-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer bg-menu border border-foreground/15 rounded px-2 py-1 hover:bg-foreground/5"
+								onClick={(e) => {
+									e.stopPropagation()
+									handleRemoveColor()
+									setShowColorPicker(false)
+								}}>
+								Убрать цвет
+							</button>
+						)}
+					</div>
+				</div>
+			)}
 		</div>
 	)
 }

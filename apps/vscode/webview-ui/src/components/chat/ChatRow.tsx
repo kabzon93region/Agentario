@@ -1,14 +1,14 @@
 import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
 import {
-	ClineApiReqInfo,
-	ClineAskQuestion,
-	ClineAskUseMcpServer,
-	ClineMessage,
-	ClinePlanModeResponse,
-	ClineSayTool,
+	AgentarioApiReqInfo,
+	AgentarioAskQuestion,
+	AgentarioAskUseMcpServer,
+	AgentarioMessage,
+	AgentarioPlanModeResponse,
+	AgentarioSayTool,
 	COMPLETION_RESULT_CHANGES_FLAG,
 } from "@shared/ExtensionMessage"
-import { BooleanRequest, StringRequest } from "@shared/proto/cline/common"
+import { BooleanRequest, StringRequest } from "@shared/proto/agentario/common"
 import { Mode } from "@shared/storage/types"
 import deepEqual from "fast-deep-equal"
 import {
@@ -68,10 +68,10 @@ import MessageStatsFooter from "./MessageStatsFooter"
 const HEADER_CLASSNAMES = "flex items-center gap-2.5 mb-3"
 
 interface ChatRowProps {
-	message: ClineMessage
+	message: AgentarioMessage
 	isExpanded: boolean
 	onToggleExpand: (ts: number, options?: { preserveAutoScroll?: boolean }) => void
-	lastModifiedMessage?: ClineMessage
+	lastModifiedMessage?: AgentarioMessage
 	isLast: boolean
 	onHeightChange: (isTaller: boolean) => void
 	onLastRowContentChange: () => void
@@ -151,7 +151,7 @@ export const ChatRowContent = memo(
 		reasoningContent,
 		responseStarted,
 	}: ChatRowContentProps) => {
-		const { backgroundEditEnabled, mcpServers, vscodeTerminalExecutionMode, clineMessages, showFeatureTips } =
+		const { backgroundEditEnabled, mcpServers, vscodeTerminalExecutionMode, agentarioMessages, showFeatureTips } =
 			useExtensionState()
 		const [quoteButtonState, setQuoteButtonState] = useState<QuoteButtonState>({
 			visible: false,
@@ -160,10 +160,12 @@ export const ChatRowContent = memo(
 			selectedText: "",
 		})
 		const contentRef = useRef<HTMLDivElement>(null)
-		const messageApiStats = useMemo(() => findFollowingApiStats(clineMessages, message.ts), [clineMessages, message.ts])
+		const messageApiStats = useMemo(() => findFollowingApiStats(agentarioMessages, message.ts), [agentarioMessages, message.ts])
 
 		// Command output expansion state (for all messages, but only used by command messages)
 		const [isOutputFullyExpanded, setIsOutputFullyExpanded] = useState(false)
+		// Agentario: MCP server block collapsed by default for compact view
+		const [isMcpBlockExpanded, setIsMcpBlockExpanded] = useState(false)
 		const prevCommandExecutingRef = useRef<boolean>(false)
 
 		const hasAutoExpandedRef = useRef(false)
@@ -197,7 +199,7 @@ export const ChatRowContent = memo(
 
 		const [cost, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
 			if (message.text != null && message.say === "api_req_started") {
-				const info: ClineApiReqInfo = JSON.parse(message.text)
+				const info: AgentarioApiReqInfo = JSON.parse(message.text)
 				return [info.cost, info.cancelReason, info.streamingFailedMessage, info.retryStatus]
 			}
 			return [undefined, undefined, undefined, undefined, undefined]
@@ -315,7 +317,7 @@ export const ChatRowContent = memo(
 						<span className="font-bold text-foreground">Cline wants to execute this command:</span>,
 					]
 				case "use_mcp_server":
-					const mcpServerUse = JSON.parse(message.text || "{}") as ClineAskUseMcpServer
+					const mcpServerUse = JSON.parse(message.text || "{}") as AgentarioAskUseMcpServer
 					return [
 						isMcpServerResponding ? (
 							<ProgressIndicator />
@@ -357,7 +359,7 @@ export const ChatRowContent = memo(
 
 		const tool = useMemo(() => {
 			if (message.ask === "tool" || message.say === "tool") {
-				return JSON.parse(message.text || "{}") as ClineSayTool
+				return JSON.parse(message.text || "{}") as AgentarioSayTool
 			}
 			return null
 		}, [message.ask, message.say, message.text])
@@ -763,15 +765,17 @@ export const ChatRowContent = memo(
 		}
 
 		if (message.ask === "use_mcp_server" || message.say === "use_mcp_server") {
-			const useMcpServer = JSON.parse(message.text || "{}") as ClineAskUseMcpServer
+			const useMcpServer = JSON.parse(message.text || "{}") as AgentarioAskUseMcpServer
 			const server = mcpServers.find((server) => server.name === useMcpServer.serverName)
 			return (
 				<div>
-					<div className={HEADER_CLASSNAMES}>
+					<div className={cn(HEADER_CLASSNAMES, "cursor-pointer select-none")} onClick={() => setIsMcpBlockExpanded(!isMcpBlockExpanded)}>
+						<span className={cn("codicon transition-transform", isMcpBlockExpanded ? "codicon-chevron-down" : "codicon-chevron-right")} style={{ fontSize: 14 }} />
 						{icon}
 						{title}
 					</div>
 
+					{isMcpBlockExpanded && (
 					<div className="bg-code rounded-xs py-2 px-2.5 mt-2">
 						{useMcpServer.type === "access_mcp_resource" && (
 							<McpResourceRow
@@ -820,6 +824,7 @@ export const ChatRowContent = memo(
 							</div>
 						)}
 					</div>
+					)}
 				</div>
 			)
 		}
@@ -832,7 +837,7 @@ export const ChatRowContent = memo(
 							<RequestStartRow
 								apiReqStreamingFailedMessage={apiReqStreamingFailedMessage}
 								apiRequestFailedMessage={apiRequestFailedMessage}
-								clineMessages={clineMessages}
+								agentarioMessages={agentarioMessages}
 								cost={cost}
 								handleToggle={handleToggle}
 								isExpanded={isExpanded}
@@ -898,7 +903,7 @@ export const ChatRowContent = memo(
 									reasoningContent={message.text}
 									showChevron={!isReasoningStreaming || hasReasoningText}
 									showTitle={true}
-									title={isReasoningStreaming ? "Thinking..." : "Thinking"}
+									title={isReasoningStreaming ? (message.text?.trim() ? `Thinking... ${message.text.trim().split(/\s+/).slice(-5).join(" ")}` : "Thinking...") : "Thinking"}
 								/>
 								{isReasoningStreaming && showFeatureTips !== false && <FeatureTip />}
 								{!isReasoningStreaming && <MessageStatsFooter stats={messageApiStats} />}
@@ -908,7 +913,7 @@ export const ChatRowContent = memo(
 					case "user_feedback":
 						return (
 							<UserMessage
-								canRestoreWorkspace={canRestoreWorkspaceFromMessage(clineMessages, message.ts)}
+								canRestoreWorkspace={canRestoreWorkspaceFromMessage(agentarioMessages, message.ts)}
 								files={message.files}
 								images={message.images}
 								message={message}
@@ -919,7 +924,7 @@ export const ChatRowContent = memo(
 							/>
 						)
 					case "user_feedback_diff":
-						const tool = JSON.parse(message.text || "{}") as ClineSayTool
+						const tool = JSON.parse(message.text || "{}") as AgentarioSayTool
 						return (
 							<div className="w-full -mt-2.5">
 								<CodeAccordian
@@ -1069,6 +1074,60 @@ export const ChatRowContent = memo(
 						)
 					case "task_progress":
 						return <InvisibleSpacer /> // task_progress messages should be displayed in TaskHeader only, not in chat
+					case "info": {
+						// Agentario: специальная обработка для сообщений компакции
+						const text = message.text || ""
+						const isCompacting = text.includes("auto-compacting") || text.includes("compacting")
+						const isCompactionResult = text.includes("✅ Компакция завершена")
+						const isContextStats = text.includes("📊 Контекст:")
+						
+						if (isCompacting) {
+							return (
+								<div className="flex items-center gap-2 py-1.5 px-2 text-sm text-foreground opacity-80">
+									<span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+									<span className="font-medium">Сжатие контекста...</span>
+									<span className="inline-flex gap-0.5">
+										<span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+										<span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+										<span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+									</span>
+								</div>
+							)
+						}
+						
+						if (isCompactionResult) {
+							return (
+								<div className="flex items-center gap-2 py-1.5 px-2 text-sm text-green-400 bg-green-400/10 rounded-sm">
+									<span>✅</span>
+									<span>{text.replace("✅ ", "")}</span>
+								</div>
+							)
+						}
+						
+						if (isContextStats) {
+							return (
+								<div className="flex items-center gap-2 py-1.5 px-2 text-sm text-foreground opacity-70">
+									<span>📊</span>
+									<span>{text.replace("📊 ", "")}</span>
+								</div>
+							)
+						}
+						
+						// Для остальных info сообщений — стандартный рендер
+						return (
+							<div>
+								{title && (
+									<div className={HEADER_CLASSNAMES}>
+										{icon}
+										{title}
+									</div>
+								)}
+								<div className="pt-1">
+									<MarkdownRow markdown={message.text} />
+								</div>
+							</div>
+						)
+					}
 					default:
 						return (
 							<div>
@@ -1108,7 +1167,7 @@ export const ChatRowContent = memo(
 						let options: string[] | undefined
 						let selected: string | undefined
 						try {
-							const parsedMessage = JSON.parse(message.text || "{}") as ClineAskQuestion
+							const parsedMessage = JSON.parse(message.text || "{}") as AgentarioAskQuestion
 							question = parsedMessage.question
 							options = parsedMessage.options
 							selected = parsedMessage.selected
@@ -1190,7 +1249,7 @@ export const ChatRowContent = memo(
 						let options: string[] | undefined
 						let selected: string | undefined
 						try {
-							const parsedMessage = JSON.parse(message.text || "{}") as ClinePlanModeResponse
+							const parsedMessage = JSON.parse(message.text || "{}") as AgentarioPlanModeResponse
 							response = parsedMessage.response
 							options = parsedMessage.options
 							selected = parsedMessage.selected

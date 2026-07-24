@@ -1,11 +1,11 @@
-import {
+﻿import {
 	type BuiltinToolAvailabilityContext,
 	getCoreBuiltinToolCatalog,
 	resolveDisabledToolNames,
 	type ToolCatalogEntry,
-} from "@cline/core";
+} from "@agentario/core";
 
-export type { ToolCatalogEntry } from "@cline/core";
+export type { ToolCatalogEntry } from "@agentario/core";
 
 export function getToolCatalog(
 	availabilityContext?: BuiltinToolAvailabilityContext,

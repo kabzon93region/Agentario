@@ -1,5 +1,5 @@
-import type { SessionHistoryRecord } from "@cline/core";
-import { formatDisplayUserInput, truncateStr } from "@cline/shared";
+﻿import type { SessionHistoryRecord } from "@agentario/core";
+import { formatDisplayUserInput, truncateStr } from "@agentario/shared";
 import { formatUsd } from "./output";
 import { shouldShowCliUsageCost } from "./usage-cost-display";
 

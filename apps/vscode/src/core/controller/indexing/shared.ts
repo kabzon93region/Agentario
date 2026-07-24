@@ -1,8 +1,8 @@
-import {
+﻿import {
 	CodebaseIndex,
 	IndexedFile,
 	IndexedFileStatus,
-} from "@shared/proto/cline/indexing"
+} from "@shared/proto/agentario/indexing"
 import type { CodebaseIndexState, IndexedFileRecord } from "@/services/indexing/CodebaseIndexService"
 
 function toProtoStatus(status: IndexedFileRecord["status"]): IndexedFileStatus {

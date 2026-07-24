@@ -1,6 +1,6 @@
-import * as fs from "node:fs/promises"
+﻿import * as fs from "node:fs/promises"
 import * as path from "node:path"
-import { resolveClineDataDir } from "@cline/shared/storage"
+import { resolveAgentarioDataDir } from "@agentario/shared/storage"
 
 const LOG_SUBDIR = path.join("logs", "extension")
 
@@ -29,20 +29,20 @@ function dailyLogFileName(date = new Date()): string {
 }
 
 export async function resolveAgentarioExtensionLogsDirectory(): Promise<string> {
-	const dir = path.join(resolveClineDataDir(), LOG_SUBDIR)
+	const dir = path.join(resolveAgentarioDataDir(), LOG_SUBDIR)
 	await fs.mkdir(dir, { recursive: true })
 	return dir
 }
 
 /** Корневая папка логов Agentario (extension + ui + readme для tasks). */
 export async function resolveAgentarioLogsRootDirectory(): Promise<string> {
-	const root = path.join(resolveClineDataDir(), "logs")
+	const root = path.join(resolveAgentarioDataDir(), "logs")
 	const extensionDir = path.join(root, "extension")
 	const uiDir = path.join(root, "ui")
 	await fs.mkdir(extensionDir, { recursive: true })
 	await fs.mkdir(uiDir, { recursive: true })
 
-	const tasksDir = path.join(resolveClineDataDir(), "tasks")
+	const tasksDir = path.join(resolveAgentarioDataDir(), "tasks")
 	const readmePath = path.join(root, "README.txt")
 	try {
 		await fs.access(readmePath)
@@ -89,7 +89,7 @@ export async function appendAgentarioExtensionRawLine(line: string): Promise<voi
 
 export async function appendAgentarioUiLog(payload: Record<string, unknown>): Promise<void> {
 	try {
-		const dir = path.join(resolveClineDataDir(), "logs", "ui")
+		const dir = path.join(resolveAgentarioDataDir(), "logs", "ui")
 		await fs.mkdir(dir, { recursive: true })
 		const filePath = path.join(dir, dailyLogFileName())
 		const line = JSON.stringify({ ts: new Date().toISOString(), ...payload }) + "\n"

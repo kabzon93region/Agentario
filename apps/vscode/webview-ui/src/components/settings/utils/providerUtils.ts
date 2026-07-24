@@ -1,4 +1,4 @@
-import type { ApiConfiguration, ApiProvider, ModelInfo } from "@shared/api"
+﻿import type { ApiConfiguration, ApiProvider, ModelInfo } from "@shared/api"
 import type { Mode } from "@shared/storage/types"
 import * as reasoningSupport from "@shared/utils/reasoning-support"
 
@@ -8,7 +8,7 @@ export function supportsReasoningEffortForModelId(modelId?: string, _allowShortO
 
 // Webview components must source provider models via
 // `useProviderModels(providerId)`, which talks to the extension over
-// gRPC and ultimately reads from `@cline/llms`. Do not add a static
+// gRPC and ultimately reads from `@agentario/llms`. Do not add a static
 // catalog here — it would silently bypass the SDK. If a new caller
 // needs model lists synchronously, derive them from the catalog hook
 // instead.
@@ -86,11 +86,11 @@ export function getModeSpecificFields(apiConfiguration: ApiConfiguration | undef
 		mode === "plan" ? apiConfiguration.planModeOpenRouterModelInfo : apiConfiguration.actModeOpenRouterModelInfo
 
 	const clineModelId = mode === "plan" ? apiConfiguration.planModeClineModelId : apiConfiguration.actModeClineModelId
-	const clineModelInfo = mode === "plan" ? apiConfiguration.planModeClineModelInfo : apiConfiguration.actModeClineModelInfo
+	const clineModelInfo = mode === "plan" ? apiConfiguration.planModeAgentarioModelInfo : apiConfiguration.actModeAgentarioModelInfo
 	const clinePassModelId =
-		mode === "plan" ? apiConfiguration.planModeClinePassModelId : apiConfiguration.actModeClinePassModelId
+		mode === "plan" ? apiConfiguration.planModeAgentarioPassModelId : apiConfiguration.actModeAgentarioPassModelId
 	const clinePassModelInfo =
-		mode === "plan" ? apiConfiguration.planModeClinePassModelInfo : apiConfiguration.actModeClinePassModelInfo
+		mode === "plan" ? apiConfiguration.planModeAgentarioPassModelInfo : apiConfiguration.actModeAgentarioPassModelInfo
 
 	return {
 		// Core fields
@@ -212,8 +212,8 @@ export async function syncModeConfigurations(
 		case "cline":
 			updates.planModeClineModelId = sourceFields.clineModelId
 			updates.actModeClineModelId = sourceFields.clineModelId
-			updates.planModeClineModelInfo = sourceFields.clineModelInfo
-			updates.actModeClineModelInfo = sourceFields.clineModelInfo
+			updates.planModeAgentarioModelInfo = sourceFields.clineModelInfo
+			updates.actModeAgentarioModelInfo = sourceFields.clineModelInfo
 			break
 
 		case "requesty":

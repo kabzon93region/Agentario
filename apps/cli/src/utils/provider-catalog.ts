@@ -1,7 +1,7 @@
-import {
+﻿import {
 	listLocalProviders as internalListLocalProviders,
 	type ProviderSettingsManager,
-} from "@cline/core";
+} from "@agentario/core";
 import { getCliFeatureFlagsService } from "./feature-flags";
 
 export async function listLocalProviders(
@@ -9,6 +9,6 @@ export async function listLocalProviders(
 ): ReturnType<typeof internalListLocalProviders> {
 	return await internalListLocalProviders(manager, {
 		isClinePassEnabled:
-			getCliFeatureFlagsService().getBooleanFlagEnabled("ext-cline-pass"),
+			getCliFeatureFlagsService().getBooleanFlagEnabled("ext-agentario-pass"),
 	});
 }

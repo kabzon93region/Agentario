@@ -1,6 +1,6 @@
-import { getProviderAuthStorageId } from "@cline/core"
+﻿import { getProviderAuthStorageId } from "@agentario/core"
 import type { ChatContent } from "@shared/ChatContent"
-import type { ClineMessage, TurnPhase } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, TurnPhase } from "@shared/ExtensionMessage"
 import type { Mode } from "@shared/storage/types"
 import type { StateManager } from "@/core/storage/StateManager"
 import { Logger } from "@/shared/services/Logger"
@@ -16,7 +16,7 @@ type StartInput = Parameters<VscodeSessionHost["start"]>[0]
 type InitialMessages = StartInput["initialMessages"]
 type SessionConfig = Awaited<ReturnType<SdkSessionConfigBuilder["build"]>>
 
-function usesClineAccountAuth(providerId: string): boolean {
+function usesAgentarioAccountAuth(providerId: string): boolean {
 	return getProviderAuthStorageId(providerId) === "cline"
 }
 
@@ -209,7 +209,7 @@ export class SdkModeCoordinator {
 			)
 			config.sessionId = oldSessionId
 
-			if (usesClineAccountAuth(config.providerId) && !config.apiKey) {
+			if (usesAgentarioAccountAuth(config.providerId) && !config.apiKey) {
 				Logger.warn(
 					`[SdkController] Mode rebuild: new mode '${newMode}' provider is '${config.providerId}' but no Cline auth token - emitting auth error`,
 				)
@@ -259,7 +259,7 @@ export class SdkModeCoordinator {
 				// leave an echoed-but-never-sent user message in the transcript.
 				const prompt = userPrompt ? await this.options.resolveContextMentions(userPrompt) : ACT_MODE_CONTINUATION_PROMPT
 				if (userPrompt || userImages?.length || userFiles?.length) {
-					const userMessage: ClineMessage = {
+					const userMessage: AgentarioMessage = {
 						ts: Date.now(),
 						type: "say",
 						say: "user_feedback",
@@ -305,7 +305,7 @@ export class SdkModeCoordinator {
 				this.options.sessions.setRunning(false)
 				this.options.onAutoContinueFailed()
 			}
-			const errorMessage: ClineMessage = {
+			const errorMessage: AgentarioMessage = {
 				ts: Date.now(),
 				type: "say",
 				say: "error",
@@ -338,7 +338,7 @@ export class SdkModeCoordinator {
 			return
 		}
 
-		const current = task.messageStateHandler.getClineMessages()
+		const current = task.messageStateHandler.getagentarioMessages()
 		const finalized = this.options.messages.finalizeMessagesForSave(current)
 		this.options.messages.appendMessages(finalized)
 	}

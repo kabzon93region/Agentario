@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sessionManagerMocks = vi.hoisted(() => ({
 	start: vi.fn(),
@@ -38,15 +38,15 @@ const sessionEventsMocks = vi.hoisted(() => ({
 }));
 
 const CLINE_PASS_SUBSCRIPTION_URL =
-	"https://app.cline.bot/dashboard/subscription?personal=true";
+	"https://app.agentario.bot/dashboard/subscription?personal=true";
 const CLI_SUBSCRIPTION_URL =
-	"https://app.cline.bot/promo?code=CLI-8OFF&personal=true";
+	"https://app.agentario.bot/promo?code=CLI-8OFF&personal=true";
 const SDK_CLINE_PASS_SUBSCRIPTION_MESSAGE = `No access to ClinePass subscription models yet. Subscribe to ClinePass, the low cost open weights model coding plan: ${CLINE_PASS_SUBSCRIPTION_URL}`;
 const CLI_CLINE_PASS_SUBSCRIPTION_MESSAGE = `No access to ClinePass subscription models yet. Subscribe to ClinePass, the low cost open weights model coding plan: ${CLI_SUBSCRIPTION_URL}`;
 const CLINE_ORG_INDIVIDUAL_INFERENCE_SUBSCRIPTION_MESSAGE =
 	"Organization accounts cannot use ClinePass subscriptions. Go to /account -> change account to switch to your personal account for ClinePass";
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	getClineOrgIndividualInferenceSubscriptionMessage: () =>
 		CLINE_ORG_INDIVIDUAL_INFERENCE_SUBSCRIPTION_MESSAGE,
 	getClinePassSubscriptionUrl: () => CLINE_PASS_SUBSCRIPTION_URL,
@@ -569,7 +569,7 @@ describe("runAgent", () => {
 				mode: "yolo",
 				modelId: "premium-model",
 				outputMode: "text",
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 				systemPrompt: "system",
 				thinking: false,
 				toolPolicies: { "*": { autoApprove: true } },
@@ -670,7 +670,7 @@ describe("runAgent", () => {
 				toolCalls: [],
 				iterations: 1,
 				finishReason: "error",
-				model: { id: "premium-model", provider: "cline-pass", info: {} },
+				model: { id: "premium-model", provider: "agentario-pass", info: {} },
 				startedAt,
 				endedAt,
 				durationMs: 1000,
@@ -691,7 +691,7 @@ describe("runAgent", () => {
 				mode: "yolo",
 				modelId: "premium-model",
 				outputMode: "text",
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 				systemPrompt: "system",
 				thinking: false,
 				toolPolicies: { "*": { autoApprove: true } },
@@ -734,7 +734,7 @@ describe("runAgent", () => {
 					toolCalls: [],
 					iterations: 1,
 					finishReason: "error",
-					model: { id: "premium-model", provider: "cline-pass", info: {} },
+					model: { id: "premium-model", provider: "agentario-pass", info: {} },
 					startedAt,
 					endedAt,
 					durationMs: 1000,
@@ -756,7 +756,7 @@ describe("runAgent", () => {
 				mode: "yolo",
 				modelId: "premium-model",
 				outputMode: "text",
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 				systemPrompt: "system",
 				thinking: false,
 				toolPolicies: { "*": { autoApprove: true } },

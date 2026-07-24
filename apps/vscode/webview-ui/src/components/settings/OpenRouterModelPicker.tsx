@@ -1,5 +1,5 @@
-import { openAiModelInfoSafeDefaults, openRouterDefaultModelId } from "@shared/api"
-import { StringRequest } from "@shared/proto/cline/common"
+﻿import { openAiModelInfoSafeDefaults, openRouterDefaultModelId } from "@shared/api"
+import { StringRequest } from "@shared/proto/agentario/common"
 import type { Mode } from "@shared/storage/types"
 import { isClaudeOpusAdaptiveThinkingModel, resolveClaudeOpusAdaptiveThinking } from "@shared/utils/reasoning-support"
 import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"

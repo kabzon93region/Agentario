@@ -1,4 +1,4 @@
----
+﻿---
 title: "Plugins"
 sidebarTitle: "Plugins"
 description: "Install and manage plugins that extend Cline with custom tools, hooks, and capabilities."
@@ -108,15 +108,15 @@ If no `cline.plugins` field is present, the installer falls back to auto-discove
 
 ### Host-Provided Dependencies
 
-Dependencies under the `@cline/` scope are provided by the host runtime. The installer automatically strips these from the plugin's dependency list before running `npm install`, so declare any `@cline/*` package your plugin imports as an optional peer dependency. The host currently provides `@cline/sdk`, `@cline/core`, `@cline/agents`, `@cline/llms`, and `@cline/shared`.
+Dependencies under the `@agentario/` scope are provided by the host runtime. The installer automatically strips these from the plugin's dependency list before running `npm install`, so declare any `@agentario/*` package your plugin imports as an optional peer dependency. The host currently provides `@agentario/sdk`, `@agentario/core`, `@agentario/agents`, `@agentario/llms`, and `@agentario/shared`.
 
 ```json
 {
   "peerDependencies": {
-    "@cline/sdk": "*"
+    "@agentario/sdk": "*"
   },
   "peerDependenciesMeta": {
-    "@cline/sdk": {
+    "@agentario/sdk": {
       "optional": true
     }
   }

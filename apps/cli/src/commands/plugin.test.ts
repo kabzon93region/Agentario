@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+﻿import { execFileSync } from "node:child_process";
 import {
 	existsSync,
 	mkdtempSync,
@@ -12,9 +12,9 @@ import { join } from "node:path";
 import {
 	discoverPluginModulePaths,
 	resolvePluginConfigSearchPaths,
-	setClineDir,
+	setAgentarioDir,
 	setHomeDir,
-} from "@cline/shared/storage";
+} from "@agentario/shared/storage";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	collectPluginMcpOAuthCandidates,
@@ -43,14 +43,14 @@ describe("plugin install command", () => {
 		home = join(root, "home");
 		workspace = join(root, "workspace");
 		originalHome = process.env.HOME;
-		originalClineDir = process.env.CLINE_DIR;
-		originalClineDataDir = process.env.CLINE_DATA_DIR;
-		originalMcpSettingsPath = process.env.CLINE_MCP_SETTINGS_PATH;
+		originalClineDir = process.env.AGENTARIO_DIR;
+		originalClineDataDir = process.env.agentario_DATA_DIR;
+		originalMcpSettingsPath = process.env.agentario_MCP_SETTINGS_PATH;
 		process.env.HOME = home;
-		process.env.CLINE_DIR = join(home, ".cline");
-		process.env.CLINE_DATA_DIR = join(home, ".cline", "data");
+		process.env.AGENTARIO_DIR = join(home, ".agentario");
+		process.env.agentario_DATA_DIR = join(home, ".agentario", "data");
 		setHomeDir(home);
-		setClineDir(process.env.CLINE_DIR);
+		setAgentarioDir(process.env.AGENTARIO_DIR);
 	});
 
 	function runGitCommand(cwd: string, args: string[]): void {
@@ -85,19 +85,19 @@ describe("plugin install command", () => {
 			process.env.HOME = originalHome;
 		}
 		if (originalClineDir === undefined) {
-			delete process.env.CLINE_DIR;
+			delete process.env.AGENTARIO_DIR;
 		} else {
-			process.env.CLINE_DIR = originalClineDir;
+			process.env.AGENTARIO_DIR = originalClineDir;
 		}
 		if (originalClineDataDir === undefined) {
-			delete process.env.CLINE_DATA_DIR;
+			delete process.env.agentario_DATA_DIR;
 		} else {
-			process.env.CLINE_DATA_DIR = originalClineDataDir;
+			process.env.agentario_DATA_DIR = originalClineDataDir;
 		}
 		if (originalMcpSettingsPath === undefined) {
-			delete process.env.CLINE_MCP_SETTINGS_PATH;
+			delete process.env.agentario_MCP_SETTINGS_PATH;
 		} else {
-			process.env.CLINE_MCP_SETTINGS_PATH = originalMcpSettingsPath;
+			process.env.agentario_MCP_SETTINGS_PATH = originalMcpSettingsPath;
 		}
 		rmSync(root, { recursive: true, force: true });
 	});
@@ -184,11 +184,11 @@ describe("plugin install command", () => {
 
 		const result = await installPlugin({ source });
 
-		expect(result.installPath).toContain(join(home, ".cline", "plugins"));
+		expect(result.installPath).toContain(join(home, ".agentario", "plugins"));
 		expect(result.entryPaths).toHaveLength(1);
 		expect(existsSync(result.entryPaths[0] ?? "")).toBe(true);
 		const discovered = discoverPluginModulePaths(
-			join(home, ".cline", "plugins"),
+			join(home, ".agentario", "plugins"),
 		);
 		expect(discovered).toEqual(result.entryPaths);
 	});
@@ -210,7 +210,7 @@ describe("plugin install command", () => {
 
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		expect(result.installPath).toContain(
-			join(workspace, ".cline", "plugins", "_installed", "remote"),
+			join(workspace, ".agentario", "plugins", "_installed", "remote"),
 		);
 		expect(result.entryPaths).toHaveLength(1);
 		expect(existsSync(result.entryPaths[0] ?? "")).toBe(true);
@@ -218,7 +218,7 @@ describe("plugin install command", () => {
 			"remote-weather",
 		);
 		expect(
-			discoverPluginModulePaths(join(workspace, ".cline", "plugins")),
+			discoverPluginModulePaths(join(workspace, ".agentario", "plugins")),
 		).toEqual(result.entryPaths);
 	});
 
@@ -241,7 +241,7 @@ describe("plugin install command", () => {
 		});
 
 		expect(result.installPath).toContain(
-			join(workspace, ".cline", "plugins", "_installed", "official"),
+			join(workspace, ".agentario", "plugins", "_installed", "official"),
 		);
 		expect(result.entryPaths).toHaveLength(1);
 		expect(readFileSync(result.entryPaths[0] ?? "", "utf8")).toContain(
@@ -256,7 +256,7 @@ describe("plugin install command", () => {
 			existsSync(join(result.installPath, "package", "other-plugin")),
 		).toBe(false);
 		expect(
-			discoverPluginModulePaths(join(workspace, ".cline", "plugins")),
+			discoverPluginModulePaths(join(workspace, ".agentario", "plugins")),
 		).toEqual(result.entryPaths);
 	});
 
@@ -338,7 +338,7 @@ describe("plugin install command", () => {
 		});
 
 		expect(result.installPath).toContain(
-			join(workspace, ".cline", "plugins", "_installed", "local"),
+			join(workspace, ".agentario", "plugins", "_installed", "local"),
 		);
 		const wrapperManifest = JSON.parse(
 			readFileSync(join(result.installPath, "package.json"), "utf8"),
@@ -433,15 +433,15 @@ describe("plugin install command", () => {
 						plugins: [{ paths: ["./index.ts"], capabilities: ["tools"] }],
 					},
 					dependencies: {
-						"@cline/core": "latest",
+						"@agentario/core": "latest",
 						yaml: "^2.8.1",
 					},
 					peerDependencies: {
-						"@cline/shared": "*",
+						"@agentario/shared": "*",
 						bun: ">=1.0.0",
 					},
 					peerDependenciesMeta: {
-						"@cline/shared": {
+						"@agentario/shared": {
 							optional: true,
 						},
 					},
@@ -474,8 +474,8 @@ describe("plugin install command", () => {
 			readFileSync(join(result.installPath, "package.json"), "utf8"),
 		) as { name?: string; cline?: { plugins?: Array<{ paths?: string[] }> } };
 		expect(wrapperManifest.name).toBe("plugin-package");
-		expect(wrapperManifest.cline?.plugins?.[0]?.paths).toHaveLength(1);
-		expect(wrapperManifest.cline?.plugins?.[0]?.paths?.[0]).toContain(
+		expect(wrapperManifest.agentario?.plugins?.[0]?.paths).toHaveLength(1);
+		expect(wrapperManifest.agentario?.plugins?.[0]?.paths?.[0]).toContain(
 			"package/index.ts",
 		);
 		const packageManifest = JSON.parse(
@@ -498,7 +498,7 @@ describe("plugin install command", () => {
 			existsSync(join(result.installPath, "package", "node_modules")),
 		).toBe(false);
 		const discovered = discoverPluginModulePaths(
-			join(workspace, ".cline", "plugins"),
+			join(workspace, ".agentario", "plugins"),
 		);
 		expect(discovered).toEqual(result.entryPaths);
 		expect(discovered.some((path) => path.includes("noise.ts"))).toBe(false);
@@ -521,10 +521,10 @@ describe("plugin install command", () => {
 				"  shift",
 				"done",
 				'mkdir -p "$prefix/node_modules/published-plugin"',
-				'mkdir -p "$prefix/node_modules/@cline/core"',
+				'mkdir -p "$prefix/node_modules/@agentario/core"',
 				'printf \'%s\\n\' \'{"name":"published-plugin","type":"module","cline":{"plugins":["index.ts"]}}\' > "$prefix/node_modules/published-plugin/package.json"',
 				"printf '%s\\n' \"export default { name: 'published-plugin', manifest: { capabilities: ['tools'] } };\" > \"$prefix/node_modules/published-plugin/index.ts\"",
-				'printf \'%s\\n\' \'{"name":"@cline/core"}\' > "$prefix/node_modules/@cline/core/package.json"',
+				'printf \'%s\\n\' \'{"name":"@agentario/core"}\' > "$prefix/node_modules/@agentario/core/package.json"',
 				"exit 0",
 			].join("\n"),
 			{ encoding: "utf8", mode: 0o755 },
@@ -683,7 +683,7 @@ describe("plugin install command", () => {
 			});
 			expect(code).toBe(0);
 			const parsed = JSON.parse(stdout.join("")) as { installPath: string };
-			expect(parsed.installPath).toContain(join(home, ".cline", "plugins"));
+			expect(parsed.installPath).toContain(join(home, ".agentario", "plugins"));
 			expect("mcpOAuthCandidates" in parsed).toBe(false);
 		} finally {
 			process.stdout.write = originalWrite;
@@ -691,7 +691,7 @@ describe("plugin install command", () => {
 	});
 
 	it("does not run MCP OAuth follow-up for JSON plugin installs", async () => {
-		process.env.CLINE_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
+		process.env.agentario_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
 		const source = join(root, "json-oauth-mcp-plugin.js");
 		writeFileSync(
 			source,
@@ -736,7 +736,7 @@ export default {
 				installPath: string;
 				mcpOAuthCandidates?: unknown;
 			};
-			expect(parsed.installPath).toContain(join(home, ".cline", "plugins"));
+			expect(parsed.installPath).toContain(join(home, ".agentario", "plugins"));
 			expect(parsed.mcpOAuthCandidates).toBeUndefined();
 		} finally {
 			process.stdout.write = originalWrite;
@@ -763,8 +763,8 @@ export default {
 		);
 		const blockedDirectory = join(root, "not-a-directory");
 		writeFileSync(blockedDirectory, "file", "utf8");
-		const originalSettingsPath = process.env.CLINE_MCP_SETTINGS_PATH;
-		process.env.CLINE_MCP_SETTINGS_PATH = join(
+		const originalSettingsPath = process.env.agentario_MCP_SETTINGS_PATH;
+		process.env.agentario_MCP_SETTINGS_PATH = join(
 			blockedDirectory,
 			"cline_mcp_settings.json",
 		);
@@ -786,15 +786,15 @@ export default {
 			expect(output.join("\n")).toContain("mcp-plugin");
 		} finally {
 			if (originalSettingsPath === undefined) {
-				delete process.env.CLINE_MCP_SETTINGS_PATH;
+				delete process.env.agentario_MCP_SETTINGS_PATH;
 			} else {
-				process.env.CLINE_MCP_SETTINGS_PATH = originalSettingsPath;
+				process.env.agentario_MCP_SETTINGS_PATH = originalSettingsPath;
 			}
 		}
 	});
 
 	it("detects plugin-owned remote MCP servers as OAuth candidates", async () => {
-		process.env.CLINE_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
+		process.env.agentario_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
 		const source = join(root, "oauth-mcp-plugin.js");
 		writeFileSync(
 			source,
@@ -825,7 +825,7 @@ export default {
 	});
 
 	it("does not treat remote MCP servers with static headers as OAuth candidates", async () => {
-		process.env.CLINE_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
+		process.env.agentario_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
 		const source = join(root, "headers-mcp-plugin.js");
 		writeFileSync(
 			source,
@@ -855,7 +855,7 @@ export default {
 
 	it("skips plugin MCP OAuth candidates that already have tokens", async () => {
 		const settingsPath = join(root, "mcp-settings.json");
-		process.env.CLINE_MCP_SETTINGS_PATH = settingsPath;
+		process.env.agentario_MCP_SETTINGS_PATH = settingsPath;
 		const source = join(root, "authorized-mcp-plugin.js");
 		writeFileSync(
 			source,
@@ -893,7 +893,7 @@ export default {
 	});
 
 	it("authorizes selected plugin MCP OAuth candidates during interactive installs", async () => {
-		process.env.CLINE_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
+		process.env.agentario_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
 		const source = join(root, "interactive-mcp-plugin.js");
 		writeFileSync(
 			source,
@@ -935,7 +935,7 @@ export default {
 	});
 
 	it("keeps plugin install successful when MCP OAuth authorization fails", async () => {
-		process.env.CLINE_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
+		process.env.agentario_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
 		const source = join(root, "failing-oauth-mcp-plugin.js");
 		writeFileSync(
 			source,
@@ -977,7 +977,7 @@ export default {
 	});
 
 	it("prints guidance for plugin MCP OAuth candidates in non-interactive installs", async () => {
-		process.env.CLINE_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
+		process.env.agentario_MCP_SETTINGS_PATH = join(root, "mcp-settings.json");
 		const source = join(root, "non-interactive-mcp-plugin.js");
 		writeFileSync(
 			source,
@@ -1046,7 +1046,7 @@ export default {
 			expect(code).toBe(0);
 			const parsed = JSON.parse(stdout.join("")) as { installPath: string };
 			expect(parsed.installPath).toContain(
-				join(workspace, ".cline", "plugins", "_installed", "official"),
+				join(workspace, ".agentario", "plugins", "_installed", "official"),
 			);
 		} finally {
 			process.stdout.write = originalWrite;
@@ -1067,10 +1067,10 @@ export default {
 		});
 
 		expect(resolvePluginConfigSearchPaths(workspace)[0]).toBe(
-			join(workspace, ".cline", "plugins"),
+			join(workspace, ".agentario", "plugins"),
 		);
 		expect(
-			discoverPluginModulePaths(join(workspace, ".cline", "plugins")),
+			discoverPluginModulePaths(join(workspace, ".agentario", "plugins")),
 		).toHaveLength(1);
 	});
 });

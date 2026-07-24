@@ -1,4 +1,4 @@
-import { createGateway, type GatewayProviderSettings } from "@cline/llms";
+﻿import { createGateway, type GatewayProviderSettings } from "@agentario/llms";
 import type {
 	AgentAfterToolResult,
 	AgentBeforeModelResult,
@@ -22,7 +22,7 @@ import type {
 	TelemetryProperties,
 	ToolApprovalResult,
 	ToolPolicy,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	captureAgentUnexpectedReasoningTokens,
 	captureSdkError,
@@ -31,11 +31,11 @@ import {
 	normalizeJsonLikeStringsForSchema,
 	omitUndefinedValues,
 	trimNonEmpty,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { nanoid } from "nanoid";
 
 // Local `createUID` helper. The clinee source imports this from
-// `@cline/shared` (see `packages/shared/dist/identifier.ts`), but
+// `@agentario/shared` (see `packages/shared/dist/identifier.ts`), but
 // sdk-re's shared package does not expose it yet. Inlining here keeps
 // PLAN.md Step 1 scoped to `packages/agents/src/` and matches the
 // exact clinee implementation (`${prefix}_${nanoid(length)}`).
@@ -48,7 +48,7 @@ export type AgentEventListener = (event: AgentRuntimeEvent) => void;
 
 /**
  * Advanced form: caller supplies a pre-built `AgentModel`. Used by
- * `@cline/core`, which constructs models itself to share gateway/telemetry
+ * `@agentario/core`, which constructs models itself to share gateway/telemetry
  * wiring with the rest of the session runtime.
  */
 export interface AgentRuntimeConfigWithModel extends BaseAgentRuntimeConfig {
@@ -57,7 +57,7 @@ export interface AgentRuntimeConfigWithModel extends BaseAgentRuntimeConfig {
 
 /**
  * Friendly form: caller supplies provider/model IDs and credentials, and the
- * runtime builds an `AgentModel` internally via `@cline/llms`. This is the
+ * runtime builds an `AgentModel` internally via `@agentario/llms`. This is the
  * entry point most standalone users want.
  */
 export interface AgentRuntimeConfigWithProvider
@@ -80,7 +80,7 @@ export interface AgentRuntimeConfigWithProvider
  * Config accepted by `new AgentRuntime(...)` / `createAgentRuntime(...)` /
  * `new Agent(...)` / `createAgent(...)`. Either supply a pre-built `model`
  * (advanced) or `providerId` + `modelId` (+ credentials) and the runtime will
- * construct the model itself via `@cline/llms`.
+ * construct the model itself via `@agentario/llms`.
  */
 export type AgentRuntimeConfig =
 	| AgentRuntimeConfigWithModel
@@ -715,8 +715,26 @@ export class AgentRuntime {
 				`Agent runtime exceeded maxIterations (${this.config.maxIterations})`,
 			);
 		} catch (error) {
+			// Agentario: правильно нормализуем ошибку — она может быть объектом
 			const normalized =
-				error instanceof Error ? error : new Error(String(error));
+				error instanceof Error
+					? error
+					: typeof error === "object" && error !== null
+						? (() => {
+							try {
+								const errObj = error as Record<string, unknown>;
+								if (typeof errObj.message === "string") return new Error(errObj.message);
+								const inner = errObj.error;
+								if (typeof inner === "string") return new Error(inner);
+								if (typeof inner === "object" && inner !== null && typeof (inner as Record<string, unknown>).message === "string") {
+									return new Error((inner as Record<string, unknown>).message as string);
+								}
+								return new Error(JSON.stringify(error));
+							} catch {
+								return new Error(String(error));
+							}
+						})()
+						: new Error(String(error));
 			const isControlledStop = normalized instanceof ControlledStopError;
 			const status =
 				this.abortController.signal.aborted || isControlledStop
@@ -1050,34 +1068,48 @@ export class AgentRuntime {
 			return request;
 		}
 
-		const result = await this.config.prepareTurn({
-			agentId: this.state.agentId,
-			conversationId: this.config.conversationId,
-			parentAgentId: this.state.parentAgentId ?? null,
-			iteration: this.state.iteration,
-			messages: request.messages,
-			systemPrompt: request.systemPrompt,
-			tools: request.tools,
-			model: {
-				id: this.config.messageModelInfo?.id,
-				provider: this.config.messageModelInfo?.provider,
-			},
-			signal: request.signal,
-			emitStatusNotice: (message, metadata) => {
-				void this.emit({
-					type: "status-notice",
-					snapshot: this.snapshot(),
-					message,
-					metadata,
-				});
-			},
-		});
+		let result: Awaited<ReturnType<NonNullable<typeof this.config.prepareTurn>>>;
+		try {
+			result = await this.config.prepareTurn({
+				agentId: this.state.agentId,
+				conversationId: this.config.conversationId,
+				parentAgentId: this.state.parentAgentId ?? null,
+				iteration: this.state.iteration,
+				messages: request.messages,
+				systemPrompt: request.systemPrompt,
+				tools: request.tools,
+				model: {
+					id: this.config.messageModelInfo?.id,
+					provider: this.config.messageModelInfo?.provider,
+				},
+				signal: request.signal,
+				emitStatusNotice: (message, metadata) => {
+					void this.emit({
+						type: "status-notice",
+						snapshot: this.snapshot(),
+						message,
+						metadata,
+					});
+				},
+			});
+		} catch (error) {
+			// Agentario: compaction error should NOT kill the agent run — skip compaction and continue
+			const errMsg = error instanceof Error ? error.message : typeof error === "object" ? (() => { try { return JSON.stringify(error); } catch { return String(error); } })() : String(error);
+			this.config.logger?.debug?.(`prepareTurn failed, skipping compaction: ${errMsg}`);
+			return request;
+		}
 		if (!result) {
 			return request;
 		}
 
 		let next = request;
 		if (result.messages) {
+			// Agentario: проверяем что результат компакции не пустой.
+			// Пустой массив сообщений приводит к "Invalid prompt: messages must not be empty".
+			if (result.messages.length === 0) {
+				this.config.logger?.log?.("prepareTurn returned empty messages array, ignoring compaction result", { severity: "warn" });
+				return request;
+			}
 			const preparedMessages = cloneMessages(result.messages);
 			this.state.messages = preparedMessages;
 			next = { ...next, messages: cloneMessages(preparedMessages) };
@@ -1633,7 +1665,7 @@ export function createAgentRuntime(config: AgentRuntimeConfig): AgentRuntime {
  *     const agent = new Agent({ providerId, modelId, apiKey });
  *     await agent.run("hello");
  *
- * while `@cline/core` (which owns model construction) continues to use
+ * while `@agentario/core` (which owns model construction) continues to use
  * the `AgentRuntime` name with `{ model, ... }` configs.
  */
 export const Agent = AgentRuntime;

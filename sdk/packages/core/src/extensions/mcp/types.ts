@@ -1,4 +1,4 @@
-import type { AgentToolContext } from "@cline/shared";
+import type { AgentToolContext } from "@agentario/shared";
 
 export interface McpToolDescriptor {
 	name: string;

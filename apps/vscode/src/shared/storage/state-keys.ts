@@ -8,7 +8,7 @@ import {
 	OpenAiCompatibleModelInfo,
 } from "@shared/api"
 import { BrowserSettings, DEFAULT_BROWSER_SETTINGS } from "@shared/BrowserSettings"
-import { ClineRulesToggles } from "@shared/cline-rules"
+import { AgentarioRulesToggles } from "@shared/agentario-rules"
 import { DEFAULT_FOCUS_CHAIN_SETTINGS, FocusChainSettings } from "@shared/FocusChainSettings"
 import { HistoryItem } from "@shared/HistoryItem"
 import { DEFAULT_MCP_DISPLAY_MODE, McpDisplayMode } from "@shared/McpDisplayMode"
@@ -25,7 +25,7 @@ import { type BlobStoreSettings } from "./types"
 //
 // Property definitions with types, default values, and metadata
 // NOTE: When adding a new field, the scripts/generate-state-proto.mjs will be
-// executed automatically to regenerate the proto/cline/state.proto file with the
+// executed automatically to regenerate the proto/agentario/state.proto file with the
 // new fields once the file is staged and committed.
 // ============================================================================
 
@@ -66,7 +66,7 @@ const REMOTE_CONFIG_EXTRA_FIELDS = {
 
 const GLOBAL_STATE_FIELDS = {
 	clineVersion: { default: undefined as string | undefined },
-	"cline.generatedMachineId": { default: undefined as string | undefined }, // Note, distinctId reads/writes this directly from/to StorageContext before StateManager is initialized.
+	"agentario.generatedMachineId": { default: undefined as string | undefined }, // Note, distinctId reads/writes this directly from/to StorageContext before StateManager is initialized.
 	lastShownAnnouncementId: { default: undefined as string | undefined },
 	taskHistory: { default: [] as HistoryItem[], isAsync: true },
 	userInfo: { default: undefined as UserInfo | undefined },
@@ -86,9 +86,9 @@ const GLOBAL_STATE_FIELDS = {
 	lastDismissedInfoBannerVersion: { default: 0 as number },
 	lastDismissedModelBannerVersion: { default: 0 as number },
 	lastDismissedCliBannerVersion: { default: 0 as number },
-	remoteRulesToggles: { default: {} as ClineRulesToggles },
-	remoteWorkflowToggles: { default: {} as ClineRulesToggles },
-	remoteSkillsToggles: { default: {} as ClineRulesToggles },
+	remoteRulesToggles: { default: {} as AgentarioRulesToggles },
+	remoteWorkflowToggles: { default: {} as AgentarioRulesToggles },
+	remoteSkillsToggles: { default: {} as AgentarioRulesToggles },
 	dismissedBanners: { default: [] as Array<{ bannerId: string; dismissedAt: number }> },
 	// Path to worktree that should auto-open Cline sidebar when launched
 	worktreeAutoOpenPath: { default: undefined as string | undefined },
@@ -154,9 +154,9 @@ const API_HANDLER_SETTINGS_FIELDS = {
 	planModeOpenRouterModelId: { default: undefined as string | undefined },
 	planModeOpenRouterModelInfo: { default: undefined as ModelInfo | undefined },
 	planModeClineModelId: { default: undefined as string | undefined },
-	planModeClineModelInfo: { default: undefined as ModelInfo | undefined },
-	planModeClinePassModelId: { default: undefined as string | undefined },
-	planModeClinePassModelInfo: { default: undefined as ModelInfo | undefined },
+	planModeAgentarioModelInfo: { default: undefined as ModelInfo | undefined },
+	planModeAgentarioPassModelId: { default: undefined as string | undefined },
+	planModeAgentarioPassModelInfo: { default: undefined as ModelInfo | undefined },
 	planModeOpenAiModelId: { default: undefined as string | undefined },
 	planModeOpenAiModelInfo: { default: undefined as OpenAiCompatibleModelInfo | undefined },
 	planModeOllamaModelId: { default: undefined as string | undefined },
@@ -200,9 +200,9 @@ const API_HANDLER_SETTINGS_FIELDS = {
 	actModeOpenRouterModelId: { default: undefined as string | undefined },
 	actModeOpenRouterModelInfo: { default: undefined as ModelInfo | undefined },
 	actModeClineModelId: { default: undefined as string | undefined },
-	actModeClineModelInfo: { default: undefined as ModelInfo | undefined },
-	actModeClinePassModelId: { default: undefined as string | undefined },
-	actModeClinePassModelInfo: { default: undefined as ModelInfo | undefined },
+	actModeAgentarioModelInfo: { default: undefined as ModelInfo | undefined },
+	actModeAgentarioPassModelId: { default: undefined as string | undefined },
+	actModeAgentarioPassModelInfo: { default: undefined as ModelInfo | undefined },
 	actModeOpenAiModelId: { default: undefined as string | undefined },
 	actModeOpenAiModelInfo: { default: undefined as OpenAiCompatibleModelInfo | undefined },
 	actModeOllamaModelId: { default: undefined as string | undefined },
@@ -248,8 +248,8 @@ const USER_SETTINGS_FIELDS = {
 	autoApprovalSettings: {
 		default: DEFAULT_AUTO_APPROVAL_SETTINGS as AutoApprovalSettings,
 	},
-	globalClineRulesToggles: { default: {} as ClineRulesToggles },
-	globalWorkflowToggles: { default: {} as ClineRulesToggles },
+	globalAgentarioRulesToggles: { default: {} as AgentarioRulesToggles },
+	globalWorkflowToggles: { default: {} as AgentarioRulesToggles },
 	globalSkillsToggles: { default: {} as Record<string, boolean> },
 	browserSettings: {
 		default: DEFAULT_BROWSER_SETTINGS as BrowserSettings,
@@ -266,8 +266,33 @@ const USER_SETTINGS_FIELDS = {
 	autoApproveAllToggled: { default: false as boolean },
 	useAutoCondense: { default: true as boolean },
 	compactionStrategy: { default: "agentic" as "basic" | "agentic" },
-	compactionSummarizerProviderId: { default: undefined as string | undefined },
-	compactionSummarizerModelId: { default: undefined as string | undefined },
+	compactionProviderId: { default: undefined as string | undefined },
+	compactionModelId: { default: undefined as string | undefined },
+	compactionBaseUrl: { default: undefined as string | undefined },
+	compactionApiKey: { default: undefined as string | undefined },
+	compactionChunkSize: { default: 4000 as number },
+	compactionDoubleSummarization: { default: true as boolean },
+	/** Agentario: reserve tokens for model output — auto-condense triggers when remaining context drops below this. */
+	compactionReserveTokens: { default: 16384 as number },
+	/** Agentario: max input tokens for compaction trigger (0 = auto-detect from model). Override if model info is unavailable. */
+	compactionMaxInputTokens: { default: 0 as number },
+	compactionPromptTemplateBefore: { default: undefined as string | undefined },
+	compactionPromptTemplateAfter: { default: undefined as string | undefined },
+	/** Agentario: post-processing tag mappings (JSON) */
+	compactionPostProcessTags: { default: undefined as string | undefined },
+	// Agentario: Context Protection — Smart Chunked Navigation (Tier 1)
+	smartChunkingEnabled: { default: true as boolean },
+	showFileOutline: { default: true as boolean },
+	maxOutlineEntries: { default: 100 as number },
+	// Agentario: Context Protection — Tool Result Truncation (Tier 2)
+	smartTruncationEnabled: { default: true as boolean },
+	smartTruncationThreshold: { default: 16000 as number },
+	smartTruncationHead: { default: 2000 as number },
+	smartTruncationTail: { default: 1000 as number },
+	// Agentario: Context Protection — AST Navigator (Tier 3)
+	astNavigatorEnabled: { default: false as boolean },
+	/** Agentario: chat UI theme */
+	chatTheme: { default: "default" as "default" | "cursor" },
 	subagentsEnabled: { default: false as boolean },
 	worktreesEnabled: { default: false as boolean },
 	preferredLanguage: { default: "Russian - Русский" as string },
@@ -365,7 +390,7 @@ const SECRETS_KEYS = [
 // WARNING, these are not ALL of the local state keys in practice. For example, FileContextTracker
 // uses dynamic keys like pendingFileContextWarning_${taskId}.
 export const LocalStateKeys = [
-	"localClineRulesToggles",
+	"localAgentarioRulesToggles",
 	"localCursorRulesToggles",
 	"localWindsurfRulesToggles",
 	"localAgentsRulesToggles",
@@ -393,7 +418,7 @@ export type RemoteConfigFields = GlobalStateAndSettings & RemoteConfigExtra
 // ============================================================================
 
 export type Secrets = { [K in (typeof SecretKeys)[number]]: string | undefined }
-export type LocalState = { [K in (typeof LocalStateKeys)[number]]: ClineRulesToggles }
+export type LocalState = { [K in (typeof LocalStateKeys)[number]]: AgentarioRulesToggles }
 export type SecretKey = (typeof SecretKeys)[number]
 export type GlobalStateKey = keyof GlobalState
 export type LocalStateKey = keyof LocalState

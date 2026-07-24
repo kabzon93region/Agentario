@@ -1,5 +1,5 @@
-import { createInterface } from "node:readline";
-import type { ToolApprovalRequest, ToolApprovalResult } from "@cline/shared";
+﻿import { createInterface } from "node:readline";
+import type { ToolApprovalRequest, ToolApprovalResult } from "@agentario/shared";
 import { truncate } from "./helpers";
 import { c, getActiveCliSession, write } from "./output";
 
@@ -25,7 +25,7 @@ async function requestDesktopToolApprovalFromCore(
 	request: ToolApprovalRequest,
 ): Promise<ToolApprovalResult> {
 	if (!cachedDesktopApprovalRequester) {
-		cachedDesktopApprovalRequester = import("@cline/core")
+		cachedDesktopApprovalRequester = import("@agentario/core")
 			.then((module) => {
 				const fn = (
 					module as {
@@ -40,7 +40,7 @@ async function requestDesktopToolApprovalFromCore(
 				).requestDesktopToolApproval;
 				if (typeof fn !== "function") {
 					throw new Error(
-						"Installed @cline/core does not expose requestDesktopToolApproval",
+						"Installed @agentario/core does not expose requestDesktopToolApproval",
 					);
 				}
 				return fn;
@@ -54,7 +54,7 @@ async function requestDesktopToolApprovalFromCore(
 	}
 	const requester = await cachedDesktopApprovalRequester;
 	const sessionId = getActiveCliSession()?.manifest.session_id;
-	const approvalDir = process.env.CLINE_TOOL_APPROVAL_DIR?.trim();
+	const approvalDir = process.env.agentario_TOOL_APPROVAL_DIR?.trim();
 	return requester(request, { approvalDir, sessionId });
 }
 
@@ -102,7 +102,7 @@ async function requestTerminalToolApproval(
 export async function requestToolApproval(
 	request: ToolApprovalRequest,
 ): Promise<ToolApprovalResult> {
-	const mode = process.env.CLINE_TOOL_APPROVAL_MODE?.trim().toLowerCase();
+	const mode = process.env.agentario_TOOL_APPROVAL_MODE?.trim().toLowerCase();
 	if (mode === "desktop") {
 		return requestDesktopToolApprovalFromCore(request);
 	}

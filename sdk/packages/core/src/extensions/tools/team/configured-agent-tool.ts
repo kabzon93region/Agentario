@@ -9,7 +9,7 @@ import {
 	type ToolApprovalResult,
 	type ToolPolicy,
 	zodToJsonSchema,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { z } from "zod";
 import type { ConfiguredAgentConfig } from "./configured-agent-config";
 import {

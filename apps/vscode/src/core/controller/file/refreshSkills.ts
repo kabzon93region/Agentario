@@ -1,6 +1,6 @@
-import { type CoreSettingsItem, createCoreSettingsService } from "@cline/core"
+﻿import { type CoreSettingsItem, createCoreSettingsService } from "@agentario/core"
 import { parseRemoteSkillEntries } from "@core/context/instructions/user-instructions/skills"
-import { RefreshedSkills, SkillInfo } from "@shared/proto/cline/file"
+import { RefreshedSkills, SkillInfo } from "@shared/proto/agentario/file"
 import { HostProvider } from "@/hosts/host-provider"
 import { Controller } from ".."
 

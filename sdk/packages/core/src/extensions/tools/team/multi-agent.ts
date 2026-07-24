@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Multi-Agent Coordination
  *
  * Utilities for orchestrating multiple agents working together.
@@ -30,7 +30,7 @@ import {
 	type TeamTask,
 	type TeamTaskListItem,
 	type TeamTaskStatus,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { nanoid } from "nanoid";
 import { SessionRuntime } from "../../../runtime/orchestration/session-runtime-orchestrator";
 
@@ -59,10 +59,10 @@ export {
 	type TeamTask,
 	type TeamTaskListItem,
 	type TeamTaskStatus,
-} from "@cline/shared";
+} from "@agentario/shared";
 
 // =============================================================================
-// Types that depend on @cline/agents (cannot live in shared)
+// Types that depend on @agentario/agents (cannot live in shared)
 // =============================================================================
 
 export interface TeamMemberConfig extends AgentConfig {

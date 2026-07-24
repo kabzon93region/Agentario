@@ -1,6 +1,6 @@
-import { existsSync, readdirSync } from "node:fs";
+﻿import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { resolveClineDataDir } from "@cline/core";
+import { resolveClineDataDir } from "@agentario/core";
 import { Command, CommanderError } from "commander";
 import {
 	isProcessRunning,

@@ -1,8 +1,8 @@
-import {
+﻿import {
 	type AgentExtension,
 	buildRemoteConfigSessionBlobUploadMetadata,
 	clearRemoteConfigSessionBlobUpload,
-	createClineTelemetryServiceConfig,
+	createAgentarioTelemetryServiceConfig,
 	createSessionId,
 	createRemoteConfigSessionMessagesArtifactUploader as createSharedRemoteConfigSessionMessagesArtifactUploader,
 	type ITelemetryService,
@@ -13,8 +13,8 @@ import {
 	REMOTE_CONFIG_SESSION_BLOB_UPLOAD_METADATA_KEY,
 	readRemoteConfigSessionBlobUploadMetadata,
 	registerRemoteConfigSessionBlobUpload,
-} from "@cline/shared";
-import type { ClineCoreStartInput } from "../cline-core/types";
+} from "@agentario/shared";
+import type { AgentarioCoreStartInput } from "../agentario-core/types";
 import { createConfiguredTelemetryService } from "../services/telemetry";
 import type { CreateOpenTelemetryTelemetryServiceOptions } from "../services/telemetry/OpenTelemetryProvider";
 import type { SessionMessagesArtifactUploader } from "../types/session";
@@ -31,7 +31,7 @@ export interface PreparedRemoteConfigCoreIntegration {
 	prepared: PreparedRemoteConfigRuntime;
 	extensions: AgentExtension[];
 	telemetry?: ITelemetryService;
-	applyToStartSessionInput(input: ClineCoreStartInput): ClineCoreStartInput;
+	applyToStartSessionInput(input: AgentarioCoreStartInput): AgentarioCoreStartInput;
 	dispose(): Promise<void>;
 }
 
@@ -52,7 +52,7 @@ function createTelemetryService(
 	}
 
 	return createConfiguredTelemetryService(
-		createClineTelemetryServiceConfig(telemetryConfig),
+		createAgentarioTelemetryServiceConfig(telemetryConfig),
 	).telemetry;
 }
 
@@ -82,7 +82,7 @@ export async function prepareRemoteConfigCoreIntegration(
 		prepared,
 		extensions,
 		telemetry,
-		applyToStartSessionInput(input: ClineCoreStartInput): ClineCoreStartInput {
+		applyToStartSessionInput(input: AgentarioCoreStartInput): AgentarioCoreStartInput {
 			const existingExtensions = input.config.extensions ?? [];
 			const existingTelemetry = input.config.telemetry;
 			const sessionId = blobUploadMetadataTemplate

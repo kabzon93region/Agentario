@@ -70,7 +70,7 @@ export async function seedAgentarioDefaults(stateManager: StateManager): Promise
 		}
 	}
 
-	const toggles = { ...(stateManager.getGlobalSettingsKey("globalClineRulesToggles") ?? {}) }
+	const toggles = { ...(stateManager.getGlobalSettingsKey("globalAgentarioRulesToggles") ?? {}) }
 	const { toggles: cleanedToggles, changed: cleanupChanged } = cleanupLegacySystemPromptRuleToggles(rulesDir, toggles)
 	let changed = cleanupChanged
 
@@ -82,6 +82,6 @@ export async function seedAgentarioDefaults(stateManager: StateManager): Promise
 	}
 
 	if (changed) {
-		stateManager.setGlobalState("globalClineRulesToggles", cleanedToggles)
+		stateManager.setGlobalState("globalAgentarioRulesToggles", cleanedToggles)
 	}
 }

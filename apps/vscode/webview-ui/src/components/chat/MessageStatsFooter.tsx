@@ -1,8 +1,8 @@
-import type { ClineApiReqInfo } from "@shared/ExtensionMessage"
+﻿import type { AgentarioApiReqInfo } from "@shared/ExtensionMessage"
 import { formatMessageStatsLine } from "@shared/message-display"
 
 interface MessageStatsFooterProps {
-	stats?: ClineApiReqInfo
+	stats?: AgentarioApiReqInfo
 }
 
 const MessageStatsFooter: React.FC<MessageStatsFooterProps> = ({ stats }) => {
@@ -12,7 +12,7 @@ const MessageStatsFooter: React.FC<MessageStatsFooterProps> = ({ stats }) => {
 	}
 
 	return (
-		<div className="mt-1 select-text cursor-text text-[10px] leading-tight opacity-45 tabular-nums">{line}</div>
+		<div className="mt-1 select-text cursor-text text-[9px] leading-tight opacity-40 tabular-nums">{line}</div>
 	)
 }
 

@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, it } from "bun:test"
+﻿import { afterEach, beforeEach, describe, it } from "bun:test"
 import "should"
 import fs from "fs/promises"
 import path from "path"
 import sinon from "sinon"
-import { HookOutput } from "../../../shared/proto/cline/hooks"
+import { HookOutput } from "../../../shared/proto/agentario/hooks"
 import { HookFactory } from "../hook-factory"
 import { createHookTestEnv, HookTestEnv, stubHookDirs, withFixtureRunner, writeHookScriptForPlatform } from "./test-utils"
 

@@ -1,4 +1,4 @@
-import * as p from "@clack/prompts";
+﻿import * as p from "@clack/prompts";
 import {
 	ensureSchedulerHub,
 	type HubScheduleClient,
@@ -112,7 +112,7 @@ async function actionCreate(client: HubScheduleClient): Promise<void> {
 	}
 
 	const prompt = await p.text({
-		message: "What should Cline do?",
+		message: "What should Agentario do?",
 		placeholder: "Review open PRs and post summaries",
 		validate: (v) => {
 			if (!v?.trim()) return "Prompt is required";
@@ -389,7 +389,7 @@ export async function runScheduleWizard(): Promise<number> {
 	const s = p.spinner();
 	s.start("Connecting to hub server...");
 
-	const address = resolveAddress(process.env.CLINE_HUB_ADDRESS);
+	const address = resolveAddress(process.env.agentario_HUB_ADDRESS);
 	const ensured = await ensureSchedulerHub(address, process.cwd(), {
 		writeln: (text?: string) => {
 			process.stdout.write(`${text ?? ""}\n`);

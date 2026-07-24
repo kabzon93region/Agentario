@@ -1,4 +1,4 @@
-import { GrpcPostRecordHook, GrpcRequestFilter } from "@core/controller/grpc-recorder/types"
+﻿import { GrpcPostRecordHook, GrpcRequestFilter } from "@core/controller/grpc-recorder/types"
 import { Controller } from "@/core/controller"
 import { GrpcRecorder, GrpcRecorderNoops, IRecorder } from "@/core/controller/grpc-recorder/grpc-recorder"
 import { LogFileHandler, LogFileHandlerNoops } from "@/core/controller/grpc-recorder/log-file-handler"
@@ -90,7 +90,7 @@ function testFilters(): GrpcRequestFilter[] {
 	 */
 	return [
 		(req) => req.is_streaming,
-		(req) => ["cline.UiService", "cline.McpService", "cline.WebService"].includes(req.service),
+		(req) => ["agentario.UiService", "agentario.McpService", "agentario.WebService"].includes(req.service),
 		(req) =>
 			[
 				"refreshOpenRouterModels",

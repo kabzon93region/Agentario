@@ -1,7 +1,7 @@
-import type {
-	ClineAccountActionRequest,
+﻿import type {
+	AgentarioAccountActionRequest,
 	ProviderActionRequest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type {
 	ClineAccountBalance,
 	ClineAccountOrganization,
@@ -34,14 +34,14 @@ export interface ClineAccountOperations {
 	fetchFeaturebaseToken?(): Promise<FeaturebaseTokenResponse | undefined>;
 }
 
-export function isClineAccountActionRequest(
+export function isAgentarioAccountActionRequest(
 	request: ProviderActionRequest,
-): request is ClineAccountActionRequest {
+): request is AgentarioAccountActionRequest {
 	return request.action === "clineAccount";
 }
 
 export async function executeClineAccountAction(
-	request: ClineAccountActionRequest,
+	request: AgentarioAccountActionRequest,
 	service: ClineAccountOperations,
 ): Promise<unknown> {
 	switch (request.operation) {
@@ -178,7 +178,7 @@ export class RpcClineAccountService implements ClineAccountOperations {
 		});
 	}
 
-	private async request<T>(request: ClineAccountActionRequest): Promise<T> {
+	private async request<T>(request: AgentarioAccountActionRequest): Promise<T> {
 		const response = await this.executor.runProviderAction(request);
 		return response.result as T;
 	}

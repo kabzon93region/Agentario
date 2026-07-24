@@ -2,4 +2,9 @@
 "claude-dev": patch
 ---
 
-fix: use correct base URL for Vertex AI global endpoint with Claude models
+fix: авто-компаcontext — исправления сохранения настроек, обработки ошибок и устойчивости агента
+
+- `compactionReserveTokens` теперь сохраняется (добавлено proto-поле) и читается динамически из настроек при каждой проверке
+- Ошибки модели нормализуются корректно — `[object Object]` больше не появляется в чате (исправлены: runtime-нормализация, `SdkController.onSendError`, webview `ErrorRow` — извлечение message из вложенного объекта `AgentarioError._error`)
+- Агент продолжает работу при сбое суммаризации (пропускает компацию, работает с исходными сообщениями)
+- Суммаризация отправляется с непустым system prompt для совместимости с Qwen-подобными шаблонами

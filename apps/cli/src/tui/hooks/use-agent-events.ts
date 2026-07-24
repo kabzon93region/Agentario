@@ -1,10 +1,10 @@
-import type { AgentEvent, TeamEvent } from "@cline/core";
+﻿import type { AgentEvent, TeamEvent } from "@agentario/core";
 import { useCallback, useRef } from "react";
 import type {
 	PendingPromptSnapshot,
 	PendingPromptSubmittedEvent,
 } from "../../runtime/session-events";
-import { formatCliErrorMessage } from "../../utils/cline-pass-errors";
+import { formatCliErrorMessage } from "../../utils/agentario-pass-errors";
 import { resolveStatusNoticeLabel } from "../../utils/events";
 import {
 	formatToolInput,

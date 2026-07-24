@@ -8,8 +8,8 @@ import {
 	type AgentTool,
 	createContributionRegistry,
 	type Message,
-} from "@cline/shared";
-import { setHomeDir } from "@cline/shared/storage";
+} from "@agentario/shared";
+import { setHomeDir } from "@agentario/shared/storage";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserInstructionConfigService } from "../../extensions/config";
 import type { CoreSessionConfig } from "../../types/config";

@@ -23,7 +23,7 @@ import {
 	type TextContent,
 	type ToolResultContent,
 	validateAndReserveImageMedia,
-} from "@cline/shared";
+} from "@agentario/shared";
 
 export const DEFAULT_MAX_TOOL_RESULT_CHARS = 8_000;
 export const DEFAULT_MAX_FILE_CONTENT_CHARS = 50_000;
@@ -35,6 +35,10 @@ export const DEFAULT_MAX_TOTAL_TEXT_BYTES = 6_000_000;
 export const DEFAULT_MAX_ASSISTANT_TEXT_CHARS = 200_000;
 export const DEFAULT_MAX_ASSISTANT_TOOL_MARKUP_CHARS = 12_000;
 // Batch stale-read rewrites to avoid breaking provider prefix caches on every re-read.
+// Agentario: Smart Truncation — threshold for intelligent head+tail+summary truncation
+const SMART_TRUNCATION_THRESHOLD = 16_000; // chars — apply smart truncation above this
+const SMART_TRUNCATION_HEAD = 2_000;       // keep first N chars
+const SMART_TRUNCATION_TAIL = 1_000;       // keep last N chars
 // 64KB is roughly 8 provider-capped read results; set to 0 for eager rewriting.
 export const DEFAULT_MIN_OUTDATED_REWRITE_BYTES = 65_536;
 const MIN_TOTAL_BUDGET_TOOL_RESULT_BYTES = 2_000;
@@ -1065,15 +1069,15 @@ export class MessageBuilder {
 		content: ToolResultContent["content"],
 	): ToolResultContent["content"] {
 		if (typeof content === "string") {
-			return this.truncateMiddle(content);
+			return this.smartTruncateText(content);
 		}
 		return content.map((entry) => {
 			if (entry.type === "file") {
-				const next = this.truncateMiddle(entry.content);
+				const next = this.smartTruncateText(entry.content);
 				return next === entry.content ? entry : { ...entry, content: next };
 			}
 			if (entry.type === "text") {
-				const next = this.truncateMiddle(entry.text);
+				const next = this.smartTruncateText(entry.text);
 				return next === entry.text ? entry : { ...entry, text: next };
 			}
 			if (isStructuredToolResultEntry(entry)) {
@@ -1081,6 +1085,38 @@ export class MessageBuilder {
 			}
 			return entry;
 		});
+	}
+
+	/**
+	 * Agentario: Smart truncation — head + tail + summary hint.
+	 * For large text results (> SMART_TRUNCATION_THRESHOLD), keeps the beginning
+	 * and end of the text and inserts a summary with guidance on how to read
+	 * the missing content (start_line/end_line, semantic_search).
+	 * Falls back to standard truncateMiddle for smaller texts.
+	 */
+	private smartTruncateText(text: string): string {
+		if (text.length <= SMART_TRUNCATION_THRESHOLD) {
+			return this.truncateMiddle(text);
+		}
+
+		// Count lines for better hint
+		const totalLines = (text.match(/\n/g) || []).length + 1;
+		const head = text.slice(0, SMART_TRUNCATION_HEAD);
+		const tail = text.slice(-SMART_TRUNCATION_TAIL);
+		const skippedChars = text.length - SMART_TRUNCATION_HEAD - SMART_TRUNCATION_TAIL;
+		const skippedLines = Math.max(1, Math.round(totalLines * (skippedChars / text.length)));
+
+		const summary =
+			`\n\n[... пропущено ~${skippedLines} строк (~${skippedChars.toLocaleString()} символов). ` +
+			`Используйте start_line/end_line для чтения нужных секций, или semantic_search для поиска по смыслу. ...]\n\n`;
+
+		// If even head+tail+summary exceeds the limit, fall back to standard truncation
+		const smartResult = head + summary + tail;
+		if (smartResult.length > this.maxToolResultChars * 2) {
+			return this.truncateMiddle(text);
+		}
+
+		return smartResult;
 	}
 
 	/**

@@ -6,7 +6,7 @@ import { fileExistsAtPath, isDirectory } from "@utils/fs"
 import fs from "fs/promises"
 import os from "os"
 import * as path from "path"
-import { resolveClineDir } from "@cline/shared/storage"
+import { resolveClineDir } from "@agentario/shared/storage"
 import { HostProvider } from "@/hosts/host-provider"
 import { Logger } from "@/shared/services/Logger"
 import { getDocumentsPath } from "./documents-path"
@@ -20,6 +20,8 @@ export const GlobalFileNames = {
 	apiConversationHistory: "api_conversation_history.json",
 	contextHistory: "context_history.json",
 	uiMessages: "ui_messages.json",
+	/** Agentario: separate display messages file (full history, not compacted) */
+	displayMessages: "display_messages.json",
 	clineRecommendedModels: "cline_recommended_models.json",
 	openRouterModels: "openrouter_models.json",
 	vercelAiGatewayModels: "vercel_ai_gateway_models.json",
@@ -378,3 +380,35 @@ export async function getWorkspaceHooksDirs(): Promise<string[]> {
 		)
 	).filter((hookPath): hookPath is string => Boolean(hookPath))
 }
+
+// Agentario: Display messages storage (full history, not compacted)
+// Display messages are stored separately from SDK context messages.
+// After compaction, context messages are replaced with summary, but display
+// messages remain intact for the user to see the full chat history.
+
+/**
+ * Save display messages (full chat history) to a separate file.
+ * This preserves the full history even after context compaction.
+ */
+export async function saveDisplayMessages(taskId: string, messages: unknown[]): Promise<void> {
+	const filePath = path.join(await ensureTaskDirectoryExists(taskId), GlobalFileNames.displayMessages)
+	await fs.writeFile(filePath, JSON.stringify(messages), "utf8")
+}
+
+/**
+ * Load display messages from the separate display file.
+ * Returns undefined if no display file exists (first load falls back to SDK messages).
+ */
+export async function loadDisplayMessages(taskId: string): Promise<unknown[] | undefined> {
+	const filePath = path.join(await ensureTaskDirectoryExists(taskId), GlobalFileNames.displayMessages)
+	const fileExists = await fileExistsAtPath(filePath)
+	if (fileExists) {
+		try {
+			return JSON.parse(await fs.readFile(filePath, "utf8"))
+		} catch {
+			return undefined
+		}
+	}
+	return undefined
+}
+

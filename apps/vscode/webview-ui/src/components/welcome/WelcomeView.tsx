@@ -1,7 +1,7 @@
-import { BooleanRequest, EmptyRequest } from "@shared/proto/cline/common"
+﻿import { BooleanRequest, EmptyRequest } from "@shared/proto/agentario/common"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { memo, useEffect, useState } from "react"
-import ClineLogoWhite from "@/assets/ClineLogoWhite"
+import AgentarioLogoWhite from "@/assets/AgentarioLogoWhite"
 import ApiOptions from "@/components/settings/ApiOptions"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { t } from "@/i18n"
@@ -42,7 +42,7 @@ const WelcomeView = memo(() => {
 			<div className="h-full px-5 overflow-auto flex flex-col gap-2.5">
 				<h2 className="text-lg font-semibold">{t("welcome.greeting")}</h2>
 				<div className="flex justify-center my-5">
-					<ClineLogoWhite className="size-16" />
+					<AgentarioLogoWhite className="size-16" />
 				</div>
 				<p>{t("welcome.intro")}</p>
 

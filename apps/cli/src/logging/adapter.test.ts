@@ -1,4 +1,4 @@
-import {
+﻿import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
@@ -30,11 +30,11 @@ function withEnvSnapshot(): Record<
 	string | undefined
 > {
 	return {
-		CLINE_DATA_DIR: process.env.CLINE_DATA_DIR,
-		CLINE_LOG_PATH: process.env.CLINE_LOG_PATH,
-		CLINE_LOG_LEVEL: process.env.CLINE_LOG_LEVEL,
-		CLINE_LOG_NAME: process.env.CLINE_LOG_NAME,
-		CLINE_LOG_ENABLED: process.env.CLINE_LOG_ENABLED,
+		CLINE_DATA_DIR: process.env.agentario_DATA_DIR,
+		CLINE_LOG_PATH: process.env.agentario_LOG_PATH,
+		CLINE_LOG_LEVEL: process.env.agentario_LOG_LEVEL,
+		CLINE_LOG_NAME: process.env.agentario_LOG_NAME,
+		CLINE_LOG_ENABLED: process.env.agentario_LOG_ENABLED,
 	};
 }
 
@@ -62,11 +62,11 @@ describe("createCliLoggerAdapter", () => {
 	it("resolves default runtime config from data dir", () => {
 		const snapshot = withEnvSnapshot();
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-log-test-`));
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		try {
 			const adapter = createCliLoggerAdapter({ runtime: "cli" });
@@ -101,8 +101,8 @@ describe("createCliLoggerAdapter", () => {
 	it("maps core logger metadata with error payload", () => {
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-log-test-`));
 		const snapshot = withEnvSnapshot();
-		process.env.CLINE_DATA_DIR = dataDir;
-		process.env.CLINE_LOG_ENABLED = "0";
+		process.env.agentario_DATA_DIR = dataDir;
+		process.env.agentario_LOG_ENABLED = "0";
 		try {
 			const adapter = createCliLoggerAdapter({ runtime: "cli" });
 			expect(() => {
@@ -119,11 +119,11 @@ describe("createCliLoggerAdapter", () => {
 	it("writes process-level errors to the CLI log", () => {
 		const snapshot = withEnvSnapshot();
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-process-log-`));
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		try {
 			logCliProcessError(
@@ -145,11 +145,11 @@ describe("createCliLoggerAdapter", () => {
 		const snapshot = withEnvSnapshot();
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-log-test-`));
 		const logPath = join(dataDir, "logs", `${commandName}.log`);
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		try {
 			mkdirSync(dirname(logPath), { recursive: true });
@@ -169,11 +169,11 @@ describe("createCliLoggerAdapter", () => {
 		const unwritablePath = mkdtempSync(
 			join(tmpdir(), `${commandName}-log-dir-as-file-`),
 		);
-		delete process.env.CLINE_DATA_DIR;
-		process.env.CLINE_LOG_PATH = unwritablePath;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		delete process.env.agentario_DATA_DIR;
+		process.env.agentario_LOG_PATH = unwritablePath;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		const stderrWriteSpy = vi
 			.spyOn(process.stderr, "write")
@@ -194,11 +194,11 @@ describe("createCliLoggerAdapter", () => {
 		const unwritablePath = mkdtempSync(
 			join(tmpdir(), `${commandName}-log-dir-as-file-`),
 		);
-		delete process.env.CLINE_DATA_DIR;
-		process.env.CLINE_LOG_PATH = unwritablePath;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		delete process.env.agentario_DATA_DIR;
+		process.env.agentario_LOG_PATH = unwritablePath;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		const destinationSpy = vi.spyOn(pino, "destination");
 		const stderrWriteSpy = vi
@@ -223,11 +223,11 @@ describe("createCliLoggerAdapter", () => {
 	it("uses sync pino destination for cli runtime", () => {
 		const snapshot = withEnvSnapshot();
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-log-test-`));
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		const destinationSpy = vi.spyOn(pino, "destination");
 		try {
@@ -247,11 +247,11 @@ describe("createCliLoggerAdapter", () => {
 		const dataDir = mkdtempSync(
 			join(tmpdir(), `${commandName}-shutdown-test-`),
 		);
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		try {
 			const adapter = createCliLoggerAdapter({
@@ -273,11 +273,11 @@ describe("createCliLoggerAdapter", () => {
 	it("keeps normal logging behavior with explicit flush", () => {
 		const snapshot = withEnvSnapshot();
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-flush-test-`));
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		try {
 			const adapter = createCliLoggerAdapter({
@@ -297,11 +297,11 @@ describe("createCliLoggerAdapter", () => {
 	it("closes cli loggers cleanly during shutdown", async () => {
 		const snapshot = withEnvSnapshot();
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-close-test-`));
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		try {
 			const adapter = createCliLoggerAdapter({
@@ -322,11 +322,11 @@ describe("createCliLoggerAdapter", () => {
 	it("clears log cleanup timers during shutdown", () => {
 		const snapshot = withEnvSnapshot();
 		const dataDir = mkdtempSync(join(tmpdir(), `${commandName}-timer-test-`));
-		process.env.CLINE_DATA_DIR = dataDir;
-		delete process.env.CLINE_LOG_PATH;
-		delete process.env.CLINE_LOG_LEVEL;
-		delete process.env.CLINE_LOG_NAME;
-		delete process.env.CLINE_LOG_ENABLED;
+		process.env.agentario_DATA_DIR = dataDir;
+		delete process.env.agentario_LOG_PATH;
+		delete process.env.agentario_LOG_LEVEL;
+		delete process.env.agentario_LOG_NAME;
+		delete process.env.agentario_LOG_ENABLED;
 
 		const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
 		try {

@@ -1,5 +1,5 @@
-import { Empty, EmptyRequest } from "@shared/proto/cline/common"
-import { OpenRouterCompatibleModelInfo } from "@shared/proto/cline/models"
+﻿import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
+import { OpenRouterCompatibleModelInfo } from "@shared/proto/agentario/models"
 import { telemetryService } from "@/services/telemetry"
 import { Logger } from "@/shared/services/Logger"
 import { GlobalStateAndSettings } from "@/shared/storage/state-keys"

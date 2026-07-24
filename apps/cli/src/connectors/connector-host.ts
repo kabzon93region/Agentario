@@ -1,11 +1,11 @@
-import { readFileSync } from "node:fs";
+﻿import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import type {
 	ChatRunTurnRequest,
 	ChatStartSessionRequest,
 	HubSessionClient,
 	UserInstructionConfigService,
-} from "@cline/core";
+} from "@agentario/core";
 import type { SentMessage, Thread } from "chat";
 import type { CliLoggerAdapter } from "../logging/adapter";
 import { buildUserInputMessage, resolveSystemPrompt } from "../runtime/prompt";

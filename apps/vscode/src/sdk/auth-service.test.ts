@@ -1,4 +1,4 @@
-// Tests for the SDK-backed AuthService (Step 6: Auth & Account Flows)
+﻿// Tests for the SDK-backed AuthService (Step 6: Auth & Account Flows)
 //
 // These tests verify the auth service's core logic:
 // - Token persistence (read/write/clear from secrets)
@@ -8,7 +8,7 @@
 // - Streaming subscription management
 // - workos: prefix handling
 
-import { getValidClineCredentials, type OAuthCredentials } from "@cline/core"
+import { getValidClineCredentials, type OAuthCredentials } from "@agentario/core"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthService, type ClineAuthInfo, LogoutReason } from "./auth-service"
 
@@ -102,8 +102,8 @@ vi.mock("axios", () => ({
 
 const mockLoginClineOAuth = vi.hoisted(() => vi.fn())
 
-// Mock @cline/core OAuth functions
-vi.mock("@cline/core", () => ({
+// Mock @agentario/core OAuth functions
+vi.mock("@agentario/core", () => ({
 	createOAuthClientCallbacks: (opts: {
 		onOutput?: (message: string) => void
 		onPrompt: () => void

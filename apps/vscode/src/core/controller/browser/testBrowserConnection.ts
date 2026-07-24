@@ -1,7 +1,7 @@
-import { discoverChromeInstances } from "@services/browser/BrowserDiscovery"
+﻿import { discoverChromeInstances } from "@services/browser/BrowserDiscovery"
 import { BrowserSession } from "@services/browser/BrowserSession"
-import { BrowserConnection } from "@shared/proto/cline/browser"
-import { StringRequest } from "@shared/proto/cline/common"
+import { BrowserConnection } from "@shared/proto/agentario/browser"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { Controller } from "../index"
 
 /**

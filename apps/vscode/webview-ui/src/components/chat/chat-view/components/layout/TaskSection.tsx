@@ -1,11 +1,11 @@
-import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
-import { ClineMessage } from "@shared/ExtensionMessage"
+﻿import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import React from "react"
 import TaskHeader from "@/components/chat/task-header/TaskHeader"
 import { MessageHandlers } from "../../types/chatTypes"
 
 interface TaskSectionProps {
-	task: ClineMessage
+	task: AgentarioMessage
 	apiMetrics: {
 		totalTokensIn: number
 		totalTokensOut: number

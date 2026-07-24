@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+﻿import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, extname, join } from "node:path";
 import {
@@ -14,7 +14,7 @@ import {
 	resolvePluginConfigSearchPaths,
 	type SkillConfig,
 	type WorkflowConfig,
-} from "@cline/core";
+} from "@agentario/core";
 import { Command } from "commander";
 import { getToolCatalog } from "../runtime/tools";
 import { loadInteractiveConfigData } from "../tui/interactive-config";
@@ -26,8 +26,8 @@ type ConfigIo = {
 };
 
 function resolveCliAgentConfigSearchPaths(cwd: string): string[] {
-	const clineDir = process.env.CLINE_DIR?.trim() || join(homedir(), ".cline");
-	return [join(cwd, ".cline", "agents"), join(clineDir, "agents")];
+	const clineDir = process.env.AGENTARIO_DIR?.trim() || join(homedir(), ".agentario");
+	return [join(cwd, ".agentario", "agents"), join(clineDir, "agents")];
 }
 
 function createConfigUserInstructionService(cwd: string) {

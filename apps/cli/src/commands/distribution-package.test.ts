@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+﻿import { spawnSync } from "node:child_process";
 import {
 	chmod,
 	mkdir,
@@ -58,7 +58,7 @@ describe("CLI distribution package shape", () => {
 							postinstall: "node ./postinstall.mjs || true",
 						},
 						optionalDependencies: {
-							"@cline/cli-linux-x64": "1.2.3",
+							"@agentario/cli-linux-x64": "1.2.3",
 						},
 					},
 					null,

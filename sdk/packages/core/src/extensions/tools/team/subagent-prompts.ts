@@ -1,4 +1,4 @@
-import { buildClineSystemPrompt } from "@cline/shared";
+﻿import { buildAgentarioSystemPrompt } from "@agentario/shared";
 import type { DelegatedAgentRuntimeConfig } from "./delegated-agent";
 
 export function buildTeammateSystemPrompt(
@@ -10,7 +10,7 @@ export function buildTeammateSystemPrompt(
 		return trimmedPrompt;
 	}
 
-	return buildClineSystemPrompt({
+	return buildAgentarioSystemPrompt({
 		ide: config.clineIdeName?.trim() || "Terminal",
 		workspaceRoot: config.cwd?.trim() || "/",
 		providerId: config.providerId,
@@ -30,7 +30,7 @@ export function buildSubAgentSystemPrompt(
 		return trimmedPrompt;
 	}
 
-	return buildClineSystemPrompt({
+	return buildAgentarioSystemPrompt({
 		ide: config.clineIdeName || "Terminal",
 		workspaceRoot: config.cwd?.trim() || "/",
 		providerId: config.providerId,

@@ -1,4 +1,4 @@
-// Replaces classic src/services/account/ClineAccountService.ts (see origin/main)
+﻿// Replaces classic src/services/account/AgentarioAccountService.ts (see origin/main)
 //
 // SDK-backed account service. Handles credits, organizations, and user data
 // by making authenticated requests to the Cline API.
@@ -10,17 +10,17 @@ import type {
 	PaymentTransaction,
 	UsageTransaction,
 	UserResponse,
-} from "@shared/ClineAccount"
+} from "@shared/AgentarioAccount"
 import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios"
 import { ClineEnv } from "@/config"
 import { buildBasicClineHeaders } from "@/services/EnvUtils"
-import { CLINE_API_ENDPOINT } from "@/shared/cline/api"
+import { AGENTARIO_API_ENDPOINT } from "@/shared/agentario/api"
 import { getAxiosSettings } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"
 import { AuthService } from "./auth-service"
 
-export class ClineAccountService {
-	private static instance: ClineAccountService
+export class AgentarioAccountService {
+	private static instance: AgentarioAccountService
 	private _authService: AuthService
 
 	constructor() {
@@ -28,13 +28,13 @@ export class ClineAccountService {
 	}
 
 	/**
-	 * Returns the singleton instance of ClineAccountService
+	 * Returns the singleton instance of AgentarioAccountService
 	 */
-	public static getInstance(): ClineAccountService {
-		if (!ClineAccountService.instance) {
-			ClineAccountService.instance = new ClineAccountService()
+	public static getInstance(): AgentarioAccountService {
+		if (!AgentarioAccountService.instance) {
+			AgentarioAccountService.instance = new AgentarioAccountService()
 		}
-		return ClineAccountService.instance
+		return AgentarioAccountService.instance
 	}
 
 	/**
@@ -147,7 +147,7 @@ export class ClineAccountService {
 	 */
 	async fetchMe(): Promise<UserResponse | undefined> {
 		try {
-			const data = await this.authenticatedRequest<UserResponse>(CLINE_API_ENDPOINT.USER_INFO)
+			const data = await this.authenticatedRequest<UserResponse>(AGENTARIO_API_ENDPOINT.USER_INFO)
 			return data
 		} catch (error) {
 			Logger.error("Failed to fetch user data (RPC):", error)
@@ -231,7 +231,7 @@ export class ClineAccountService {
 	 */
 	async switchAccount(organizationId?: string): Promise<void> {
 		try {
-			await this.authenticatedRequest<string>(CLINE_API_ENDPOINT.ACTIVE_ACCOUNT, {
+			await this.authenticatedRequest<string>(AGENTARIO_API_ENDPOINT.ACTIVE_ACCOUNT, {
 				method: "PUT",
 				headers: {
 					"Content-Type": "application/json",

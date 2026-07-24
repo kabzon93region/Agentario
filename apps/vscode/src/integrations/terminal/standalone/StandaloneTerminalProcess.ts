@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StandaloneTerminalProcess - Manages command execution in standalone environments.
  *
  * This class handles subprocess management for terminal commands when running
@@ -125,7 +125,7 @@ export class StandaloneTerminalProcess extends EventEmitter<TerminalProcessEvent
 				this.childProcess = spawn("cmd.exe", shellArgs, { ...shellOptions, windowsHide: true })
 			} else {
 				// On Windows, detached:true without windowsHide:true allocates a new
-				// console for the child when the parent (cline-core launched by the
+				// console for the child when the parent (agentario-core launched by the
 				// IDE) has none, routing the child's stdio to that console instead
 				// of our pipes. Drop detached on win32 (tree-kill handles cleanup)
 				// and force windowsHide so the child stays attached to our pipes.

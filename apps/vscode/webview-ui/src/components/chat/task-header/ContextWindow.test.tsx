@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { ButtonHTMLAttributes, PropsWithChildren } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import ContextWindow from "./ContextWindow"
@@ -11,7 +11,7 @@ vi.mock("@/services/grpc-client", () => ({
 	},
 }))
 
-vi.mock("@shared/proto/cline/common", () => ({
+vi.mock("@shared/proto/agentario/common", () => ({
 	StringRequest: {
 		create: (request: unknown) => request,
 	},

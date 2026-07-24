@@ -1,5 +1,5 @@
-import type { ModelProfilePreset } from "@shared/model-profile-presets"
-import { UpdateSettingsRequest } from "@shared/proto/cline/state"
+﻿import type { ModelProfilePreset } from "@shared/model-profile-presets"
+import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { ChevronDownIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -14,7 +14,7 @@ async function persistModelProfilePresets(presets: ModelProfilePreset[], activeP
 	await StateServiceClient.updateSettings(
 		UpdateSettingsRequest.create({
 			modelProfilePresetsJson: JSON.stringify({ presets, activePresetId }),
-		}),
+		} as any),
 	)
 }
 
@@ -48,7 +48,7 @@ export const ModelPresetPickerModal = () => {
 		await StateServiceClient.updateSettings(
 			UpdateSettingsRequest.create({
 				applyModelProfilePresetId: presetId,
-			}),
+			} as any),
 		)
 		setIsVisible(false)
 	}

@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+﻿import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
@@ -10,8 +10,8 @@ import {
 	resolveProductionHubOwnerContext,
 	resolveSharedHubOwnerContext,
 	stopLocalHubServerGracefully,
-} from "@cline/core";
-import { formatUptime, resolveClineBuildEnv } from "@cline/shared";
+} from "@agentario/core";
+import { formatUptime, resolveClineBuildEnv } from "@agentario/shared";
 import { Command } from "commander";
 import open from "open";
 import { isProcessRunning } from "../connectors/common";

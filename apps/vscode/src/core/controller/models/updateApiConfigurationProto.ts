@@ -1,5 +1,5 @@
-import { Empty } from "@shared/proto/cline/common"
-import type { UpdateApiConfigurationRequest } from "@shared/proto/cline/models"
+﻿import { Empty } from "@shared/proto/agentario/common"
+import type { UpdateApiConfigurationRequest } from "@shared/proto/agentario/models"
 import { convertProtoToApiProvider } from "@shared/proto-conversions/models/api-configuration-conversion"
 import {
 	fromProtobufLiteLLMModelInfo,
@@ -10,7 +10,7 @@ import {
 import { OpenaiReasoningEffort } from "@shared/storage/types"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"
-import { clearOrganizationForClinePassProviderSelection } from "./handleClinePassProviderSelection"
+import { clearOrganizationForAgentarioPassProviderSelection } from "./handleAgentarioPassProviderSelection"
 import { normalizeProviderSwitchModel } from "./providerSwitchNormalization"
 import { createTaskApiModelShim, resolveActiveModelIdFromApiConfiguration } from "./taskApiModel"
 
@@ -49,11 +49,11 @@ export async function updateApiConfigurationProto(
 			planModeOpenRouterModelInfo: protoApiConfiguration.planModeOpenRouterModelInfo
 				? fromProtobufModelInfo(protoApiConfiguration.planModeOpenRouterModelInfo)
 				: undefined,
-			planModeClineModelInfo: protoApiConfiguration.planModeClineModelInfo
-				? fromProtobufModelInfo(protoApiConfiguration.planModeClineModelInfo)
+			planModeAgentarioModelInfo: protoApiConfiguration.planModeAgentarioModelInfo
+				? fromProtobufModelInfo(protoApiConfiguration.planModeAgentarioModelInfo)
 				: undefined,
-			planModeClinePassModelInfo: protoApiConfiguration.planModeClinePassModelInfo
-				? fromProtobufModelInfo(protoApiConfiguration.planModeClinePassModelInfo)
+			planModeAgentarioPassModelInfo: protoApiConfiguration.planModeAgentarioPassModelInfo
+				? fromProtobufModelInfo(protoApiConfiguration.planModeAgentarioPassModelInfo)
 				: undefined,
 			planModeOpenAiModelInfo: protoApiConfiguration.planModeOpenAiModelInfo
 				? fromProtobufOpenAiCompatibleModelInfo(protoApiConfiguration.planModeOpenAiModelInfo)
@@ -90,11 +90,11 @@ export async function updateApiConfigurationProto(
 			actModeOpenRouterModelInfo: protoApiConfiguration.actModeOpenRouterModelInfo
 				? fromProtobufModelInfo(protoApiConfiguration.actModeOpenRouterModelInfo)
 				: undefined,
-			actModeClineModelInfo: protoApiConfiguration.actModeClineModelInfo
-				? fromProtobufModelInfo(protoApiConfiguration.actModeClineModelInfo)
+			actModeAgentarioModelInfo: protoApiConfiguration.actModeAgentarioModelInfo
+				? fromProtobufModelInfo(protoApiConfiguration.actModeAgentarioModelInfo)
 				: undefined,
-			actModeClinePassModelInfo: protoApiConfiguration.actModeClinePassModelInfo
-				? fromProtobufModelInfo(protoApiConfiguration.actModeClinePassModelInfo)
+			actModeAgentarioPassModelInfo: protoApiConfiguration.actModeAgentarioPassModelInfo
+				? fromProtobufModelInfo(protoApiConfiguration.actModeAgentarioPassModelInfo)
 				: undefined,
 			actModeOpenAiModelInfo: protoApiConfiguration.actModeOpenAiModelInfo
 				? fromProtobufOpenAiCompatibleModelInfo(protoApiConfiguration.actModeOpenAiModelInfo)
@@ -141,7 +141,7 @@ export async function updateApiConfigurationProto(
 
 		// Update the API configuration in storage
 		controller.stateManager.setApiConfiguration(normalizedApiConfiguration)
-		await clearOrganizationForClinePassProviderSelection(controller, normalizedApiConfiguration)
+		await clearOrganizationForAgentarioPassProviderSelection(controller, normalizedApiConfiguration)
 
 		// Update the task's API handler if there's an active task
 		if (controller.task) {

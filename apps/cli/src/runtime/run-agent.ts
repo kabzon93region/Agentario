@@ -1,13 +1,13 @@
-import {
+﻿import {
 	type AgentEvent,
 	type AgentResult,
 	type ProviderSettings,
 	prewarmFileIndex,
 	SessionSource,
 	type UserInstructionConfigService,
-} from "@cline/core";
-import type { ConsecutiveMistakeLimitContext } from "@cline/shared";
-import { createSessionId } from "@cline/shared";
+} from "@agentario/core";
+import type { ConsecutiveMistakeLimitContext } from "@agentario/shared";
+import { createSessionId } from "@agentario/shared";
 import { logCliError } from "../logging/errors";
 import { createCliCore } from "../session/session";
 import { resolveClineWelcomeLine } from "../tui/interactive-welcome";
@@ -16,7 +16,7 @@ import {
 	requestToolApproval,
 	submitAndExitInTerminal,
 } from "../utils/approval";
-import { formatCliErrorMessage } from "../utils/cline-pass-errors";
+import { formatCliErrorMessage } from "../utils/agentario-pass-errors";
 import { handleEvent, handleTeamEvent } from "../utils/events";
 import {
 	shouldZeroClineFreeModelCost,
@@ -147,8 +147,8 @@ export async function runAgent(
 	if (config.verbose) {
 		const clineWelcomeLine = await resolveClineWelcomeLine({
 			config,
-			clineApiBaseUrl: options?.clineApiBaseUrl,
-			clineProviderSettings: options?.clineProviderSettings,
+			clineApiBaseUrl: options?.agentarioApiBaseUrl,
+			clineProviderSettings: options?.agentarioProviderSettings,
 		});
 		if (clineWelcomeLine && config.outputMode !== "json") {
 			writeln(clineWelcomeLine);

@@ -1,4 +1,4 @@
-import { ApiFormat } from "./proto/cline/models"
+﻿import { ApiFormat } from "./proto/agentario/models"
 import type { ApiHandlerSettings } from "./storage/state-keys"
 
 export type ApiProvider =
@@ -22,7 +22,7 @@ export type ApiProvider =
 	| "mistral"
 	| "vscode-lm"
 	| "cline"
-	| "cline-pass"
+	| "agentario-pass"
 	| "litellm"
 	| "moonshot"
 	| "nebius"
@@ -142,7 +142,7 @@ export const openRouterDefaultModelInfo: ModelInfo = {
 }
 
 export type ClinePassModelId = keyof typeof clinePassModels
-export const clinePassDefaultModelId = "cline-pass/glm-5.1"
+export const clinePassDefaultModelId = "agentario-pass/glm-5.1"
 export const clinePassModelInfoSaneDefaults: ModelInfo = {
 	maxTokens: 8_192,
 	contextWindow: 128_000,
@@ -156,8 +156,8 @@ export const clinePassModelInfoSaneDefaults: ModelInfo = {
 	description: "",
 }
 export const clinePassModels = {
-	"cline-pass/glm-5.1": {
-		name: "cline-pass/glm-5.1",
+	"agentario-pass/glm-5.1": {
+		name: "agentario-pass/glm-5.1",
 		maxTokens: 131_072,
 		contextWindow: 202_752,
 		supportsImages: false,
@@ -208,7 +208,7 @@ export const openAiModelInfoSafeDefaults: OpenAiCompatibleModelInfo = {
 // Uses OAuth authentication via ChatGPT, routes to chatgpt.com/backend-api/codex/responses
 // Subscription-based pricing (all costs are $0).
 //
-// The Codex catalog and default model id are sourced from the `@cline/llms`
+// The Codex catalog and default model id are sourced from the `@agentario/llms`
 // SDK.
 // Azure OpenAI
 // https://learn.microsoft.com/en-us/azure/ai-services/openai/api-version-deprecation

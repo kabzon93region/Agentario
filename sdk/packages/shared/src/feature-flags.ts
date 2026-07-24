@@ -1,6 +1,6 @@
-export const FeatureFlag = {
+﻿export const FeatureFlag = {
 	/** Enables ClinePass provider/model list exposure in supported clients. */
-	CLINE_PASS: "ext-cline-pass",
+	CLINE_PASS: "ext-agentario-pass",
 } as const;
 
 export type KnownFeatureFlag = (typeof FeatureFlag)[keyof typeof FeatureFlag];

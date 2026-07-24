@@ -1,4 +1,4 @@
-import type { ClineSubscriptionPlan } from "@cline/core";
+﻿import type { ClineSubscriptionPlan } from "@agentario/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -9,12 +9,12 @@ import {
 	getIndividualPlanFeatures,
 	isClineOrgIndividualInferenceSubscriptionErrorMessage,
 	isClinePassSubscriptionError,
-} from "../../utils/cline-pass-errors";
+} from "../../utils/agentario-pass-errors";
 import { getCliFeatureFlagsService } from "../../utils/feature-flags";
 import {
 	CLINE_CREDITS_DASHBOARD_URL,
 	isClineAccountCreditsErrorMessage,
-} from "../cline-account";
+} from "../agentario-account";
 import { useTerminalBackground } from "../hooks/use-terminal-background";
 import {
 	getDefaultForeground,
@@ -317,7 +317,7 @@ function ClineCreditsClinePassErrorView(props: { defaultFg?: string }) {
 
 function ClineCreditsErrorView(props: { defaultFg?: string }) {
 	const isClinePassEnabled =
-		getCliFeatureFlagsService().getBooleanFlagEnabled("ext-cline-pass");
+		getCliFeatureFlagsService().getBooleanFlagEnabled("ext-agentario-pass");
 
 	if (isClinePassEnabled) {
 		return <ClineCreditsClinePassErrorView defaultFg={props.defaultFg} />;

@@ -1,7 +1,7 @@
 import type {
 	GatewayProviderFactory,
 	GatewayProviderRegistration,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { BUILTIN_SPECS, type ProviderFamily, toManifest } from "./builtins";
 
 const FAMILY_FACTORY_PROMISES = new Map<

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+﻿import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import EntitlementError from "./EntitlementError"
 
@@ -6,7 +6,7 @@ const mockAuth: { clineUser: { appBaseUrl?: string } | null } = {
 	clineUser: null,
 }
 
-vi.mock("@/context/ClineAuthContext", () => ({
+vi.mock("@/context/AgentarioAuthContext", () => ({
 	useClineAuth: () => mockAuth,
 }))
 

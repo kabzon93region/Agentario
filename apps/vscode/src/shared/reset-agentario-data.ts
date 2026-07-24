@@ -1,12 +1,12 @@
-import * as fs from "node:fs/promises"
+﻿import * as fs from "node:fs/promises"
 import * as os from "node:os"
 import * as path from "node:path"
 import {
 	AGENTARIO_HOME_DIR_NAME,
 	LEGACY_CLINE_HOME_DIR_NAME,
-	resolveClineDataDir,
+	resolveAgentarioDataDir,
 	resolveProviderSettingsPath,
-} from "@cline/shared/storage"
+} from "@agentario/shared/storage"
 import { GLOBAL_RULES_EXCLUDED_FILENAMES } from "@/core/context/instructions/user-instructions/rule-helpers"
 import { ensureRulesDirectoryExists } from "@/core/storage/disk"
 import type { StateManager } from "@/core/storage/StateManager"
@@ -35,7 +35,7 @@ async function removeDirectoryContents(dirPath: string): Promise<void> {
 }
 
 function getIndexesRoots(): string[] {
-	const primary = path.join(resolveClineDataDir(), "indexes")
+	const primary = path.join(resolveAgentarioDataDir(), "indexes")
 	const candidates = [
 		primary,
 		path.join(os.homedir(), AGENTARIO_HOME_DIR_NAME, "data", "indexes"),
@@ -70,7 +70,7 @@ async function resetGlobalRuleToggles(stateManager: StateManager, rulesDir: stri
 	try {
 		entries = await fs.readdir(rulesDir, { withFileTypes: true })
 	} catch {
-		stateManager.setGlobalState("globalClineRulesToggles", toggles)
+		stateManager.setGlobalState("globalAgentarioRulesToggles", toggles)
 		return
 	}
 
@@ -84,12 +84,12 @@ async function resetGlobalRuleToggles(stateManager: StateManager, rulesDir: stri
 		toggles[path.normalize(path.join(rulesDir, entry.name))] = true
 	}
 
-	stateManager.setGlobalState("globalClineRulesToggles", toggles)
+	stateManager.setGlobalState("globalAgentarioRulesToggles", toggles)
 }
 
 /** Полный сброс данных Agentario: настройки, кеш, индекс, MCP, пресеты; пользовательские правила сохраняются. */
 export async function resetAgentarioData(stateManager: StateManager): Promise<void> {
-	const dataDir = resolveClineDataDir()
+	const dataDir = resolveAgentarioDataDir()
 
 	await resetGlobalState()
 	await resetWorkspaceState()
@@ -117,7 +117,7 @@ export async function resetAgentarioData(stateManager: StateManager): Promise<vo
 
 /** Путь к каталогу логов чатов (папки задач). */
 export async function resolveAgentarioChatLogsDirectory(): Promise<string> {
-	const dataDir = resolveClineDataDir()
+	const dataDir = resolveAgentarioDataDir()
 	const tasksDir = path.join(dataDir, "tasks")
 	await fs.mkdir(tasksDir, { recursive: true })
 	return tasksDir

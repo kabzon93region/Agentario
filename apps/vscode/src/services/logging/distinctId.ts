@@ -1,4 +1,4 @@
-import { machineId } from "node-machine-id"
+﻿import { machineId } from "node-machine-id"
 import { v4 as uuidv4 } from "uuid"
 import { HostRegistryInfo } from "@/registry"
 import { Logger } from "@/shared/services/Logger"
@@ -13,7 +13,7 @@ let _distinctId = ""
  * Some environments don't return a value for the machine ID. For these situations we generated
  * a unique ID and store it locally.
  */
-export const _GENERATED_MACHINE_ID_KEY = "cline.generatedMachineId"
+export const _GENERATED_MACHINE_ID_KEY = "agentario.generatedMachineId"
 
 export async function initializeDistinctId(storage: StorageContext, uuid: () => string = uuidv4) {
 	// Try to read the ID from storage.

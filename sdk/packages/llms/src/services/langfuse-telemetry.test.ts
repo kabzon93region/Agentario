@@ -16,7 +16,7 @@ class MockNodeTracerProvider {
 	register = vi.fn();
 }
 
-vi.mock("@cline/shared", () => ({
+vi.mock("@agentario/shared", () => ({
 	registerDisposable: registerDisposableSpy,
 }));
 

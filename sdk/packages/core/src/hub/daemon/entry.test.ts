@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+﻿import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -38,9 +38,9 @@ const {
 	})),
 }));
 
-vi.mock("@cline/shared", () => ({
+vi.mock("@agentario/shared", () => ({
 	initVcr: mockInitVcr,
-	resolveClineBuildEnv: () => "production",
+	resolveAgentarioBuildEnv: () => "production",
 }));
 
 vi.mock("../daemon/runtime-handlers", () => ({

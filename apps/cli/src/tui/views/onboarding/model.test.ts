@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
 	getMainMenuOptions,
 	getOAuthProviderLabel,
@@ -11,16 +11,16 @@ import {
 describe("onboarding model helpers", () => {
 	it("hides ClinePass from the main menu unless its feature flag is enabled", () => {
 		expect(
-			getMainMenuOptions().some((option) => option.value === "cline-pass"),
+			getMainMenuOptions().some((option) => option.value === "agentario-pass"),
 		).toBe(false);
 		expect(
 			getMainMenuOptions({ isClinePassEnabled: false }).some(
-				(option) => option.value === "cline-pass",
+				(option) => option.value === "agentario-pass",
 			),
 		).toBe(false);
 		expect(
 			getMainMenuOptions({ isClinePassEnabled: true }).some(
-				(option) => option.value === "cline-pass",
+				(option) => option.value === "agentario-pass",
 			),
 		).toBe(true);
 	});
@@ -130,14 +130,14 @@ describe("onboarding model helpers", () => {
 
 	it("formats OAuth provider labels for onboarding status views", () => {
 		expect(getOAuthProviderLabel("cline")).toBe("Cline");
-		expect(getOAuthProviderLabel("cline-pass")).toBe("ClinePass");
+		expect(getOAuthProviderLabel("agentario-pass")).toBe("ClinePass");
 		expect(getOAuthProviderLabel("openai-codex")).toBe("ChatGPT");
 		expect(getOAuthProviderLabel("oca")).toBe("oca");
 	});
 
 	it("uses the featured Cline model picker only for the Cline provider", () => {
 		expect(shouldUseFeaturedClineModelPicker("cline")).toBe(true);
-		expect(shouldUseFeaturedClineModelPicker("cline-pass")).toBe(false);
+		expect(shouldUseFeaturedClineModelPicker("agentario-pass")).toBe(false);
 		expect(shouldUseFeaturedClineModelPicker("anthropic")).toBe(false);
 	});
 });

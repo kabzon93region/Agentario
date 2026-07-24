@@ -1,43 +1,43 @@
-// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
+﻿// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
 //
-// Translates SDK session events into ClineMessage[] for webview consumption.
-// The webview expects ClineMessage objects with ask/say types; this module
+// Translates SDK session events into AgentarioMessage[] for webview consumption.
+// The webview expects AgentarioMessage objects with ask/say types; this module
 // maps SDK CoreSessionEvent and AgentEvent types to that format.
 //
 // Key mappings:
-// - SDK "chunk" event (agent stream) → ClineMessage say="text" with partial=true
-// - SDK "agent_event" content_start (text) → ClineMessage say="text" with partial=true
-// - SDK "agent_event" content_start (reasoning) → ClineMessage say="reasoning" with partial=true
-// - SDK "agent_event" content_start (tool) → ClineMessage say="tool" with partial=true
+// - SDK "chunk" event (agent stream) → AgentarioMessage say="text" with partial=true
+// - SDK "agent_event" content_start (text) → AgentarioMessage say="text" with partial=true
+// - SDK "agent_event" content_start (reasoning) → AgentarioMessage say="reasoning" with partial=true
+// - SDK "agent_event" content_start (tool) → AgentarioMessage say="tool" with partial=true
 //   IMPORTANT: The webview's ChatRow.tsx parses message.text as JSON when
-//   say==="tool", expecting ClineSayTool format: {tool, path, content, ...}.
+//   say==="tool", expecting AgentarioSayTool format: {tool, path, content, ...}.
 //   We must convert SDK tool names (read_files, editor, run_commands, etc.)
 //   and their inputs to this format.
-// - SDK "agent_event" content_start (tool: MCP) → ClineMessage say="use_mcp_server" with partial=true
+// - SDK "agent_event" content_start (tool: MCP) → AgentarioMessage say="use_mcp_server" with partial=true
 //   MCP tools use serverName__toolName naming convention. The webview renders
-//   MCP tool calls via say/ask="use_mcp_server" with ClineAskUseMcpServer JSON.
+//   MCP tool calls via say/ask="use_mcp_server" with AgentarioAskUseMcpServer JSON.
 // - SDK "agent_event" content_end (tool: MCP) → say="use_mcp_server" + say="mcp_server_response"
-// - SDK "agent_event" content_end → ClineMessage with partial=false
-// - SDK "agent_event" content_start (tool: attempt_completion) → ClineMessage say="completion_result"
-// - SDK "agent_event" content_end (tool: attempt_completion) → ClineMessage say="completion_result" (final)
-// - SDK "agent_event" done → ClineMessage ask="completion_result" (always; must be last message)
-// - SDK "agent_event" error → ClineMessage say="error"
-// - SDK "agent_event" usage → ClineMessage say="api_req_started" with ClineApiReqInfo JSON
+// - SDK "agent_event" content_end → AgentarioMessage with partial=false
+// - SDK "agent_event" content_start (tool: attempt_completion) → AgentarioMessage say="completion_result"
+// - SDK "agent_event" content_end (tool: attempt_completion) → AgentarioMessage say="completion_result" (final)
+// - SDK "agent_event" done → AgentarioMessage ask="completion_result" (always; must be last message)
+// - SDK "agent_event" error → AgentarioMessage say="error"
+// - SDK "agent_event" usage → AgentarioMessage say="api_req_started" with AgentarioApiReqInfo JSON
 // - SDK "ended" event → finalizes the session
 
-import type { CoreSessionEvent } from "@cline/core"
-import type { Message as SdkMessage } from "@cline/llms"
-import type { AgentEvent, ContextBudgetBreakdown } from "@cline/shared"
-import { CONTEXT_BUDGET_NOTICE_KIND } from "@cline/shared"
+import type { CoreSessionEvent } from "@agentario/core"
+import type { Message as SdkMessage } from "@agentario/llms"
+import type { AgentEvent, ContextBudgetBreakdown } from "@agentario/shared"
+import { CONTEXT_BUDGET_NOTICE_KIND } from "@agentario/shared"
 import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
 import type {
-	ClineApiReqInfo,
-	ClineAskUseMcpServer,
-	ClineAskUseSubagents,
-	ClineMessage,
-	ClineSay,
-	ClineSaySubagentStatus,
-	ClineSayTool,
+	AgentarioApiReqInfo,
+	AgentarioAskUseMcpServer,
+	AgentarioAskUseSubagents,
+	AgentarioMessage,
+	AgentarioSay,
+	AgentarioSaySubagentStatus,
+	AgentarioSayTool,
 	ClineSubagentUsageInfo,
 	SubagentStatusItem,
 } from "@shared/ExtensionMessage"
@@ -46,16 +46,80 @@ import { MessageIdMinter } from "./message-id-minter"
 import { isDeniedToolApprovalMistake, isKnownToolApprovalDenial } from "./tool-approval-denial"
 
 // ---------------------------------------------------------------------------
+// Error stringification helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Safely convert an unknown error value to a human-readable string.
+ * Handles Error objects, plain objects with `message` or `error.message`,
+ * and falls back to JSON.stringify / String() to avoid `[object Object]`.
+ */
+function safeStringifyError(value: unknown): string {
+	if (value === undefined || value === null) return ""
+	if (typeof value === "string") return value
+	if (value instanceof Error) return value.message
+	if (typeof value === "object") {
+		const obj = value as Record<string, unknown>
+		// { message: "..." }
+		if (typeof obj.message === "string") return obj.message
+		// { error: { message: "..." } }
+		const inner = obj.error
+		if (typeof inner === "string") return inner
+		if (typeof inner === "object" && inner !== null && typeof (inner as Record<string, unknown>).message === "string") {
+			return (inner as Record<string, unknown>).message as string
+		}
+		try {
+			return JSON.stringify(value)
+		} catch {
+			return String(value)
+		}
+	}
+	return String(value)
+}
+
+/**
+ * Guarantee a human-readable string from any error value.
+ * Wraps safeStringifyError but additionally ensures the result is never
+ * empty or `[object Object]` (which happens for plain objects whose
+ * toString() is the default Object.prototype.toString).
+ */
+function ensureErrorString(value: unknown): string {
+	if (value === undefined || value === null) return "Unknown error"
+	if (typeof value === "string") return value
+	if (value instanceof Error) return value.message
+
+	const result = safeStringifyError(value)
+	if (!result || result === "[object Object]") {
+		try {
+			return JSON.stringify(value)
+		} catch {
+			return String(value)
+		}
+	}
+	return result
+}
+
+/**
+ * Build a `{ message }` object suitable for `reshapeErrorForWebview` from
+ * any error shape — Error instances, plain objects, or raw strings.
+ * Guarantees the result has a non-empty `message` string.
+ */
+function normalizeErrorForReshape(value: unknown): { message: string } {
+	const message = ensureErrorString(value)
+	return { message: message || "Unknown error" }
+}
+
+// ---------------------------------------------------------------------------
 // Translation result
 // ---------------------------------------------------------------------------
 
 /**
- * Result of translating a single SDK event into ClineMessages.
+ * Result of translating a single SDK event into agentarioMessages.
  * May produce zero or more messages.
  */
 export interface TranslationResult {
 	/** Messages produced by this event */
-	messages: ClineMessage[]
+	messages: AgentarioMessage[]
 	/** Whether the session has ended */
 	sessionEnded: boolean
 	/** Whether the agent turn is complete */
@@ -71,6 +135,8 @@ export interface TranslationResult {
 		cacheWrites?: number
 		cacheReads?: number
 		totalCost?: number
+		/** Последний расчёт бюджета контекста (для сохранения в историю). */
+		contextBudget?: ContextBudgetBreakdown
 	}
 }
 
@@ -105,7 +171,7 @@ function normalizeUsageEvent(usageEvent: {
 function buildApiReqInfoFromUsage(
 	usageEvent: NormalizedUsage,
 	state: MessageTranslatorState,
-): ClineApiReqInfo {
+): AgentarioApiReqInfo {
 	const durationMs = state.getIterationDurationMs()
 	const generationDurationMs = state.getGenerationDurationMs()
 	const tokensOut = usageEvent.tokensOut ?? 0
@@ -453,8 +519,8 @@ export class MessageTranslatorState {
 		return this.spawnAgentStatusTs
 	}
 
-	/** Build a ClineSaySubagentStatus from the current entries */
-	buildSubagentStatus(overallStatus: ClineSaySubagentStatus["status"]): ClineSaySubagentStatus {
+	/** Build a AgentarioSaySubagentStatus from the current entries */
+	buildSubagentStatus(overallStatus: AgentarioSaySubagentStatus["status"]): AgentarioSaySubagentStatus {
 		const items = this.getSpawnAgentItems()
 		const completed = items.filter((e) => e.status === "completed" || e.status === "failed").length
 		const successes = items.filter((e) => e.status === "completed").length
@@ -511,15 +577,15 @@ export class MessageTranslatorState {
 }
 
 // ---------------------------------------------------------------------------
-// SDK tool name → classic ClineSayTool mapping
+// SDK tool name → classic AgentarioSayTool mapping
 // ---------------------------------------------------------------------------
 
 /**
- * Map an SDK tool name and its input to a ClineSayTool object that the
+ * Map an SDK tool name and its input to a AgentarioSayTool object that the
  * webview's ChatRow.tsx can render.
  *
- * The webview does `JSON.parse(message.text) as ClineSayTool` when
- * `say === "tool"`, so the text MUST be valid ClineSayTool JSON.
+ * The webview does `JSON.parse(message.text) as AgentarioSayTool` when
+ * `say === "tool"`, so the text MUST be valid AgentarioSayTool JSON.
  *
  * SDK tool names → classic tool names:
  *   read_files/read_file               → readFile
@@ -535,9 +601,9 @@ export class MessageTranslatorState {
  *   web_search                         → webSearch
  *   skills/use_skill                   → useSkill
  *   ask_question/ask_followup_question → (not a visual tool — handled by askQuestion executor in SdkController)
- *   MCP tools (serverName__toolName)   → (handled before reaching sdkToolToClineSayTool — emitted as say="use_mcp_server")
+ *   MCP tools (serverName__toolName)   → (handled before reaching sdkToolToAgentarioSayTool — emitted as say="use_mcp_server")
  */
-function sdkToolToClineSayTool(toolName: string, input?: unknown): ClineSayTool {
+function sdkToolToAgentarioSayTool(toolName: string, input?: unknown): AgentarioSayTool {
 	// Parse input if it's a string (some SDK tools pass stringified JSON)
 	const parsedInput = parseToolInput(input)
 
@@ -710,7 +776,7 @@ function sdkToolToClineSayTool(toolName: string, input?: unknown): ClineSayTool 
 				getStringField(parsedInput, "command") ??
 				""
 			return {
-				tool: toolName as ClineSayTool["tool"],
+				tool: toolName as AgentarioSayTool["tool"],
 				path: filePath,
 			}
 		}
@@ -887,13 +953,13 @@ function parseMcpToolName(toolName: string): { serverName: string; toolName: str
 }
 
 /**
- * Build a ClineAskUseMcpServer JSON payload for MCP tool calls.
+ * Build a AgentarioAskUseMcpServer JSON payload for MCP tool calls.
  * This is what the webview's ChatRow expects when rendering MCP tool calls
  * (message.ask === "use_mcp_server" or message.say === "use_mcp_server").
  */
 function buildMcpToolPayload(mcpInfo: { serverName: string; toolName: string }, input?: unknown): string {
 	const parsedInput = parseToolInput(input)
-	// Format arguments as a JSON string (matching classic ClineAskUseMcpServer.arguments)
+	// Format arguments as a JSON string (matching classic AgentarioAskUseMcpServer.arguments)
 	let argumentsStr: string | undefined
 	if (parsedInput && Object.keys(parsedInput).length > 0) {
 		argumentsStr = JSON.stringify(parsedInput, null, 2)
@@ -906,7 +972,7 @@ function buildMcpToolPayload(mcpInfo: { serverName: string; toolName: string }, 
 		serverName: mcpInfo.serverName,
 		toolName: mcpInfo.toolName,
 		arguments: argumentsStr,
-	} satisfies ClineAskUseMcpServer)
+	} satisfies AgentarioAskUseMcpServer)
 }
 
 function extractCommandText(input: unknown): string {
@@ -933,7 +999,7 @@ function extractCommandText(input: unknown): string {
  * can render specialized rows (MCP, commands, subagents) instead of a generic
  * tool approval with missing context.
  */
-export function buildToolApprovalAskMessage(toolName: string, input: unknown, ts: number): ClineMessage {
+export function buildToolApprovalAskMessage(toolName: string, input: unknown, ts: number): AgentarioMessage {
 	const mcpInfo = parseMcpToolName(toolName)
 	if (mcpInfo) {
 		return {
@@ -964,7 +1030,7 @@ export function buildToolApprovalAskMessage(toolName: string, input: unknown, ts
 			ask: "use_subagents",
 			text: JSON.stringify({
 				prompts: [taskPrompt],
-			} satisfies ClineAskUseSubagents),
+			} satisfies AgentarioAskUseSubagents),
 			partial: false,
 		}
 	}
@@ -973,7 +1039,7 @@ export function buildToolApprovalAskMessage(toolName: string, input: unknown, ts
 		ts,
 		type: "ask",
 		ask: "tool",
-		text: JSON.stringify(sdkToolToClineSayTool(toolName, input)),
+		text: JSON.stringify(sdkToolToAgentarioSayTool(toolName, input)),
 		partial: false,
 	}
 }
@@ -983,10 +1049,10 @@ export function buildToolApprovalAskMessage(toolName: string, input: unknown, ts
 // ---------------------------------------------------------------------------
 
 /**
- * Translate an SDK AgentEvent into ClineMessage(s).
+ * Translate an SDK AgentEvent into AgentarioMessage(s).
  */
-function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): ClineMessage[] {
-	const messages: ClineMessage[] = []
+function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): AgentarioMessage[] {
+	const messages: AgentarioMessage[] = []
 
 	switch (event.type) {
 		case "content_start": {
@@ -1101,13 +1167,13 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 
 						// Emit the combined prompts list (replaces itself on each new spawn_agent)
 						const allPrompts = state.getSpawnAgentItems().map((e) => e.prompt)
-						const approvalPayload: ClineAskUseSubagents = {
+						const approvalPayload: AgentarioAskUseSubagents = {
 							prompts: allPrompts,
 						}
 						messages.push({
 							ts: state.getSpawnAgentPromptsTs(),
 							type: "say",
-							say: "use_subagents" as ClineSay,
+							say: "use_subagents" as AgentarioSay,
 							text: JSON.stringify(approvalPayload),
 							partial: true,
 						})
@@ -1119,22 +1185,22 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 
 					// MCP tools use serverName__toolName naming convention.
 					// The webview renders MCP tool calls via say/ask="use_mcp_server"
-					// with ClineAskUseMcpServer JSON, not generic say="tool".
+					// with AgentarioAskUseMcpServer JSON, not generic say="tool".
 					const mcpInfo = parseMcpToolName(toolName)
 					if (mcpInfo) {
 						const mcpPayload = buildMcpToolPayload(mcpInfo, input)
 						messages.push({
 							ts: state.getStreamingToolTs(),
 							type: "say",
-							say: "use_mcp_server" as ClineSay,
+							say: "use_mcp_server" as AgentarioSay,
 							text: mcpPayload,
 							partial: true,
 						})
 						break
 					}
 
-					// All other tools → say="tool" with ClineSayTool JSON
-					const sayTool = sdkToolToClineSayTool(toolName, input)
+					// All other tools → say="tool" with AgentarioSayTool JSON
+					const sayTool = sdkToolToAgentarioSayTool(toolName, input)
 					messages.push({
 						ts: state.getStreamingToolTs(),
 						type: "say",
@@ -1152,7 +1218,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 			// spawn_agent progress updates → emit say:"subagent" with live stats.
 			// The SDK's spawn_agent tool may emit content_update events with
 			// sub-agent progress (iterations, tool calls, usage). We translate
-			// these into the ClineSaySubagentStatus format for the rich UI.
+			// these into the AgentarioSaySubagentStatus format for the rich UI.
 			const updateToolName = event.toolName ?? state.getStreamingToolName()
 			if (updateToolName === "spawn_agent" && state.hasSpawnAgents()) {
 				const callId = event.toolCallId ?? ""
@@ -1177,7 +1243,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 				messages.push({
 					ts: state.getSpawnAgentStatusTs(),
 					type: "say",
-					say: "subagent" as ClineSay,
+					say: "subagent" as AgentarioSay,
 					text: JSON.stringify(status),
 					partial: true,
 				})
@@ -1260,7 +1326,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 						const items = state.getSpawnAgentItems()
 						const allDone = items.every((e) => e.status === "completed" || e.status === "failed")
 						const hasFailed = items.some((e) => e.status === "failed")
-						const overallStatus: ClineSaySubagentStatus["status"] = allDone
+						const overallStatus: AgentarioSaySubagentStatus["status"] = allDone
 							? hasFailed
 								? "failed"
 								: "completed"
@@ -1270,7 +1336,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 						messages.push({
 							ts: state.getSpawnAgentStatusTs(),
 							type: "say",
-							say: "subagent" as ClineSay,
+							say: "subagent" as AgentarioSay,
 							text: JSON.stringify(status),
 							partial: !allDone,
 						})
@@ -1288,7 +1354,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 							messages.push({
 								ts: state.nextTs(),
 								type: "say",
-								say: "subagent_usage" as ClineSay,
+								say: "subagent_usage" as AgentarioSay,
 								text: JSON.stringify(usagePayload),
 								partial: false,
 							})
@@ -1330,7 +1396,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 					if (toolName === "run_commands" || toolName === "execute_command") {
 						const storedInput = state.getStreamingToolInput()
 						const commandText = extractCommandText(storedInput)
-						const outputStr = event.error ? `Error: ${event.error}` : extractToolOutputText(event.output)
+						const outputStr = event.error ? `Error: ${safeStringifyError(event.error)}` : extractToolOutputText(event.output)
 						const ts = state.clearStreamingTool()
 						messages.push({
 							ts,
@@ -1360,18 +1426,18 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 						messages.push({
 							ts: mcpTs,
 							type: "say",
-							say: "use_mcp_server" as ClineSay,
+							say: "use_mcp_server" as AgentarioSay,
 							text: mcpPayload,
 							partial: false,
 						})
 
 						// Emit the MCP server response with the tool output
-						const mcpOutputStr = event.error ? `Error: ${event.error}` : extractToolOutputText(event.output)
+						const mcpOutputStr = event.error ? `Error: ${safeStringifyError(event.error)}` : extractToolOutputText(event.output)
 						if (mcpOutputStr) {
 							messages.push({
 								ts: state.nextTs(),
 								type: "say",
-								say: "mcp_server_response" as ClineSay,
+								say: "mcp_server_response" as AgentarioSay,
 								text: mcpOutputStr,
 								partial: false,
 							})
@@ -1400,7 +1466,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 									text: JSON.stringify({
 										tool: "readFile",
 										path: filePath,
-									} satisfies ClineSayTool),
+									} satisfies AgentarioSayTool),
 									partial: false,
 								})
 							})
@@ -1408,7 +1474,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 						}
 					}
 
-					const sayTool = sdkToolToClineSayTool(toolName, storedInput)
+					const sayTool = sdkToolToAgentarioSayTool(toolName, storedInput)
 					// If there's an error, include it in the tool message
 					if (event.error) {
 						messages.push({
@@ -1419,11 +1485,13 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 							partial: false,
 						})
 						// Also push an error message
+						const errorText = ensureErrorString(event.error)
+						Logger.log(`[MessageTranslator] Tool error for ${toolName}: type=${typeof event.error}, text=${errorText.substring(0, 200)}`)
 						messages.push({
 							ts: state.nextTs(),
 							type: "say",
 							say: "error",
-							text: event.error,
+							text: errorText,
 							partial: false,
 						})
 					} else {
@@ -1454,7 +1522,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 				say: "api_req_started",
 				text: JSON.stringify({
 					request: undefined, // Will be filled in by usage event
-				} satisfies ClineApiReqInfo),
+				} satisfies AgentarioApiReqInfo),
 				partial: false,
 			})
 			break
@@ -1474,6 +1542,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 			if (isContextBudgetNotice && event.metadata) {
 				const budget = parseContextBudgetMetadata(event.metadata)
 				if (budget) {
+					Logger.log(`[MessageTranslator] Context budget received: system=${budget.categories.system}, rules=${budget.categories.rules}, tools=${budget.categories.tools}, chat=${budget.categories.chat}, total=${budget.totalEstimated}`)
 					state.setPendingContextBudget(budget)
 					messages.push({
 						ts: state.nextTs(),
@@ -1482,6 +1551,8 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 						text: JSON.stringify({ contextBudget: budget }),
 						partial: false,
 					})
+				} else {
+					Logger.warn("[MessageTranslator] Context budget notice received but parsing failed", event.metadata)
 				}
 				break
 			}
@@ -1498,7 +1569,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 
 		case "usage": {
 			// Usage events carry token counts. The webview reads them from an
-			// api_req_started message's ClineApiReqInfo, so emit a follow-up
+			// api_req_started message's AgentarioApiReqInfo, so emit a follow-up
 			// api_req_started update carrying the usage data for cost display.
 			const usageEvent = normalizeUsageEvent(event)
 			const apiReqInfo = buildApiReqInfoFromUsage(usageEvent, state)
@@ -1525,18 +1596,21 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 			if (state.isSuppressedToolApprovalDenial(event.error)) {
 				break
 			}
-
-			// Serialize the error message for the webview's ErrorRow to parse.
-			// The webview uses ClineError.parse() on the `api_req_failed` text to
+		
+			// Log the raw error shape for diagnostics
+			Logger.log(`[MessageTranslator] Error event: type=${typeof event.error}, isError=${event.error instanceof Error}, value=${ensureErrorString(event.error).substring(0, 300)}`)
+		
+			// Serialize the error-message for the webview's ErrorRow to parse.
+			// The webview uses AgentarioError.parse() on the `api_req_failed` text to
 			// detect special error types (insufficient credits, spend limit, auth,
 			// quota exceeded) and render appropriate UI (e.g. "Add Credits" button).
 			//
 			// The error object from the SDK is a standard JS Error. Its `message`
 			// may contain JSON from the API (e.g. Cline provider's 402 response with
 			// `code: "insufficient_credits"`). We try to reshape it into the
-			// ClineError-serialized format the webview expects so that ErrorRow
+			// AgentarioError-serialized format the webview expects so that ErrorRow
 			// can render the correct UI (Buy Credits button, etc.).
-			const errorPayload = reshapeErrorForWebview(event.error, state.activeProviderId())
+			const errorPayload = reshapeErrorForWebview(normalizeErrorForReshape(event.error), state.activeProviderId())
 
 			// Emit an api_req_started with streamingFailedMessage so the
 			// RequestStartRow renders the error via ErrorRow. This replaces
@@ -1547,7 +1621,7 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 				say: "api_req_started",
 				text: JSON.stringify({
 					streamingFailedMessage: errorPayload,
-				} satisfies ClineApiReqInfo),
+				} satisfies AgentarioApiReqInfo),
 				partial: false,
 			})
 
@@ -1608,7 +1682,7 @@ export function translateSessionEvent(event: CoreSessionEvent, state: MessageTra
 		}
 
 		case "agent_event": {
-			// Sub-agent events should NOT produce ClineMessages in the main chat.
+			// Sub-agent events should NOT produce agentarioMessages in the main chat.
 			// The sub-agent's work is represented by the parent's spawn_agent tool
 			// events (content_start/update/end), which we translate into the rich
 			// SubagentStatusRow UI. Without this filter, every sub-agent tool call,
@@ -1656,7 +1730,11 @@ export function translateSessionEvent(event: CoreSessionEvent, state: MessageTra
 
 			// Extract usage from usage events
 			if (agentEvent.type === "usage") {
-				result.usage = normalizeUsageEvent(agentEvent)
+				result.usage = {
+					...normalizeUsageEvent(agentEvent),
+					// Передаём последний известный context budget для сохранения в историю
+					contextBudget: state.getPendingContextBudget(),
+				}
 			}
 			break
 		}
@@ -1684,7 +1762,7 @@ export function translateSessionEvent(event: CoreSessionEvent, state: MessageTra
 				result.messages.push({
 					ts: state.nextTs(),
 					type: "say",
-					say: "hook_status" as ClineSay,
+					say: "hook_status" as AgentarioSay,
 					text: toolName ? `Running ${toolName}...` : "Running tool...",
 					partial: false,
 				})
@@ -1692,7 +1770,7 @@ export function translateSessionEvent(event: CoreSessionEvent, state: MessageTra
 				result.messages.push({
 					ts: state.nextTs(),
 					type: "say",
-					say: "hook_status" as ClineSay,
+					say: "hook_status" as AgentarioSay,
 					text: toolName ? `${toolName} completed` : "Tool completed",
 					partial: false,
 				})
@@ -1728,7 +1806,7 @@ export function translateSessionEvent(event: CoreSessionEvent, state: MessageTra
 		case "team_progress":
 		case "pending_prompts": {
 			// These are handled by the team/subagent system, not translated
-			// to ClineMessages at this layer
+			// to agentarioMessages at this layer
 			break
 		}
 
@@ -1773,7 +1851,7 @@ function textContentBlocksToText(content: SdkMessage["content"]): string {
 	return text.join("\n").trim()
 }
 
-function agentEventToMessages(event: AgentEvent, state: MessageTranslatorState): ClineMessage[] {
+function agentEventToMessages(event: AgentEvent, state: MessageTranslatorState): AgentarioMessage[] {
 	return translateSessionEvent(
 		{
 			type: "agent_event",
@@ -1787,7 +1865,7 @@ function agentEventToMessages(event: AgentEvent, state: MessageTranslatorState):
 }
 
 function appendPersistedMetricsMessage(
-	clineMessages: ClineMessage[],
+	agentarioMessages: AgentarioMessage[],
 	message: SdkMessageWithMetrics,
 	state: MessageTranslatorState,
 ): void {
@@ -1813,7 +1891,7 @@ function appendPersistedMetricsMessage(
 		return
 	}
 
-	clineMessages.push({
+	agentarioMessages.push({
 		ts: state.nextTs(),
 		type: "say",
 		say: "api_req_started",
@@ -1827,10 +1905,10 @@ function finalizePersistedToolUse(
 	state: MessageTranslatorState,
 	output?: unknown,
 	isError?: boolean,
-): ClineMessage[] {
+): AgentarioMessage[] {
 	// Reuse the same content_start → content_end path as live SDK events. The
 	// start event seeds MessageTranslatorState with the tool input; the end event
-	// produces the final non-partial ClineMessage shape the webview expects.
+	// produces the final non-partial AgentarioMessage shape the webview expects.
 	agentEventToMessages(
 		{
 			type: "content_start",
@@ -1856,12 +1934,12 @@ function finalizePersistedToolUse(
 }
 
 /**
- * Convert SDK-persisted LLM messages back into the ClineMessage format used by
+ * Convert SDK-persisted LLM messages back into the AgentarioMessage format used by
  * the webview. Keep this in the live message translator so history rendering
  * and streaming rendering share the same SDK tool → Cline UI mapping.
  */
-export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], minter?: MessageIdMinter): ClineMessage[] {
-	const clineMessages: ClineMessage[] = []
+export function sdkMessagesToagentarioMessages(messages: SdkMessageWithMetrics[], minter?: MessageIdMinter): AgentarioMessage[] {
+	const agentarioMessages: AgentarioMessage[] = []
 	// Use the process-wide minter when provided so regenerated history ids are globally unique
 	// and never overlap live-session ids. Falls back to a private minter for standalone tests.
 	const state = new MessageTranslatorState(minter)
@@ -1869,7 +1947,7 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 
 	const flushUnmatchedToolUses = () => {
 		for (const toolUse of pendingToolUses.values()) {
-			clineMessages.push(...finalizePersistedToolUse(toolUse, state))
+			agentarioMessages.push(...finalizePersistedToolUse(toolUse, state))
 		}
 		pendingToolUses.clear()
 	}
@@ -1881,11 +1959,11 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 			if (typeof message.content === "string") {
 				const text = message.content.trim()
 				if (text) {
-					clineMessages.push(
+					agentarioMessages.push(
 						...agentEventToMessages({ type: "content_end", contentType: "text", text } as AgentEvent, state),
 					)
 				}
-				appendPersistedMetricsMessage(clineMessages, message, state)
+				appendPersistedMetricsMessage(agentarioMessages, message, state)
 				continue
 			}
 
@@ -1893,7 +1971,7 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 				switch (block.type) {
 					case "text":
 						if (block.text.trim()) {
-							clineMessages.push(
+							agentarioMessages.push(
 								...agentEventToMessages(
 									{
 										type: "content_end",
@@ -1907,7 +1985,7 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 						break
 					case "thinking":
 						if (block.thinking.trim()) {
-							clineMessages.push(
+							agentarioMessages.push(
 								...agentEventToMessages(
 									{
 										type: "content_end",
@@ -1924,17 +2002,17 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 						break
 				}
 			}
-			appendPersistedMetricsMessage(clineMessages, message, state)
+			appendPersistedMetricsMessage(agentarioMessages, message, state)
 			continue
 		}
 
 		if (typeof message.content === "string") {
 			const text = message.content.trim()
 			if (text) {
-				clineMessages.push({
+				agentarioMessages.push({
 					ts: state.nextTs(),
 					type: "say",
-					say: clineMessages.length === 0 ? "task" : "user_feedback",
+					say: agentarioMessages.length === 0 ? "task" : "user_feedback",
 					text,
 					partial: false,
 				})
@@ -1944,10 +2022,10 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 
 		const userText = textContentBlocksToText(message.content)
 		if (userText) {
-			clineMessages.push({
+			agentarioMessages.push({
 				ts: state.nextTs(),
 				type: "say",
-				say: clineMessages.length === 0 ? "task" : "user_feedback",
+				say: agentarioMessages.length === 0 ? "task" : "user_feedback",
 				text: userText,
 				partial: false,
 			})
@@ -1964,7 +2042,7 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 			}
 
 			pendingToolUses.delete(block.tool_use_id)
-			clineMessages.push(...finalizePersistedToolUse(toolUse, state, block.content, block.is_error))
+			agentarioMessages.push(...finalizePersistedToolUse(toolUse, state, block.content, block.is_error))
 		}
 	}
 
@@ -1974,7 +2052,7 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 	// the last raw message to determine UI state. If the usage
 	// event is last, the webview shows "Thinking..." instead of
 	// the completion UI
-	clineMessages.push({
+	agentarioMessages.push({
 		ts: state.nextTs(),
 		type: "ask",
 		ask: "completion_result",
@@ -1983,7 +2061,7 @@ export function sdkMessagesToClineMessages(messages: SdkMessageWithMetrics[], mi
 	})
 
 	flushUnmatchedToolUses()
-	return clineMessages
+	return agentarioMessages
 }
 
 // ---------------------------------------------------------------------------
@@ -2048,7 +2126,7 @@ function describeModelNotFoundError(rawMessage: string): string | undefined {
 }
 
 /**
- * Reshape an SDK error into the serialized ClineError JSON the webview's
+ * Reshape an SDK error into the serialized AgentarioError JSON the webview's
  * ErrorRow expects (`code`, `providerId`, `details`), extracting structured
  * info from the error message when present and falling back to raw text.
  */
@@ -2081,7 +2159,7 @@ export function reshapeErrorForWebview(
 		// and delivers only a human-readable string such as
 		// "Not enough credits available" or "Your daily spend limit of $20.00
 		// has been reached." Detect these by keyword and synthesize the
-		// ClineError-compatible JSON the webview expects.
+		// AgentarioError-compatible JSON the webview expects.
 		const lower = rawMessage.toLowerCase()
 		if (
 			lower.includes("insufficient_credits") ||
@@ -2123,7 +2201,7 @@ export function reshapeErrorForWebview(
 	}
 
 	// Detect insufficient credits (402) — needs code + current_balance for
-	// ClineError.getErrorType() to return ClineErrorType.Balance
+	// AgentarioError.getErrorType() to return AgentarioErrorType.Balance
 	const code = (parsed.code as string) ?? error.code
 	if (code === "insufficient_credits" && typeof parsed.current_balance === "number") {
 		return JSON.stringify({
@@ -2159,6 +2237,6 @@ export function reshapeErrorForWebview(
 	}
 
 	// For other structured errors, pass through the parsed JSON so
-	// ClineError.parse() can still extract what it can.
+	// AgentarioError.parse() can still extract what it can.
 	return JSON.stringify(parsed)
 }

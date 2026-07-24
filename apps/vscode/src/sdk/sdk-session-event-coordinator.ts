@@ -1,8 +1,8 @@
-import type { CoreSessionEvent } from "@cline/core"
-import { refreshClineRecommendedModels } from "@/core/controller/models/refreshClineRecommendedModels"
+﻿import type { CoreSessionEvent } from "@agentario/core"
+import { refreshAgentarioRecommendedModels } from "@/core/controller/models/refreshAgentarioRecommendedModels"
 import type { StateManager } from "@/core/storage/StateManager"
-import { CLINE_RECOMMENDED_MODELS_FALLBACK } from "@/shared/cline/recommended-models"
-import type { ClineApiReqInfo, TurnPhase } from "@/shared/ExtensionMessage"
+import { AGENTARIO_RECOMMENDED_MODELS_FALLBACK } from "@/shared/agentario/recommended-models"
+import type { AgentarioApiReqInfo, TurnPhase } from "@/shared/ExtensionMessage"
 import { Logger } from "@/shared/services/Logger"
 import type { MessageTranslatorState, TranslationResult } from "./message-translator"
 import { translateSessionEvent } from "./message-translator"
@@ -154,7 +154,7 @@ export class SdkSessionEventCoordinator {
 				return false
 			}
 			try {
-				const info = JSON.parse(message.text) as ClineApiReqInfo
+				const info = JSON.parse(message.text) as AgentarioApiReqInfo
 				return typeof info.cost === "number" && info.cost !== 0
 			} catch {
 				return false
@@ -179,13 +179,13 @@ export class SdkSessionEventCoordinator {
 					return message
 				}
 				try {
-					const info = JSON.parse(message.text) as ClineApiReqInfo
+					const info = JSON.parse(message.text) as AgentarioApiReqInfo
 					if (typeof info.cost !== "number") {
 						return message
 					}
 					return {
 						...message,
-						text: JSON.stringify({ ...info, cost: 0 } satisfies ClineApiReqInfo),
+						text: JSON.stringify({ ...info, cost: 0 } satisfies AgentarioApiReqInfo),
 					}
 				} catch {
 					return message
@@ -218,10 +218,10 @@ export class SdkSessionEventCoordinator {
 			}
 
 			const normalizedModelId = normalizeModelId(modelId)
-			const models = await refreshClineRecommendedModels()
+			const models = await refreshAgentarioRecommendedModels()
 			const freeIds = models.free.map((model) => normalizeModelId(model.id)).filter(Boolean)
 			const resolvedFreeIds =
-				freeIds.length > 0 ? freeIds : CLINE_RECOMMENDED_MODELS_FALLBACK.free.map((model) => normalizeModelId(model.id))
+				freeIds.length > 0 ? freeIds : AGENTARIO_RECOMMENDED_MODELS_FALLBACK.free.map((model) => normalizeModelId(model.id))
 			return resolvedFreeIds.includes(normalizedModelId)
 		} catch (error) {
 			Logger.error("[SdkController] Failed to check Cline free model list:", error)
@@ -229,7 +229,7 @@ export class SdkSessionEventCoordinator {
 			if (!modelId) {
 				return false
 			}
-			const fallbackFreeIds = CLINE_RECOMMENDED_MODELS_FALLBACK.free.map((model) => normalizeModelId(model.id))
+			const fallbackFreeIds = AGENTARIO_RECOMMENDED_MODELS_FALLBACK.free.map((model) => normalizeModelId(model.id))
 			return fallbackFreeIds.includes(normalizeModelId(modelId))
 		}
 	}

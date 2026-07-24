@@ -1,5 +1,5 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { formatCliErrorMessage } from "../../utils/cline-pass-errors";
+﻿import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { formatCliErrorMessage } from "../../utils/agentario-pass-errors";
 import { shouldShowCliUsageCost } from "../../utils/usage-cost-display";
 import type { SlashCommandRegistry } from "../commands/slash-command-registry";
 import {

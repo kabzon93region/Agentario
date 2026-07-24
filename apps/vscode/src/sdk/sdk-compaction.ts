@@ -11,8 +11,8 @@
 // compaction effect in the SDK (rather than asking the model to "summarize the
 // conversation") is what makes the compact button real instead of improvised.
 
-import { type CoreSessionConfig, createContextCompactionPrepareTurn } from "@cline/core"
-import type { Message as SdkMessage, ModelInfo as SdkModelInfo } from "@cline/llms"
+import { type CoreSessionConfig, createContextCompactionPrepareTurn } from "@agentario/core"
+import type { Message as SdkMessage, ModelInfo as SdkModelInfo } from "@agentario/llms"
 import { Logger } from "@/shared/services/Logger"
 
 // When the active model does not declare a context window, fall back to a
@@ -30,6 +30,10 @@ export interface CompactSessionMessagesInput {
 	sessionId: string
 	/** The conversation transcript to compact (SDK message shape). */
 	messages: SdkMessage[]
+	/** Agentario: compaction mode - "context" uses previous summary, "full" re-summarizes all */
+	compactionMode?: "context" | "full"
+	/** Agentario: callback for status updates in UI */
+	statusCallback?: (message: string) => void
 }
 
 export interface CompactSessionMessagesResult {
@@ -48,12 +52,17 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 		return { compacted: false, messages: input.messages }
 	}
 
+	// Agentario: логируем входные параметры
+	Logger.info(`[SdkCompaction] input: messages.length=${input.messages.length}, providerId=${input.config.providerId}, modelId=${input.config.modelId}`)
+	Logger.info(`[SdkCompaction] compaction config: enabled=${input.config.compaction?.enabled}, maxInputTokens=${input.config.compaction?.maxInputTokens}, strategy=${input.config.compaction?.strategy}`)
+
 	const modelInfo: SdkModelInfo | undefined = input.config.knownModels?.[input.config.modelId]
-	const maxInputTokens =
-		input.config.compaction?.maxInputTokens ??
-		modelInfo?.maxInputTokens ??
-		modelInfo?.contextWindow ??
-		FALLBACK_MANUAL_COMPACTION_MAX_INPUT_TOKENS
+	// Agentario: динамический расчёт maxInputTokens
+	// Цель: сжать контекст до ~25% от окна модели для адекватной суммаризации
+	const contextWindow = modelInfo?.contextWindow ?? FALLBACK_MANUAL_COMPACTION_MAX_INPUT_TOKENS
+	const maxInputTokens = Math.floor(contextWindow * 0.25)
+
+	Logger.info(`[SdkCompaction] modelInfo: maxInputTokens=${maxInputTokens}, contextWindow=${contextWindow}`)
 
 	const compact = createContextCompactionPrepareTurn(
 		{
@@ -73,7 +82,7 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 			telemetry: input.config.telemetry,
 			sessionId: input.sessionId,
 		},
-		{ mode: "manual" },
+		{ mode: "manual", compactionMode: input.compactionMode, statusCallback: input.statusCallback }, // Agentario: передаём режим и callback
 	)
 	if (!compact) {
 		Logger.warn("[SdkCompaction] Compaction prepareTurn unavailable; skipping manual compaction")
@@ -100,8 +109,22 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 			},
 		},
 	})
+
+	// Agentario: логируем результат для диагностики
+	Logger.info(`[SdkCompaction] compact() returned: ${result ? "object" : "null"}, input.messages.length=${input.messages.length}`)
+	if (result) {
+		Logger.info(`[SdkCompaction] result.messages.length=${result.messages.length}, sameRef=${result.messages === input.messages}`)
+	}
+
 	if (!result) {
+		Logger.warn("[SdkCompaction] compact() returned null/undefined")
 		return { compacted: false, messages: input.messages }
 	}
+	// Если messages - та же ссылка, считаем что не сжато
+	if (result.messages === input.messages) {
+		Logger.warn(`[SdkCompaction] compact() returned same reference (${result.messages.length} items)`)
+		return { compacted: false, messages: input.messages }
+	}
+	Logger.info(`[SdkCompaction] compact() succeeded: ${input.messages.length} -> ${result.messages.length} messages`)
 	return { compacted: true, messages: result.messages }
 }

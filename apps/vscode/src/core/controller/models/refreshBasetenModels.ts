@@ -1,6 +1,6 @@
 import fs from "node:fs/promises"
 import path from "node:path"
-import { getProviderCollectionSync } from "@cline/llms"
+import { getProviderCollectionSync } from "@agentario/llms"
 import { ensureCacheDirectoryExists, GlobalFileNames } from "@core/storage/disk"
 import { ANTHROPIC_MAX_THINKING_BUDGET, ModelInfo } from "@shared/api"
 import { fileExistsAtPath } from "@utils/fs"

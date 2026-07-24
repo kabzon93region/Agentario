@@ -1,11 +1,11 @@
-import {
+﻿import {
 	getFileIndex,
 	type ProviderSettings,
 	type UserInstructionConfigService,
-} from "@cline/core";
+} from "@agentario/core";
 import { byLengthAsc, Fzf, type FzfResultItem } from "fzf";
 import type { Config } from "../utils/types";
-import { formatClineCredits, loadClineAccountSnapshot } from "./cline-account";
+import { formatClineCredits, loadClineAccountSnapshot } from "./agentario-account";
 
 export interface InteractiveSlashCommand {
 	name: string;

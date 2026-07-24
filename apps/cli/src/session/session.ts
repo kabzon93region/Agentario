@@ -1,16 +1,16 @@
-import type {
+﻿import type {
 	AgentConfig,
 	BasicLogger,
 	RuntimeCapabilities,
 	RuntimeHostMode,
 	SessionHistoryRecord,
 	SessionRecord,
-} from "@cline/core";
+} from "@agentario/core";
 import {
 	ClineCore,
 	listSessionHistoryFromBackend,
 	resolveSessionBackend,
-} from "@cline/core";
+} from "@agentario/core";
 import {
 	createCliMessagesArtifactUploader,
 	prepareCliEnterpriseIntegration,

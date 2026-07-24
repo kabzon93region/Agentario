@@ -1,11 +1,11 @@
-import type { ChatStartSessionRequest, RuntimeLoggerConfig } from "@cline/core";
+﻿import type { ChatStartSessionRequest, RuntimeLoggerConfig } from "@agentario/core";
 import {
 	CoreSessionService,
 	HubSessionClient,
 	Llms,
 	ProviderSettingsManager,
 	SqliteSessionStore,
-} from "@cline/core";
+} from "@agentario/core";
 import type { Thread } from "chat";
 import {
 	ensureOAuthProviderApiKey,
@@ -65,7 +65,7 @@ export async function buildConnectorStartRequest(input: {
 	const lastUsedProviderSettings =
 		providerSettingsManager.getLastUsedProviderSettings({
 			isClinePassEnabled:
-				getCliFeatureFlagsService().getBooleanFlagEnabled("ext-cline-pass"),
+				getCliFeatureFlagsService().getBooleanFlagEnabled("ext-agentario-pass"),
 		});
 	const provider = normalizeProviderId(
 		input.options.provider?.trim() ||

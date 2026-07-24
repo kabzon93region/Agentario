@@ -28,7 +28,7 @@ export const CompletionOutputRow = memo(
 					</div>
 					{/* Content */}
 					<div className="w-full relative border-t-1 border-description/20 rounded-b-sm">
-						<div className="completion-output-content p-2 pt-3 w-full [&_hr]:opacity-20 [&_p:last-child]:mb-0 rounded-sm">
+						<div className="completion-output-content p-2 pt-3 w-full [&_hr]:opacity-20 [&_p:last-child]:mb-0 rounded-sm text-[13px]">
 							<MarkdownRow markdown={text} />
 							{quoteButtonState.visible && (
 								<QuoteButton left={quoteButtonState.left} onClick={handleQuoteClick} top={quoteButtonState.top} />

@@ -1,7 +1,9 @@
 import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import React, { memo, useCallback, useMemo, useState } from "react"
 import { t } from "@/i18n"
+import { SlashServiceClient } from "@/services/grpc-client"
 import { formatLargeNumber as formatTokenNumber } from "@/utils/format"
 import type { ContextBudgetSegmentKey } from "./StructuredContextBar"
 import { SEGMENT_COLORS } from "./StructuredContextBar"
@@ -54,13 +56,15 @@ const AccordionItem = memo<{
 })
 AccordionItem.displayName = "AccordionItem"
 
-const CATEGORY_KEYS: ContextBudgetSegmentKey[] = ["system", "rules", "tools", "chat"]
+const CATEGORY_KEYS: string[] = ["system", "tools", "skills", "rules", "mcp", "chat"]
 
-const CATEGORY_LABELS: Record<ContextBudgetSegmentKey, () => string> = {
+const CATEGORY_LABELS: Record<string, () => string> = {
 	system: () => t("contextWindow.categorySystem"),
 	rules: () => t("contextWindow.categoryRules"),
 	tools: () => t("contextWindow.categoryTools"),
 	chat: () => t("contextWindow.categoryChat"),
+	mcp: () => "MCP",
+	skills: () => "Skills",
 }
 
 const TokenUsageDetails = memo<TokenUsageInfoProps>(({ tokensIn, tokensOut, cacheWrites, cacheReads }) => {
@@ -106,6 +110,7 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 	useAutoCondense = false,
 }) => {
 	const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["categories"]))
+	const [exportStatus, setExportStatus] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
 
 	const toggleSection = useCallback((section: string, event?: React.MouseEvent) => {
 		if (event) {
@@ -131,11 +136,11 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 		}
 		return CATEGORY_KEYS.map((key) => ({
 			key,
-			label: CATEGORY_LABELS[key](),
-			tokens: contextBudget.categories[key],
-			colorClass: SEGMENT_COLORS[key],
+			label: CATEGORY_LABELS[key]?.() ?? key,
+			tokens: contextBudget.categories[key as keyof typeof contextBudget.categories] ?? 0,
+			colorClass: SEGMENT_COLORS[key] ?? "bg-gray-500/50",
 			compressible: key === "chat",
-		})).filter((row) => row.tokens > 0)
+		})) // Agentario: показываем все категории, включая нулевые
 	}, [contextBudget])
 
 	return (
@@ -177,37 +182,58 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 			</AccordionItem>
 
 			{categoryRows.length > 0 && (
-				<AccordionItem
-					isExpanded={expandedSections.has("categories")}
-					onToggle={(event) => toggleSection("categories", event)}
-					title={t("contextWindow.categoriesTitle")}
-					value={`≈ ${formatTokenNumber(contextBudget?.totalEstimated ?? tokenUsed)}`}>
-					<div className="space-y-1">
-						{categoryRows.map((row) => (
-							<div className="flex justify-between items-center gap-2" key={row.key}>
-								<span className="flex items-center gap-1.5">
-									<span className={`inline-block size-2 rounded-full ${row.colorClass}`} />
-									{row.label}
-									{row.compressible ? ` (${t("contextWindow.compressibleShort")})` : ""}
-								</span>
-								<span className="font-mono">≈ {formatTokenNumber(row.tokens)}</span>
-							</div>
-						))}
-						{contextBudget?.rulesDetail && contextBudget.rulesDetail.length > 0 && (
-							<div className="mt-2 space-y-0.5 border-t border-foreground/10 pt-1">
-								{contextBudget.rulesDetail.map((rule) => (
-									<div className="flex justify-between pl-3" key={rule.name}>
-										<span className="truncate max-w-[9rem]" title={rule.name}>
-											{rule.name}
+				<>
+					{/* Pinned (non-chat) categories */}
+					<AccordionItem
+						isExpanded={expandedSections.has("categories")}
+						onToggle={(event) => toggleSection("categories", event)}
+						title={t("contextWindow.categoriesTitle")}
+						value={`≈ ${formatTokenNumber(contextBudget?.pinnedEstimated ?? 0)}`}>
+						<div className="space-y-1">
+							{categoryRows
+								.filter((row) => !row.compressible)
+								.map((row) => (
+									<div className="flex justify-between items-center gap-2" key={row.key}>
+										<span className="flex items-center gap-1.5">
+											<span className={`inline-block size-2 rounded-full ${row.colorClass}`} />
+											{row.label}
 										</span>
-										<span className="font-mono">≈ {formatTokenNumber(rule.tokens)}</span>
+										<span className="font-mono">≈ {formatTokenNumber(row.tokens)}</span>
 									</div>
 								))}
+							<div className="flex justify-between items-center gap-2 pt-1 border-t border-foreground/20 font-semibold">
+								<span>Итого (без чата)</span>
+								<span className="font-mono">≈ {formatTokenNumber(contextBudget?.pinnedEstimated ?? 0)}</span>
 							</div>
-						)}
-						<p className="text-[10px] leading-snug pt-1">{t("contextWindow.estimatedHint")}</p>
-					</div>
-				</AccordionItem>
+							<p className="text-[10px] leading-snug pt-0.5">{t("contextWindow.estimatedHint")}</p>
+						</div>
+					</AccordionItem>
+
+					{/* Chat (compressible) — отдельный блок */}
+					<AccordionItem
+						isExpanded={expandedSections.has("chat")}
+						onToggle={(event) => toggleSection("chat", event)}
+						title={`${t("contextWindow.categoryChat")} (${t("contextWindow.compressibleShort")})`}
+						value={`≈ ${formatTokenNumber(contextBudget?.compressibleEstimated ?? 0)}`}>
+						<div className="space-y-1">
+							{categoryRows
+								.filter((row) => row.compressible)
+								.map((row) => (
+									<div className="flex justify-between items-center gap-2" key={row.key}>
+										<span className="flex items-center gap-1.5">
+											<span className={`inline-block size-2 rounded-full ${row.colorClass}`} />
+											{row.label}
+										</span>
+										<span className="font-mono">≈ {formatTokenNumber(row.tokens)}</span>
+									</div>
+								))}
+							<div className="flex justify-between items-center gap-2 pt-1 border-t border-foreground/20 font-semibold">
+								<span>Итого (всего)</span>
+								<span className="font-mono">≈ {formatTokenNumber(contextBudget?.totalEstimated ?? 0)}</span>
+							</div>
+						</div>
+					</AccordionItem>
+				</>
 			)}
 
 			{totalTokens > 0 && (
@@ -223,6 +249,47 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 						tokensOut={tokensOut}
 					/>
 				</AccordionItem>
+			)}
+
+			{/* Export context button */}
+			<button
+				className="flex items-center gap-1.5 w-full text-xs text-muted-foreground hover:text-foreground cursor-pointer px-0.5 py-1 rounded hover:bg-foreground/5 transition-colors"
+				onClick={async (e) => {
+					e.preventDefault()
+					e.stopPropagation()
+					setExportStatus(null)
+					try {
+						const result = await SlashServiceClient.exportContextText(EmptyRequest.create({}))
+						if (result?.value) {
+							setExportStatus({ type: "success", message: `Экспортировано: ${result.value}` })
+						} else {
+							setExportStatus({
+								type: "info",
+								message: "Нет активной сессии — откройте таск и отправьте сообщение, затем повторите.",
+							})
+						}
+					} catch (err) {
+						console.error("Failed to export context:", err)
+						setExportStatus({
+							type: "error",
+							message: `Ошибка: ${err instanceof Error ? err.message : String(err)}`,
+						})
+					}
+				}}>
+				<span>📄</span>
+				<span>Экспорт контекста в файл</span>
+			</button>
+			{exportStatus && (
+				<div
+					className={`text-[10px] px-0.5 py-0.5 rounded ${
+						exportStatus.type === "success"
+							? "text-green-400 bg-green-400/10"
+							: exportStatus.type === "error"
+								? "text-red-400 bg-red-400/10"
+								: "text-yellow-400 bg-yellow-400/10"
+					}`}>
+					{exportStatus.message}
+				</div>
 			)}
 		</div>
 	)

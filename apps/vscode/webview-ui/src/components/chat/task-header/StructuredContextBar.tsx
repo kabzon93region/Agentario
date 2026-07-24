@@ -4,10 +4,15 @@ import { cn } from "@/lib/utils"
 
 export type ContextBudgetSegmentKey = keyof ContextBudgetBreakdown["categories"]
 
-const SEGMENT_COLORS: Record<ContextBudgetSegmentKey, string> = {
+// Agentario: порядок категорий — chat всегда последний
+const CATEGORY_ORDER: ContextBudgetSegmentKey[] = ["system", "tools", "skills", "rules", "mcp", "chat"]
+
+const SEGMENT_COLORS: Record<string, string> = {
 	system: "bg-blue-500/80",
 	rules: "bg-violet-500/80",
 	tools: "bg-amber-500/70",
+	mcp: "bg-orange-500/70",
+	skills: "bg-pink-500/70",
 	chat: "bg-emerald-500/80",
 }
 
@@ -28,15 +33,14 @@ export const StructuredContextBar = memo(function StructuredContextBar({
 		if (!contextBudget || contextWindow <= 0) {
 			return []
 		}
-		const entries = Object.entries(contextBudget.categories) as Array<[ContextBudgetSegmentKey, number]>
-		return entries
-			.filter(([, value]) => value > 0)
-			.map(([key, value]) => ({
-				key,
-				value,
-				widthPercent: Math.min(100, (value / contextWindow) * 100),
-				colorClass: SEGMENT_COLORS[key],
-			}))
+		const cats = contextBudget.categories
+		// Agentario: используем CATEGORY_ORDER для стабильного порядка (chat всегда последний)
+		return CATEGORY_ORDER.map((key) => ({
+			key,
+			value: (cats[key] as number) ?? 0,
+			widthPercent: Math.min(100, (((cats[key] as number) ?? 0) / contextWindow) * 100),
+			colorClass: SEGMENT_COLORS[key] ?? "bg-gray-500/50",
+		}))
 	}, [contextBudget, contextWindow])
 
 	const fallbackPercent = contextWindow > 0 ? Math.min(100, (totalUsed / contextWindow) * 100) : 0

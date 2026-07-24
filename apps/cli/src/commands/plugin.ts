@@ -1,23 +1,23 @@
-import {
+﻿import {
 	installPlugin,
 	type PluginInstallOptions,
 	type PluginInstallResult,
 	type PluginMcpOAuthCandidate,
 	type PluginUninstallOptions,
 	uninstallPlugin,
-} from "@cline/core";
+} from "@agentario/core";
 
 export type {
 	PluginInstallOptions,
 	PluginInstallResult,
 	PluginMcpOAuthCandidate,
-} from "@cline/core";
+} from "@agentario/core";
 export {
 	collectPluginMcpOAuthCandidates,
 	installPlugin,
 	isOfficialPluginSlug,
 	parsePluginSource,
-} from "@cline/core";
+} from "@agentario/core";
 
 export interface PluginInstallMcpOAuthOptions {
 	interactive?: boolean;

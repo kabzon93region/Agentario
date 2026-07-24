@@ -3,7 +3,7 @@ import { join } from "node:path";
 import {
 	type ResolveCronSpecsDirOptions,
 	resolveCronReportsDir,
-} from "@cline/shared/storage";
+} from "@agentario/shared/storage";
 import type {
 	CronEventLogRecord,
 	CronRunRecord,

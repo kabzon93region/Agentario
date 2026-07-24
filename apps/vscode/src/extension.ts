@@ -1,7 +1,9 @@
-// The module 'vscode' contains the VS Code extensibility API
+﻿// The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 
 import assert from "node:assert"
+import fs from "node:fs"
+import os from "node:os"
 import { DIFF_VIEW_URI_SCHEME } from "@hosts/vscode/VscodeDiffViewProvider"
 import * as vscode from "vscode"
 import { Logger } from "@/shared/services/Logger"
@@ -25,10 +27,10 @@ import { vscodeHostBridgeClient } from "@/hosts/vscode/hostbridge/client/host-gr
 import { createStorageContext } from "@/shared/storage/storage-context"
 import { readTextFromClipboard, writeTextToClipboard } from "@/utils/env"
 import { initialize, tearDown } from "./common"
-import { addToCline } from "./core/controller/commands/addToCline"
-import { explainWithCline } from "./core/controller/commands/explainWithCline"
-import { fixWithCline } from "./core/controller/commands/fixWithCline"
-import { improveWithCline } from "./core/controller/commands/improveWithCline"
+import { addToAgentario } from "./core/controller/commands/addToAgentario"
+import { explainWithAgentario } from "./core/controller/commands/explainWithAgentario"
+import { fixWithAgentario } from "./core/controller/commands/fixWithAgentario"
+import { improveWithAgentario } from "./core/controller/commands/improveWithAgentario"
 import { sendAddToInputEvent } from "./core/controller/ui/subscribeToAddToInput"
 import { sendShowWebviewEvent } from "./core/controller/ui/subscribeToShowWebview"
 import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
@@ -65,6 +67,18 @@ import { fileExistsAtPath } from "./utils/fs"
 // for all-platform should be registered in common.ts.
 export async function activate(context: vscode.ExtensionContext) {
 	const activationStartTime = performance.now()
+
+	// 0. Ensure ~/.agentario exists BEFORE any resolveClineDir() calls.
+	// This prevents fallback to legacy ~/.cline when .agentario doesn't exist yet.
+	const agentarioHomeDir = path.join(os.homedir(), ".agentario")
+	if (!fs.existsSync(agentarioHomeDir)) {
+		try {
+			fs.mkdirSync(agentarioHomeDir, { recursive: true })
+			Logger.info(`[Agentario] Created home directory: ${agentarioHomeDir}`)
+		} catch (error) {
+			Logger.warn(`[Agentario] Failed to create home directory: ${agentarioHomeDir}`, error)
+		}
+	}
 
 	// 1. Set up HostProvider for VSCode
 	// IMPORTANT: This must be done before any service can be registered
@@ -220,7 +234,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Register size testing commands in development mode
 	if (IS_DEV) {
-		vscode.commands.executeCommand("setContext", "cline.isDevMode", IS_DEV)
+		vscode.commands.executeCommand("setContext", "agentario.isDevMode", IS_DEV)
 		// Use dynamic import to avoid loading the module in production
 		import("./dev/commands/tasks")
 			.then((module) => {
@@ -380,7 +394,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (!context) {
 				return
 			}
-			await addToCline(context.controller, context.commandContext)
+			await addToAgentario(context.controller, context.commandContext)
 		}),
 	)
 	context.subscriptions.push(
@@ -389,7 +403,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (!context) {
 				return
 			}
-			await fixWithCline(context.controller, context.commandContext)
+			await fixWithAgentario(context.controller, context.commandContext)
 		}),
 	)
 	context.subscriptions.push(
@@ -398,7 +412,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (!context) {
 				return
 			}
-			await explainWithCline(context.controller, context.commandContext)
+			await explainWithAgentario(context.controller, context.commandContext)
 		}),
 	)
 	context.subscriptions.push(
@@ -407,7 +421,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (!context) {
 				return
 			}
-			await improveWithCline(context.controller, context.commandContext)
+			await improveWithAgentario(context.controller, context.commandContext)
 		}),
 	)
 
@@ -487,7 +501,7 @@ Current Notebook Cell Context (JSON, sanitized of image data):
 ${ctx.cellJson || "{}"}
 \`\`\``
 
-				await addToCline(ctx.controller, ctx.commandContext, notebookContext)
+				await addToAgentario(ctx.controller, ctx.commandContext, notebookContext)
 			},
 		),
 	)
@@ -503,7 +517,7 @@ ${ctx.cellJson || "{}"}
 					? `\n\nCurrent Notebook Cell Context (JSON, sanitized of image data):\n\`\`\`json\n${ctx.cellJson}\n\`\`\``
 					: undefined
 
-				await explainWithCline(ctx.controller, ctx.commandContext, notebookContext)
+				await explainWithAgentario(ctx.controller, ctx.commandContext, notebookContext)
 			},
 		),
 	)
@@ -529,7 +543,7 @@ Current Notebook Cell Context (JSON, sanitized of image data):
 ${ctx.cellJson || "{}"}
 \`\`\``
 
-				await improveWithCline(ctx.controller, ctx.commandContext, notebookContext)
+				await improveWithAgentario(ctx.controller, ctx.commandContext, notebookContext)
 			},
 		),
 	)

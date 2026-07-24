@@ -1,4 +1,4 @@
-import type { ClineMessage, TurnState } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
 import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -21,11 +21,11 @@ vi.mock("@/services/grpc-client", () => ({
 }))
 
 // Proto request factories just echo their input so we can assert on it.
-vi.mock("@shared/proto/cline/task", () => ({
+vi.mock("@shared/proto/agentario/task", () => ({
 	AskResponseRequest: { create: (x: unknown) => x },
 	NewTaskRequest: { create: (x: unknown) => x },
 }))
-vi.mock("@shared/proto/cline/common", () => ({
+vi.mock("@shared/proto/agentario/common", () => ({
 	EmptyRequest: { create: (x: unknown) => x },
 	StringRequest: { create: (x: unknown) => x },
 }))
@@ -43,7 +43,7 @@ import type { ChatState } from "../types/chatTypes"
 import { useMessageHandlers } from "./useMessageHandlers"
 
 // Minimal ChatState stub. clineAsk/lastMessage are the only derived values the send path reads.
-function makeChatState(messages: ClineMessage[], overrides: Partial<ChatState> = {}): ChatState {
+function makeChatState(messages: AgentarioMessage[], overrides: Partial<ChatState> = {}): ChatState {
 	const last = messages.at(-1)
 	const state = {
 		inputValue: "",
@@ -80,7 +80,7 @@ function makeChatState(messages: ClineMessage[], overrides: Partial<ChatState> =
 	return { ...state, ...overrides } as ChatState
 }
 
-const completedConversation: ClineMessage[] = [
+const completedConversation: AgentarioMessage[] = [
 	{ ts: 1, type: "say", say: "text", text: "task" },
 	{ ts: 2, type: "say", say: "completion_result", text: "all done" },
 ]
@@ -283,7 +283,7 @@ describe("useMessageHandlers — send routing", () => {
 
 	it("does not show a pending chat bubble for a streaming follow-up that will be queued", async () => {
 		mockTurnState = { phase: "streaming", seq: 9 }
-		const streamingConversation: ClineMessage[] = [
+		const streamingConversation: AgentarioMessage[] = [
 			{ ts: 1, type: "say", say: "task", text: "task" },
 			{ ts: 2, type: "say", say: "text", text: "working", partial: true },
 		]
@@ -302,7 +302,7 @@ describe("useMessageHandlers — send routing", () => {
 
 	it("rejects a pending approval when the composer is submitted with typed feedback", async () => {
 		mockTurnState = { phase: "awaiting_approval", anchorTs: 2, seq: 9 }
-		const approvalConversation: ClineMessage[] = [
+		const approvalConversation: AgentarioMessage[] = [
 			{ ts: 1, type: "say", say: "task", text: "task" },
 			{ ts: 2, type: "ask", ask: "tool", text: JSON.stringify({ tool: "newFileCreated", path: "notes.txt" }) },
 		]
@@ -344,7 +344,7 @@ describe("useMessageHandlers — send routing", () => {
 
 	it("does not show a pending chat bubble when answering an active follow-up question with freeform text", async () => {
 		mockTurnState = { phase: "awaiting_followup", anchorTs: 2, seq: 3 }
-		const questionConversation: ClineMessage[] = [
+		const questionConversation: AgentarioMessage[] = [
 			{ ts: 1, type: "say", say: "task", text: "task" },
 			{
 				ts: 2,

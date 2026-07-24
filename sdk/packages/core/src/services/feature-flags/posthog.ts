@@ -4,7 +4,7 @@ import type {
 	FeatureFlagsContext,
 	FeatureFlagsSettings,
 	IFeatureFlagsProvider,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { PostHog, type PostHogOptions } from "posthog-node";
 
 export interface PostHogFeatureFlagsProviderConfig {

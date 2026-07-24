@@ -1,4 +1,4 @@
-import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/cline/state"
+﻿import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/agentario/state"
 import { describe, expect, it } from "vitest"
 import {
 	CLINEPASS_GROUP,
@@ -27,7 +27,7 @@ describe("getClineUIOnboardingGroups", () => {
 	it("buckets ClinePass models into the clinePass group", () => {
 		const result = getClineUIOnboardingGroups(
 			groupOf([
-				model("cline-pass/glm-5.1", CLINEPASS_GROUP),
+				model("agentario-pass/glm-5.1", CLINEPASS_GROUP),
 				model("free-model", "free"),
 				model("anthropic/claude", "frontier"),
 				model("z-ai/glm", "open source"),
@@ -36,13 +36,13 @@ describe("getClineUIOnboardingGroups", () => {
 
 		expect(result.clinePass).toHaveLength(1)
 		expect(result.clinePass[0].group).toBe(CLINEPASS_GROUP)
-		expect(result.clinePass[0].models.map((m) => m.id)).toEqual(["cline-pass/glm-5.1"])
+		expect(result.clinePass[0].models.map((m) => m.id)).toEqual(["agentario-pass/glm-5.1"])
 		expect(result.free[0].models.map((m) => m.id)).toEqual(["free-model"])
 		expect(result.power.flatMap((g) => g.models.map((m) => m.id))).toEqual(["anthropic/claude", "z-ai/glm"])
 	})
 
-	it("does not bucket cline-pass ids without a ClinePass group label", () => {
-		const result = getClineUIOnboardingGroups(groupOf([model("cline-pass/glm-5.2", "frontier")]))
+	it("does not bucket agentario-pass ids without a ClinePass group label", () => {
+		const result = getClineUIOnboardingGroups(groupOf([model("agentario-pass/glm-5.2", "frontier")]))
 
 		expect(result.clinePass).toEqual([])
 	})
@@ -58,22 +58,22 @@ describe("getRecommendedModelsData", () => {
 		const result = getRecommendedModelsData({
 			recommended: [],
 			free: [],
-			clinePass: [{ id: "cline-pass/glm-5.1", name: "GLM 5.1", description: "", tags: [] }],
+			clinePass: [{ id: "agentario-pass/glm-5.1", name: "GLM 5.1", description: "", tags: [] }],
 		})
 
-		expect(result?.clinePass.map((model) => model.id)).toEqual(["cline-pass/glm-5.1"])
+		expect(result?.clinePass.map((model) => model.id)).toEqual(["agentario-pass/glm-5.1"])
 	})
 
 	it("keeps classic recommended/free responses and ClinePass responses", () => {
 		const result = getRecommendedModelsData({
 			recommended: [{ id: "anthropic/claude", name: "Claude", description: "", tags: [] }],
 			free: [{ id: "free-model", name: "Free", description: "", tags: [] }],
-			clinePass: [{ id: "cline-pass/glm-5.1", name: "GLM 5.1", description: "", tags: [] }],
+			clinePass: [{ id: "agentario-pass/glm-5.1", name: "GLM 5.1", description: "", tags: [] }],
 		})
 
 		expect(result?.recommended.map((model) => model.id)).toEqual(["anthropic/claude"])
 		expect(result?.free.map((model) => model.id)).toEqual(["free-model"])
-		expect(result?.clinePass.map((model) => model.id)).toEqual(["cline-pass/glm-5.1"])
+		expect(result?.clinePass.map((model) => model.id)).toEqual(["agentario-pass/glm-5.1"])
 	})
 
 	it("returns undefined when every recommended bucket is empty", () => {

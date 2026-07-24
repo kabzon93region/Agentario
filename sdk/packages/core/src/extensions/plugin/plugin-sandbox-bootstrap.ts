@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Bootstrap script for the plugin sandbox subprocess.
  *
  * This file runs inside an isolated Node.js child process spawned by
@@ -15,7 +15,7 @@ import {
 	type AutomationEventEnvelope,
 	normalizePluginManifest,
 	type PluginManifest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { importPluginModule } from "./plugin-module-import";
 import {
 	matchesPluginManifestTargeting,
@@ -43,7 +43,7 @@ interface PluginCommand {
 	) => Promise<PluginCommandResult> | PluginCommandResult;
 }
 
-// Keep this local mirror in sync with AgentExtensionCommandResult from @cline/shared.
+// Keep this local mirror in sync with AgentExtensionCommandResult from @agentario/shared.
 // The sandbox bootstrap runs in an isolated process and avoids host package imports.
 type PluginCommandResult =
 	| string

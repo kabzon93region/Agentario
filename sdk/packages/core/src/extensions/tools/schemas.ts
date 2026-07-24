@@ -5,7 +5,7 @@
  * and are used for both validation and JSON Schema generation.
  */
 
-import { normalizeEditorToolInput } from "@cline/shared";
+import { normalizeEditorToolInput } from "@agentario/shared";
 import { z } from "zod";
 
 export const INPUT_ARG_CHAR_LIMIT = 6000;
@@ -121,6 +121,80 @@ export const StructuredCommandEntrySchema = z.union([
 	StructuredCommandInputSchema,
 ]);
 
+function tryParseJsonArray(value: string): unknown | undefined {
+	const trimmed = value.trim();
+	if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) {
+		return undefined;
+	}
+	try {
+		return JSON.parse(trimmed);
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Unwrap common model mistakes: stringified JSON arrays/objects in `commands`.
+ */
+export function preprocessRunCommandsInput(value: unknown): unknown {
+	if (typeof value === "string") {
+		return tryParseJsonArray(value) ?? value;
+	}
+
+	if (!value || typeof value !== "object") {
+		return value;
+	}
+
+	const record = value as Record<string, unknown>;
+	if (typeof record.commands === "string") {
+		const parsed = tryParseJsonArray(record.commands);
+		if (parsed !== undefined) {
+			return { ...record, commands: parsed };
+		}
+	}
+
+	return value;
+}
+
+/**
+ * Best-effort syntax checks before shell execution (catches common model errors).
+ */
+export function validateShellCommandString(
+	command: string,
+	platform: string = process.platform,
+): string | null {
+	const trimmed = command.trim();
+	if (!trimmed) {
+		return "Empty command string.";
+	}
+
+	if (/\}"\s*$/.test(trimmed)) {
+		return "Command has a stray '}\" at the end — remove extra braces/quotes.";
+	}
+
+	if (platform === "win32") {
+		if (/\s&&\s/.test(trimmed)) {
+			return "PowerShell 5.1 does not support '&&'. Pass independent commands as separate entries in the commands array.";
+		}
+
+		const doubleQuotes = trimmed.match(/"/g)?.length ?? 0;
+		if (doubleQuotes % 2 !== 0) {
+			return "Unbalanced double quotes in command. Use single quotes for paths inside double-quoted strings.";
+		}
+
+		if (
+			trimmed.endsWith("}") &&
+			!trimmed.includes("{") &&
+			!trimmed.includes("@{") &&
+			!trimmed.includes("$_")
+		) {
+			return "Command has a stray '}' at the end — remove it.";
+		}
+	}
+
+	return null;
+}
+
 /**
  * Schema for run_commands tool input.
  *
@@ -139,16 +213,19 @@ export const RunCommandsInputSchema = z.object({
 /**
  * Union schema for run_commands tool input. More flexible.
  */
-export const RunCommandsInputUnionSchema = z.union([
-	RunCommandsInputSchema,
-	z.object({ commands: StructuredCommandEntrySchema }),
-	z.array(StructuredCommandInputSchema),
-	StructuredCommandInputSchema,
-	z.object({ command: CommandInputSchema }),
-	z.object({ cmd: CommandInputSchema }),
-	z.array(z.string()),
-	z.string(),
-]);
+export const RunCommandsInputUnionSchema = z.preprocess(
+	preprocessRunCommandsInput,
+	z.union([
+		RunCommandsInputSchema,
+		z.object({ commands: StructuredCommandEntrySchema }),
+		z.array(StructuredCommandInputSchema),
+		StructuredCommandInputSchema,
+		z.object({ command: CommandInputSchema }),
+		z.object({ cmd: CommandInputSchema }),
+		z.array(z.string()),
+		z.string(),
+	]),
+);
 
 /**
  * Schema for a single web fetch request

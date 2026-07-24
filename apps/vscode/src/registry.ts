@@ -1,7 +1,7 @@
-import { name, publisher, version } from "../package.json"
+﻿import { name, publisher, version } from "../package.json"
 import { HostProvider } from "./hosts/host-provider"
 
-const prefix = name === "claude-dev" ? "cline" : name
+const prefix = "agentario"
 
 /**
  * List of commands with the name of the extension they are registered under.
@@ -20,7 +20,7 @@ const ClineCommands = {
 	WorktreesButton: prefix + ".worktreesButtonClicked",
 	TerminalOutput: prefix + ".addTerminalOutputToChat",
 	AddToChat: prefix + ".addToChat",
-	FixWithCline: prefix + ".fixWithCline",
+	FixWithCline: prefix + ".fixWithAgentario",
 	ExplainCode: prefix + ".explainCode",
 	ImproveCode: prefix + ".improveCode",
 	FocusChatInput: prefix + ".focusChatInput",
@@ -92,7 +92,7 @@ export const HostRegistryInfo = {
 		const hostVersion = host.version
 		const extensionVersion = host.clineVersion || ExtensionRegistryInfo.version
 		const platform = host.platform || "unknown"
-		const os = process.platform || "unknown"
+		const os = (globalThis as any).process?.platform || "unknown"
 		const ide = host.clineType || "unknown"
 		hostInfo = { hostVersion, extensionVersion, platform, os, ide, distinctId }
 	},

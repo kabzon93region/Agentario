@@ -1,5 +1,5 @@
-import type { ModelInfo } from "@shared/api"
-import { EmptyRequest } from "@shared/proto/cline/common"
+﻿import type { ModelInfo } from "@shared/api"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { fromProtobufModels } from "@shared/proto-conversions/models/typeConversion"
 import { Mode } from "@shared/storage/types"
 import { VSCodeLink, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"

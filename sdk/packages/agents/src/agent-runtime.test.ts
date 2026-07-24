@@ -6,8 +6,8 @@ import type {
 	AgentRuntimePlugin,
 	AgentTool,
 	ITelemetryService,
-} from "@cline/shared";
-import { AGENT_UNEXPECTED_REASONING_TOKENS_EVENT } from "@cline/shared";
+} from "@agentario/shared";
+import { AGENT_UNEXPECTED_REASONING_TOKENS_EVENT } from "@agentario/shared";
 import { describe, expect, it, vi } from "vitest";
 import { AgentRuntime } from "./index";
 

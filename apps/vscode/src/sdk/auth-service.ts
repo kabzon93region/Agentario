@@ -1,6 +1,6 @@
-// Replaces classic src/services/auth/AuthService.ts (see origin/main)
+﻿// Replaces classic src/services/auth/AuthService.ts (see origin/main)
 //
-// SDK-backed authentication service. Uses @cline/core OAuth functions
+// SDK-backed authentication service. Uses @agentario/core OAuth functions
 // for login flows and ProviderSettingsManager (providers.json) as the
 // single source of truth for credentials.
 //
@@ -8,17 +8,17 @@
 // disk — it's fetched from the Cline API on startup and cached in memory.
 // This matches the CLI's pattern (see apps/cli/src/runtime/interactive-welcome.ts).
 
-import type { OAuthCredentials } from "@cline/core"
+import type { OAuthCredentials } from "@agentario/core"
 import {
 	createOAuthClientCallbacks,
 	getValidClineCredentials,
-	loginClineOAuth,
+	loginAgentarioCloudOAuth,
 	loginOcaOAuth,
 	loginOpenAICodex,
-} from "@cline/core"
+} from "@agentario/core"
 import type { ApiProvider } from "@shared/api"
-import { AuthState, UserInfo } from "@shared/proto/cline/account"
-import type { EmptyRequest, String } from "@shared/proto/cline/common"
+import { AuthState, UserInfo } from "@shared/proto/agentario/account"
+import type { EmptyRequest, String } from "@shared/proto/agentario/common"
 import axios from "axios"
 import { ClineEnv } from "@/config"
 import type { Controller } from "@/core/controller"
@@ -30,7 +30,7 @@ import { BannerService } from "@/services/banner/BannerService"
 import { buildBasicClineHeaders } from "@/services/EnvUtils"
 import { featureFlagsService } from "@/services/feature-flags"
 import { telemetryService } from "@/services/telemetry"
-import { CLINE_API_ENDPOINT } from "@/shared/cline/api"
+import { AGENTARIO_API_ENDPOINT } from "@/shared/agentario/api"
 import { fetch, getAxiosSettings } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"
 import { openExternal } from "@/utils/env"
@@ -457,7 +457,7 @@ export class AuthService {
 		// In strict mode, don't open a new auth window if already authenticated
 		if (strict && this._authenticated) {
 			await this.sendAuthStatusUpdate()
-			const { String: ProtoString } = await import("@shared/proto/cline/common")
+			const { String: ProtoString } = await import("@shared/proto/agentario/common")
 			return ProtoString.create({ value: "Already authenticated" })
 		}
 
@@ -479,7 +479,7 @@ export class AuthService {
 		void (async () => {
 			try {
 				const apiBaseUrl = ClineEnv.config().apiBaseUrl
-				const credentials = await loginClineOAuth({
+				const credentials = await loginAgentarioCloudOAuth({
 					apiBaseUrl,
 					// Use WorkOS device auth so the browser confirmation code can be surfaced in the extension.
 					useWorkOSDeviceAuth: true,
@@ -524,7 +524,7 @@ export class AuthService {
 			}
 		})()
 
-		const { String: ProtoString } = await import("@shared/proto/cline/common")
+		const { String: ProtoString } = await import("@shared/proto/agentario/common")
 		return ProtoString.create({ value: await authMessagePromise })
 	}
 
@@ -539,7 +539,7 @@ export class AuthService {
 		}
 
 		const apiBaseUrl = ClineEnv.config().apiBaseUrl
-		const tokenUrl = new URL(CLINE_API_ENDPOINT.TOKEN_EXCHANGE, apiBaseUrl)
+		const tokenUrl = new URL(AGENTARIO_API_ENDPOINT.TOKEN_EXCHANGE, apiBaseUrl)
 		const response = await fetch(tokenUrl.toString(), {
 			method: "POST",
 			headers: {
@@ -590,7 +590,7 @@ export class AuthService {
 		await this.sendAuthStatusUpdate()
 		Logger.log(`[SdkAuthService] E2E mock login completed as ${this._clineAuthInfo.userInfo.email}`)
 
-		const { String: ProtoString } = await import("@shared/proto/cline/common")
+		const { String: ProtoString } = await import("@shared/proto/agentario/common")
 		return ProtoString.create({ value: apiBaseUrl })
 	}
 
@@ -624,7 +624,7 @@ export class AuthService {
 
 			await this.sendAuthStatusUpdate()
 
-			const { String: ProtoString } = await import("@shared/proto/cline/common")
+			const { String: ProtoString } = await import("@shared/proto/agentario/common")
 			return ProtoString.create({ value: "Authenticated" })
 		} catch (error) {
 			Logger.error("[SdkAuthService] OCA OAuth login failed:", error)
@@ -749,7 +749,7 @@ export class AuthService {
 			const apiBaseUrl = ClineEnv.config().apiBaseUrl
 			const callbackUrl = await HostProvider.get().getCallbackUrl("/auth")
 
-			const tokenUrl = new URL(CLINE_API_ENDPOINT.TOKEN_EXCHANGE, apiBaseUrl)
+			const tokenUrl = new URL(AGENTARIO_API_ENDPOINT.TOKEN_EXCHANGE, apiBaseUrl)
 			const response = await fetch(tokenUrl.toString(), {
 				method: "POST",
 				headers: {

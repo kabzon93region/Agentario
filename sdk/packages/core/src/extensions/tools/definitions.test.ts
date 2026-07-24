@@ -1,4 +1,4 @@
-import type { ITelemetryService } from "@cline/shared";
+import type { ITelemetryService } from "@agentario/shared";
 import { describe, expect, it, vi } from "vitest";
 import {
 	CLINE_INTERNAL_TELEMETRY_METADATA_KEY,

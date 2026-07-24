@@ -1,4 +1,4 @@
-import { ClineMessage } from "@shared/ExtensionMessage"
+﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { useMemo } from "react"
 import { expect, userEvent, within } from "storybook/test"
@@ -6,7 +6,7 @@ import { createStorybookDecorator } from "@/config/StorybookDecorator"
 import ErrorRow from "./ErrorRow"
 
 // Mock data factories
-const createMockMessage = (overrides: Partial<ClineMessage> = {}): ClineMessage => ({
+const createMockMessage = (overrides: Partial<AgentarioMessage> = {}): AgentarioMessage => ({
 	ts: Date.now(),
 	type: "say",
 	say: "error",
@@ -23,7 +23,7 @@ const createMockAuthState = (overrides: any = {}) => ({
 
 const createMockExtensionState = (overrides: any = {}) => ({
 	version: "1.0.0",
-	clineMessages: [],
+	agentarioMessages: [],
 	taskHistory: [],
 	shouldShowAnnouncement: false,
 	...overrides,

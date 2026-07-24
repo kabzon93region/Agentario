@@ -1,6 +1,6 @@
-import { EmptyRequest } from "@shared/proto/cline/common"
-import { UpdateSettingsRequest } from "@shared/proto/cline/state"
-import { CodebaseIndex, IndexedFile, IndexedFileStatus } from "@shared/proto/cline/indexing"
+﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
+import { CodebaseIndex, IndexedFile, IndexedFileStatus } from "@shared/proto/agentario/indexing"
 import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { DebouncedTextField } from "@/components/settings/common/DebouncedTextField"
@@ -254,7 +254,7 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 									void persistIndexSetting(
 										UpdateSettingsRequest.create({
 											codebaseIndexMode: value,
-										}),
+										} as any),
 									)
 								}
 							}}
@@ -275,7 +275,7 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 										void persistIndexSetting(
 											UpdateSettingsRequest.create({
 												codebaseIndexAiBackend: value,
-											}),
+											} as any),
 										)
 									}
 								}}
@@ -293,7 +293,7 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 								void persistIndexSetting(
 									UpdateSettingsRequest.create({
 										codebaseIndexBaseUrl: value.trim(),
-									}),
+									} as any),
 								)
 							}
 							placeholder={
@@ -329,7 +329,7 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 										void persistIndexSetting(
 											UpdateSettingsRequest.create({
 												codebaseIndexEmbeddingModelId: (selected?.key ?? value).trim() || undefined,
-											}),
+											} as any),
 										)
 									}
 								}}
@@ -349,7 +349,7 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 								void persistIndexSetting(
 									UpdateSettingsRequest.create({
 										codebaseIndexEmbeddingModelId: value.trim() || undefined,
-									}),
+									} as any),
 								)
 							}
 							placeholder={DEFAULT_EMBEDDING_MODEL}

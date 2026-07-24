@@ -1,4 +1,4 @@
-import type { AgentMode } from "@cline/core";
+﻿import type { AgentMode } from "@agentario/core";
 import { useTerminalDimensions } from "@opentui/react";
 import {
 	shouldShowCliUsageCost,
@@ -103,7 +103,7 @@ export function resolveModelDisplayName(config: {
 	const info = lookupModelInfo(config.modelId, config.knownModels);
 	const modelIdTail = config.modelId.split("/").pop() ?? config.modelId;
 	const displayName =
-		config.providerId === "cline-pass"
+		config.providerId === "agentario-pass"
 			? `ClinePass/${modelIdTail}`
 			: (info?.name ?? modelIdTail);
 	if (config.thinking && config.reasoningEffort) {

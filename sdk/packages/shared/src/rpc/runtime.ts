@@ -1,4 +1,4 @@
-import z from "zod";
+﻿import z from "zod";
 import type { HubToolExecutorName } from "../hub";
 import type {
 	RuntimeConfigExtensionKind,
@@ -372,7 +372,7 @@ export type ProviderSettingsActionRequest =
 	| SaveProviderSettingsActionRequest
 	| AddProviderActionRequest;
 
-export type ClineAccountActionRequest =
+export type AgentarioAccountActionRequest =
 	| {
 			action: "clineAccount";
 			operation: "fetchMe";
@@ -419,7 +419,7 @@ export type ClineAccountActionRequest =
 
 export type ProviderActionRequest =
 	| ProviderSettingsActionRequest
-	| ClineAccountActionRequest;
+	| AgentarioAccountActionRequest;
 
 export interface ProviderOAuthLoginResponse {
 	provider: string;

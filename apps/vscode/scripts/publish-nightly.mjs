@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 /**
  * Nightly publish script for VS Code extension
@@ -347,7 +347,7 @@ class NightlyPublisher {
 	updatePackageJson() {
 		// Replace any occurrences cline. or claude-dev with nightly name
 		const rawContent = fs.readFileSync(config.packageJsonPath, "utf-8")
-		const content = rawContent.replaceAll("claude-dev", config.nightlyName).replaceAll('"cline.', `"${config.nightlyName}.`)
+		const content = rawContent.replaceAll("claude-dev", config.nightlyName).replaceAll('"agentario.', `"${config.nightlyName}.`)
 
 		const pkg = JSON.parse(content)
 		const currentVersion = pkg.version

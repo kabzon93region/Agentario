@@ -1,4 +1,4 @@
-# Cline CLI Changelog
+# Agentario CLI Changelog
 
 ## 3.0.33
 
@@ -268,13 +268,13 @@ Introducing our new Cline CLI built on our new SDK and comes with a snappy new T
 Install:
 
 ```sh
-npm install -g cline
+npm install -g agentario
 ```
 
 For nightly builds:
 
 ```sh
-npm install -g cline@nightly
+npm install -g agentario@nightly
 ```
 
 ## 0.0.13

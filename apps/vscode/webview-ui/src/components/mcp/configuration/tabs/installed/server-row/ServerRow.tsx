@@ -1,11 +1,11 @@
-import { DEFAULT_MCP_TIMEOUT_SECONDS, McpServer } from "@shared/mcp"
-import { StringRequest } from "@shared/proto/cline/common"
+﻿import { DEFAULT_MCP_TIMEOUT_SECONDS, McpServer } from "@shared/mcp"
+import { StringRequest } from "@shared/proto/agentario/common"
 import {
 	McpServers,
 	ToggleMcpServerRequest,
 	ToggleToolAutoApproveRequest,
 	UpdateMcpTimeoutRequest,
-} from "@shared/proto/cline/mcp"
+} from "@shared/proto/agentario/mcp"
 import { convertProtoMcpServersToMcpServers } from "@shared/proto-conversions/mcp/mcp-server-conversion"
 import {
 	VSCodeCheckbox,

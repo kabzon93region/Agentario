@@ -56,4 +56,5 @@ export {
 	setHomeDir,
 	setHomeDirIfUnset,
 	WORKFLOWS_CONFIG_DIRECTORY_NAME,
+	resolveClineDataDir as resolveAgentarioDataDir,
 } from "./paths";

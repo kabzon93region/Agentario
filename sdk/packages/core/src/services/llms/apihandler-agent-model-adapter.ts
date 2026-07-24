@@ -1,5 +1,5 @@
-/**
- * Adapter: wrap a custom `ApiHandler` (from the `@cline/llms` handler registry)
+﻿/**
+ * Adapter: wrap a custom `ApiHandler` (from the `@agentario/llms` handler registry)
  * as an `AgentModel` for the agent runtime.
  *
  * The agent runtime builds models via `createAgentModelFromConfig`, which goes
@@ -10,16 +10,16 @@
  * `AgentModel` contract (`stream` -> `AgentModelEvent`).
  *
  * This is the inverse of the gateway's `toApiStreamChunk` in
- * `@cline/llms` `compat.ts`.
+ * `@agentario/llms` `compat.ts`.
  */
 
-import type { ApiHandler, ApiStreamChunk } from "@cline/llms";
+import type { ApiHandler, ApiStreamChunk } from "@agentario/llms";
 import type {
 	AgentModel,
 	AgentModelEvent,
 	AgentModelFinishReason,
 	AgentModelRequest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { agentMessagesToMessages } from "../../runtime/config/agent-message-codec";
 
 type ApiStreamDoneChunk = Extract<ApiStreamChunk, { type: "done" }>;
@@ -159,10 +159,30 @@ export function createAgentModelFromApiHandler(
 				}
 			} catch (error) {
 				if (!sawFinish) {
+					// Agentario: правильно извлекаем сообщение из ошибки — она может быть объектом
+					const errorMsg = error instanceof Error
+						? error.message
+						: typeof error === "object" && error !== null
+							? (() => {
+								try {
+									// Пробуем извлечь message из объекта ошибки (OpenAI/LM Studio формат)
+									const errObj = error as Record<string, unknown>;
+									if (typeof errObj.message === "string") return errObj.message;
+									const inner = errObj.error;
+									if (typeof inner === "string") return inner;
+									if (typeof inner === "object" && inner !== null && typeof (inner as Record<string, unknown>).message === "string") {
+										return (inner as Record<string, unknown>).message as string;
+									}
+									return JSON.stringify(error);
+								} catch {
+									return String(error);
+								}
+							})()
+							: String(error);
 					yield {
 						type: "finish",
 						reason: request.signal?.aborted ? "aborted" : "error",
-						error: error instanceof Error ? error.message : String(error),
+						error: errorMsg,
 					};
 				}
 			}

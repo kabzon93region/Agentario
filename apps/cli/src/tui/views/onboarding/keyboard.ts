@@ -1,7 +1,7 @@
-import type { ProviderConfigFieldKey } from "@cline/core";
+﻿import type { ProviderConfigFieldKey } from "@agentario/core";
 import { useKeyboard } from "@opentui/react";
 import type { Dispatch, SetStateAction } from "react";
-import type { ClineModelPickerEntry } from "../../components/model-selector/cline-model-picker";
+import type { ClineModelPickerEntry } from "../../components/model-selector/agentario-model-picker";
 import type { SearchableListState } from "../../components/searchable-list";
 import {
 	isOnboardingOAuthProviderId,
@@ -150,7 +150,7 @@ export function useOnboardingKeyboard(input: {
 		if (input.step === "device_code") return;
 
 		if (input.step === "cline_pass_subscription") {
-			const total = input.clinePassSubscriptionOptions.length;
+			const total = input.agentarioPassSubscriptionOptions.length;
 			if (total === 0) return;
 			if (key.name === "up" || (key.ctrl && key.name === "p")) {
 				input.setClinePassSubscriptionSelected((s) =>
@@ -166,14 +166,14 @@ export function useOnboardingKeyboard(input: {
 			}
 			if (key.name === "return" || key.name === "enter") {
 				const option =
-					input.clinePassSubscriptionOptions[
-						Math.min(input.clinePassSubscriptionSelected, total - 1)
+					input.agentarioPassSubscriptionOptions[
+						Math.min(input.agentarioPassSubscriptionSelected, total - 1)
 					];
 				if (!option) return;
 				if (option.value === "subscribe") {
 					input.openClinePassSubscriptionPage();
 				} else if (option.value === "refresh") {
-					if (input.clinePassSubscriptionStatus !== "loading") {
+					if (input.agentarioPassSubscriptionStatus !== "loading") {
 						input.refreshClinePassSubscriptionStatus();
 					}
 				} else if (option.value === "skip") {
@@ -256,7 +256,7 @@ export function useOnboardingKeyboard(input: {
 		}
 
 		if (input.step === "cline_model") {
-			const total = input.clineEntries.length;
+			const total = input.agentarioEntries.length;
 			if (total === 0) return;
 			if (key.name === "up" || (key.ctrl && key.name === "p")) {
 				input.setClineModelSelected((s) => (s <= 0 ? total - 1 : s - 1));
@@ -267,7 +267,7 @@ export function useOnboardingKeyboard(input: {
 				return;
 			}
 			if (key.name === "return") {
-				const entry = input.clineEntries[input.clineModelSelected];
+				const entry = input.agentarioEntries[input.agentarioModelSelected];
 				if (!entry) return;
 				if (entry.kind === "model") {
 					input.saveClineModelSelection(entry.model.id, entry.model.name);

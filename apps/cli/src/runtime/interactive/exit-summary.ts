@@ -1,5 +1,5 @@
-import type { SessionAccumulatedUsage, SessionRecord } from "@cline/core";
-import type { Message } from "@cline/shared";
+﻿import type { SessionAccumulatedUsage, SessionRecord } from "@agentario/core";
+import type { Message } from "@agentario/shared";
 import { c, formatUsd } from "../../utils/output";
 import { shouldShowCliUsageCost } from "../../utils/usage-cost-display";
 

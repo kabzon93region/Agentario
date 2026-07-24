@@ -12,12 +12,12 @@ import {
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import type { BasicLogger } from "@cline/shared";
+import type { BasicLogger } from "@agentario/shared";
 import {
 	resolveEffectiveMcpSettingsPath,
 	resolveLegacyMcpSettingsPath,
 	resolveMcpSettingsPath,
-} from "@cline/shared/storage";
+} from "@agentario/shared/storage";
 import { z } from "zod";
 import type {
 	McpManager,

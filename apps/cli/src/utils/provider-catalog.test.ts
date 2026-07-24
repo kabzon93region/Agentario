@@ -1,12 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	listLocalProviders: vi.fn(async () => ({ providers: [], settingsPath: "" })),
 	getBooleanFlagEnabled: vi.fn(() => true),
 }));
 
-vi.mock("@cline/core", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("@cline/core")>();
+vi.mock("@agentario/core", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@agentario/core")>();
 	return {
 		...actual,
 		listLocalProviders: mocks.listLocalProviders,
@@ -26,7 +26,7 @@ describe("listLocalProviders", () => {
 
 		await listLocalProviders(manager);
 
-		expect(mocks.getBooleanFlagEnabled).toHaveBeenCalledWith("ext-cline-pass");
+		expect(mocks.getBooleanFlagEnabled).toHaveBeenCalledWith("ext-agentario-pass");
 		expect(mocks.listLocalProviders).toHaveBeenCalledWith(manager, {
 			isClinePassEnabled: true,
 		});

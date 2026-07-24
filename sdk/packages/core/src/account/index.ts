@@ -1,11 +1,11 @@
-export {
+﻿export {
 	ClineAccountService,
 	type ClineAccountServiceOptions,
-} from "./cline-account-service";
+} from "./agentario-account-service";
 export {
 	type ClineAccountOperations,
 	executeClineAccountAction,
-	isClineAccountActionRequest,
+	isAgentarioAccountActionRequest,
 	type ProviderActionExecutor,
 	RpcClineAccountService,
 } from "./rpc";

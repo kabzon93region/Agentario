@@ -1,9 +1,9 @@
-import { type ChildProcess, spawn } from "node:child_process";
+﻿import { type ChildProcess, spawn } from "node:child_process";
 import { basename } from "node:path";
 import {
 	augmentNodeCommandForDebug,
-	withResolvedClineBuildEnv,
-} from "@cline/shared";
+	withResolvedAgentarioBuildEnv,
+} from "@agentario/shared";
 
 interface SandboxCallMessage {
 	type: "call";
@@ -169,7 +169,7 @@ export class SubprocessSandbox {
 			command.slice(1),
 			{
 				stdio: ["ignore", "ignore", "pipe", "ipc"],
-				env: withResolvedClineBuildEnv(process.env),
+				env: withResolvedAgentarioBuildEnv(process.env),
 				// Prevent a console window from flashing on Windows.
 				windowsHide: true,
 			},

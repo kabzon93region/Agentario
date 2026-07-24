@@ -1,4 +1,4 @@
-import { EmptyRequest } from "@shared/proto/cline/common"
+﻿import { EmptyRequest } from "@shared/proto/agentario/common"
 import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { isStandaloneEnvironment } from "@/constants/standalone"

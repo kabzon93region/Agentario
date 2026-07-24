@@ -1,5 +1,5 @@
 {
-    "name": "@cline/packages",
+    "name": "@agentario/packages",
     "private": true,
     "workspaces": [
         "sdk/packages/*",

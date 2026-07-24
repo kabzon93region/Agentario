@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it } from "bun:test"
+﻿import { afterEach, beforeEach, describe, it } from "bun:test"
 import "should"
 import * as fs from "fs/promises"
 import * as os from "os"
@@ -13,7 +13,7 @@ import { hookFileName } from "../core/hooks/__tests__/test-utils"
 import { HookDiscoveryCache } from "../core/hooks/HookDiscoveryCache"
 import { StateManager } from "../core/storage/StateManager"
 import { HostProvider } from "../hosts/host-provider"
-import { CreateHookRequest, DeleteHookRequest, ToggleHookRequest } from "../shared/proto/cline/file"
+import { CreateHookRequest, DeleteHookRequest, ToggleHookRequest } from "../shared/proto/agentario/file"
 
 /**
  * Integration tests for hook management

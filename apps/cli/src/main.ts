@@ -1,9 +1,9 @@
-import { fstatSync } from "node:fs";
+﻿import { fstatSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename } from "node:path";
-import type { ToolPolicy } from "@cline/core";
+import type { ToolPolicy } from "@agentario/core";
 
-import { registerDisposable } from "@cline/shared";
+import { registerDisposable } from "@agentario/shared";
 import type { Command } from "commander";
 import {
 	CommanderError,
@@ -64,13 +64,13 @@ export function stdinHasPipedInput(): boolean {
 }
 
 async function createProviderSettingsManager() {
-	const { ProviderSettingsManager } = await import("@cline/core");
+	const { ProviderSettingsManager } = await import("@agentario/core");
 	return new ProviderSettingsManager();
 }
 
 async function loadCliRuntimeModules() {
 	const [coreServer, prompt, runAgentModule] = await Promise.all([
-		import("@cline/core"),
+		import("@agentario/core"),
 		import("./runtime/prompt"),
 		import("./runtime/run-agent"),
 	]);
@@ -88,7 +88,7 @@ async function loadInteractiveRuntimeModule() {
 
 /**
  * Two-pass approach for --config: a quick scan of process.argv extracts the
- * config directory before commander parses, because setClineDir() must run
+ * config directory before commander parses, because setAgentarioDir() must run
  * before any code that reads the home/config directory.
  *
  * Recognizes both Commander spellings:
@@ -126,7 +126,7 @@ function promptArgLooksQuoted(arg: string | undefined): boolean {
 function writePromptArgError(args: string[]): void {
 	const renderedArgs = args.join(" ");
 	writeErr(
-		`Unknown command or unquoted prompt: ${renderedArgs}\nPrompt text must be passed as a single quoted argument, for example: cline "fix the tests". Use "cline --help" to see available commands and flags.`,
+		`Unknown command or unquoted prompt: ${renderedArgs}\nPrompt text must be passed as a single quoted argument, for example: agentario "fix the tests". Use "agentario --help" to see available commands and flags.`,
 	);
 }
 
@@ -136,7 +136,7 @@ export async function runCli(): Promise<void> {
 
 	const cliArgs = process.argv.slice(2);
 	const configDir = resolveConfigDirArg(cliArgs);
-	const { setClineDir, setHomeDir } = await import("@cline/shared/storage");
+	const { setClineDir, setHomeDir } = await import("@agentario/shared/storage");
 	if (configDir) {
 		setClineDir(configDir);
 	}
@@ -180,7 +180,7 @@ export async function runCli(): Promise<void> {
 		.option("-c, --cwd <path>", "Working directory")
 		.option(
 			"--data-dir <dir>",
-			"Use isolated local state at <dir> instead of ~/.cline (enables sandbox mode)",
+			"Use isolated local state at <dir> instead of ~/.agentario (enables sandbox mode)",
 		)
 		.option("-v, --verbose", "Show verbose output")
 		.action(async (positionalProvider: string | undefined) => {
@@ -196,17 +196,17 @@ export async function runCli(): Promise<void> {
 				verbose?: boolean;
 			}>();
 			// Honor --config inside the action as a defense-in-depth measure.
-			// The early pre-pass in runCli() also calls setClineDir(), but only
+			// The early pre-pass in runCli() also calls setAgentarioDir(), but only
 			// for argv tokens it can spot before commander runs. Reapplying
 			// here ensures opts.config (parsed by commander, including the
 			// --config=<dir> form) is always respected before any provider
-			// settings manager is constructed against ~/.cline.
+			// settings manager is constructed against ~/.agentario.
 			if (opts.config?.trim()) {
-				const { setClineDir } = await import("@cline/shared/storage");
-				setClineDir(opts.config.trim());
+				const { setAgentarioDir } = await import("@agentario/shared/storage");
+				setAgentarioDir(opts.config.trim());
 			}
 			// Honor --data-dir before constructing the provider settings manager
-			// so writes land under the chosen data dir instead of ~/.cline.
+			// so writes land under the chosen data dir instead of ~/.agentario.
 			configureSandboxEnvironment({
 				enabled: !!opts.dataDir || process.env.CLINE_SANDBOX?.trim() === "1",
 				cwd: opts.cwd ?? process.cwd(),
@@ -264,7 +264,7 @@ export async function runCli(): Promise<void> {
 
 	const pluginCmd = program
 		.command("plugin")
-		.description("Manage Cline Plugins")
+		.description("Manage Agentario Plugins")
 		.action(() => {
 			pluginCmd.help();
 		});
@@ -272,7 +272,7 @@ export async function runCli(): Promise<void> {
 		.command("install")
 		.alias("i")
 		.description(
-			"Install a Cline Plugin from an official keyword, npm, git, URL, or a local path",
+			"Install a Agentario Plugin from an official keyword, npm, git, URL, or a local path"
 		)
 		.argument(
 			"<source>",
@@ -282,7 +282,7 @@ export async function runCli(): Promise<void> {
 		.option("--git", "Treat source as a git repository")
 		.option("--force", "Replace an existing install for the same source")
 		.option("--json", "Output as JSON")
-		.option("--cwd <path>", "Install to <path>/.cline/plugins")
+		.option("--cwd <path>", "Install to <path>/.agentario/plugins")
 		.action(async (source: string) => {
 			const opts = pluginInstallCmd.opts<{
 				npm?: boolean;
@@ -314,12 +314,12 @@ export async function runCli(): Promise<void> {
 		.command("uninstall")
 		.alias("remove")
 		.alias("rm")
-		.description("Uninstall a Cline Plugin by name or path")
+		.description("Uninstall an Agentario Plugin by name or path")
 		.argument("<name>", "plugin package name, installed slug, or plugin path")
 		.option("--json", "Output as JSON")
 		.option(
 			"--cwd <path>",
-			"Search <path>/.cline/plugins before global plugins",
+			"Search <path>/.agentario/plugins before global plugins",
 		)
 		.action(async (name: string) => {
 			const opts = pluginUninstallCmd.opts<{
@@ -336,20 +336,20 @@ export async function runCli(): Promise<void> {
 		});
 	const skillCmd = program
 		.command("skill")
-		.description("Manage Cline Skills via the open skills CLI (npx skills)")
+		.description("Manage Agentario Skills via the open skills CLI (npx skills)")
 		.allowUnknownOption()
 		.passThroughOptions()
 		.argument("[args...]", "arguments forwarded to the skills CLI")
 		.addHelpText(
 			"after",
 			"\nForwards to the open skills CLI via npx. Examples:\n" +
-				"  cline skill add <owner/repo>       Add a skill into Cline\n" +
-				"  cline skill install <owner/repo>   Alias for add\n" +
-				"  cline skill list                   List installed skills\n" +
-				"  cline skill remove                 Remove installed skills\n" +
-				"  cline skill uninstall              Alias for remove\n" +
-				"\nadd/install and remove/uninstall default to '--agent cline' unless you pass your own --agent.\n" +
-				"Run 'npx skills --help' for the full command reference.",
+				"  agentario skill add <owner/repo>       Add a skill into Agentario\n" +
+				"  agentario skill install <owner/repo>   Alias for add\n" +
+				"  agentario skill list                   List installed skills\n" +
+				"  agentario skill remove                 Remove installed skills\n" +
+				"  agentario skill uninstall              Alias for remove\n" +
+				"\nadd/install and remove/uninstall default to '--agent agentario' unless you pass your own --agent.\n," +
+				"Run 'npx skills --help' for the full command reference.\n"
 		)
 		.action(async () => {
 			const { runSkillCommand } = await import("./commands/skill");
@@ -622,12 +622,12 @@ export async function runCli(): Promise<void> {
 
 	const dashboardCmd = program
 		.command("dashboard")
-		.description("Start the Cline Hub dashboard and open it in a browser")
+		.description("Start the Agentario Hub dashboard and open it in a browser")
 		.option("--config <dir>", "configuration directory")
 		.option("-c, --cwd <path>", "Workspace root", process.cwd())
 		.option(
 			"--data-dir <dir>",
-			"Use isolated local state at <dir> instead of ~/.cline (enables sandbox mode)",
+			"Use isolated local state at <dir> instead of ~/.agentario (enables sandbox mode)",
 		)
 		.option("--host <host>", "Dashboard bind host")
 		.option("--port <port>", "Dashboard HTTP/WebSocket port")
@@ -675,7 +675,7 @@ export async function runCli(): Promise<void> {
 
 	program
 		.command("version")
-		.description("Show Cline CLI version number")
+		.description("Show Agentario CLI version number")
 		.action(async () => {
 			const { showVersion } = await import("./commands/help");
 			showVersion();
@@ -782,14 +782,14 @@ export async function runCli(): Promise<void> {
 			return;
 		}
 		resumeSessionId = sessionId;
-		process.env.CLINE_HOOK_AGENT_RESUME = "1";
+		process.env.agentario_HOOK_AGENT_RESUME = "1";
 		args = {
 			...args,
 			interactive: true,
 			prompt: undefined,
 		};
 	} else {
-		delete process.env.CLINE_HOOK_AGENT_RESUME;
+		delete process.env.agentario_HOOK_AGENT_RESUME;
 	}
 	if (launchConfigView) {
 		args = {
@@ -833,7 +833,7 @@ export async function runCli(): Promise<void> {
 		);
 	}
 	if (args.hooksDir?.trim()) {
-		process.env.CLINE_HOOKS_DIR = args.hooksDir.trim();
+		process.env.agentario_HOOKS_DIR = args.hooksDir.trim();
 	}
 	if (args.prompt && !args.interactive) {
 		if (program.args.length > 1 || !promptArgLooksQuoted(program.args[0])) {
@@ -957,7 +957,7 @@ export async function runCli(): Promise<void> {
 		const lastUsedProviderSettings =
 			providerSettingsManager.getLastUsedProviderSettings({
 				isClinePassEnabled:
-					getCliFeatureFlagsService().getBooleanFlagEnabled("ext-cline-pass"),
+					getCliFeatureFlagsService().getBooleanFlagEnabled("ext-agentario-pass"),
 			});
 		const provider = normalizeProviderId(
 			args.provider?.trim() || lastUsedProviderSettings?.provider || "cline",

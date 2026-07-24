@@ -1,11 +1,11 @@
-import {
+﻿import {
 	fetchClineRecommendedModels,
 	getProviderConfigFields,
 	Llms,
 	ProviderSettingsManager,
 	refreshProviderModelsFromSource,
 	resolveProviderConfig,
-} from "@cline/core";
+} from "@agentario/core";
 import type { ChoiceContext } from "@opentui-ui/dialog";
 import type { DialogActions } from "@opentui-ui/dialog/react";
 import { useCallback } from "react";
@@ -27,11 +27,11 @@ import {
 	ProviderPickerContent,
 	UseExistingOrReconfigureContent,
 } from "../components/dialogs/provider-picker";
-import { buildClineModelEntries } from "../components/model-selector/cline-model-picker";
+import { buildClineModelEntries } from "../components/model-selector/agentario-model-picker";
 import {
 	BROWSE_ALL_ACTION,
 	ClineModelSelectorDialogContent,
-} from "../components/model-selector/cline-model-selector";
+} from "../components/model-selector/agentario-model-selector";
 import {
 	buildModelOptions,
 	CHANGE_PROVIDER_ACTION,
@@ -86,7 +86,7 @@ function providerToExistingProviderOptions(input: {
 	dialog: DialogActions;
 	termHeight: number;
 }): ExistingProviderOption[] {
-	if (input.providerId !== "cline-pass") {
+	if (input.providerId !== "agentario-pass") {
 		return [];
 	}
 
@@ -390,7 +390,7 @@ export function useModelSelector(opts: {
 									currentModel={config.modelId}
 									currentProviderName={providerDisplayName}
 									models={modelOptions}
-									showCustomModelId={config.providerId !== "cline-pass"}
+									showCustomModelId={config.providerId !== "agentario-pass"}
 								/>
 							),
 						});
@@ -481,7 +481,7 @@ export function useModelSelector(opts: {
 							currentModel={config.modelId}
 							currentProviderName={providerDisplayName}
 							models={modelOptions}
-							showCustomModelId={config.providerId !== "cline-pass"}
+							showCustomModelId={config.providerId !== "agentario-pass"}
 						/>
 					),
 				});

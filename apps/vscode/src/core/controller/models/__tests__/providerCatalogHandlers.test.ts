@@ -1,9 +1,9 @@
-import type { ApiConfiguration } from "@shared/api"
+﻿import type { ApiConfiguration } from "@shared/api"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { EffectiveProviderConfig, ProviderCatalog, ProviderConfigStore } from "@/sdk/model-catalog/contracts"
 import { computeConfigFingerprint } from "@/sdk/model-catalog/fingerprint"
 import { parseProviderId } from "@/sdk/model-catalog/provider-id"
-import { ApiFormat, OpenRouterModelInfo } from "@/shared/proto/cline/models"
+import { ApiFormat, OpenRouterModelInfo } from "@/shared/proto/agentario/models"
 import type { ProviderCatalogController } from "../providerCatalogShared"
 
 type TestStateManager = {

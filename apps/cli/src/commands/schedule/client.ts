@@ -1,9 +1,9 @@
-import {
+﻿import {
 	createLocalHubScheduleRuntimeHandlers,
 	HubScheduleCommandService,
 	HubScheduleService,
 	sendHubCommand,
-} from "@cline/core";
+} from "@agentario/core";
 import {
 	ensureCliHubServer,
 	parseHubEndpointOverride,

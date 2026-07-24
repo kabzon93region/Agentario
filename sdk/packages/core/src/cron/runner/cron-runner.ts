@@ -1,12 +1,12 @@
-import { basename } from "node:path";
+﻿import { basename } from "node:path";
 import type {
 	BasicLogger,
 	ChatRunTurnRequest,
 	ChatStartSessionRequest,
-} from "@cline/shared";
-import { buildClineSystemPrompt } from "@cline/shared";
-import { nowIso } from "@cline/shared/db";
-import type { ResolveCronSpecsDirOptions } from "@cline/shared/storage";
+} from "@agentario/shared";
+import { buildAgentarioSystemPrompt } from "@agentario/shared";
+import { nowIso } from "@agentario/shared/db";
+import type { ResolveCronSpecsDirOptions } from "@agentario/shared/storage";
 import { DefaultToolNames } from "../../extensions/tools/constants";
 import { mergeRulesForSystemPrompt } from "../../runtime/safety/rules";
 import { buildWorkspaceMetadata } from "../../services/workspace/workspace-manifest";
@@ -476,7 +476,7 @@ export class CronRunner {
 		const notes = buildNotesSystemPromptSection(spec.notesDirectory);
 		const additional = mergeRulesForSystemPrompt(undefined, notes);
 		const metadata = await buildWorkspaceMetadata(workspaceRoot);
-		const base = buildClineSystemPrompt({
+		const base = buildAgentarioSystemPrompt({
 			ide: "Cline Cron",
 			workspaceRoot,
 			workspaceName: basename(workspaceRoot),

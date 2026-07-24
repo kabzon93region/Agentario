@@ -6,9 +6,9 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import type * as LlmsProviders from "@cline/llms";
-import type { BasicLogger } from "@cline/shared";
-import { ensureHookLogDir } from "@cline/shared/storage";
+import type * as LlmsProviders from "@agentario/llms";
+import type { BasicLogger } from "@agentario/shared";
+import { ensureHookLogDir } from "@agentario/shared/storage";
 import { nowIso, SessionArtifacts } from "../../services/session-artifacts";
 import {
 	buildMessagesFilePayload,

@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+﻿import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { resolveClineDataDir } from "@cline/shared/storage";
+import { resolveClineDataDir } from "@agentario/shared/storage";
 
-const NOTICE_ID = "cline-cli-cline-pass-intro";
+const NOTICE_ID = "cline-cli-agentario-pass-intro";
 const FORCE_NOTICE_ENV = "CLINE_FORCE_CLINE_PASS_NOTICE";
 const DISABLE_NOTICE_ENV = "CLINE_DISABLE_CLINE_PASS_NOTICE";
 
@@ -62,7 +62,7 @@ export function shouldSuppressClineCliMigrationNoticeForActiveProvider(
 	env: NodeJS.ProcessEnv = process.env,
 ): boolean {
 	return (
-		activeProviderId?.trim() === "cline-pass" && !isForceNoticeEnabled(env)
+		activeProviderId?.trim() === "agentario-pass" && !isForceNoticeEnabled(env)
 	);
 }
 

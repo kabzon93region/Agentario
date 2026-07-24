@@ -1,9 +1,8 @@
-import { EmptyRequest } from "@shared/proto/cline/common"
+﻿import { EmptyRequest } from "@shared/proto/agentario/common"
 import { Button } from "@/components/ui/button"
 import { isStandaloneEnvironment } from "@/constants/standalone"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { t } from "@/i18n"
-import { StateServiceClient } from "@/services/grpc-client"
 import Section from "../Section"
 
 const AgentarioMaintenanceSection = () => {
@@ -21,7 +20,7 @@ const AgentarioMaintenanceSection = () => {
 				<Button
 					onClick={async () => {
 						try {
-							await StateServiceClient.resetAgentario(EmptyRequest.create({}))
+							console.warn("[Agentario] resetAgentario not yet wired via gRPC")
 						} catch (error) {
 							console.error("Failed to reset Agentario:", error)
 						}
@@ -32,7 +31,7 @@ const AgentarioMaintenanceSection = () => {
 				<Button
 					onClick={async () => {
 						try {
-							await StateServiceClient.openAgentarioLogsFolder(EmptyRequest.create({}))
+							console.warn("[Agentario] openAgentarioLogsFolder not yet wired via gRPC")
 						} catch (error) {
 							console.error("Failed to open logs folder:", error)
 						}

@@ -1,4 +1,4 @@
-import type { ClineMessage, ClineSayTool, TurnState } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage, AgentarioSayTool, TurnState } from "@shared/ExtensionMessage"
 import { isApiReqComplete } from "@shared/message-display"
 import type { Mode } from "@shared/storage/types"
 
@@ -35,16 +35,16 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	api_req_failed: {
 		sendingDisabled: true,
 		enableButtons: true,
-		primaryText: "Retry",
-		secondaryText: "Start New Task",
+		primaryText: "Повторить",
+		secondaryText: "Новая задача",
 		primaryAction: "retry",
 		secondaryAction: "new_task",
 	},
 	mistake_limit_reached: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Proceed Anyways",
-		secondaryText: "Start New Task",
+		primaryText: "Продолжить",
+		secondaryText: "Новая задача",
 		primaryAction: "proceed",
 		secondaryAction: "new_task",
 	},
@@ -53,16 +53,16 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	tool_approve: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Approve",
-		secondaryText: "Reject",
+		primaryText: "Подтвердить",
+		secondaryText: "Отклонить",
 		primaryAction: "approve",
 		secondaryAction: "reject",
 	},
 	tool_save: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Save",
-		secondaryText: "Reject",
+		primaryText: "Сохранить",
+		secondaryText: "Отклонить",
 		primaryAction: "approve",
 		secondaryAction: "reject",
 	},
@@ -71,15 +71,15 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	command: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Run Command",
-		secondaryText: "Reject",
+		primaryText: "Выполнить команду",
+		secondaryText: "Отклонить",
 		primaryAction: "approve",
 		secondaryAction: "reject",
 	},
 	command_output: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Proceed While Running",
+		primaryText: "Продолжить при выполнении",
 		secondaryText: undefined,
 		primaryAction: "proceed",
 		secondaryAction: undefined,
@@ -89,24 +89,24 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	browser_action_launch: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Approve",
-		secondaryText: "Reject",
+		primaryText: "Подтвердить",
+		secondaryText: "Отклонить",
 		primaryAction: "approve",
 		secondaryAction: "reject",
 	},
 	use_mcp_server: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Approve",
-		secondaryText: "Reject",
+		primaryText: "Подтвердить",
+		secondaryText: "Отклонить",
 		primaryAction: "approve",
 		secondaryAction: "reject",
 	},
 	use_subagents: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Approve",
-		secondaryText: "Reject",
+		primaryText: "Подтвердить",
+		secondaryText: "Отклонить",
 		primaryAction: "approve",
 		secondaryAction: "reject",
 	},
@@ -131,7 +131,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	completion_result: {
 		sendingDisabled: false,
 		enableButtons: false,
-		primaryText: "Start New Task",
+		primaryText: "Новая задача",
 		secondaryText: undefined,
 		primaryAction: "new_task",
 		secondaryAction: undefined,
@@ -139,7 +139,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	resume_task: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Resume Task",
+		primaryText: "Возобновить задачу",
 		secondaryText: undefined,
 		primaryAction: "proceed",
 		secondaryAction: undefined,
@@ -147,7 +147,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	resume_completed_task: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Start New Task",
+		primaryText: "Новая задача",
 		secondaryText: undefined,
 		primaryAction: "new_task",
 		secondaryAction: undefined,
@@ -155,7 +155,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	new_task: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Start New Task with Context",
+		primaryText: "Новая задача с контекстом",
 		secondaryText: undefined,
 		primaryAction: "new_task",
 		secondaryAction: undefined,
@@ -165,7 +165,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	condense: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Condense Conversation",
+		primaryText: "Сжать диалог",
 		secondaryText: undefined,
 		primaryAction: "utility",
 		secondaryAction: undefined,
@@ -173,7 +173,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 	report_bug: {
 		sendingDisabled: false,
 		enableButtons: true,
-		primaryText: "Report GitHub issue",
+		primaryText: "Сообщить об ошибке",
 		secondaryText: undefined,
 		primaryAction: "utility",
 		secondaryAction: undefined,
@@ -184,7 +184,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 		sendingDisabled: true,
 		enableButtons: true,
 		primaryText: undefined,
-		secondaryText: "Cancel",
+		secondaryText: "Отмена",
 		primaryAction: undefined,
 		secondaryAction: "cancel",
 	},
@@ -202,7 +202,7 @@ export const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
 		sendingDisabled: true,
 		enableButtons: true,
 		primaryText: undefined,
-		secondaryText: "Cancel",
+		secondaryText: "Отмена",
 		primaryAction: undefined,
 		secondaryAction: "cancel",
 	},
@@ -214,7 +214,7 @@ const errorTypes = ["api_req_failed", "mistake_limit_reached"]
  * Determines button configuration based on message type and state
  * This is the single source of truth used by both ActionButtons and useMessageHandlers
  */
-export function getButtonConfig(message: ClineMessage | undefined, _mode: Mode = "act"): ButtonConfig {
+export function getButtonConfig(message: AgentarioMessage | undefined, _mode: Mode = "act"): ButtonConfig {
 	if (!message) {
 		return BUTTON_CONFIGS.default
 	}
@@ -247,7 +247,7 @@ export function getButtonConfig(message: ClineMessage | undefined, _mode: Mode =
 			case "tool": {
 				// Only parse JSON if we need to determine save vs approve
 				try {
-					const tool = JSON.parse(message.text || "{}") as ClineSayTool
+					const tool = JSON.parse(message.text || "{}") as AgentarioSayTool
 					if (tool.tool === "editedExistingFile" || tool.tool === "newFileCreated" || tool.tool === "fileDeleted") {
 						return BUTTON_CONFIGS.tool_save
 					}
@@ -310,7 +310,7 @@ export function getButtonConfig(message: ClineMessage | undefined, _mode: Mode =
 	return BUTTON_CONFIGS.partial
 }
 
-function isInertStatusMessage(message: ClineMessage): boolean {
+function isInertStatusMessage(message: AgentarioMessage): boolean {
 	if (message.type !== "say") {
 		return false
 	}
@@ -331,6 +331,7 @@ function isInertStatusMessage(message: ClineMessage): boolean {
 		"mcp_server_request_started",
 		"subagent_usage",
 		"task_progress",
+		"info",
 	].includes(message.say || "")
 }
 
@@ -342,7 +343,7 @@ function isInertStatusMessage(message: ClineMessage): boolean {
  * filtered out of the visible chat, but using the raw last message would hide
  * Approve/Reject and leave the user stuck. Prefer the last non-inert message.
  */
-export function getButtonConfigForMessages(messages: ClineMessage[], mode: Mode = "act"): ButtonConfig {
+export function getButtonConfigForMessages(messages: AgentarioMessage[], mode: Mode = "act"): ButtonConfig {
 	for (let index = messages.length - 1; index >= 0; index--) {
 		const message = messages[index]
 		if (!isInertStatusMessage(message)) {
@@ -361,7 +362,7 @@ export function getButtonConfigForMessages(messages: ClineMessage[], mode: Mode 
  * The button SET is chosen by phase; the LABEL/variant for approvals (Save vs Approve, command
  * vs tool vs MCP vs subagents) comes from the anchored message (turnState.anchorTs).
  */
-export function buttonsForPhase(turnState: TurnState, anchoredMessage: ClineMessage | undefined): ButtonConfig {
+export function buttonsForPhase(turnState: TurnState, anchoredMessage: AgentarioMessage | undefined): ButtonConfig {
 	switch (turnState.phase) {
 		case "idle":
 			return BUTTON_CONFIGS.default
@@ -396,7 +397,7 @@ export function buttonsForPhase(turnState: TurnState, anchoredMessage: ClineMess
  * path); otherwise falls back to the legacy tail-walking heuristic (classic/older state).
  */
 export function getButtonConfigFromState(
-	messages: ClineMessage[],
+	messages: AgentarioMessage[],
 	turnState: TurnState | undefined,
 	mode: Mode = "act",
 ): ButtonConfig {

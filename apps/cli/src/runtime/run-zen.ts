@@ -1,6 +1,6 @@
-import type { UserInstructionConfigService } from "@cline/core";
-import { HubSessionClient } from "@cline/core";
-import type { ChatStartSessionRequest } from "@cline/shared";
+﻿import type { UserInstructionConfigService } from "@agentario/core";
+import { HubSessionClient } from "@agentario/core";
+import type { ChatStartSessionRequest } from "@agentario/shared";
 import { resolveCliSessionMetadata } from "../utils/enterprise";
 import { ensureCliHubServer } from "../utils/hub-runtime";
 import { c, emitJsonLine, writeErr, writeln } from "../utils/output";
@@ -38,7 +38,7 @@ export async function runZen(
 		return;
 	}
 	if (
-		process.env.CLINE_SESSION_BACKEND_MODE?.trim().toLowerCase() === "local"
+		process.env.agentario_SESSION_BACKEND_MODE?.trim().toLowerCase() === "local"
 	) {
 		writeErr(
 			"--zen requires the hub backend but CLINE_SESSION_BACKEND_MODE=local is set.",

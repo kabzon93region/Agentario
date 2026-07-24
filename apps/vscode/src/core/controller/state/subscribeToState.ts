@@ -1,5 +1,5 @@
-import { EmptyRequest } from "@shared/proto/cline/common"
-import { State } from "@shared/proto/cline/state"
+﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { State } from "@shared/proto/agentario/state"
 import { telemetryService } from "@/services/telemetry"
 import { ExtensionState } from "@/shared/ExtensionMessage"
 import { Logger } from "@/shared/services/Logger"
@@ -86,5 +86,5 @@ export async function sendStateUpdate(state: ExtensionState): Promise<void> {
 }
 
 function recordStateSizeTelemetry(sizeBytes: number): void {
-	telemetryService.captureGrpcResponseSize(sizeBytes, "cline.StateService", "subscribeToState")
+	telemetryService.captureGrpcResponseSize(sizeBytes, "agentario.StateService", "subscribeToState")
 }

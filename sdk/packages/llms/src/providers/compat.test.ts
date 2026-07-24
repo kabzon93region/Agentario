@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createGatewayApiHandler, toGatewayRequestMessages } from "./compat";
 import { ClineNotSubscribedError } from "./errors";
 import type { Message } from "./types";
@@ -621,7 +621,7 @@ describe("createGatewayApiHandler.createMessage", () => {
 		) as unknown as typeof fetch;
 
 		const handler = createGatewayApiHandler({
-			providerId: "cline-pass",
+			providerId: "agentario-pass",
 			clientType: "openai-compatible",
 			modelId: "premium-model",
 			apiKey: "test-key",

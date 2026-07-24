@@ -1,8 +1,8 @@
-import { Anthropic } from "@anthropic-ai/sdk"
+﻿import { Anthropic } from "@anthropic-ai/sdk"
 import * as diff from "diff"
 import * as path from "path"
 import { Mode } from "@/shared/storage/types"
-import { ClineIgnoreController, LOCK_TEXT_SYMBOL } from "../ignore/ClineIgnoreController"
+import { AgentarioIgnoreController, LOCK_TEXT_SYMBOL } from "../ignore/AgentarioIgnoreController"
 
 const CONTEXT_WINDOW_WARNING_THRESHOLD_PERCENT = 50
 
@@ -161,7 +161,7 @@ Otherwise, if you have not completed the task and do not need additional informa
 		absolutePath: string,
 		files: string[],
 		didHitLimit: boolean,
-		clineIgnoreController?: ClineIgnoreController,
+		AgentarioIgnoreController?: AgentarioIgnoreController,
 	): string => {
 		const sorted = files
 			.map((file) => {
@@ -194,13 +194,13 @@ Otherwise, if you have not completed the task and do not need additional informa
 				return aParts.length - bParts.length
 			})
 
-		const clineIgnoreParsed = clineIgnoreController
+		const clineIgnoreParsed = AgentarioIgnoreController
 			? sorted.map((filePath) => {
 					// path is relative to absolute path, not cwd
 					// validateAccess expects either path relative to cwd or absolute path
 					// otherwise, for validating against ignore patterns like "assets/icons", we would end up with just "icons", which would result in the path not being ignored.
 					const absoluteFilePath = path.resolve(absolutePath, filePath)
-					const isIgnored = !clineIgnoreController.validateAccess(absoluteFilePath)
+					const isIgnored = !AgentarioIgnoreController.validateAccess(absoluteFilePath)
 					if (isIgnored) {
 						return LOCK_TEXT_SYMBOL + " " + filePath
 					}

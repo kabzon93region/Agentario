@@ -2,8 +2,8 @@ import type {
 	HubCommandEnvelope,
 	HubReplyEnvelope,
 	ToolApprovalRequest,
-} from "@cline/shared";
-import { createSessionId } from "@cline/shared";
+} from "@agentario/shared";
+import { createSessionId } from "@agentario/shared";
 import { errorReply, type HubTransportContext, okReply } from "./context";
 
 export async function requestToolApproval(

@@ -1,4 +1,4 @@
-import { SwitchWorktreeRequest, WorktreeResult } from "@shared/proto/cline/worktree"
+﻿import { SwitchWorktreeRequest, WorktreeResult } from "@shared/proto/agentario/worktree"
 import { HostProvider } from "@/hosts/host-provider"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."

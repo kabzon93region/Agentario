@@ -1,6 +1,6 @@
-import { HostProvider } from "@/hosts/host-provider"
+﻿import { HostProvider } from "@/hosts/host-provider"
 import { ExtensionRegistryInfo } from "@/registry"
-import { EmptyRequest } from "@/shared/proto/cline/common"
+import { EmptyRequest } from "@/shared/proto/agentario/common"
 import { Logger } from "@/shared/services/Logger"
 
 // Canonical header names for extra client/host context

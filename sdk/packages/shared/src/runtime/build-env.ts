@@ -1,26 +1,26 @@
-import { basename } from "node:path";
+﻿import { basename } from "node:path";
 
 export const CLINE_BUILD_ENV_ENV = "CLINE_BUILD_ENV";
 export const CLINE_DEBUG_HOST_ENV = "CLINE_DEBUG_HOST";
 export const CLINE_DEBUG_PORT_BASE_ENV = "CLINE_DEBUG_PORT_BASE";
 
-export type ClineBuildEnv = "development" | "production";
-export type ClineDebugRole =
+export type AgentarioBuildEnv = "development" | "production";
+export type AgentarioDebugRole =
 	| "rpc"
 	| "hook"
 	| "plugin-sandbox"
 	| "connector"
 	| "sandbox";
 
-export interface ResolveClineBuildEnvOptions {
+export interface ResolveAgentarioBuildEnvOptions {
 	env?: NodeJS.ProcessEnv;
 	execArgv?: string[];
-	debugRole?: ClineDebugRole;
+	debugRole?: AgentarioDebugRole;
 }
 
 function normalizeBuildEnv(
 	value: string | undefined,
-): ClineBuildEnv | undefined {
+): AgentarioBuildEnv | undefined {
 	const normalized = value?.trim().toLowerCase();
 	if (normalized === "development" || normalized === "production") {
 		return normalized;
@@ -94,7 +94,7 @@ function resolveDebugPortBase(env: NodeJS.ProcessEnv): number | undefined {
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function resolveRolePortOffset(role: ClineDebugRole | undefined): number {
+function resolveRolePortOffset(role: AgentarioDebugRole | undefined): number {
 	switch (role) {
 		case "rpc":
 			return 0;
@@ -111,9 +111,9 @@ function resolveRolePortOffset(role: ClineDebugRole | undefined): number {
 	}
 }
 
-export function resolveClineBuildEnv(
-	options: ResolveClineBuildEnvOptions = {},
-): ClineBuildEnv {
+export function resolveAgentarioBuildEnv(
+	options: ResolveAgentarioBuildEnvOptions = {},
+): AgentarioBuildEnv {
 	const env = options.env ?? process.env;
 	const execArgv = options.execArgv ?? process.execArgv;
 
@@ -133,16 +133,16 @@ export function resolveClineBuildEnv(
 	return hasDevelopmentCondition(execArgv) ? "development" : "production";
 }
 
-export function withResolvedClineBuildEnv(
+export function withResolvedAgentarioBuildEnv(
 	env: NodeJS.ProcessEnv = process.env,
-	options: Omit<ResolveClineBuildEnvOptions, "env"> = {},
+	options: Omit<ResolveAgentarioBuildEnvOptions, "env"> = {},
 ): NodeJS.ProcessEnv {
 	if (normalizeBuildEnv(env[CLINE_BUILD_ENV_ENV])) {
 		return env;
 	}
 	return {
 		...env,
-		[CLINE_BUILD_ENV_ENV]: resolveClineBuildEnv({
+		[CLINE_BUILD_ENV_ENV]: resolveAgentarioBuildEnv({
 			env,
 			execArgv: options.execArgv,
 		}),
@@ -151,12 +151,12 @@ export function withResolvedClineBuildEnv(
 
 export function augmentNodeCommandForDebug(
 	command: string[],
-	options: ResolveClineBuildEnvOptions = {},
+	options: ResolveAgentarioBuildEnvOptions = {},
 ): string[] {
 	if (command.length === 0 || !isNodeLauncher(command[0])) {
 		return [...command];
 	}
-	if (resolveClineBuildEnv(options) !== "development") {
+	if (resolveAgentarioBuildEnv(options) !== "development") {
 		return [...command];
 	}
 

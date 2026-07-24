@@ -1,4 +1,4 @@
-import type { AgentEvent } from "@cline/core";
+﻿import type { AgentEvent } from "@agentario/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	clearClineFreeModelCostCache,

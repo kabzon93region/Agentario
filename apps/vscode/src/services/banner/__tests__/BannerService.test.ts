@@ -1,10 +1,10 @@
-/**
+﻿/**
  * Tests for BannerService
  * Tests API fetching, caching, auth updates, and rate limit backoff
  */
 
 import { afterEach, beforeEach, describe, it } from "bun:test"
-import type { BannerRules } from "@shared/ClineBanner"
+import type { BannerRules } from "@shared/AgentarioBanner"
 import { expect } from "chai"
 import * as sinon from "sinon"
 import { ClineEnv, Environment } from "@/config"

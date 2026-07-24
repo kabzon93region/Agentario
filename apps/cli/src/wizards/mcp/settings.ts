@@ -1,10 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+﻿import { existsSync, readFileSync } from "node:fs";
 import {
 	type McpServerOAuthState,
 	McpSettingsUpdateSkippedError,
 	resolveDefaultMcpSettingsPath,
 	updateMcpSettingsFileSync,
-} from "@cline/core";
+} from "@agentario/core";
 
 export interface McpServerEntry {
 	name: string;
@@ -72,7 +72,7 @@ function getOwnServerRecord(
 }
 
 /**
- * Mutate the MCP settings file through @cline/core's locked read-update-write
+ * Mutate the MCP settings file through @agentario/core's locked read-update-write
  * helper. The mutator must be synchronous and pure; the helper may call it more
  * than once to verify deterministic output. Throw McpSettingsUpdateSkippedError
  * for normal no-op cases instead of returning a boolean that callers can ignore.

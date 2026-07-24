@@ -1,4 +1,4 @@
-import type { GatewayResolvedProviderConfig } from "@cline/shared";
+import type { GatewayResolvedProviderConfig } from "@agentario/shared";
 // Keep this import static so the VS Code extension bundle includes the SAP
 // provider. Hiding it behind a computed dynamic import leaves the published
 // extension trying to load @jerome-benoit/sap-ai-provider from node_modules at

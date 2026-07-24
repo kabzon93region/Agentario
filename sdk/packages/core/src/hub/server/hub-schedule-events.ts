@@ -1,4 +1,4 @@
-import type { HubCommandEnvelope, HubEventEnvelope } from "@cline/shared";
+import type { HubCommandEnvelope, HubEventEnvelope } from "@agentario/shared";
 
 export function eventNameForScheduleCommand(
 	command: HubCommandEnvelope["command"],

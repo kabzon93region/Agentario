@@ -8,7 +8,7 @@ import type {
 	AgentToolContext,
 	ImageContent,
 	TextContent,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type {
 	ApplyPatchInput,
 	EditFileInput,
@@ -193,6 +193,18 @@ export type VerifySubmitExecutor = (
 ) => Promise<string>;
 
 /**
+ * Executor for semantic search using embeddings
+ *
+ * @param query - Natural language search query
+ * @param limit - Maximum number of results to return
+ * @returns JSON string with search results
+ */
+export type SemanticSearchExecutor = (
+	query: string,
+	limit: number,
+) => Promise<string>;
+
+/**
  * Collection of all tool executors
  */
 export interface ToolExecutors {
@@ -214,6 +226,8 @@ export interface ToolExecutors {
 	askQuestion?: AskQuestionExecutor;
 	/** Final submission implementation */
 	submit?: VerifySubmitExecutor;
+	/** Semantic search using embeddings */
+	semanticSearch?: SemanticSearchExecutor;
 }
 
 // =============================================================================
@@ -232,7 +246,8 @@ export type DefaultToolName =
 	| "editor"
 	| "skills"
 	| "ask_question"
-	| "submit_and_exit";
+	| "submit_and_exit"
+	| "semantic_search";
 
 /**
  * Configuration for enabling/disabling default tools
@@ -291,6 +306,12 @@ export interface DefaultToolsConfig {
 	 * @default false
 	 */
 	enableSubmitAndExit?: boolean;
+
+	/**
+	 * Enable the semantic_search tool (uses embeddings index)
+	 * @default true
+	 */
+	enableSemanticSearch?: boolean;
 
 	/**
 	 * Current working directory for tools that need it

@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------
 // Environment helpers for test setup.
 //
 // Usage:
@@ -51,16 +51,16 @@ export function clineEnv(
 
 	// Determine effective VCR mode: extra overrides > parent env > default "playback"
 	const effectiveVcrMode =
-		extra.CLINE_VCR ?? process.env.CLINE_VCR ?? "playback";
+		extra.agentario_VCR ?? process.env.agentario_VCR ?? "playback";
 
 	// During recording, authenticated configs read real OAuth credentials from
-	// ~/.cline/data/settings/providers.json while keeping all other settings
+	// ~/.agentario/data/settings/providers.json while keeping all other settings
 	// (model, provider, global state) from the mock config directory.
 	const isRecording = effectiveVcrMode === "record";
 	const isAuthenticated = configDir !== "unauthenticated";
 	const realProvidersFile =
 		isRecording && isAuthenticated
-			? path.join(os.homedir(), ".cline", "data", "settings", "providers.json")
+			? path.join(os.homedir(), ".agentario", "data", "settings", "providers.json")
 			: undefined;
 
 	// Remove CI so terminal renderers treat the spawned process as interactive.
@@ -70,14 +70,14 @@ export function clineEnv(
 	// recording/playback is silently skipped.
 	const { CI: _ci, VITEST: _vitest, ...cleanEnv } = process.env;
 	if (!isAuthenticated) {
-		delete cleanEnv.CLINE_API_KEY;
+		delete cleanEnv.agentario_API_KEY;
 	}
 
 	// Only enable VCR when a cassette path is provided (via extra or parent env),
 	// otherwise tests without cassettes would trigger a spurious
 	// "[VCR] No CLINE_VCR_CASSETTE" warning on every run.
 	const hasCassette = !!(
-		extra.CLINE_VCR_CASSETTE ?? process.env.CLINE_VCR_CASSETTE
+		extra.agentario_VCR_CASSETTE ?? process.env.agentario_VCR_CASSETTE
 	);
 	const vcrDefaults = hasCassette
 		? { CLINE_VCR: "playback", CLINE_VCR_FILTER: "" }
@@ -92,7 +92,7 @@ export function clineEnv(
 			: {}),
 		CLINE_TELEMETRY_DISABLED: "1",
 		HOME: path.join(isolatedClinePath, "home"),
-		CLINE_DIR: isolatedClinePath,
+		AGENTARIO_DIR: isolatedClinePath,
 		CLINE_DATA_DIR: dataDir,
 		CLINE_DB_DATA_DIR: path.join(dataDir, "db"),
 		CLINE_GLOBAL_SETTINGS_PATH: path.join(

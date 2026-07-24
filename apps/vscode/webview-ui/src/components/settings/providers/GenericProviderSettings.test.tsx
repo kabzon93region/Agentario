@@ -1,5 +1,5 @@
-import type { ProviderConfigResponse } from "@shared/proto/cline/models"
-import { ApiFormat } from "@shared/proto/cline/models"
+﻿import type { ProviderConfigResponse } from "@shared/proto/agentario/models"
+import { ApiFormat } from "@shared/proto/agentario/models"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { ChangeEventHandler, ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"

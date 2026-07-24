@@ -1,4 +1,4 @@
-// SDK Adapter Layer
+﻿// SDK Adapter Layer
 // Replaces classic src/core/controller/ (see origin/main)
 //
 // This module provides the SDK-backed Controller and related adapters.
@@ -7,7 +7,7 @@
 
 export * from "./account-service"
 export * from "./auth-service"
-export * from "./cline-session-factory"
+export * from "./agentario-session-factory"
 export * from "./legacy-state-reader"
 export * from "./message-translator"
 export * from "./provider-migration"

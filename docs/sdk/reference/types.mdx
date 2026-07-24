@@ -1,10 +1,10 @@
----
+﻿---
 title: "Types"
 sidebarTitle: "Types"
 description: "Common SDK type surfaces."
 ---
 
-Most common types are exported from `@cline/shared`; runtime entry-point packages re-export selected helpers.
+Most common types are exported from `@agentario/shared`; runtime entry-point packages re-export selected helpers.
 
 ## AgentRuntime Types
 
@@ -16,7 +16,7 @@ import type {
   AgentRuntimeEvent,
   AgentRuntimeStateSnapshot,
   AgentUsage,
-} from "@cline/sdk"
+} from "@agentario/sdk"
 ```
 
 `AgentRunResult` is returned by direct `AgentRuntime` / `Agent` runs:
@@ -46,7 +46,7 @@ import type {
   AgentTool,
   AgentToolContext,
   ToolPolicy,
-} from "@cline/sdk"
+} from "@agentario/sdk"
 ```
 
 `AgentResult` is the host/core-facing result shape:
@@ -74,7 +74,7 @@ import type {
   ClineCoreStartInput,
   CoreSessionConfig,
   SessionRecord,
-} from "@cline/sdk"
+} from "@agentario/sdk"
 ```
 
 ## Tool Types

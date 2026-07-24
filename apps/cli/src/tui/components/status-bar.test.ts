@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 import {
 	createContextBar,
 	formatStatusBarUsageText,
@@ -66,7 +66,7 @@ describe("formatStatusBarUsageText", () => {
 			formatStatusBarUsageText({
 				totalTokens: 12_345,
 				totalCost: 0.123,
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 			}),
 		).toBe("(12,345 tokens) $0.00 (included with subscription)");
 	});
@@ -76,7 +76,7 @@ describe("resolveModelDisplayName", () => {
 	it("keeps ClinePass visible when model ids have provider prefixes", () => {
 		expect(
 			resolveModelDisplayName({
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 				modelId: "zai/glm-5.2",
 				knownModels: {
 					"zai/glm-5.2": { name: "GLM 5.2" },

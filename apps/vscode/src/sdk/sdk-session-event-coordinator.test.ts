@@ -1,5 +1,5 @@
-import type { CoreSessionEvent } from "@cline/core"
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import type { CoreSessionEvent } from "@agentario/core"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MessageTranslatorState } from "./message-translator"
 import { SdkSessionEventCoordinator, type SdkSessionEventCoordinatorOptions } from "./sdk-session-event-coordinator"
@@ -19,7 +19,7 @@ describe("SdkSessionEventCoordinator", () => {
 	})
 
 	it("translates and emits session messages, then posts state", async () => {
-		const message: ClineMessage = { ts: 1, type: "say", say: "text", text: "hello" }
+		const message: AgentarioMessage = { ts: 1, type: "say", say: "text", text: "hello" }
 		const { coordinator, options, event } = makeCoordinator({
 			translation: {
 				messages: [message],
@@ -112,7 +112,7 @@ describe("SdkSessionEventCoordinator", () => {
 	})
 
 	it("marks a submitted queued prompt as a new streaming turn", async () => {
-		const message: ClineMessage = { ts: 1, type: "say", say: "user_feedback", text: "queued prompt" }
+		const message: AgentarioMessage = { ts: 1, type: "say", say: "user_feedback", text: "queued prompt" }
 		const { coordinator, options } = makeCoordinator({
 			translation: {
 				messages: [message],
@@ -248,7 +248,7 @@ describe("SdkSessionEventCoordinator", () => {
 	})
 
 	it("leaves mistake-limit recovery to the SDK callback instead of mutating tool-error events", async () => {
-		const message: ClineMessage = { ts: 1, type: "say", say: "tool", text: "{}", partial: false }
+		const message: AgentarioMessage = { ts: 1, type: "say", say: "tool", text: "{}", partial: false }
 		const { coordinator, options, event } = makeCoordinator({
 			translation: {
 				messages: [message],
@@ -344,7 +344,7 @@ interface MakeCoordinatorInput {
 	task: { taskId: string }
 	isClineFreeModel: () => Promise<boolean>
 	translation: {
-		messages: ClineMessage[]
+		messages: AgentarioMessage[]
 		sessionEnded: boolean
 		turnComplete: boolean
 		toolError?: boolean

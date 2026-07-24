@@ -1,5 +1,5 @@
-import { StringRequest } from "@shared/proto/cline/common"
-import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/cline/state"
+﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/agentario/state"
 import { SquareArrowOutUpRightIcon } from "lucide-react"
 import { marked } from "marked"
 import type { ComponentProps } from "react"

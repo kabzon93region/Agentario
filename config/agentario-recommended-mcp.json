@@ -4,7 +4,10 @@
 			"transport": {
 				"type": "stdio",
 				"command": "npx",
-				"args": ["-y", "@modelcontextprotocol/server-memory"]
+				"args": ["-y", "@modelcontextprotocol/server-memory"],
+				"env": {
+					"MEMORY_FILE_PATH": "${env:AGENTARIO_WORKSPACE_ROOT}/.agentario/mcp-memory.json"
+				}
 			},
 			"disabled": true,
 			"autoApprove": ["create_entities", "create_relations", "add_observations", "search_nodes", "open_nodes"]
@@ -13,7 +16,10 @@
 			"transport": {
 				"type": "stdio",
 				"command": "npx",
-				"args": ["-y", "memory-slim@latest"]
+				"args": ["-y", "memory-slim@latest"],
+				"env": {
+					"MEMORY_FILE_PATH": "${env:AGENTARIO_WORKSPACE_ROOT}/.agentario/mcp-memory-slim.json"
+				}
 			},
 			"disabled": true
 		},

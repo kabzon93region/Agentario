@@ -1,8 +1,8 @@
-import type { ModelInfo } from "@shared/api"
+﻿import type { ModelInfo } from "@shared/api"
 import type { ProviderModelsResult } from "@/sdk/model-catalog/contracts"
 import { providerAllowsCustomModelIds } from "@/sdk/model-catalog/custom-model-ids"
 import { applyHostModelInfoOverrides } from "@/sdk/model-catalog/host-overrides"
-import { ResolveModelInfoRequest, ResolveModelInfoResponse } from "@/shared/proto/cline/models"
+import { ResolveModelInfoRequest, ResolveModelInfoResponse } from "@/shared/proto/agentario/models"
 import { toProtobufModelInfo } from "@/shared/proto-conversions/models/typeConversion"
 import {
 	hasProviderCatalogStateController,

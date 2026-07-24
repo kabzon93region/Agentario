@@ -1,4 +1,4 @@
-export {
+﻿export {
 	type ApiHandler,
 	BUILT_IN_PROVIDER,
 	BUILT_IN_PROVIDER_IDS,
@@ -34,10 +34,10 @@ export {
 	getClineOrgIndividualInferenceSubscriptionMessage,
 	getClineNotSubscribedMessage,
 	getClinePassSubscriptionUrl,
-	isClineNotSubscribedError,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionError,
-	isClineOrgIndividualInferenceSubscriptionMessage,
+	isAgentarioCloudNotSubscribedError,
+	isAgentarioCloudNotSubscribedMessage,
+	isAgentarioCloudOrgSubscriptionError,
+	isAgentarioCloudOrgSubscriptionMessage,
 } from "./providers/errors";
 export {
 	getRegisteredHandler,

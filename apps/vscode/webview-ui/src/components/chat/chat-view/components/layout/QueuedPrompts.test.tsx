@@ -1,4 +1,4 @@
-import type { QueuedPrompt } from "@shared/ExtensionMessage"
+﻿import type { QueuedPrompt } from "@shared/ExtensionMessage"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { QueuedPrompts } from "./QueuedPrompts"
@@ -11,7 +11,7 @@ vi.mock("@/services/grpc-client", () => ({
 	},
 }))
 
-vi.mock("@shared/proto/cline/common", () => ({
+vi.mock("@shared/proto/agentario/common", () => ({
 	StringRequest: {
 		create: (request: unknown) => request,
 	},

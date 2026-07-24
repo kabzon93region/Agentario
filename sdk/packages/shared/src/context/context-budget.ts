@@ -8,6 +8,10 @@ export interface ContextBudgetCategories {
 	rules: number
 	tools: number
 	chat: number
+	/** Agentario: MCP tools token usage */
+	mcp?: number
+	/** Agentario: Skills/rules token usage */
+	skills?: number
 }
 
 /** Estimated token breakdown for one model request (categories are approximate). */

@@ -13,7 +13,7 @@
  *   # or
  *   bun packages/core/scripts/telemetry-smoke.ts
  */
-import type { ITelemetryService, TelemetryProperties } from "@cline/shared";
+import type { ITelemetryService, TelemetryProperties } from "@agentario/shared";
 import {
 	captureConversationTurnEvent,
 	captureExtensionActivated,

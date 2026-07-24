@@ -1,4 +1,4 @@
-import fs from "fs/promises"
+﻿import fs from "fs/promises"
 import path from "path"
 import { Logger } from "@/shared/services/Logger"
 import { version as clineVersion } from "../../../package.json"
@@ -17,7 +17,7 @@ import {
 	TaskResumeData,
 	TaskStartData,
 	UserPromptSubmitData,
-} from "../../shared/proto/cline/hooks"
+} from "../../shared/proto/agentario/hooks"
 import { getAllHooksDirs } from "../storage/disk"
 import { StateManager } from "../storage/StateManager"
 import { HookExecutionError } from "./HookError"

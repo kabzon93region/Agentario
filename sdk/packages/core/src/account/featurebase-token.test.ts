@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { ClineAccountService } from "./cline-account-service";
+﻿import { describe, expect, it, vi } from "vitest";
+import { ClineAccountService } from "./agentario-account-service";
 import {
 	type ClineAccountOperations,
 	executeClineAccountAction,

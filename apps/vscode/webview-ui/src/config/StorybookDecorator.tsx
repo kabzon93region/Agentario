@@ -1,11 +1,11 @@
-import "../../../node_modules/@vscode/codicons/dist/codicon.css"
+﻿import "../../../node_modules/@vscode/codicons/dist/codicon.css"
 import "../../../node_modules/@vscode/codicons/dist/codicon.ttf"
 import "../../src/index.css"
 
 import { cn } from "@heroui/react"
 import type { Decorator } from "@storybook/react-vite"
 import React from "react"
-import { ClineAuthContext, ClineAuthContextType, ClineAuthProvider, useClineAuth } from "@/context/ClineAuthContext"
+import { AgentarioAuthContext, AgentarioAuthContextType, ClineAuthProvider, useClineAuth } from "@/context/AgentarioAuthContext"
 import {
 	ExtensionStateContext,
 	ExtensionStateContextProvider,
@@ -64,15 +64,15 @@ const ExtensionStateProviderWithOverrides: React.FC<{
 }
 
 const ClineAuthProviderWithOverrides: React.FC<{
-	overrides?: Partial<ClineAuthContextType>
+	overrides?: Partial<AgentarioAuthContextType>
 	children: React.ReactNode
 }> = ({ overrides, children }) => {
 	const authContext = useClineAuth()
-	return <ClineAuthContext.Provider value={{ ...authContext, ...overrides }}>{children}</ClineAuthContext.Provider>
+	return <AgentarioAuthContext.Provider value={{ ...authContext, ...overrides }}>{children}</AgentarioAuthContext.Provider>
 }
 
 export const createStorybookDecorator =
-	(overrideStates?: Partial<ExtensionStateContextType>, classNames?: string, authOverrides?: Partial<ClineAuthContextType>) =>
+	(overrideStates?: Partial<ExtensionStateContextType>, classNames?: string, authOverrides?: Partial<AgentarioAuthContextType>) =>
 	(Story: any) => (
 		<ExtensionStateProviderWithOverrides overrides={overrideStates}>
 			<ClineAuthProviderWithOverrides overrides={authOverrides}>

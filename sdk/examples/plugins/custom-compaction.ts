@@ -15,8 +15,8 @@
  *   cline -i "Search the codebase for dispatcher usage, then summarize it"
  */
 
-import type { AgentPlugin, Message, ToolResultContent } from "@cline/core";
-import { estimateTokens as estimateTokensFromChars } from "@cline/shared";
+import type { AgentPlugin, Message, ToolResultContent } from "@agentario/core";
+import { estimateTokens as estimateTokensFromChars } from "@agentario/shared";
 
 const MAX_INPUT_TOKENS = 120_000;
 const COMPACT_AT_RATIO = 0.75;

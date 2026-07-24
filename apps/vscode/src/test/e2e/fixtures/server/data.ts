@@ -1,11 +1,11 @@
-import type {
+﻿import type {
 	BalanceResponse,
 	OrganizationBalanceResponse,
 	OrganizationUsageTransaction,
 	PaymentTransaction,
 	UsageTransaction,
 	UserResponse,
-} from "../../../../shared/ClineAccount"
+} from "../../../../shared/AgentarioAccount"
 
 const organizations = [
 	{

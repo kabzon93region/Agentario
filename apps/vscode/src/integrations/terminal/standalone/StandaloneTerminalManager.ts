@@ -1,4 +1,4 @@
-/**
+﻿/**
  * StandaloneTerminalManager - Main terminal manager for standalone environments.
  *
  * This class provides the same interface as VSCode's TerminalManager but works
@@ -12,7 +12,7 @@
  * - Provides summary for environment details
  */
 
-import { ClineTempManager } from "@services/temp"
+import { AgentarioTempManager } from "@services/temp"
 import * as fs from "fs"
 import { Logger } from "@/shared/services/Logger"
 import { BACKGROUND_COMMAND_TIMEOUT_MS, DEFAULT_TERMINAL_OUTPUT_LINE_LIMIT } from "../constants"
@@ -413,8 +413,8 @@ export class StandaloneTerminalManager implements ITerminalManager {
 		existingOutput: string[] = [],
 	): BackgroundCommand {
 		const id = `background-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-		// Use ClineTempManager for proper temp file management and cleanup
-		const logFilePath = ClineTempManager.createTempFilePath("background")
+		// Use AgentarioTempManager for proper temp file management and cleanup
+		const logFilePath = AgentarioTempManager.createTempFilePath("background")
 
 		const backgroundCommand: BackgroundCommand = {
 			id,

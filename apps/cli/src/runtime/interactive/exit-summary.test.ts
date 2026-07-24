@@ -1,4 +1,4 @@
-import type { SessionRecord } from "@cline/core";
+﻿import type { SessionRecord } from "@agentario/core";
 import { describe, expect, it } from "vitest";
 import {
 	createInteractiveExitSummary,

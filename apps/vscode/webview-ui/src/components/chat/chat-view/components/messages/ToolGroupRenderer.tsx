@@ -1,6 +1,6 @@
-import { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
+﻿import { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"
 import { isApiReqComplete } from "@shared/message-display"
-import { StringRequest } from "@shared/proto/cline/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { memo, useCallback, useMemo, useState } from "react"
 import { TypewriterText } from "@/components/chat/TypewriterText"
 import { cleanPathPrefix } from "@/components/common/CodeAccordian"
@@ -10,14 +10,14 @@ import { FileServiceClient } from "@/services/grpc-client"
 import { getIconByToolName, getToolsNotInCurrentActivities, isLowStakesTool } from "../../utils/messageUtils"
 
 interface ToolGroupRendererProps {
-	messages: ClineMessage[]
-	allMessages: ClineMessage[]
+	messages: AgentarioMessage[]
+	allMessages: AgentarioMessage[]
 	isLastGroup: boolean
 }
 
 interface ToolWithReasoning {
-	tool: ClineMessage
-	parsedTool: ClineSayTool
+	tool: AgentarioMessage
+	parsedTool: AgentarioSayTool
 	reasoning?: string
 	isActive?: boolean
 	activityText?: string
@@ -26,7 +26,7 @@ interface ToolWithReasoning {
 const EXPANDABLE_TOOLS = new Set(["listFilesTopLevel", "listFilesRecursive", "listCodeDefinitionNames", "searchFiles"])
 
 // Helper to format activity text for active items (from RequestStartRow logic)
-const getActivityText = (tool: ClineSayTool): string | null => {
+const getActivityText = (tool: AgentarioSayTool): string | null => {
 	const cleanedPath = cleanPathPrefix(tool.path || "")
 	const formatSearchRegex = (regex: string, path: string, filePattern?: string): string => {
 		const cleanedPath = cleanPathPrefix(path)
@@ -63,7 +63,7 @@ const getActivityText = (tool: ClineSayTool): string | null => {
 }
 
 // Calculate current activities (from RequestStartRow logic)
-const getCurrentActivities = (allMessages: ClineMessage[]): ClineMessage[] => {
+const getCurrentActivities = (allMessages: AgentarioMessage[]): AgentarioMessage[] => {
 	// Find current api_req
 	let currentApiReqIndex = -1
 	for (let i = allMessages.length - 1; i >= 0; i--) {
@@ -87,7 +87,7 @@ const getCurrentActivities = (allMessages: ClineMessage[]): ClineMessage[] => {
 	}
 
 	// Collect tools AFTER the current api_req_started
-	const activities: ClineMessage[] = []
+	const activities: AgentarioMessage[] = []
 	for (let i = currentApiReqIndex + 1; i < allMessages.length; i++) {
 		const msg = allMessages[i]
 		// Only collect tools that are currently executing (ask === "tool")
@@ -109,6 +109,8 @@ const getCurrentActivities = (allMessages: ClineMessage[]): ClineMessage[] => {
  */
 export const ToolGroupRenderer = memo(({ messages, allMessages, isLastGroup }: ToolGroupRendererProps) => {
 	const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({})
+	// Agentario: tool group collapsed by default for compact view
+	const [isGroupExpanded, setIsGroupExpanded] = useState(false)
 
 	// Filter out tools in the "current activities" range (being shown in loading state)
 	const filteredMessages = useMemo(() => getToolsNotInCurrentActivities(messages, allMessages), [messages, allMessages])
@@ -166,15 +168,25 @@ export const ToolGroupRenderer = memo(({ messages, allMessages, isLastGroup }: T
 
 	// Don't render if no tools to show
 	if (allTools.length === 0) {
+		console.warn("[ToolGroupRenderer] allTools is empty", { messages: messages.length, filteredMessages: filteredMessages.length, completedTools: completedTools.length, activeTools: activeTools.length })
 		return null
 	}
 
 	return (
 		<div className={cn("px-4 py-2 ml-1 text-description")}>
-			{/* Header */}
-			<div className="text-[13px] text-description font-semibold mb-1">{summary}:</div>
+			{/* Header - clickable to toggle file list */}
+			<div
+				className="text-[13px] text-description font-semibold mb-1 cursor-pointer select-none flex items-center gap-1.5"
+				onClick={() => setIsGroupExpanded(!isGroupExpanded)}>
+				<span
+					className={cn("codicon transition-transform", isGroupExpanded ? "codicon-chevron-down" : "codicon-chevron-right")}
+					style={{ fontSize: 12 }}
+				/>
+				{summary}:
+			</div>
 
 			{/* Content - unified list of completed + active tools */}
+			{isGroupExpanded && (
 			<div className="min-w-0">
 				{allTools.map(({ tool, parsedTool, isActive, activityText }) => {
 					const info = getToolDisplayInfo(parsedTool)
@@ -234,6 +246,7 @@ export const ToolGroupRenderer = memo(({ messages, allMessages, isLastGroup }: T
 					)
 				})}
 			</div>
+			)}
 		</div>
 	)
 })
@@ -242,7 +255,7 @@ export const ToolGroupRenderer = memo(({ messages, allMessages, isLastGroup }: T
  * Build tool items WITHOUT reasoning.
  * Reasoning should not be displayed in file lists - only file/folder content.
  */
-export function buildToolsWithReasoning(messages: ClineMessage[]): ToolWithReasoning[] {
+export function buildToolsWithReasoning(messages: AgentarioMessage[]): ToolWithReasoning[] {
 	const result: ToolWithReasoning[] = []
 
 	for (const msg of messages) {
@@ -284,18 +297,18 @@ export function buildToolsWithReasoning(messages: ClineMessage[]): ToolWithReaso
 /**
  * Safely parse tool JSON, returning empty tool on failure.
  */
-function parseToolSafe(text: string | undefined): ClineSayTool {
+function parseToolSafe(text: string | undefined): AgentarioSayTool {
 	try {
-		return JSON.parse(text || "{}") as ClineSayTool
+		return JSON.parse(text || "{}") as AgentarioSayTool
 	} catch {
-		return {} as ClineSayTool
+		return {} as AgentarioSayTool
 	}
 }
 
 /**
  * Get display info for a tool.
  */
-function getToolDisplayInfo(tool: ClineSayTool) {
+function getToolDisplayInfo(tool: AgentarioSayTool) {
 	const icon = getIconByToolName(tool.tool)
 	const filePath = tool.path || ""
 	const folderPath = filePath + "/"
@@ -354,7 +367,7 @@ function formatSearchDisplay(regex: string, path: string, filePattern?: string):
 /**
  * Get summary label for a tool group - shows what's been added to context.
  */
-export function getToolGroupSummaryFromParsedTools(tools: ClineSayTool[]): string {
+export function getToolGroupSummaryFromParsedTools(tools: AgentarioSayTool[]): string {
 	const counts = { read: 0, list: 0, search: 0, def: 0 }
 
 	for (const tool of tools) {

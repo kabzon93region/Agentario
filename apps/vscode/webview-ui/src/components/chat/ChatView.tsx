@@ -1,10 +1,10 @@
-import { combineApiRequests } from "@shared/combineApiRequests"
+﻿import { combineApiRequests } from "@shared/combineApiRequests"
 import { combineCommandSequences } from "@shared/combineCommandSequences"
 import { combineErrorRetryMessages } from "@shared/combineErrorRetryMessages"
 import { combineHookSequences } from "@shared/combineHookSequences"
-import type { ClineMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { getApiMetrics, getLastApiReqTotalTokens, getLastContextBudget } from "@shared/getApiMetrics"
-import { BooleanRequest, StringRequest } from "@shared/proto/cline/common"
+import { BooleanRequest, StringRequest } from "@shared/proto/agentario/common"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { useMount } from "react-use"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -43,7 +43,7 @@ interface ChatViewProps {
 const MAX_IMAGES_AND_FILES_PER_MESSAGE = CHAT_CONSTANTS.MAX_IMAGES_AND_FILES_PER_MESSAGE
 const QUICK_WINS_HISTORY_THRESHOLD = 3
 
-const sameUserMessage = (left: ClineMessage, right: ClineMessage) => {
+const sameUserMessage = (left: AgentarioMessage, right: AgentarioMessage) => {
 	const leftImages = left.images ?? []
 	const rightImages = right.images ?? []
 	const leftFiles = left.files ?? []
@@ -66,14 +66,16 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 	const showNavbar = useShowNavbar()
 	const {
 		version,
-		clineMessages: messages,
+		agentarioMessages: messages,
 		taskHistory,
+		currentTaskItem,
 		telemetrySetting,
 		mode,
 		userInfo,
 		hooksEnabled,
 		checkpointRestoreInput,
 		queuedPrompts,
+		turnState,
 	} = useExtensionState()
 	const isProdHostedApp = userInfo?.apiBaseUrl === "https://app.cline.bot"
 	const shouldShowQuickWins = isProdHostedApp && (!taskHistory || taskHistory.length < QUICK_WINS_HISTORY_THRESHOLD)
@@ -87,6 +89,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		selectedFiles,
 		setSelectedFiles,
 		sendingDisabled,
+		setSendingDisabled,
 		enableButtons,
 		expandedRows,
 		setExpandedRows,
@@ -106,6 +109,15 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		}
 		return [...messages, pendingUserMessage.message]
 	}, [messages, pendingUserMessage])
+
+	// Сбрасываем sendingDisabled когда turn завершён (completed/awaiting_followup)
+	// Это нужно чтобы после compaction или завершения генерации можно было отправить новое сообщение
+	useEffect(() => {
+		const phase = turnState?.phase
+		if (phase === "completed" || phase === "awaiting_followup" || phase === "idle") {
+			setSendingDisabled(false)
+		}
+	}, [turnState?.phase, setSendingDisabled])
 
 	useEffect(() => {
 		if (
@@ -130,7 +142,20 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
 
 	const lastApiReqTotalTokens = useMemo(() => getLastApiReqTotalTokens(modifiedMessages) || undefined, [modifiedMessages])
-	const lastContextBudget = useMemo(() => getLastContextBudget(modifiedMessages), [modifiedMessages])
+	// Fallback: если в сообщениях нет contextBudget, берём из history item (для старых чатов)
+	// Ищем во всех messages (не в modifiedMessages), потому что contextBudgetMsg может быть первым сообщением после compaction
+	const lastContextBudget = useMemo(() => {
+		const fromAllMessages = getLastContextBudget(messages)
+		if (fromAllMessages) {
+			return fromAllMessages
+		}
+		const fromModified = getLastContextBudget(modifiedMessages)
+		if (fromModified) {
+			return fromModified
+		}
+		// Используем сохранённый context budget из currentTaskItem
+		return currentTaskItem?.lastContextBudget
+	}, [messages, modifiedMessages, currentTaskItem])
 	const lastAppliedCheckpointRestoreSessionId = useRef<string | undefined>(checkpointRestoreInput?.sessionId)
 
 	useEffect(() => {

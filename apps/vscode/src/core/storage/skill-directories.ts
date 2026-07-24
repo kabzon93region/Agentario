@@ -1,4 +1,4 @@
-import { resolveClineDir } from "@cline/shared/storage"
+import { resolveClineDir } from "@agentario/shared/storage"
 import os from "os"
 import * as path from "path"
 

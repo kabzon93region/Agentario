@@ -1,4 +1,4 @@
-import type { FeatureFlagPayload } from "@/services/feature-flags/providers/IFeatureFlagsProvider"
+﻿import type { FeatureFlagPayload } from "@/services/feature-flags/providers/IFeatureFlagsProvider"
 
 export enum FeatureFlag {
 	WORKTREES = "worktree-exp",
@@ -15,7 +15,7 @@ export enum FeatureFlag {
 	// off => OpenRouter model list, on => Cline endpoint model list.
 	EXTENSION_CLINE_MODELS_ENDPOINT = "extension_cline_models_endpoint",
 	// Enables ClinePass provider/model list exposure.
-	CLINE_PASS = "ext-cline-pass",
+	CLINE_PASS = "ext-agentario-pass",
 	// Rollout flag for fetching recommended Cline models from the upstream endpoint.
 	CLINE_RECOMMENDED_MODELS_UPSTREAM = "cline_recommended_models_upstream",
 	// Use the websocket mode for OpenAI native Responses API format

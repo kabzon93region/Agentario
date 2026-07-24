@@ -4,13 +4,13 @@ import type {
 	AgentConfig,
 	PluginSetupContext,
 	WorkspaceInfo,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	discoverPluginModulePaths as discoverPluginModulePathsFromShared,
 	resolveConfiguredPluginModulePaths,
 	resolvePluginConfigSearchPaths as resolvePluginConfigSearchPathsFromShared,
 	SKILLS_CONFIG_DIRECTORY_NAME,
-} from "@cline/shared/storage";
+} from "@agentario/shared/storage";
 import { filterDisabledPluginPaths } from "../../services/global-settings";
 import type { PluginLoadDiagnostics } from "./plugin-load-report";
 import { loadAgentPluginsFromPathsWithDiagnostics } from "./plugin-loader";

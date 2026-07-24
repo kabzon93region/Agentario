@@ -1,4 +1,4 @@
-# Cline CLI
+# Agentario CLI
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/7123f9d1-afeb-48d5-93fa-e750dec0ebba" width="70%" />
@@ -34,7 +34,7 @@ Run Cline in your terminal. Interactive chat for paired sessions, or fully headl
 ## Install
 
 ```sh
-npm install -g cline
+npm install -g agentario
 ```
 
 For nightly builds:
@@ -50,7 +50,7 @@ Platform binaries are published for macOS, Linux, and Windows on `arm64` and `x6
 Run interactively:
 
 ```sh
-cline
+agentario
 ```
 
 Run a single prompt:
@@ -122,7 +122,7 @@ cline --json "List all TODO comments" | jq -r 'select(.type == "agent_event" and
 
 ```sh
 # Start Cline CLI without a prompt to enter interactive mode
-cline
+agentario
 
 # Single prompt (one-shot) - includes tools, spawn, and teams
 cline "Audit this package and propose fixes"
@@ -337,7 +337,7 @@ Desktop-integrated approval mode is also supported via env wiring (`CLINE_TOOL_A
 - `CLINE_SANDBOX` - Set to `1` to force sandbox mode
 - `CLINE_SANDBOX_DATA_DIR` - Override sandbox state directory
 - `CLINE_TEAM_DATA_DIR` - Override team persistence directory
-- `CLINE_BUILD_ENV` - Runtime build mode for SDK-owned subprocess launches
+- `AGENTARIO_BUILD_ENV` - Runtime build mode for SDK-owned subprocess launches
 - `CLINE_DEBUG_HOST` - Host for development inspector listeners (default `127.0.0.1`)
 - `CLINE_DEBUG_PORT_BASE` - Base inspector port for development child processes
 - `CLINE_TOOL_APPROVAL_MODE` - Approval mode (`desktop` uses file IPC; unset uses terminal prompt)
@@ -355,4 +355,4 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for local development setup, monorepo str
 
 ## License
 
-[Apache 2.0 © Cline Bot Inc.](https://github.com/cline/cline/blob/main/LICENSE)
+[Apache 2.0 © ClineBot Inc.](https://github.com/cline/cline/blob/main/LICENSE)

@@ -1,4 +1,4 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { describe, expect, it } from "vitest"
 import { buildToolsWithReasoning, getToolGroupSummaryFromParsedTools } from "./ToolGroupRenderer"
 
@@ -7,7 +7,7 @@ const readToolMessage = (
 	type: "ask" | "say",
 	path: string,
 	range?: { start: number; end: number },
-): ClineMessage => ({
+): AgentarioMessage => ({
 	ts,
 	type,
 	...(type === "ask" ? { ask: "tool" as const } : { say: "tool" as const }),

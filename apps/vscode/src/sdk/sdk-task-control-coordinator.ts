@@ -1,10 +1,12 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { Logger } from "@/shared/services/Logger"
 import type { SdkInteractionCoordinator } from "./sdk-interaction-coordinator"
 import type { SdkMessageCoordinator } from "./sdk-message-coordinator"
 import { isAbortError, type SdkSessionLifecycle } from "./sdk-session-lifecycle"
 import type { SdkTaskHistory } from "./sdk-task-history"
 import { createTaskProxy, type TaskProxy } from "./task-proxy"
+import { saveDisplayMessages } from "@core/storage/disk"
+import { filterCompactionInfoMessages } from "./sdk-compaction-coordinator"
 
 export interface SdkTaskControlCoordinatorOptions {
 	sessions: SdkSessionLifecycle
@@ -60,7 +62,7 @@ export class SdkTaskControlCoordinator {
 
 		this.options.messages.finalizeInFlightMessages()
 
-		const resumeMessage: ClineMessage = {
+		const resumeMessage: AgentarioMessage = {
 			ts: Date.now(),
 			type: "ask",
 			ask: "resume_task",
@@ -80,6 +82,14 @@ export class SdkTaskControlCoordinator {
 
 		const task = this.options.getTask()
 		if (task) {
+			// Agentario: сохраняем display messages перед очисткой (фильтруем info)
+			const displayMessages = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
+			if (displayMessages.length > 0) {
+				await saveDisplayMessages(task.taskId, displayMessages).catch(err =>
+					Logger.error("[SdkTaskControl] Failed to save display messages on clear:", err)
+				)
+			}
+
 			// SDK session persistence owns conversation history. Do not write classic
 			// ui_messages.json here; history viewing reloads from SDK readMessages().
 			this.options.messages.cancelPendingSave()
@@ -104,6 +114,13 @@ export class SdkTaskControlCoordinator {
 
 			const currentTask = this.options.getTask()
 			if (currentTask) {
+				// Agentario: сохраняем display messages текущего таска перед переключением (фильтруем info)
+				const displayMessages = filterCompactionInfoMessages(currentTask.messageStateHandler.getagentarioMessages())
+				if (displayMessages.length > 0) {
+					await saveDisplayMessages(currentTask.taskId, displayMessages).catch(err =>
+						Logger.error("[SdkTaskControl] Failed to save display messages on showTask:", err)
+					)
+				}
 				currentTask.messageStateHandler.clear()
 			}
 
@@ -111,7 +128,7 @@ export class SdkTaskControlCoordinator {
 
 			// Load messages before installing the new task proxy so any concurrent
 			// postStateToWebview() caller never sees the new id with empty messages.
-			const rawMessages = await this.options.taskHistory.getClineMessages(taskId)
+			const rawMessages = await this.options.taskHistory.getagentarioMessages(taskId)
 			const messages = this.options.messages.finalizeMessagesForSave(rawMessages)
 			const cleanedMessages = messages.length > 0 ? this.appendFreshResumeMessage(messages) : []
 
@@ -131,7 +148,7 @@ export class SdkTaskControlCoordinator {
 				Logger.log(`[SdkController] No messages found for task: ${taskId}`)
 			}
 
-			// The final state update below includes the loaded clineMessages. Avoid pushing
+			// The final state update below includes the loaded agentarioMessages. Avoid pushing
 			// each historical message through the partial-message stream one-by-one; for
 			// long tasks that serial loop can dominate history-open latency.
 			await this.options.postStateToWebview()
@@ -141,7 +158,7 @@ export class SdkTaskControlCoordinator {
 		}
 	}
 
-	private appendFreshResumeMessage(messages: ClineMessage[]): ClineMessage[] {
+	private appendFreshResumeMessage(messages: AgentarioMessage[]): AgentarioMessage[] {
 		const lastRelevantMessage = [...messages]
 			.reverse()
 			.find((m) => m.ask !== "resume_task" && m.ask !== "resume_completed_task")

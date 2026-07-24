@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+﻿import { spawn } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type {
@@ -8,16 +8,16 @@ import type {
 	AgentHooks,
 	AgentRunLifecycleContext,
 	AgentRuntimeEvent,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	augmentNodeCommandForDebug,
 	type BasicLogger,
 	type HookControl,
 	type HookSessionContext,
 	type WorkspaceInfo,
-	withResolvedClineBuildEnv,
-} from "@cline/shared";
-import { ensureHookLogDir } from "@cline/shared/storage";
+	withResolvedAgentarioBuildEnv,
+} from "@agentario/shared";
+import { ensureHookLogDir } from "@agentario/shared/storage";
 import { createAgentHooksExtension } from "./hook-extension";
 import { listHookConfigFiles } from "./hook-file-config";
 import type { HookEventName, HookEventPayload } from "./subprocess";
@@ -330,7 +330,7 @@ async function runHookCommandOnce(
 	});
 	const child = spawn(command[0], command.slice(1), {
 		cwd: options.cwd,
-		env: withResolvedClineBuildEnv(options.env),
+		env: withResolvedAgentarioBuildEnv(options.env),
 		stdio: options.detached
 			? ["pipe", "ignore", "ignore"]
 			: ["pipe", "pipe", "pipe"],
@@ -533,7 +533,7 @@ async function runBlockingHookCommands(options: {
 			const result = await runHookCommand(options.payload, {
 				command,
 				cwd: options.cwd,
-				env: withResolvedClineBuildEnv(process.env),
+				env: withResolvedAgentarioBuildEnv(process.env),
 				detached: false,
 				timeoutMs: options.timeoutMs,
 			});
@@ -571,7 +571,7 @@ function runAsyncHookCommands(options: {
 		void runHookCommand(options.payload, {
 			command,
 			cwd: options.cwd,
-			env: withResolvedClineBuildEnv(process.env),
+			env: withResolvedAgentarioBuildEnv(process.env),
 			detached: true,
 		}).catch((error) => {
 			logHookError(

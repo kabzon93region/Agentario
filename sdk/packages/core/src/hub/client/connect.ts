@@ -1,9 +1,9 @@
-import type {
+﻿import type {
 	HubCommandEnvelope,
 	HubReplyEnvelope,
 	HubTransportFrame,
-} from "@cline/shared";
-import { resolveClineBuildEnv } from "@cline/shared";
+} from "@agentario/shared";
+import { resolveAgentarioBuildEnv } from "@agentario/shared";
 import { createHubServerUrl, readHubDiscovery } from "../discovery";
 import {
 	type HubEndpointOverrides,
@@ -73,7 +73,7 @@ function sameHubEndpoint(left: string, right: string): boolean {
 }
 
 function resolveDefaultHubOwnerContext() {
-	return resolveClineBuildEnv() === "production"
+	return resolveAgentarioBuildEnv() === "production"
 		? resolveProductionHubOwnerContext()
 		: resolveSharedHubOwnerContext();
 }

@@ -11,7 +11,7 @@ import type {
 	AgentModelEvent,
 	AgentTool,
 	ITelemetryService,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { describe, expect, it, vi } from "vitest";
 import {
 	buildMessageModelInfo,

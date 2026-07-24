@@ -1,18 +1,18 @@
-import type { ClineRecommendedModel, OpenRouterModelInfo } from "@shared/proto/cline/models"
-import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/cline/state"
+﻿import type { AgentarioRecommendedModel, OpenRouterModelInfo } from "@shared/proto/agentario/models"
+import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/agentario/state"
 
-export const CLINEPASS_GROUP = "cline-pass"
+export const CLINEPASS_GROUP = "agentario-pass"
 
 export interface RecommendedModelsData {
-	recommended: ClineRecommendedModel[]
-	free: ClineRecommendedModel[]
-	clinePass: ClineRecommendedModel[]
+	recommended: AgentarioRecommendedModel[]
+	free: AgentarioRecommendedModel[]
+	clinePass: AgentarioRecommendedModel[]
 }
 
 type RecommendedModelsResponseLike = {
-	recommended?: ClineRecommendedModel[]
-	free?: ClineRecommendedModel[]
-	clinePass?: ClineRecommendedModel[]
+	recommended?: AgentarioRecommendedModel[]
+	free?: AgentarioRecommendedModel[]
+	clinePass?: AgentarioRecommendedModel[]
 }
 
 export function getRecommendedModelsData(response: RecommendedModelsResponseLike): RecommendedModelsData | undefined {

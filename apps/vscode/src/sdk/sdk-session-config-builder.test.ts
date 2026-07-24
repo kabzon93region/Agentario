@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+﻿import { describe, expect, it, vi } from "vitest"
 import { SdkSessionConfigBuilder } from "./sdk-session-config-builder"
 
 const mocks = vi.hoisted(() => ({
@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
 	buildAgentHooks: vi.fn(() => ({})),
 }))
 
-vi.mock("./cline-session-factory", () => ({
+vi.mock("./agentario-session-factory", () => ({
 	buildSessionConfig: mocks.buildSessionConfig,
 }))
 

@@ -1,11 +1,11 @@
-import {
+﻿import {
 	formatProviderOAuthApiKey,
 	getPersistedProviderApiKey as getCorePersistedProviderApiKey,
 	isOAuthProvider,
 	Llms,
 	type ProviderOAuthCredentials,
 	type ProviderSettings,
-} from "@cline/core";
+} from "@agentario/core";
 
 export type OAuthCredentials = ProviderOAuthCredentials;
 

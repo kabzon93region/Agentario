@@ -1,4 +1,4 @@
-// Replaces classic src/core/storage/disk.ts reads (see origin/main)
+﻿// Replaces classic src/core/storage/disk.ts reads (see origin/main)
 //
 // Reads on-disk state written in the pre-SDK storage format from the Cline
 // data directory, so the SDK adapter can surface tasks and settings created
@@ -10,7 +10,8 @@ import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Anthropic } from "@anthropic-ai/sdk"
-import { ClineMessage } from "@shared/ExtensionMessage"
+import { resolveClineDir } from "@agentario/shared/storage"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import { HistoryItem } from "@shared/HistoryItem"
 import { Logger } from "@shared/services/Logger"
 import { GlobalStateAndSettings, Secrets } from "@shared/storage/state-keys"
@@ -26,7 +27,7 @@ import { GlobalStateAndSettings, Secrets } from "@shared/storage/state-keys"
 export function resolveDataDir(override?: string): string {
 	if (override) return override
 	if (process.env.CLINE_DATA_DIR) return process.env.CLINE_DATA_DIR
-	const clineDir = process.env.CLINE_DIR || path.join(os.homedir(), ".cline")
+	const clineDir = process.env.CLINE_DIR || resolveClineDir()
 	return path.join(clineDir, "data")
 }
 
@@ -193,8 +194,8 @@ export function readApiConversationHistory(taskId: string, dataDir?: string): An
  * Read the UI messages for a specific task.
  * Returns an empty array if the file is missing or corrupt.
  */
-export function readUiMessages(taskId: string, dataDir?: string): ClineMessage[] {
-	return readJsonFile<ClineMessage[]>(uiMessagesPath(taskId, dataDir), [])
+export function readUiMessages(taskId: string, dataDir?: string): AgentarioMessage[] {
+	return readJsonFile<AgentarioMessage[]>(uiMessagesPath(taskId, dataDir), [])
 }
 
 /**

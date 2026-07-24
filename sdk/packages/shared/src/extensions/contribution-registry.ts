@@ -1,4 +1,4 @@
-import type { AgentRuntimeHooks, AgentTool } from "../agent";
+﻿import type { AgentRuntimeHooks, AgentTool } from "../agent";
 import type { AutomationEventEnvelope } from "../cron";
 import type { BasicLogger } from "../logging/logger";
 import type { ITelemetryService } from "../services/telemetry";
@@ -171,7 +171,7 @@ export interface PluginSetupContext {
 	 */
 	workspaceInfo?: WorkspaceInfo;
 	/**
-	 * Automation ingress made available by hosts that enable ClineCore
+	 * Automation ingress made available by hosts that enable AgentarioCore
 	 * automation. Plugins should feature-detect this property so the same plugin
 	 * can run in hosts that do not enable automation.
 	 */
@@ -231,7 +231,7 @@ export interface AgentExtensionRegistry<TTool = AgentTool, TMessage = unknown> {
  *
  * Hook handler properties are typed `unknown` here so that the generic base
  * interface stays free of agent-specific imports. Concrete extension types
- * (e.g. `AgentExtension` in `@cline/agents`) narrow them to the correct
+ * (e.g. `AgentExtension` in `@agentario/agents`) narrow them to the correct
  * context and return types.
  */
 export interface ContributionRegistryExtension<
@@ -245,7 +245,7 @@ export interface ContributionRegistryExtension<
 	manifest: PluginManifest;
 	/** Indicates whether this extension is disabled. Disabled extensions are ignored during setup. */
 	disabled?: boolean;
-	/** Runtime-native hooks consumed directly by `@cline/agents`. */
+	/** Runtime-native hooks consumed directly by `@agentario/agents`. */
 	hooks?: AgentExtensionHooks;
 	/**
 	 * Called once during registry setup to register tools, commands, and other

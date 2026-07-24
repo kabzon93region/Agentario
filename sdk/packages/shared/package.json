@@ -1,7 +1,7 @@
 {
-	"name": "@cline/shared",
-	"version": "0.0.54",
-	"description": "Shared utilities, types, and schemas for Cline packages",
+	"name": "@agentario/shared",
+	"version": "0.0.55",
+	"description": "Shared utilities, types, and schemas for Agentario packages",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cline/cline",

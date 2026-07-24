@@ -1,8 +1,8 @@
-import { buildModelInfoNameMap, type ModelInfo, resolveClinePassModelInfo } from "@shared/api"
-import { CLINE_ONBOARDING_MODELS } from "@shared/cline/onboarding"
-import { EmptyRequest } from "@shared/proto/cline/common"
-import type { ClineRecommendedModel } from "@shared/proto/cline/models"
-import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/cline/state"
+﻿import { buildModelInfoNameMap, type ModelInfo, resolveClinePassModelInfo } from "@shared/api"
+import { AGENTARIO_ONBOARDING_MODELS } from "@shared/agentario/onboarding"
+import { EmptyRequest } from "@shared/proto/agentario/common"
+import type { AgentarioRecommendedModel } from "@shared/proto/agentario/models"
+import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/agentario/state"
 import { useEffect, useMemo, useState } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useProviderModels } from "@/hooks/useProviderModels"
@@ -17,7 +17,7 @@ export interface UseOnboardingModelsResult {
 }
 
 function toOnboardingModel(
-	rec: ClineRecommendedModel,
+	rec: AgentarioRecommendedModel,
 	group: string,
 	fallbackBadge: string,
 	modelCatalog: Record<string, ModelInfo>,
@@ -58,7 +58,7 @@ export function useOnboardingModels(): UseOnboardingModelsResult {
 
 		const refreshRecommendedModels = async () => {
 			try {
-				const response = await ModelsServiceClient.refreshClineRecommendedModelsRpc(EmptyRequest.create({}))
+				const response = await ModelsServiceClient.refreshAgentarioRecommendedModelsRpc(EmptyRequest.create({}))
 				if (!cancelled) {
 					const data = getRecommendedModelsData(response)
 					if (!data) {
@@ -86,14 +86,14 @@ export function useOnboardingModels(): UseOnboardingModelsResult {
 		return { ...openRouterModels, ...(clineModels ?? {}) }
 	}, [openRouterModels, clineModels])
 
-	// ClinePass model IDs omit the upstream lab (e.g. "cline-pass/glm-5.1"), so look up
+	// ClinePass model IDs omit the upstream lab (e.g. "agentario-pass/glm-5.1"), so look up
 	// capabilities via the model slug against the OpenRouter catalog, falling back to
-	// conservative ClinePass defaults. Mirrors ClinePassProvider's resolution.
+	// conservative ClinePass defaults. Mirrors AgentarioPassProvider's resolution.
 	const openRouterModelsByName = useMemo(() => buildModelInfoNameMap(openRouterModels), [openRouterModels])
 
 	return useMemo<UseOnboardingModelsResult>(() => {
 		if (fetchState.status !== "success") {
-			return { status: fetchState.status, models: { models: CLINE_ONBOARDING_MODELS } }
+			return { status: fetchState.status, models: { models: AGENTARIO_ONBOARDING_MODELS } }
 		}
 
 		const { data } = fetchState

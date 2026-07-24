@@ -1,13 +1,13 @@
-import { createTelegramAdapter } from "@chat-adapter/telegram";
-import type { ChatStartSessionRequest } from "@cline/core";
+﻿import { createTelegramAdapter } from "@chat-adapter/telegram";
+import type { ChatStartSessionRequest } from "@agentario/core";
 import {
 	createUserInstructionConfigService,
 	HubSessionClient,
-} from "@cline/core";
+} from "@agentario/core";
 import type {
 	ConnectTelegramOptions,
 	TelegramConnectorState,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { Chat, ConsoleLogger, type Thread } from "chat";
 import type { Command } from "commander";
 import type { CliLoggerAdapter } from "../../logging/adapter";
@@ -443,7 +443,7 @@ class TelegramConnector extends ConnectorBase<
 			.option(
 				"--rpc-address <host:port>",
 				"RPC address",
-				process.env.CLINE_RPC_ADDRESS?.trim() || resolveDefaultCliRpcAddress(),
+				process.env.agentario_RPC_ADDRESS?.trim() || resolveDefaultCliRpcAddress(),
 			)
 			.addHelpText(
 				"after",
@@ -487,7 +487,7 @@ class TelegramConnector extends ConnectorBase<
 		}
 		const hookCommand =
 			opts.hookCommand?.trim() ||
-			process.env.CLINE_CONNECT_HOOK_COMMAND?.trim();
+			process.env.agentario_CONNECT_HOOK_COMMAND?.trim();
 		const allowedUserId = opts.allowedUserId?.trim();
 		if (hookCommand && allowedUserId) {
 			throw new Error(
@@ -507,7 +507,7 @@ class TelegramConnector extends ConnectorBase<
 			enableTools: opts.tools !== false,
 			rpcAddress:
 				opts.rpcAddress?.trim() ||
-				process.env.CLINE_RPC_ADDRESS?.trim() ||
+				process.env.agentario_RPC_ADDRESS?.trim() ||
 				resolveDefaultCliRpcAddress(),
 			hookCommand: allowedUserId
 				? buildTelegramAllowedUserHookCommand(
@@ -612,7 +612,7 @@ class TelegramConnector extends ConnectorBase<
 		if (
 			!inputOptions.botUsername &&
 			!inputOptions.interactive &&
-			process.env.CLINE_TELEGRAM_CONNECT_CHILD !== "1"
+			process.env.agentario_TELEGRAM_CONNECT_CHILD !== "1"
 		) {
 			const runningState = this.findRunningConnectorStateByBotId(
 				readTelegramBotId(inputOptions.botToken),

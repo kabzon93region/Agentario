@@ -1,5 +1,5 @@
-import { type ModelInfo, openAiModelInfoSafeDefaults } from "@shared/api"
-import type { ProviderConfigResponse } from "@shared/proto/cline/models"
+﻿import { type ModelInfo, openAiModelInfoSafeDefaults } from "@shared/api"
+import type { ProviderConfigResponse } from "@shared/proto/agentario/models"
 import { fromProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
 import type { Mode } from "@shared/storage/types"
 import { useCallback } from "react"
@@ -10,7 +10,7 @@ interface UseProviderModelSelectionOptions {
 	models: Record<string, ModelInfo>
 	defaultModelId?: string
 	config?: ProviderConfigResponse
-	commitSelection: (mode: "plan" | "act", selection: ProviderModelSelection) => Promise<unknown>
+	commitSelection: (mode: Mode, selection: ProviderModelSelection) => Promise<unknown>
 	fallbackModelInfo?: ModelInfo
 	customModelInfo?: (modelId: string) => ModelInfo
 }

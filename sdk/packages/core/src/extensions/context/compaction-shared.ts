@@ -1,9 +1,9 @@
-import type { ToolResultContent } from "@cline/llms";
+import type { ToolResultContent } from "@agentario/llms";
 import {
 	CHARS_PER_TOKEN,
 	estimateTokens,
 	type MessageWithMetadata,
-} from "@cline/shared";
+} from "@agentario/shared";
 
 export { CHARS_PER_TOKEN, estimateTokens };
 
@@ -18,7 +18,8 @@ export const DEFAULT_THRESHOLD_RATIO = 0.9;
 export const DEFAULT_TARGET_RATIO = 0.7;
 export const DEFAULT_RESERVE_TOKENS = 16_384;
 export const DEFAULT_PRESERVE_RECENT_TOKENS = 20_000;
-export const DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS = 1_024;
+// Agentario: fallback — переопределяется динамически из chunkSize в runAgenticCompaction
+export const DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS = 0;
 export const TOOL_RESULT_CHAR_LIMIT = 2_000;
 export const FILE_CONTENT_CHAR_LIMIT = 2_000;
 export const MIN_TRUNCATED_MESSAGE_TOKENS = 8;
@@ -145,6 +146,24 @@ export function serializeConversation(messages: MessageWithMetadata[]): string {
 	return messages.map(serializeMessage).join("\n\n").trim();
 }
 
+// Agentario: проверка является ли сообщение "Общей картиной"
+export function isOverallPictureMessage(message: MessageWithMetadata): boolean {
+	if (message.role !== "user") {
+		return false;
+	}
+	let text = "";
+	if (typeof message.content === "string") {
+		text = message.content;
+	} else if (Array.isArray(message.content)) {
+		for (const block of message.content) {
+			if (block.type === "text") {
+				text += block.text + " ";
+			}
+		}
+	}
+	return /^Общая картина[:\s]/i.test(text.trim());
+}
+
 export function createTokenEstimator(): EstimateMessageTokens {
 	const cache = new WeakMap<object, number>();
 	return (message) => {
@@ -153,13 +172,20 @@ export function createTokenEstimator(): EstimateMessageTokens {
 		if (typeof cached === "number") {
 			return cached;
 		}
-		let serialized: string;
-		try {
-			serialized = JSON.stringify(message);
-		} catch {
-			serialized = serializeMessage(message);
+		// Agentario: считаем только контент сообщения, а не все поля (role, metadata, и т.д.)
+		let contentLength = 0;
+		if (typeof message.content === "string") {
+			contentLength = message.content.length;
+		} else if (Array.isArray(message.content)) {
+			for (const block of message.content) {
+				if (block.type === "text") {
+					contentLength += block.text.length;
+				} else if (block.type === "tool_use" || block.type === "tool_result") {
+					contentLength += JSON.stringify(block).length;
+				}
+			}
 		}
-		const value = estimateTokens(serialized.length);
+		const value = estimateTokens(contentLength);
 		cache.set(ref, value);
 		return value;
 	};
@@ -246,7 +272,7 @@ export function findLastTurnStartIndex(
 			return index;
 		}
 	}
-	return 0;
+	return -1;
 }
 
 export function findLastAssistantIndex(
@@ -277,8 +303,13 @@ export function findCutIndex(
 	estimateMessageTokens: EstimateMessageTokens,
 ): number {
 	const lastTurnStartIndex = findLastTurnStartIndex(messages);
-	if (lastTurnStartIndex <= 0) {
-		return 0;
+	// Agentario: если нет turn start сообщений, суммаризируем все сообщения
+	if (lastTurnStartIndex < 0) {
+		return messages.length;
+	}
+	if (lastTurnStartIndex === 0) {
+		// Agentario: если единственный turn start - это первое сообщение, суммаризируем все кроме него
+		return messages.length > 1 ? messages.length : 0;
 	}
 
 	let total = 0;
@@ -415,60 +446,87 @@ export function ensureFilesSection(
 	return `${summary.trim()}\n\n${renderFilesSection(fileOps)}`.trim();
 }
 
+// Agentario: стандартные части промпт-шаблона суммаризации (до и после текста диалога)
+export const DEFAULT_PROMPT_BEFORE = `Ты — компрессор(суммаризатор) текста сообщений чата. Получаешь диалог из чата пользователя с агентом, и разбив чат на отдельные сообщения, начинаешь их обрабатывать отдельно, по следующим правилам:
+1. Отдельным сообщением считается отдельное действие участника диалога (сообщение пользователя целиком (даже из многих предложений), размышления агента в чате, действия агента в чате (Tool calls, чтение файлов, запись в файлов, открытие браузера, и так далее), ответные сообщения агента в чате, промежуточные высказывания агента в чате между другими действиями).
+2. Удали из каждого обрабатываемого отдельного сообщения ВСЮ техническую служебную информацию (конкретику вызовов инструментов, пути к файлам, списки файлов, diff кода, логовые маркеры типа "Tool calls", "Thinking", "Completed").
+3. Сожми текст (суммаризируй) отдельного сообщения, оставив только его смысл и ключевые действия/требования/вопросы/ответы (кратко).
+4. Сжатый текст отдельного сообщения должен быть в 2 раза меньше оригинального (но не менее 30 слов, чтобы не потерять смысл и контекст сообщения). Если всё исходное отдельное сообщение короче 30 слов — не сжимай его, а возвращай целиком оригинальный текст.
+5. Для отдельных сообщений о действиях агента (вызов tools, чтение файлов, индексация, обращение к браузеру, создание файла и т.д.) оставляй только сжатый смысл и краткое описание произведенных действий, без перечисления деталей.
+
+Пример и формат вывода диалога сжатыми сообщениями:
+[User]: Изучи документацию, историю чатов, файлы правил, структуру папок и прогресс проекта.
+[Agent-thinking]: Нужно начать сборку контекста, проверяя статус репозитория и структуру папок.
+[Agent]: Изучаю назначение проекта, текущий статус и планы развития.
+[Agent-Tool-calls]: Выполнил команду git status для проверки репозитория, получил список файлов в структуре папок проекта и проверил наличие ошибок.
+[Agent-thinking]: Я полностью ознакомился с проектом. Теперь сформирую подробный анализ.
+[Agent]: Результат анализа: NetWatcher — фоновое Windows-приложение, которое контролирует сетевое подключение и автоматически восстанавливает его при потере связи. Проект полностью реализован: есть готовый исходный код, поддержка системного трея и собранный NetWatcher.exe с логикой автоматического ремонта сети.
+[User]: Продолжи выполнение плана разработки.
+
+Вот диалог для обработки (сжатия):`;
+
+export const DEFAULT_PROMPT_AFTER = `Выводи мне в ответ только обработанный диалог с сжатыми тобой сообщениями, без кавычек, без предисловий "Вот сжатое сообщение".`;
+
 export function buildSummaryRequest(options: {
 	previousSummary?: string;
 	conversationText: string;
 	fileOps: FileOperationSummary;
+	/** Agentario: custom prompt template part BEFORE the conversation text */
+	promptTemplateBefore?: string;
+	/** Agentario: custom prompt template part AFTER the conversation text */
+	promptTemplateAfter?: string;
 }): string {
-	const parts: string[] = [
-		`Summarize this session for continuation. Be concise and factual.
-
-## Goal
-One sentence: what is being built or fixed.
-
-## State
-- Done: completed steps
-- In Progress: current work
-- Blocked: blockers or open questions
-
-## Highlights
-Key technical choices or notable findings (omit if none).
-
-## Next
-Immediate next steps.
-
-## Files
-Read: ${options.fileOps.readFiles.join(", ") || "none"}
-Edited: ${options.fileOps.modifiedFiles.join(", ") || "none"}`,
-	];
-
+	// Agentario: строго по шаблону — промпт + диалог
+	// Если есть предыдущая суммаризация, добавляем её в начало диалога
+	let dialogContent = "";
 	if (options.previousSummary?.trim()) {
-		parts.push(`Previous summary:\n${options.previousSummary.trim()}`);
+		dialogContent = `[Предыдущая суммаризация]\n${options.previousSummary.trim()}\n\n${options.conversationText || "(пусто)"}`;
+	} else {
+		dialogContent = options.conversationText || "(пусто)";
 	}
 
-	parts.push(`Conversation:\n${options.conversationText || "(empty)"}`);
+	// Agentario: если задан пользовательский шаблон — используем его
+	const before = options.promptTemplateBefore?.trim();
+	const after = options.promptTemplateAfter?.trim();
+	if (before || after) {
+		const beforePart = before || DEFAULT_PROMPT_BEFORE;
+		const afterPart = after || DEFAULT_PROMPT_AFTER;
+		return `${beforePart}\n\n--- НАЧАЛО ДИАЛОГА ---\n${dialogContent}\n--- КОНЕЦ ДИАЛОГА ---\n\n${afterPart}`;
+	}
 
-	return parts.join("\n\n");
+	return `${DEFAULT_PROMPT_BEFORE}\n\n--- НАЧАЛО ДИАЛОГА ---\n${dialogContent}\n--- КОНЕЦ ДИАЛОГА ---\n\n${DEFAULT_PROMPT_AFTER}`;
 }
 
 export function resolveSummarizerConfig(options: {
 	activeProviderConfig: ProviderConfig;
 	summarizer?: CoreCompactionSummarizerConfig;
+	/** Agentario: динамический лимит output токенов (перекрывает дефолт) */
+	maxOutputTokensOverride?: number;
 }): ProviderConfig {
 	const summarizer = options.summarizer;
 	const withSummarizerDefaults = (config: ProviderConfig): ProviderConfig => {
+		// Agentario: убираем capabilities связанные с tools из конфига суммаризатора.
+		// Это предотвращает Jinja template ошибки в LM Studio когда model использует
+		// tool-calling темплейт, а запрос суммаризации не содержит инструментов.
+		const filteredCapabilities = config.capabilities?.filter(
+			(c) => c !== "tools"
+		);
 		if (config.providerId === "openai-codex") {
 			const { maxOutputTokens: _maxOutputTokens, ...rest } = config;
 			return {
 				...rest,
 				thinking: false,
+				...(filteredCapabilities ? { capabilities: filteredCapabilities } : {}),
 			};
 		}
 		return {
 			...config,
 			maxOutputTokens:
-				config.maxOutputTokens ?? DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS,
+				options.maxOutputTokensOverride
+				?? config.maxOutputTokens
+				?? DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS,
 			thinking: false,
+			...(filteredCapabilities ? { capabilities: filteredCapabilities } : {}),
 		};
 	};
 	if (!summarizer) {
@@ -478,17 +536,59 @@ export function resolveSummarizerConfig(options: {
 		summarizer.providerConfig?.providerId === summarizer.providerId
 			? summarizer.providerConfig
 			: undefined;
+	// Normalize baseUrl: add /v1 suffix for OpenAI-compatible providers if missing
+	const rawBaseUrl = summarizer.baseUrl ?? baseProviderConfig?.baseUrl;
+	const normalizedBaseUrl = normalizeOpenAiCompatibleBaseUrl(
+		rawBaseUrl,
+		summarizer.providerId,
+	);
 	return withSummarizerDefaults({
 		...(baseProviderConfig ?? {}),
 		providerId: summarizer.providerId,
 		modelId: summarizer.modelId,
 		apiKey: summarizer.apiKey ?? baseProviderConfig?.apiKey,
-		baseUrl: summarizer.baseUrl ?? baseProviderConfig?.baseUrl,
+		baseUrl: normalizedBaseUrl,
 		headers: summarizer.headers ?? baseProviderConfig?.headers,
 		knownModels: summarizer.knownModels ?? baseProviderConfig?.knownModels,
 		maxOutputTokens:
-			summarizer.maxOutputTokens ?? DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS,
+			options.maxOutputTokensOverride
+			?? summarizer.maxOutputTokens
+			?? DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS,
 	});
+}
+
+/**
+ * Normalize baseUrl for OpenAI-compatible providers.
+ * If the URL doesn't end with /v1 or /v1/, append /v1.
+ * This ensures compatibility with LM Studio, Ollama, and other OpenAI-compatible servers.
+ */
+function normalizeOpenAiCompatibleBaseUrl(
+	baseUrl: string | undefined,
+	providerId: string,
+): string | undefined {
+	if (!baseUrl) {
+		return baseUrl;
+	}
+	// Only normalize for OpenAI-compatible providers
+	const openAiCompatibleProviders = [
+		"openai-compatible",
+		"lmstudio",
+		"ollama",
+		"litellm",
+	];
+	if (!openAiCompatibleProviders.includes(providerId)) {
+		return baseUrl;
+	}
+	const trimmed = baseUrl.trim();
+	if (!trimmed) {
+		return baseUrl;
+	}
+	// Already has /v1 or /v1/ suffix
+	if (trimmed.endsWith("/v1") || trimmed.endsWith("/v1/")) {
+		return trimmed;
+	}
+	// Add /v1 suffix
+	return trimmed.endsWith("/") ? `${trimmed}v1` : `${trimmed}/v1`;
 }
 
 export function buildSummaryMessage(options: {

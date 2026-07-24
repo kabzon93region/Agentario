@@ -1,5 +1,5 @@
-import { openAiModelInfoSafeDefaults } from "@shared/api"
-import { StringRequest } from "@shared/proto/cline/common"
+﻿import { openAiModelInfoSafeDefaults } from "@shared/api"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { Mode } from "@shared/storage/types"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useCallback, useEffect, useMemo, useState } from "react"

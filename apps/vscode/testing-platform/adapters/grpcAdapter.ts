@@ -1,4 +1,4 @@
-import { AccountServiceClient } from "@cline-grpc/account"
+﻿import { AccountServiceClient } from "@cline-grpc/account"
 import { BrowserServiceClient } from "@cline-grpc/browser"
 import { CheckpointsServiceClient } from "@cline-grpc/checkpoints"
 import { CommandsServiceClient } from "@cline-grpc/commands"
@@ -14,18 +14,18 @@ import { credentials } from "@grpc/grpc-js"
 import { promisify } from "util"
 
 const serviceRegistry = {
-	"cline.AccountService": AccountServiceClient,
-	"cline.BrowserService": BrowserServiceClient,
-	"cline.CheckpointsService": CheckpointsServiceClient,
-	"cline.CommandsService": CommandsServiceClient,
-	"cline.FileService": FileServiceClient,
-	"cline.McpService": McpServiceClient,
-	"cline.ModelsService": ModelsServiceClient,
-	"cline.SlashService": SlashServiceClient,
-	"cline.StateService": StateServiceClient,
-	"cline.TaskService": TaskServiceClient,
-	"cline.UiService": UiServiceClient,
-	"cline.WebService": WebServiceClient,
+	"agentario.AccountService": AccountServiceClient,
+	"agentario.BrowserService": BrowserServiceClient,
+	"agentario.CheckpointsService": CheckpointsServiceClient,
+	"agentario.CommandsService": CommandsServiceClient,
+	"agentario.FileService": FileServiceClient,
+	"agentario.McpService": McpServiceClient,
+	"agentario.ModelsService": ModelsServiceClient,
+	"agentario.SlashService": SlashServiceClient,
+	"agentario.StateService": StateServiceClient,
+	"agentario.TaskService": TaskServiceClient,
+	"agentario.UiService": UiServiceClient,
+	"agentario.WebService": WebServiceClient,
 } as const
 
 export type ServiceClients = {

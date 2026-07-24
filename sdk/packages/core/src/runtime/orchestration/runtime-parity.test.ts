@@ -1,8 +1,8 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AgentTool } from "@cline/shared";
-import { setClineDir, setHomeDir } from "@cline/shared/storage";
+import type { AgentTool } from "@agentario/shared";
+import { setClineDir, setHomeDir } from "@agentario/shared/storage";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createBuiltinTools } from "../../extensions/tools";
 import { DefaultRuntimeBuilder } from "./runtime-builder";

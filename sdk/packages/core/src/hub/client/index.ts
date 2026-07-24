@@ -1,4 +1,4 @@
-import {
+﻿import {
 	createSessionId,
 	type HubClientRegistration,
 	type HubCommandEnvelope,
@@ -6,9 +6,9 @@ import {
 	type HubReplyEnvelope,
 	type HubTransportFrame,
 	isHubProtocolCompatible,
-	resolveClineBuildEnv,
+	resolveAgentarioBuildEnv,
 	resolveHubCommandTimeoutMs,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	SESSION_NOT_FOUND_ERROR_CODE,
 	SessionNotFoundError,
@@ -36,7 +36,7 @@ type SubscriptionEntry = {
 };
 
 function resolveDefaultHubOwnerContext(): HubOwnerContext {
-	return resolveClineBuildEnv() === "production"
+	return resolveAgentarioBuildEnv() === "production"
 		? resolveProductionHubOwnerContext()
 		: resolveSharedHubOwnerContext();
 }

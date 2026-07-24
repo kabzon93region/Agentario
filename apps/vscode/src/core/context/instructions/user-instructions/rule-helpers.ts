@@ -1,4 +1,4 @@
-import { ClineRulesToggles } from "@shared/cline-rules"
+﻿import { AgentarioRulesToggles } from "@shared/Agentario-rules"
 import { GlobalInstructionsFile } from "@shared/remote-config/schema"
 import { resolveLocalRulesDirectory } from "@core/storage/disk"
 import { fileExistsAtPath, isDirectory } from "@utils/fs"
@@ -21,8 +21,8 @@ function isExcludedRuleFilename(filePath: string): boolean {
 	return GLOBAL_RULES_EXCLUDED_FILENAMES.has(path.basename(filePath))
 }
 
-function normalizeRuleToggleKeys(toggles: ClineRulesToggles): ClineRulesToggles {
-	const normalized: ClineRulesToggles = {}
+function normalizeRuleToggleKeys(toggles: AgentarioRulesToggles): AgentarioRulesToggles {
+	const normalized: AgentarioRulesToggles = {}
 	for (const [key, enabled] of Object.entries(toggles)) {
 		normalized[path.normalize(key)] = enabled
 	}
@@ -112,10 +112,10 @@ async function readDirectoryRecursive(
  */
 export async function synchronizeRuleToggles(
 	rulesDirectoryPath: string,
-	currentToggles: ClineRulesToggles,
+	currentToggles: AgentarioRulesToggles,
 	allowedFileExtension = "",
 	excludedPaths: string[][] = [],
-): Promise<ClineRulesToggles> {
+): Promise<AgentarioRulesToggles> {
 	// Create a copy of toggles to modify (normalize keys so disable/enable survives sync)
 	const updatedToggles = normalizeRuleToggleKeys({ ...currentToggles })
 
@@ -182,9 +182,9 @@ export async function synchronizeRuleToggles(
  */
 export function synchronizeRemoteRuleToggles(
 	remoteRules: GlobalInstructionsFile[],
-	currentToggles: ClineRulesToggles,
-): ClineRulesToggles {
-	const updatedToggles: ClineRulesToggles = {}
+	currentToggles: AgentarioRulesToggles,
+): AgentarioRulesToggles {
+	const updatedToggles: AgentarioRulesToggles = {}
 
 	// Create set of current remote rule names
 	const existingRuleNames = new Set(remoteRules.map((rule) => rule.name))
@@ -209,14 +209,14 @@ export function synchronizeRemoteRuleToggles(
 /**
  * Certain project rules have more than a single location where rules are allowed to be stored
  */
-export function combineRuleToggles(toggles1: ClineRulesToggles, toggles2: ClineRulesToggles): ClineRulesToggles {
+export function combineRuleToggles(toggles1: AgentarioRulesToggles, toggles2: AgentarioRulesToggles): AgentarioRulesToggles {
 	return { ...toggles1, ...toggles2 }
 }
 
 /**
  * Read the content of rules files
  */
-const getRuleFilesTotalContent = async (rulesFilePaths: string[], basePath: string, toggles: ClineRulesToggles) => {
+const getRuleFilesTotalContent = async (rulesFilePaths: string[], basePath: string, toggles: AgentarioRulesToggles) => {
 	return (await getRuleFilesTotalContentWithMetadata(rulesFilePaths, basePath, toggles)).content
 }
 
@@ -232,24 +232,24 @@ type ActivatedConditionalRule = {
 
 type RuleFileController = {
 	stateManager: {
-		getGlobalSettingsKey(key: "globalWorkflowToggles" | "globalClineRulesToggles"): ClineRulesToggles
-		setGlobalState(key: "globalWorkflowToggles" | "globalClineRulesToggles", value: ClineRulesToggles): void
+		getGlobalSettingsKey(key: "globalWorkflowToggles" | "globalAgentarioRulesToggles"): AgentarioRulesToggles
+		setGlobalState(key: "globalWorkflowToggles" | "globalAgentarioRulesToggles", value: AgentarioRulesToggles): void
 		getWorkspaceStateKey(
 			key:
 				| "workflowToggles"
 				| "localCursorRulesToggles"
 				| "localWindsurfRulesToggles"
 				| "localAgentsRulesToggles"
-				| "localClineRulesToggles",
-		): ClineRulesToggles
+				| "localAgentarioRulesToggles",
+		): AgentarioRulesToggles
 		setWorkspaceState(
 			key:
 				| "workflowToggles"
 				| "localCursorRulesToggles"
 				| "localWindsurfRulesToggles"
 				| "localAgentsRulesToggles"
-				| "localClineRulesToggles",
-			value: ClineRulesToggles,
+				| "localAgentarioRulesToggles",
+			value: AgentarioRulesToggles,
 		): void
 	}
 }
@@ -279,7 +279,7 @@ type RuleLoadResultWithInstructions = {
 export const getRuleFilesTotalContentWithMetadata = async (
 	rulesFilePaths: string[],
 	basePath: string,
-	toggles: ClineRulesToggles,
+	toggles: AgentarioRulesToggles,
 	opts?: { evaluationContext?: RuleEvaluationContext; ruleNamePrefix?: keyof typeof RULE_SOURCE_PREFIX },
 ): Promise<RuleLoadResult> => {
 	const evaluationContext = opts?.evaluationContext ?? {}
@@ -333,7 +333,7 @@ export const getRuleFilesTotalContentWithMetadata = async (
 
 function getRemoteRulesTotalContentWithMetadata(
 	remoteRules: GlobalInstructionsFile[],
-	remoteToggles: ClineRulesToggles,
+	remoteToggles: AgentarioRulesToggles,
 	opts?: { evaluationContext?: RuleEvaluationContext },
 ): RuleLoadResult {
 	const activatedConditionalRules: ActivatedConditionalRule[] = []
@@ -503,9 +503,9 @@ export async function deleteRuleFile(
 				delete toggles[rulePath]
 				controller.stateManager.setGlobalState("globalWorkflowToggles", toggles)
 			} else {
-				const toggles = controller.stateManager.getGlobalSettingsKey("globalClineRulesToggles")
+				const toggles = controller.stateManager.getGlobalSettingsKey("globalAgentarioRulesToggles")
 				delete toggles[rulePath]
-				controller.stateManager.setGlobalState("globalClineRulesToggles", toggles)
+				controller.stateManager.setGlobalState("globalAgentarioRulesToggles", toggles)
 			}
 		} else {
 			if (type === "workflow") {
@@ -525,9 +525,9 @@ export async function deleteRuleFile(
 				delete toggles[rulePath]
 				controller.stateManager.setWorkspaceState("localAgentsRulesToggles", toggles)
 			} else {
-				const toggles = controller.stateManager.getWorkspaceStateKey("localClineRulesToggles")
+				const toggles = controller.stateManager.getWorkspaceStateKey("localAgentarioRulesToggles")
 				delete toggles[rulePath]
-				controller.stateManager.setWorkspaceState("localClineRulesToggles", toggles)
+				controller.stateManager.setWorkspaceState("localAgentarioRulesToggles", toggles)
 			}
 		}
 

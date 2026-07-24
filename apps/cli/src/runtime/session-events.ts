@@ -1,10 +1,10 @@
-import { EventEmitter } from "node:events";
+﻿import { EventEmitter } from "node:events";
 import type {
 	AgentEvent,
 	CoreSessionEvent,
 	RuntimeHostSubscribeOptions,
 	TeamEvent,
-} from "@cline/core";
+} from "@agentario/core";
 
 export const getUIEventEmitter = () =>
 	new EventEmitter() as InteractiveEventBridge;

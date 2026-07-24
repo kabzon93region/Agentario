@@ -1,4 +1,4 @@
-import type { ModelInfo } from "@cline/llms";
+import type { ModelInfo } from "@agentario/llms";
 import type {
 	AgentConfig,
 	AgentHooks,
@@ -14,7 +14,7 @@ import type {
 	SessionExecutionConfig,
 	SessionPromptConfig,
 	SessionWorkspaceConfig,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type { ToolRoutingRule } from "../extensions/tools/model-tool-routing";
 import type { TeamEvent } from "../extensions/tools/team";
 import type { ProviderConfig } from "./provider-settings";
@@ -91,15 +91,28 @@ export interface CoreCompactionConfig {
 	strategy?: CoreCompactionStrategy;
 	thresholdRatio?: number;
 	reserveTokens?: number;
+	/** Agentario: dynamic resolver — called on every compaction check to get the current reserveTokens value from settings. */
+	reserveTokensResolver?: () => number;
 	preserveRecentTokens?: number;
 	maxInputTokens?: number;
+	/** Agentario: dynamic resolver — called on every compaction check to get the current maxInputTokens value from settings. */
+	maxInputTokensResolver?: () => number | undefined;
 	summarizer?: CoreCompactionSummarizerConfig;
+	/** Chunk size in tokens for map-reduce summarization (0 = unlimited/single pass). */
+	chunkSize?: number;
+	/** Enable double summarization: summarize intermediate results again. */
+	doubleSummarization?: boolean;
+	/** Agentario: custom prompt template parts for summarization */
+	promptTemplateBefore?: string;
+	promptTemplateAfter?: string;
 	compact?: (
 		context: CoreCompactionContext,
 	) =>
 		| Promise<CoreCompactionResult | undefined>
 		| CoreCompactionResult
 		| undefined;
+	/** Agentario: callback for status updates in UI during auto-compaction */
+	statusCallback?: (message: string) => void;
 }
 
 /**

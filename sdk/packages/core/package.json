@@ -1,7 +1,7 @@
 {
-	"name": "@cline/core",
-	"description": "Cline Core SDK for Node Runtime",
-	"version": "0.0.54",
+	"name": "@agentario/core",
+	"description": "Agentario Core SDK for Node Runtime",
+	"version": "0.0.55",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cline/cline",
@@ -48,9 +48,9 @@
 		"test:watch": "vitest --config vitest.config.ts"
 	},
 	"dependencies": {
-		"@cline/agents": "workspace:*",
-		"@cline/shared": "workspace:*",
-		"@cline/llms": "workspace:*",
+		"@agentario/agents": "workspace:*",
+		"@agentario/shared": "workspace:*",
+		"@agentario/llms": "workspace:*",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/api-logs": "^0.214.0",
@@ -67,6 +67,7 @@
 		"node-machine-id": "^1.1.12",
 		"nanoid": "^5.1.7",
 		"simple-git": "3.36.0",
+		"web-tree-sitter": "^0.24.7",
 		"ws": "^8.20.0",
 		"yaml": "^2.8.2",
 		"zod": "^4.3.6"

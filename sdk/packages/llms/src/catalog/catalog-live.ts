@@ -1,8 +1,8 @@
-import { MODELS_DEV_PROVIDER_KEY_MAP } from "../providers/provider-keys";
+﻿import { MODELS_DEV_PROVIDER_KEY_MAP } from "../providers/provider-keys";
 import {
 	fetchClineRecommendedModelsPayload,
-	normalizeClineRecommendedProviderModels,
-} from "./catalog-cline-recommended";
+	normalizeAgentarioRecommendedProviderModels,
+} from "./catalog-agentario-recommended";
 import type { ModelInfo } from "./types";
 
 export interface ModelsDevModel {
@@ -201,7 +201,7 @@ export async function fetchLiveProviderModels(
 		fetchClineRecommendedModelsPayload(fetcher).catch(() => undefined),
 	]);
 	const clineRecommended = clineRecommendedPayload
-		? normalizeClineRecommendedProviderModels(
+		? normalizeAgentarioRecommendedProviderModels(
 				clineRecommendedPayload,
 				providerModels.openrouter ?? {},
 			)

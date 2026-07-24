@@ -1,5 +1,5 @@
-import { Controller } from "@/sdk"
-import { Empty, RemoteConfigSetting, RemoteConfigSettingsResponse, RemoteConfigType } from "@/shared/proto/index.cline"
+﻿import { Controller } from "@/sdk"
+import { Empty, RemoteConfigSetting, RemoteConfigSettingsResponse, RemoteConfigType } from "@/shared/proto/index.agentario"
 
 export async function getRemoteConfigSettings(controller: Controller, _request: Empty): Promise<RemoteConfigSettingsResponse> {
 	const globalRules: RemoteConfigSetting[] = (controller.remoteConfig?.globalRules || []).map((rule) => ({

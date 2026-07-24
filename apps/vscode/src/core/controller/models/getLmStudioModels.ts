@@ -1,5 +1,5 @@
-import { StringArray, type StringRequest } from "@shared/proto/cline/common"
-import { fetchLmStudioModels } from "@cline/shared"
+﻿import { StringArray, type StringRequest } from "@shared/proto/agentario/common"
+import { fetchLmStudioModels } from "@agentario/shared"
 import { fetch } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from ".."

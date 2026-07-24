@@ -1,4 +1,4 @@
-import {
+﻿import {
 	afterEach,
 	beforeAll,
 	beforeEach,
@@ -15,9 +15,9 @@ const listSessionHistoryFromBackend = vi.fn();
 const featureFlagsPoll = vi.fn(async () => {});
 const featureFlagsDispose = vi.fn(async () => {});
 
-vi.mock("@cline/core", async () => {
+vi.mock("@agentario/core", async () => {
 	const actual =
-		await vi.importActual<typeof import("@cline/core")>("@cline/core");
+		await vi.importActual<typeof import("@agentario/core")>("@agentario/core");
 	return {
 		...actual,
 		ClineCore: {
@@ -35,9 +35,9 @@ vi.mock("../utils/telemetry", () => ({
 describe("createCliCore", () => {
 	let sessionModule: typeof import("./session");
 	const envSnapshot = {
-		CLINE_RPC_ADDRESS: process.env.CLINE_RPC_ADDRESS,
-		CLINE_SESSION_BACKEND_MODE: process.env.CLINE_SESSION_BACKEND_MODE,
-		CLINE_VCR: process.env.CLINE_VCR,
+		CLINE_RPC_ADDRESS: process.env.agentario_RPC_ADDRESS,
+		CLINE_SESSION_BACKEND_MODE: process.env.agentario_SESSION_BACKEND_MODE,
+		CLINE_VCR: process.env.agentario_VCR,
 	};
 
 	beforeAll(async () => {
@@ -71,22 +71,22 @@ describe("createCliCore", () => {
 			subscribe: vi.fn(),
 			updateSessionModel: vi.fn(),
 		});
-		delete process.env.CLINE_RPC_ADDRESS;
-		delete process.env.CLINE_SESSION_BACKEND_MODE;
-		delete process.env.CLINE_VCR;
+		delete process.env.agentario_RPC_ADDRESS;
+		delete process.env.agentario_SESSION_BACKEND_MODE;
+		delete process.env.agentario_VCR;
 		featureFlagsPoll.mockClear();
 		featureFlagsDispose.mockClear();
 	});
 
 	afterEach(() => {
-		process.env.CLINE_RPC_ADDRESS = envSnapshot.CLINE_RPC_ADDRESS;
-		process.env.CLINE_SESSION_BACKEND_MODE =
-			envSnapshot.CLINE_SESSION_BACKEND_MODE;
-		process.env.CLINE_VCR = envSnapshot.CLINE_VCR;
+		process.env.agentario_RPC_ADDRESS = envSnapshot.agentario_RPC_ADDRESS;
+		process.env.agentario_SESSION_BACKEND_MODE =
+			envSnapshot.agentario_SESSION_BACKEND_MODE;
+		process.env.agentario_VCR = envSnapshot.agentario_VCR;
 	});
 
 	it("passes hub client metadata through without forcing hub mode", async () => {
-		process.env.CLINE_RPC_ADDRESS = "127.0.0.1:5001";
+		process.env.agentario_RPC_ADDRESS = "127.0.0.1:5001";
 
 		await sessionModule.createCliCore();
 
@@ -183,7 +183,7 @@ describe("createCliCore", () => {
 	});
 
 	it("passes env-managed routing through to core when local is requested via env", async () => {
-		process.env.CLINE_SESSION_BACKEND_MODE = "local";
+		process.env.agentario_SESSION_BACKEND_MODE = "local";
 
 		await sessionModule.createCliCore();
 
@@ -195,7 +195,7 @@ describe("createCliCore", () => {
 	});
 
 	it("passes env-managed routing through to core when vcr is enabled", async () => {
-		process.env.CLINE_VCR = "1";
+		process.env.agentario_VCR = "1";
 
 		await sessionModule.createCliCore();
 

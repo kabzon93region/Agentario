@@ -1,4 +1,4 @@
-import {
+﻿import {
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
@@ -51,7 +51,7 @@ describe("migration notice", () => {
 		);
 
 		expect(getClineCliMigrationNotice(dataDir)?.id).toBe(
-			"cline-cli-cline-pass-intro",
+			"cline-cli-agentario-pass-intro",
 		);
 	});
 
@@ -92,20 +92,20 @@ describe("migration notice", () => {
 			getClineCliMigrationNotice(
 				dataDir,
 				{},
-				{ activeProviderId: "cline-pass" },
+				{ activeProviderId: "agentario-pass" },
 			),
 		).toBeUndefined();
 	});
 
 	it("suppresses the active ClinePass provider even when the provider id has surrounding whitespace", () => {
 		expect(
-			shouldSuppressClineCliMigrationNoticeForActiveProvider(" cline-pass "),
+			shouldSuppressClineCliMigrationNoticeForActiveProvider(" agentario-pass "),
 		).toBe(true);
 	});
 
 	it("does not suppress the active ClinePass provider when forced", () => {
 		expect(
-			shouldSuppressClineCliMigrationNoticeForActiveProvider("cline-pass", {
+			shouldSuppressClineCliMigrationNoticeForActiveProvider("agentario-pass", {
 				CLINE_FORCE_CLINE_PASS_NOTICE: "1",
 			}),
 		).toBe(false);
@@ -118,7 +118,7 @@ describe("migration notice", () => {
 			getClineCliMigrationNotice(
 				dataDir,
 				{ CLINE_FORCE_CLINE_PASS_NOTICE: "1" },
-				{ activeProviderId: "cline-pass" },
+				{ activeProviderId: "agentario-pass" },
 			),
 		).toBeDefined();
 	});
@@ -140,7 +140,7 @@ describe("migration notice", () => {
 		markClineCliMigrationNoticeShown(dataDir);
 
 		const rawState = readFileSync(resolveCliNoticeStatePath(dataDir), "utf8");
-		expect(rawState).toContain("cline-cli-cline-pass-intro");
+		expect(rawState).toContain("cline-cli-agentario-pass-intro");
 		expect(getClineCliMigrationNotice(dataDir)).toBeUndefined();
 	});
 });

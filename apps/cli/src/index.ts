@@ -1,7 +1,7 @@
-#!/usr/bin/env bun
+﻿#!/usr/bin/env bun
 
 import { isMainThread } from "node:worker_threads";
-import { disposeAll, initVcr, isHubDaemonProcess } from "@cline/shared";
+import { disposeAll, initVcr, isHubDaemonProcess } from "@agentario/shared";
 import { logCliProcessError } from "./logging/errors";
 import {
 	abortActiveRuntime,
@@ -12,7 +12,7 @@ import { writeErr } from "./utils/output";
 
 // Initialize VCR before any HTTP requests are made.
 // Set CLINE_VCR=record|playback and CLINE_VCR_CASSETTE=<path> to enable.
-initVcr(process.env.CLINE_VCR);
+initVcr(process.env.agentario_VCR);
 
 if (!isMainThread) {
 	// Worker imports of the bundled CLI entrypoint should not start the CLI.
@@ -58,7 +58,7 @@ if (!isMainThread) {
 
 	void (async () => {
 		if (isHubDaemonProcess()) {
-			await import("@cline/core/hub/daemon-entry");
+			await import("@agentario/core/hub/daemon-entry");
 			return;
 		}
 

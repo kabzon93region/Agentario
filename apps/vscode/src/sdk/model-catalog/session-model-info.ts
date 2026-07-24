@@ -1,4 +1,4 @@
-import type { ModelInfo as SdkModelInfo } from "@cline/llms"
+import type { ModelInfo as SdkModelInfo } from "@agentario/llms"
 import type { ApiConfiguration, ModelInfo as HostModelInfo } from "@shared/api"
 import type { Mode } from "@shared/storage/types"
 import { createProviderConfigStore } from "./store"

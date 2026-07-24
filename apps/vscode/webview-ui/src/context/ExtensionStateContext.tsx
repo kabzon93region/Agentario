@@ -2,11 +2,11 @@ import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
 import { DEFAULT_BROWSER_SETTINGS } from "@shared/BrowserSettings"
 import { DEFAULT_PLATFORM, type ExtensionState } from "@shared/ExtensionMessage"
 import { DEFAULT_MCP_DISPLAY_MODE } from "@shared/McpDisplayMode"
-import type { UserInfo } from "@shared/proto/cline/account"
-import { EmptyRequest } from "@shared/proto/cline/common"
-import type { OpenRouterCompatibleModelInfo, ProviderModelsResponse } from "@shared/proto/cline/models"
-import { OnboardingModelGroup, type TerminalProfile } from "@shared/proto/cline/state"
-import { convertProtoToClineMessage } from "@shared/proto-conversions/cline-message"
+import type { UserInfo } from "@shared/proto/agentario/account"
+import { EmptyRequest } from "@shared/proto/agentario/common"
+import type { OpenRouterCompatibleModelInfo, ProviderModelsResponse } from "@shared/proto/agentario/models"
+import { OnboardingModelGroup, type TerminalProfile } from "@shared/proto/agentario/state"
+import { convertProtoToAgentarioMessage } from "@shared/proto-conversions/agentario-message"
 import { convertProtoMcpServersToMcpServers } from "@shared/proto-conversions/mcp/mcp-server-conversion"
 import { fromProtobufModels } from "@shared/proto-conversions/models/typeConversion"
 import type React from "react"
@@ -87,17 +87,17 @@ export interface ExtensionStateContextType extends ExtensionState {
 	setGroqModels: (value: Record<string, ModelInfo>) => void
 	setBasetenModels: (value: Record<string, ModelInfo>) => void
 	setHuggingFaceModels: (value: Record<string, ModelInfo>) => void
-	setGlobalClineRulesToggles: (toggles: Record<string, boolean>) => void
-	setLocalClineRulesToggles: (toggles: Record<string, boolean>) => void
-	setLocalCursorRulesToggles: (toggles: Record<string, boolean>) => void
-	setLocalWindsurfRulesToggles: (toggles: Record<string, boolean>) => void
-	setLocalAgentsRulesToggles: (toggles: Record<string, boolean>) => void
-	setLocalWorkflowToggles: (toggles: Record<string, boolean>) => void
-	setGlobalWorkflowToggles: (toggles: Record<string, boolean>) => void
-	setGlobalSkillsToggles: (toggles: Record<string, boolean>) => void
-	setLocalSkillsToggles: (toggles: Record<string, boolean>) => void
-	setRemoteRulesToggles: (toggles: Record<string, boolean>) => void
-	setRemoteWorkflowToggles: (toggles: Record<string, boolean>) => void
+	setGlobalAgentarioRulesToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setLocalAgentarioRulesToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setLocalCursorRulesToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setLocalWindsurfRulesToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setLocalAgentsRulesToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setLocalWorkflowToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setGlobalWorkflowToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setGlobalSkillsToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setLocalSkillsToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setRemoteRulesToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+	setRemoteWorkflowToggles: (toggles: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
 	setTotalTasksSize: (value: number | null) => void
 	setExpandTaskHeader: (value: boolean) => void
 	setShowWelcome: (value: boolean) => void
@@ -290,7 +290,7 @@ export const ExtensionStateContextProvider: React.FC<{
 
 	const [state, setState] = useState<ExtensionState>({
 		version: "",
-		clineMessages: [],
+		agentarioMessages: [],
 		queuedPrompts: [],
 		taskHistory: [],
 		shouldShowAnnouncement: false,
@@ -305,8 +305,8 @@ export const ExtensionStateContextProvider: React.FC<{
 		planActSeparateModelsSetting: true,
 		enableCheckpointsSetting: true,
 		mcpDisplayMode: DEFAULT_MCP_DISPLAY_MODE,
-		globalClineRulesToggles: {},
-		localClineRulesToggles: {},
+		globalAgentarioRulesToggles: {},
+		localAgentarioRulesToggles: {},
 		localCursorRulesToggles: {},
 		localWindsurfRulesToggles: {},
 		localAgentsRulesToggles: {},
@@ -325,8 +325,26 @@ export const ExtensionStateContextProvider: React.FC<{
 		customPrompt: undefined,
 		useAutoCondense: true,
 		compactionStrategy: "agentic" as "basic" | "agentic",
-		compactionSummarizerProviderId: undefined,
-		compactionSummarizerModelId: undefined,
+		compactionProviderId: undefined,
+		compactionModelId: undefined,
+		compactionBaseUrl: undefined,
+		compactionApiKey: undefined,
+		compactionChunkSize: 4000,
+		compactionDoubleSummarization: true,
+		compactionReserveTokens: 16384,
+		compactionMaxInputTokens: 0,
+		compactionPromptTemplateBefore: undefined,
+		compactionPromptTemplateAfter: undefined,
+		compactionPostProcessTags: undefined,
+		// Agentario: Context Protection
+		smartChunkingEnabled: true,
+		showFileOutline: true,
+		maxOutlineEntries: 100,
+		smartTruncationEnabled: true,
+		smartTruncationThreshold: 16000,
+		smartTruncationHead: 2000,
+		smartTruncationTail: 1000,
+		astNavigatorEnabled: false,
 		modelProfilePresets: [],
 		activeModelProfilePresetId: undefined,
 		codebaseIndexMode: "local",
@@ -354,6 +372,8 @@ export const ExtensionStateContextProvider: React.FC<{
 		isMultiRootWorkspace: false,
 		multiRootSetting: { user: false, featureFlag: false },
 		hooksEnabled: false,
+		/** Agentario: chat UI theme */
+		chatTheme: "default" as "default" | "cursor",
 	})
 	const [expandTaskHeader, setExpandTaskHeader] = useState(true)
 	const [didHydrateState, setDidHydrateState] = useState(false)
@@ -468,7 +488,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		}
 	}, [])
 	const mcpServersSubscriptionRef = useRef<(() => void) | null>(null)
-	// Convergent-replica state for clineMessages. The partial-message stream and the full state
+	// Convergent-replica state for agentarioMessages. The partial-message stream and the full state
 	// snapshots both feed this reducer so the transcript converges correctly regardless of
 	// arrival order, duplication, or loss. See messageReducer.ts.
 	const replicaRef = useRef<ReplicaState>(createReplicaState())
@@ -493,12 +513,17 @@ export const ExtensionStateContextProvider: React.FC<{
 							// state defaults to epoch 0 / version 0, which merges.
 							replicaRef.current = reducerApplyStateSnapshot(
 								replicaRef.current,
-								stateData.clineMessages ?? [],
+								stateData.agentarioMessages ?? [],
 								stateData.epoch ?? 0,
 								stateData.stateVersion ?? 0,
 								stateData.turnState,
 							)
-							stateData.clineMessages = replicaRef.current.messages
+							// Если таск закрыт (currentTaskItem === undefined), принудительно очищаем
+							// сообщения — редьюсер не умеет уменьшать транскрипт в рамках одной эпохи.
+							if (!stateData.currentTaskItem) {
+								replicaRef.current = { ...replicaRef.current, messages: [] }
+							}
+							stateData.agentarioMessages = replicaRef.current.messages
 							// Use the seq-gated turnState from the replica, NOT the raw snapshot's, so a
 							// late/stale snapshot carrying an older phase (e.g. "idle") cannot revert a
 							// newer phase (e.g. "streaming") and hide the Cancel button. Falls back to
@@ -510,6 +535,19 @@ export const ExtensionStateContextProvider: React.FC<{
 								autoApprovalSettings: shouldUpdateAutoApproval
 									? stateData.autoApprovalSettings
 									: prevState.autoApprovalSettings,
+								// Agentario: сохраняем локальные toggle-состояния правил,
+								// т.к. push состояния может прийти с устаревшими данными
+								// и вызвать визуальное "дрожание" переключателей.
+								// Toggle-состояния обновляются только через gRPC-ответы.
+								globalAgentarioRulesToggles: prevState.globalAgentarioRulesToggles,
+								localAgentarioRulesToggles: prevState.localAgentarioRulesToggles,
+								localCursorRulesToggles: prevState.localCursorRulesToggles,
+								localWindsurfRulesToggles: prevState.localWindsurfRulesToggles,
+								localAgentsRulesToggles: prevState.localAgentsRulesToggles,
+								remoteRulesToggles: prevState.remoteRulesToggles,
+								localWorkflowToggles: prevState.localWorkflowToggles,
+								globalWorkflowToggles: prevState.globalWorkflowToggles,
+								remoteWorkflowToggles: prevState.remoteWorkflowToggles,
 							}
 
 							// Update welcome screen state based on API configuration if welcome view not in progress
@@ -674,7 +712,7 @@ export const ExtensionStateContextProvider: React.FC<{
 						return
 					}
 
-					const partialMessage = convertProtoToClineMessage(protoMessage)
+					const partialMessage = convertProtoToAgentarioMessage(protoMessage)
 					setState((prevState) => {
 						// Route through the convergent-replica reducer: merge by ts keeping the
 						// higher seq, fence stale epochs, never let an out-of-order or duplicate
@@ -686,7 +724,7 @@ export const ExtensionStateContextProvider: React.FC<{
 							// Stale/ignored — no change.
 							return prevState
 						}
-						return { ...prevState, clineMessages: replicaRef.current.messages }
+						return { ...prevState, agentarioMessages: replicaRef.current.messages }
 					})
 				} catch (error) {
 					console.error("Failed to process partial message:", error, protoMessage)
@@ -949,8 +987,8 @@ export const ExtensionStateContextProvider: React.FC<{
 		showWorktrees,
 		showIndexing,
 		showAnnouncement,
-		globalClineRulesToggles: state.globalClineRulesToggles || {},
-		localClineRulesToggles: state.localClineRulesToggles || {},
+		globalAgentarioRulesToggles: state.globalAgentarioRulesToggles || {},
+		localAgentarioRulesToggles: state.localAgentarioRulesToggles || {},
 		localCursorRulesToggles: state.localCursorRulesToggles || {},
 		localWindsurfRulesToggles: state.localWindsurfRulesToggles || {},
 		localAgentsRulesToggles: state.localAgentsRulesToggles || {},
@@ -997,60 +1035,60 @@ export const ExtensionStateContextProvider: React.FC<{
 		setShowMarketplace,
 		setShowMcp,
 		closeMcpView,
-		setGlobalClineRulesToggles: (toggles) =>
+		setGlobalAgentarioRulesToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				globalClineRulesToggles: toggles,
+				globalAgentarioRulesToggles: typeof toggles === "function" ? toggles(prevState.globalAgentarioRulesToggles) : toggles,
 			})),
-		setLocalClineRulesToggles: (toggles) =>
+		setLocalAgentarioRulesToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				localClineRulesToggles: toggles,
+				localAgentarioRulesToggles: typeof toggles === "function" ? toggles(prevState.localAgentarioRulesToggles) : toggles,
 			})),
 		setLocalCursorRulesToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				localCursorRulesToggles: toggles,
+				localCursorRulesToggles: typeof toggles === "function" ? toggles(prevState.localCursorRulesToggles) : toggles,
 			})),
 		setLocalWindsurfRulesToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				localWindsurfRulesToggles: toggles,
+				localWindsurfRulesToggles: typeof toggles === "function" ? toggles(prevState.localWindsurfRulesToggles) : toggles,
 			})),
 		setLocalAgentsRulesToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				localAgentsRulesToggles: toggles,
+				localAgentsRulesToggles: typeof toggles === "function" ? toggles(prevState.localAgentsRulesToggles) : toggles,
 			})),
 		setLocalWorkflowToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				localWorkflowToggles: toggles,
+				localWorkflowToggles: typeof toggles === "function" ? toggles(prevState.localWorkflowToggles) : toggles,
 			})),
 		setGlobalWorkflowToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				globalWorkflowToggles: toggles,
+				globalWorkflowToggles: typeof toggles === "function" ? toggles(prevState.globalWorkflowToggles) : toggles,
 			})),
 		setGlobalSkillsToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				globalSkillsToggles: toggles,
+				globalSkillsToggles: typeof toggles === "function" ? toggles(prevState.globalSkillsToggles ?? {}) : toggles,
 			})),
 		setLocalSkillsToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				localSkillsToggles: toggles,
+				localSkillsToggles: typeof toggles === "function" ? toggles(prevState.localSkillsToggles ?? {}) : toggles,
 			})),
 		setRemoteRulesToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				remoteRulesToggles: toggles,
+				remoteRulesToggles: typeof toggles === "function" ? toggles(prevState.remoteRulesToggles ?? {}) : toggles,
 			})),
 		setRemoteWorkflowToggles: (toggles) =>
 			setState((prevState) => ({
 				...prevState,
-				remoteWorkflowToggles: toggles,
+				remoteWorkflowToggles: typeof toggles === "function" ? toggles(prevState.remoteWorkflowToggles ?? {}) : toggles,
 			})),
 		setMcpTab,
 		setTotalTasksSize,

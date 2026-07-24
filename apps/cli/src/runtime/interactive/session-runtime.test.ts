@@ -1,12 +1,12 @@
-import type {
+﻿import type {
 	AgentEvent,
 	ProviderSettingsManager,
 	TeamEvent,
 	ToolApprovalRequest,
 	ToolApprovalResult,
-} from "@cline/core";
-import { SessionNotFoundError } from "@cline/core";
-import type { AgentTool, Message } from "@cline/shared";
+} from "@agentario/core";
+import { SessionNotFoundError } from "@agentario/core";
+import type { AgentTool, Message } from "@agentario/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatCommandState } from "../../utils/chat-commands";
 import type { Config } from "../../utils/types";

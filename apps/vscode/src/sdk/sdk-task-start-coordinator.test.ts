@@ -1,4 +1,4 @@
-import type { HistoryItem } from "@shared/HistoryItem"
+﻿import type { HistoryItem } from "@shared/HistoryItem"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { StateManager } from "@/core/storage/StateManager"
 import { SdkTaskStartCoordinator, type SdkTaskStartCoordinatorOptions } from "./sdk-task-start-coordinator"
@@ -75,7 +75,7 @@ describe("SdkTaskStartCoordinator", () => {
 	})
 
 	it("emits a Cline auth error instead of starting when ClinePass has no token", async () => {
-		const { coordinator, options } = makeCoordinator({ config: { providerId: "cline-pass", modelId: "model", apiKey: "" } })
+		const { coordinator, options } = makeCoordinator({ config: { providerId: "agentario-pass", modelId: "model", apiKey: "" } })
 
 		const sessionId = await coordinator.initTask("needs clinepass auth")
 
@@ -161,7 +161,7 @@ describe("SdkTaskStartCoordinator", () => {
 	it("emits Cline auth errors when reinitialization fails due auth", async () => {
 		const { coordinator, options } = makeCoordinator()
 		options.sessionConfigBuilder.build.mockRejectedValue(new Error("missing api key"))
-		options.isClineProviderActive.mockReturnValue(true)
+		options.isAgentarioCloudProviderActive.mockReturnValue(true)
 
 		await coordinator.reinitExistingTaskFromId("task-1")
 
@@ -240,7 +240,7 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 		createTempSessionHost: vi.fn().mockResolvedValue(tempHost),
 		loadInitialMessages: vi.fn().mockResolvedValue([{ role: "user", content: "hello" }]),
 		resolveContextMentions: vi.fn(async (text: string) => `resolved: ${text}`),
-		isClineProviderActive: vi.fn(() => false),
+		isAgentarioCloudProviderActive: vi.fn(() => false),
 		emitClineAuthError: vi.fn(),
 		postStateToWebview: vi.fn().mockResolvedValue(undefined),
 	} as unknown as SdkTaskStartCoordinatorOptions & {
@@ -264,7 +264,7 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 		createTempSessionHost: ReturnType<typeof vi.fn>
 		loadInitialMessages: ReturnType<typeof vi.fn>
 		resolveContextMentions: ReturnType<typeof vi.fn>
-		isClineProviderActive: ReturnType<typeof vi.fn>
+		isAgentarioCloudProviderActive: ReturnType<typeof vi.fn>
 		emitClineAuthError: ReturnType<typeof vi.fn>
 		postStateToWebview: ReturnType<typeof vi.fn>
 	}

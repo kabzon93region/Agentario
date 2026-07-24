@@ -1,11 +1,11 @@
-import type {
+﻿import type {
 	AgentSideConnection,
 	PermissionOption,
 	PermissionOptionKind,
 	RequestPermissionRequest,
 	ToolCallUpdate,
 } from "@agentclientprotocol/sdk";
-import type { ToolApprovalRequest, ToolApprovalResult } from "@cline/shared";
+import type { ToolApprovalRequest, ToolApprovalResult } from "@agentario/shared";
 import { buildToolTitle, mapToolKind } from "./tool-utils";
 
 // ---------------------------------------------------------------------------

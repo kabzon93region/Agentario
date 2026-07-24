@@ -2,7 +2,7 @@ import {
 	type BasicLogger,
 	CHARS_PER_TOKEN,
 	type MessageWithMetadata,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type {
 	CoreCompactionContext,
 	CoreCompactionResult,
@@ -453,6 +453,12 @@ export function runBasicCompaction(options: {
 		targetTokens: totalTargetTokens,
 		maxInputTokens: options.context.maxInputTokens,
 	});
+
+	// Agentario: проверяем что результат не пустой
+	if (nextMessages.length === 0) {
+		options.logger?.log?.("Basic compaction: result is empty, aborting", { severity: "error" });
+		return undefined;
+	}
 
 	return { messages: nextMessages };
 }

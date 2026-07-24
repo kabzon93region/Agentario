@@ -20,6 +20,7 @@ import {
 	DEFAULT_RESERVE_TOKENS,
 	DEFAULT_TARGET_RATIO,
 	DEFAULT_THRESHOLD_RATIO,
+	estimateTokens,
 } from "./compaction-shared";
 
 export interface ContextPipelinePrepareTurnInput {
@@ -37,6 +38,8 @@ export interface ContextPipelinePrepareTurnInput {
 		message: string,
 		metadata?: Record<string, unknown>,
 	) => void;
+	/** Agentario: реальные inputTokens от модели (из предыдущего ответа). Если доступны — используются вместо estimate. */
+	lastInputTokens?: number;
 }
 
 export interface ContextPipelinePrepareTurnResult {
@@ -53,6 +56,10 @@ type BuiltinCompactionStrategyOptions = {
 	mode: ContextCompactionMode;
 	estimateMessageTokens: EstimateMessageTokens;
 	logger: Pick<CoreSessionConfig, "logger">["logger"];
+	/** Agentario: compaction mode - "context" uses previous summary, "full" re-summarizes all */
+	compactionMode?: "context" | "full";
+	/** Agentario: callback for status updates in UI */
+	statusCallback?: (message: string) => void;
 };
 
 type BuiltinCompactionStrategyRunner = (
@@ -67,14 +74,10 @@ export type ContextCompactionMode = "auto" | "manual";
 export interface ContextCompactionPrepareTurnOptions {
 	mode?: ContextCompactionMode;
 	manualTargetRatio?: number;
-}
-
-function safeJsonSize(value: unknown): number {
-	try {
-		return JSON.stringify(value).length;
-	} catch {
-		return String(value).length;
-	}
+	/** Agentario: compaction mode - "context" uses previous summary, "full" re-summarizes all */
+	compactionMode?: "context" | "full";
+	/** Agentario: callback for status updates in UI */
+	statusCallback?: (message: string) => void;
 }
 
 function isPositiveFiniteNumber(value: unknown): value is number {
@@ -86,6 +89,7 @@ function resolveMaxInputTokens(input: {
 	modelMaxInputTokens?: number;
 	contextWindow?: number;
 	modelMaxTokens?: number;
+	providerMaxInputTokens?: number;
 }): number {
 	const candidates: number[] = [];
 	if (isPositiveFiniteNumber(input.configMaxInputTokens)) {
@@ -103,42 +107,16 @@ function resolveMaxInputTokens(input: {
 			candidates.push(input.contextWindow - input.modelMaxTokens);
 		}
 	}
+	// Agentario: fallback на настройки провайдера (context window из LM Studio/Ollama)
+	if (isPositiveFiniteNumber(input.providerMaxInputTokens)) {
+		candidates.push(input.providerMaxInputTokens);
+	}
 	return candidates.length > 0
 		? Math.min(...candidates)
 		: DEFAULT_MAX_INPUT_TOKENS;
 }
 
-function summarizeToolResults(messages: CoreCompactionContext["messages"]): {
-	toolResultCount: number;
-	toolResultSerializedChars: number;
-	maxToolResultSerializedChars: number;
-} {
-	let toolResultCount = 0;
-	let toolResultSerializedChars = 0;
-	let maxToolResultSerializedChars = 0;
-	for (const message of messages) {
-		if (!Array.isArray(message.content)) {
-			continue;
-		}
-		for (const block of message.content) {
-			if (block.type !== "tool_result") {
-				continue;
-			}
-			const size = safeJsonSize(block.content);
-			toolResultCount += 1;
-			toolResultSerializedChars += size;
-			maxToolResultSerializedChars = Math.max(
-				maxToolResultSerializedChars,
-				size,
-			);
-		}
-	}
-	return {
-		toolResultCount,
-		toolResultSerializedChars,
-		maxToolResultSerializedChars,
-	};
-}
+// summarizeToolResults removed — was only used in debug logging
 
 const BUILTIN_COMPACTION_STRATEGIES = {
 	basic: ({ context, estimateMessageTokens, logger }) =>
@@ -154,19 +132,28 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 		mode,
 		estimateMessageTokens,
 		logger,
+		compactionMode,
+		statusCallback,
 	}) =>
 		runAgenticCompaction({
 			context,
 			providerConfig,
 			summarizer: compaction?.summarizer,
-			preserveRecentTokens: resolveAdaptivePreserveRecentTokens({
+			// Agentario: для full режима отключаем защиту preserveRecentTokens
+			preserveRecentTokens: compactionMode === "full" ? 0 : resolveAdaptivePreserveRecentTokens({
 				maxInputTokens: context.maxInputTokens,
 				configPreserve: compaction?.preserveRecentTokens,
 				mode,
 				triggerTokens: context.triggerTokens,
 			}),
 			estimateMessageTokens,
+			chunkSize: compaction?.chunkSize,
+			doubleSummarization: compaction?.doubleSummarization,
+			promptTemplateBefore: compaction?.promptTemplateBefore,
+			promptTemplateAfter: compaction?.promptTemplateAfter,
 			logger,
+			compactionMode, // Agentario: передаём режим суммаризации
+			statusCallback, // Agentario: callback для статусов в UI
 		}),
 } satisfies Record<CoreCompactionStrategy, BuiltinCompactionStrategyRunner>;
 
@@ -177,13 +164,19 @@ export function resolveAdaptivePreserveRecentTokens(input: {
 	triggerTokens: number;
 }): number {
 	const configured = input.configPreserve ?? DEFAULT_PRESERVE_RECENT_TOKENS;
+	// Agentario: максимум 8к токенов (или configured), но не больше чем triggerTokens
+	// чтобы освободить место для reserve (8к свободных токенов)
+	const maxPreserve = Math.min(configured, 8_000);
+	// triggerTokens = maxInputTokens - reserveTokens
+	// Если нужно освободить место, сохраняем меньше
 	const adaptiveCap = Math.max(
 		1_024,
-		Math.floor(input.maxInputTokens * 0.25),
+		Math.min(maxPreserve, input.triggerTokens),
 	);
 	const base = Math.min(configured, adaptiveCap);
 	if (input.mode === "manual") {
-		return Math.min(base, input.triggerTokens);
+		// Для manual режима — сохраняем минимум, чтобы максимально сжать
+		return Math.min(base, input.triggerTokens, 2_000);
 	}
 	return base;
 }
@@ -228,8 +221,13 @@ function resolveTriggerState(input: {
 	maxInputTokens: number;
 	config: CoreCompactionConfig;
 }): { shouldCompact: boolean; triggerTokens: number; thresholdRatio: number } {
-	if (typeof input.config.reserveTokens === "number") {
-		const reserveTokens = Math.max(0, input.config.reserveTokens);
+	// Agentario: prefer dynamic resolver over static value — reads from settings on every check
+	const reserveTokensValue = typeof input.config.reserveTokensResolver === "function"
+		? input.config.reserveTokensResolver()
+		: input.config.reserveTokens;
+
+	if (typeof reserveTokensValue === "number") {
+		const reserveTokens = Math.max(0, reserveTokensValue);
 		const triggerTokens = Math.max(0, input.maxInputTokens - reserveTokens);
 		return {
 			shouldCompact: input.inputTokens > triggerTokens,
@@ -361,79 +359,132 @@ export function createContextCompactionPrepareTurn(
 		: strategy;
 
 	return async (context) => {
-		const inputTokens = context.apiMessages.reduce(
+		// Agentario: считаем токены сообщений (chat) по символам
+		const chatTokens = context.apiMessages.reduce(
 			(total: number, message) => total + estimateMessageTokens(message),
 			0,
 		);
+		// Agentario: диагностическое логирование — сколько токенов занимают tool results
+		let toolResultTokens = 0;
+		try {
+			toolResultTokens = context.apiMessages
+				.filter((m: { role?: string }) => m.role === "tool")
+				.reduce((sum: number, m: { content?: unknown }) => {
+					const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "");
+					return sum + estimateTokens(content.length);
+				}, 0);
+		} catch { /* diagnostic only — ignore malformed messages */ }
+		if (toolResultTokens > 0 && chatTokens > 0) {
+			config.logger?.log?.(`Context compaction diagnostics: toolResults=${toolResultTokens} tokens (${Math.round(toolResultTokens / chatTokens * 100)}% of chat)`, { severity: "info" });
+		}
+		// Считаем токены системного промпта и инструментов
+		const systemPromptTokens = context.systemPrompt ? estimateTokens(context.systemPrompt.length) : 0;
+		const toolChars = (context.tools as Array<{ name?: string; description?: string; inputSchema?: unknown }>)?.reduce((sum: number, t) => {
+			const nameLen = t.name?.length || 0;
+			const descLen = t.description?.length || 0;
+			let schemaLen = 0;
+			try { schemaLen = t.inputSchema ? JSON.stringify(t.inputSchema).length : 0; } catch { /* ignore */ }
+			return sum + nameLen + descLen + schemaLen;
+		}, 0) || 0;
+		const toolTokens = estimateTokens(toolChars);
+		// Оценка по символам (fallback)
+		const estimatedInputTokens = chatTokens + systemPromptTokens + toolTokens;
+		// Agentario: используем МАКСИМУМ из model-reported и estimate.
+		// lastInputTokens — из предыдущего API-запроса, не включает НОВЫЕ tool results, добавленные после.
+		// estimatedInputTokens — оценка по символам, включает tool results.
+		// Берём max, чтобы не занизить размер контекста (пропуск компакции).
+		const inputTokens = Math.max(
+			(typeof context.lastInputTokens === "number" && Number.isFinite(context.lastInputTokens) && context.lastInputTokens > 0) ? context.lastInputTokens : 0,
+			estimatedInputTokens,
+		);
+		// Agentario: вызываем maxInputTokensResolver если есть (динамическое значение из настроек)
+		const resolvedMaxInputTokens = typeof userCompaction?.maxInputTokensResolver === "function"
+			? userCompaction.maxInputTokensResolver()
+			: undefined;
 		const maxInputTokens = resolveMaxInputTokens({
-			configMaxInputTokens: userCompaction?.maxInputTokens,
+			configMaxInputTokens: resolvedMaxInputTokens ?? userCompaction?.maxInputTokens,
 			modelMaxInputTokens: context.model.info?.maxInputTokens,
 			contextWindow: context.model.info?.contextWindow,
 			modelMaxTokens: context.model.info?.maxTokens,
+			providerMaxInputTokens: providerConfig.maxInputTokens,
 		});
-
+		// Agentario: cap inputTokens на maxInputTokens.
+		// lastInputTokens может быть от суммаризатора (30k+) и превышать реальный контекст.
+		// Модель не может обработать больше токенов чем контекст-окно.
+		const cappedInputTokens = maxInputTokens > 0 ? Math.min(inputTokens, maxInputTokens) : inputTokens;
+		if (cappedInputTokens < inputTokens) {
+			config.logger?.log?.(`Context compaction: capped inputTokens from ${inputTokens} to ${cappedInputTokens} (maxInputTokens=${maxInputTokens})`, { severity: "info" });
+		}
+		config.logger?.log?.(`Context compaction: mode=${mode}, strategy=${strategy}, inputTokens=${cappedInputTokens}, estimatedInputTokens=${estimatedInputTokens}, lastInputTokens=${context.lastInputTokens ?? "n/a"}, maxInputTokens=${maxInputTokens}, chat=${chatTokens}, sys=${systemPromptTokens}, tools=${toolTokens}, messages=${context.messages.length}`, { severity: "info" });
 		const triggerState = resolveTriggerState({
-			inputTokens,
+			inputTokens: cappedInputTokens,
 			maxInputTokens,
 			config: {
 				maxInputTokens: userCompaction?.maxInputTokens,
 				reserveTokens: userCompaction?.reserveTokens,
+				reserveTokensResolver: userCompaction?.reserveTokensResolver,
 				thresholdRatio: userCompaction?.thresholdRatio,
 			},
 		});
-		config.logger?.debug("Context compaction diagnostics", {
-			mode,
-			strategy,
-			iteration: context.iteration,
-			providerId: config.providerId,
-			modelId: config.modelId,
-			inputTokens,
-			maxInputTokens,
-			triggerTokens: triggerState.triggerTokens,
-			thresholdRatio: triggerState.thresholdRatio,
-			shouldCompact: triggerState.shouldCompact,
-			messageCount: context.messages.length,
-			apiMessageCount: context.apiMessages.length,
-			apiMessagesJsonChars: safeJsonSize(context.apiMessages),
-			...summarizeToolResults(context.apiMessages),
-		});
+		config.logger?.log?.(`Context compaction trigger: triggerTokens=${triggerState.triggerTokens}, shouldCompact=${triggerState.shouldCompact}, thresholdRatio=${triggerState.thresholdRatio}`, { severity: "info" });
 		if (mode === "auto" && !triggerState.shouldCompact) {
 			return undefined;
 		}
-			const targetState =
-				mode === "manual"
-					? resolveManualTargetState({
-							inputTokens,
-							maxInputTokens,
-						autoTriggerTokens: triggerState.triggerTokens,
-						manualTargetRatio: options.manualTargetRatio,
+		// Agentario: минимальная полезная threshold — не компактировать если chat слишком мал.
+		// После первой компакции: pinned (~9k) + маленький chat (~400) = ~9.4k total.
+		// Если chat < 500 токенов — компакция бессмысленна (нечего сжимать), только тратит время.
+		const MIN_USEFUL_CHAT_TOKENS = 500;
+		if (mode === "auto" && chatTokens < MIN_USEFUL_CHAT_TOKENS) {
+			config.logger?.log?.(`Context compaction skipped: chat too small (${chatTokens} tokens < ${MIN_USEFUL_CHAT_TOKENS} minimum). Nothing useful to compact.`, { severity: "info" });
+			return undefined;
+		}
+		const targetState =
+			mode === "manual"
+				? resolveManualTargetState({
+						inputTokens: cappedInputTokens,
+						maxInputTokens,
+					autoTriggerTokens: triggerState.triggerTokens,
+					manualTargetRatio: options.manualTargetRatio,
+				})
+				: triggerState;
+		const targetTokens =
+			mode === "auto"
+				? resolveBasicTargetTokens({
+						maxInputTokens,
+						modelMaxTokens: context.model.info?.maxTokens,
+						triggerTokens: targetState.triggerTokens,
 					})
-					: triggerState;
-			const targetTokens =
-				mode === "auto"
-					? resolveBasicTargetTokens({
-							maxInputTokens,
-							modelMaxTokens: context.model.info?.maxTokens,
-							triggerTokens: targetState.triggerTokens,
-						})
-					: undefined;
+				: undefined;
 
-			const compactionContext = {
-				agentId: context.agentId,
-				conversationId: context.conversationId,
-			parentAgentId: context.parentAgentId,
-			iteration: context.iteration,
-			messages: context.messages,
-				model: context.model,
-				maxInputTokens,
-				triggerTokens: targetState.triggerTokens,
-				targetTokens,
-				thresholdRatio: targetState.thresholdRatio,
-				utilizationRatio: maxInputTokens > 0 ? inputTokens / maxInputTokens : 0,
-			};
+		const compactionContext = {
+			agentId: context.agentId,
+			conversationId: context.conversationId,
+		parentAgentId: context.parentAgentId,
+		iteration: context.iteration,
+		messages: context.messages,
+			model: context.model,
+			maxInputTokens,
+			triggerTokens: targetState.triggerTokens,
+			targetTokens,
+			thresholdRatio: targetState.thresholdRatio,
+			utilizationRatio: maxInputTokens > 0 ? cappedInputTokens / maxInputTokens : 0,
+		};
 
-		const statusReason =
-			mode === "manual" ? "manual_compaction" : "auto_compaction";
+	const statusReason =
+		mode === "manual" ? "manual_compaction" : "auto_compaction";
+	// Agentario: эмитим статистику контекста ПЕРЕД "auto-compacting"
+	// Для отображения используем estimatedInputTokens (реальная оценка), а не cappedInputTokens
+	const displayInputTokens = estimatedInputTokens;
+	const contextPercent = maxInputTokens > 0 ? Math.round((displayInputTokens / maxInputTokens) * 100) : 0;
+	const statsMessage = `📊 Контекст: ${displayInputTokens.toLocaleString()} / ${maxInputTokens.toLocaleString()} токенов (${contextPercent}%)`;
+	context.emitStatusNotice?.(statsMessage, {
+		kind: "context_stats",
+		reason: statusReason,
+		inputTokens: displayInputTokens,
+		maxInputTokens,
+		contextPercent,
+	});
+		// Agentario: эмитим "auto-compacting" с анимацией
 		context.emitStatusNotice?.(
 			mode === "manual" ? "compacting" : "auto-compacting",
 			{
@@ -442,6 +493,7 @@ export function createContextCompactionPrepareTurn(
 				iteration: context.iteration,
 				triggerTokens: targetState.triggerTokens,
 				maxInputTokens,
+				animate: true, // Agentario: флаг для UI чтобы показать анимацию
 			},
 		);
 
@@ -460,6 +512,8 @@ export function createContextCompactionPrepareTurn(
 					mode,
 					estimateMessageTokens,
 					logger: config.logger,
+					compactionMode: options.compactionMode, // Agentario: передаём режим суммаризации
+					statusCallback: options.statusCallback, // Agentario: callback для статусов в UI
 				});
 
 		const durationMs = Date.now() - startedAt;
@@ -479,30 +533,45 @@ export function createContextCompactionPrepareTurn(
 				(total: number, message) => total + estimateMessageTokens(message),
 				0,
 			);
-			config.logger?.log("Context compaction completed", {
-				severity: "info",
-				strategy: strategy,
-				maxInputTokens,
-				inputTokens,
-				afterTokens,
-				tokensSaved: inputTokens - afterTokens,
-				utilizationBefore: `${((inputTokens / maxInputTokens) * 100).toFixed(1)}%`,
-				utilizationAfter: `${((afterTokens / maxInputTokens) * 100).toFixed(1)}%`,
-				thresholdTrigger: `${(targetState.thresholdRatio * 100).toFixed(1)}%`,
-				messagesBefore: beforeMessageCount,
-				messagesAfter: result.messages.length,
-				messagesRemoved: beforeMessageCount - result.messages.length,
-			} as Record<string, unknown>);
-			captureCompactionExecuted(config.telemetry, {
+		config.logger?.log("Context compaction completed", {
+			severity: "info",
+			strategy: strategy,
+			maxInputTokens,
+			inputTokens: displayInputTokens,
+			afterTokens,
+			tokensSaved: displayInputTokens - afterTokens,
+			utilizationBefore: `${((displayInputTokens / maxInputTokens) * 100).toFixed(1)}%`,
+			utilizationAfter: `${((afterTokens / maxInputTokens) * 100).toFixed(1)}%`,
+			thresholdTrigger: `${(targetState.thresholdRatio * 100).toFixed(1)}%`,
+			messagesBefore: beforeMessageCount,
+			messagesAfter: result.messages.length,
+			messagesRemoved: beforeMessageCount - result.messages.length,
+		} as Record<string, unknown>);
+		// Agentario: эмитим статистику ПОСЛЕ компакции
+		const tokensSaved = displayInputTokens - afterTokens;
+		const afterPercent = maxInputTokens > 0 ? Math.round((afterTokens / maxInputTokens) * 100) : 0;
+		const durationSec = (durationMs / 1000).toFixed(1);
+		const resultMessage = `✅ Компакция завершена за ${durationSec}с: ${displayInputTokens.toLocaleString()} → ${afterTokens.toLocaleString()} токенов (−${tokensSaved.toLocaleString()}, ${afterPercent}%)`;
+		context.emitStatusNotice?.(resultMessage, {
+			kind: "compaction_result",
+			reason: statusReason,
+			inputTokens: displayInputTokens,
+			afterTokens,
+			tokensSaved,
+			afterPercent,
+			durationMs,
+			durationSec,
+		});
+		captureCompactionExecuted(config.telemetry, {
 				ulid: telemetryUlid,
 				strategy: telemetryStrategy,
 				mode,
 				messagesBefore: beforeMessageCount,
 				messagesAfter: result.messages.length,
 				messagesRemoved: beforeMessageCount - result.messages.length,
-				tokensBefore: inputTokens,
-				tokensAfter: afterTokens,
-				tokensSaved: inputTokens - afterTokens,
+			tokensBefore: displayInputTokens,
+			tokensAfter: afterTokens,
+			tokensSaved: displayInputTokens - afterTokens,
 				triggerTokens: targetState.triggerTokens,
 				maxInputTokens,
 				thresholdRatio: targetState.thresholdRatio,
@@ -519,8 +588,8 @@ export function createContextCompactionPrepareTurn(
 				strategy: telemetryStrategy,
 				mode,
 				reason: "no_result",
-				tokensBefore: inputTokens,
-				triggerTokens: targetState.triggerTokens,
+			tokensBefore: displayInputTokens,
+			triggerTokens: targetState.triggerTokens,
 				maxInputTokens,
 				thresholdRatio: targetState.thresholdRatio,
 				durationMs,

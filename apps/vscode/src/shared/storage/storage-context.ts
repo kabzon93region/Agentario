@@ -1,9 +1,9 @@
-import fsSync from "node:fs"
+﻿import fsSync from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { resolveClineDir } from "@cline/shared/storage"
-import { ClineFileStorage } from "./ClineFileStorage"
-import { ClineMemento } from "./ClineStorage"
+import { resolveClineDir } from "@agentario/shared/storage"
+import { AgentarioFileStorage } from "./AgentarioFileStorage"
+import { ClineMemento } from "./AgentarioStorage"
 
 /**
  * The storage backend context object used by StateManager and other components.
@@ -24,13 +24,13 @@ export interface StorageContext {
 	 * This split exists because CLI needs to intercept the ClineMemento interface to global state,
 	 * but state resets need to write through to the backing store.
 	 */
-	readonly globalStateBackingStore: ClineFileStorage
+	readonly globalStateBackingStore: AgentarioFileStorage
 
 	/** Secrets — API keys and other sensitive values. File uses restricted permissions (0o600). */
-	readonly secrets: ClineFileStorage<string>
+	readonly secrets: AgentarioFileStorage<string>
 
 	/** Workspace-scoped state — per-project toggles, rules, etc. */
-	readonly workspaceState: ClineFileStorage
+	readonly workspaceState: AgentarioFileStorage
 
 	/** The resolved path to the data directory (~/.cline/data) */
 	readonly dataDir: string
@@ -112,15 +112,15 @@ export function createStorageContext(opts: StorageContextOptions = {}): StorageC
 	fsSync.mkdirSync(dataDir, { recursive: true })
 	fsSync.mkdirSync(workspaceDir, { recursive: true })
 
-	const globalState = new ClineFileStorage(path.join(dataDir, "globalState.json"), "GlobalState")
+	const globalState = new AgentarioFileStorage(path.join(dataDir, "globalState.json"), "GlobalState")
 
 	return {
 		globalState,
 		globalStateBackingStore: globalState,
-		secrets: new ClineFileStorage<string>(path.join(dataDir, "secrets.json"), "Secrets", {
+		secrets: new AgentarioFileStorage<string>(path.join(dataDir, "secrets.json"), "Secrets", {
 			fileMode: 0o600, // Owner read/write only — protects API keys
 		}),
-		workspaceState: new ClineFileStorage(path.join(workspaceDir, "workspaceState.json"), "WorkspaceState"),
+		workspaceState: new AgentarioFileStorage(path.join(workspaceDir, "workspaceState.json"), "WorkspaceState"),
 		dataDir,
 		workspaceStoragePath: workspaceDir,
 	}

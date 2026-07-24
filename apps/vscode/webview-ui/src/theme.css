@@ -359,3 +359,139 @@
 		}
 	}
 }
+
+/* Agentario: Cursor-style compact theme */
+.theme-cursor {
+	/* Smaller base font */
+	--text-base: calc(0.92 * var(--vscode-font-size, 14px));
+	--text-sm: calc(0.85 * var(--vscode-font-size, 14px));
+	--text-xs: calc(0.78 * var(--vscode-font-size, 14px));
+
+	/* Tighter line height */
+	line-height: 1.2;
+}
+
+/* Compact chat rows */
+.theme-cursor .chat-row-compact {
+	padding-top: 4px !important;
+	padding-bottom: 2px !important;
+	padding-left: 8px !important;
+	padding-right: 8px !important;
+}
+
+/* Compact message spacing */
+.theme-cursor [data-message-ts] {
+	padding-bottom: 2px !important;
+}
+
+/* Compact code blocks */
+.theme-cursor .inline-markdown-block pre {
+	margin: 6px 0 !important;
+	padding: 6px 8px !important;
+}
+
+.theme-cursor .inline-markdown-block p,
+.theme-cursor .inline-markdown-block li {
+	line-height: 1.3 !important;
+}
+
+.theme-cursor .inline-markdown-block ul,
+.theme-cursor .inline-markdown-block ol {
+	margin-top: 4px !important;
+	margin-bottom: 4px !important;
+}
+
+/* Compact tool/command/file blocks */
+.theme-cursor .bg-code {
+	padding: 4px 8px !important;
+}
+
+/* Compact headers */
+.theme-cursor .flex.items-center.gap-2\.5 {
+	gap: 4px !important;
+	margin-bottom: 4px !important;
+}
+
+/* Compact gaps throughout */
+.theme-cursor .gap-2\.5 {
+	gap: 4px !important;
+}
+
+.theme-cursor .gap-2 {
+	gap: 4px !important;
+}
+
+.theme-cursor .gap-3 {
+	gap: 6px !important;
+}
+
+/* Compact padding */
+.theme-cursor .px-4 {
+	padding-left: 8px !important;
+	padding-right: 8px !important;
+}
+
+.theme-cursor .py-2\.5 {
+	padding-top: 4px !important;
+	padding-bottom: 4px !important;
+}
+
+.theme-cursor .py-2 {
+	padding-top: 4px !important;
+	padding-bottom: 4px !important;
+}
+
+.theme-cursor .pt-2\.5 {
+	padding-top: 4px !important;
+}
+
+.theme-cursor .pb-2\.5 {
+	padding-bottom: 4px !important;
+}
+
+.theme-cursor .px-2\.5 {
+	padding-left: 6px !important;
+	padding-right: 6px !important;
+}
+
+.theme-cursor .mb-3 {
+	margin-bottom: 4px !important;
+}
+
+.theme-cursor .mb-2 {
+	margin-bottom: 4px !important;
+}
+
+.theme-cursor .mt-2 {
+	margin-top: 4px !important;
+}
+
+/* Compact text sizes */
+.theme-cursor .text-base {
+	font-size: var(--text-base) !important;
+}
+
+.theme-cursor .text-sm {
+	font-size: var(--text-sm) !important;
+}
+
+.theme-cursor .text-xs {
+	font-size: var(--text-xs) !important;
+}
+
+/* Compact block quote */
+.theme-cursor .bg-quote {
+	padding: 4px 8px !important;
+}
+
+/* Smaller icons in compact mode */
+.theme-cursor .size-4 {
+	width: 14px !important;
+	height: 14px !important;
+}
+
+/* Auto-expand collapsibles in compact mode (reasoning, tools, files) */
+.theme-cursor .thinking-row-default-collapsed > div:first-child {
+	cursor: pointer;
+}
+

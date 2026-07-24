@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	OAuthReauthRequiredError,
 	RuntimeOAuthTokenManager,
@@ -107,7 +107,7 @@ describe("RuntimeOAuthTokenManager", () => {
 		});
 
 		const result = await manager.resolveProviderApiKey({
-			providerId: "cline-pass",
+			providerId: "agentario-pass",
 		});
 
 		expect(getProviderSettings).toHaveBeenCalledWith("cline");

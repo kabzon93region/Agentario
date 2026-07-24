@@ -1,4 +1,4 @@
-import { Empty, EmptyRequest } from "@shared/proto/cline/common"
+﻿import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
 import { ShowMessageType } from "@shared/proto/host/window"
 import { HostProvider } from "@/hosts/host-provider"
 import { AuthService } from "@/sdk/auth-service"
@@ -7,7 +7,7 @@ import { Controller } from ".."
 
 /**
  * Initiates OpenAI Codex OAuth authentication flow.
- * Uses the SDK-backed AuthService which delegates to @cline/core's
+ * Uses the SDK-backed AuthService which delegates to @agentario/core's
  * loginOpenAICodex() function.
  */
 export async function openAiCodexSignIn(controller: Controller, _: EmptyRequest): Promise<Empty> {

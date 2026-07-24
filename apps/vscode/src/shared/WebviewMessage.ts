@@ -1,4 +1,4 @@
-export interface WebviewMessage {
+﻿export interface WebviewMessage {
 	type: "grpc_request" | "grpc_request_cancel"
 	grpc_request?: GrpcRequest
 	grpc_request_cancel?: GrpcCancel
@@ -16,8 +16,8 @@ export type GrpcCancel = {
 	request_id: string // ID of the request to cancel
 }
 
-export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"
+export type AgentarioAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"
 
-export type ClineCheckpointRestore = "task" | "workspace" | "taskAndWorkspace"
+export type AgentarioCheckpointRestore = "task" | "workspace" | "taskAndWorkspace"
 
 export type TaskFeedbackType = "thumbs_up" | "thumbs_down"

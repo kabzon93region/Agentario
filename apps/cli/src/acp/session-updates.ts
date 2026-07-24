@@ -1,9 +1,9 @@
-import type {
+﻿import type {
 	AgentSideConnection,
 	SessionConfigOption,
 	SessionUpdate,
 } from "@agentclientprotocol/sdk";
-import type { AgentEvent } from "@cline/core";
+import type { AgentEvent } from "@agentario/core";
 import { buildToolTitle, mapToolKind } from "./tool-utils";
 
 /**

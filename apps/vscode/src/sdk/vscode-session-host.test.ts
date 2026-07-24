@@ -1,14 +1,14 @@
-import type { ClineCoreStartInput, ITelemetryService } from "@cline/core"
+﻿import type { AgentarioCoreStartInput, ITelemetryService } from "@agentario/core"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockClineCoreCreate = vi.hoisted(() => vi.fn())
 const mockCreateVscodeExtraTools = vi.hoisted(() => vi.fn(async () => []))
 
-vi.mock("@cline/core", async () => {
-	const actual = await vi.importActual<typeof import("@cline/core")>("@cline/core")
+vi.mock("@agentario/core", async () => {
+	const actual = await vi.importActual<typeof import("@agentario/core")>("@agentario/core")
 	return {
 		...actual,
-		ClineCore: {
+		AgentarioCore: {
 			create: mockClineCoreCreate,
 		},
 	}
@@ -31,7 +31,7 @@ describe("VscodeSessionHost telemetry wiring", () => {
 		mockCreateVscodeExtraTools.mockReset().mockResolvedValue([])
 	})
 
-	it("passes shared telemetry to ClineCore.create", async () => {
+	it("passes shared telemetry to AgentarioCore.create", async () => {
 		const telemetry = makeTelemetry()
 
 		await VscodeSessionHost.create({
@@ -74,7 +74,7 @@ describe("VscodeSessionHost telemetry wiring", () => {
 			telemetry,
 			getRemoteConfigIntegration: () =>
 				({
-					applyToStartSessionInput: (input: ClineCoreStartInput) => ({
+					applyToStartSessionInput: (input: AgentarioCoreStartInput) => ({
 						...input,
 						config: {
 							...input.config,
@@ -99,7 +99,7 @@ describe("VscodeSessionHost telemetry wiring", () => {
 
 	it("applies remote config before appending VS Code extra tools", async () => {
 		mockCreateVscodeExtraTools.mockResolvedValueOnce([{ name: "vscode-tool" }] as never)
-		const applyToStartSessionInput = vi.fn(async (input: ClineCoreStartInput) => ({
+		const applyToStartSessionInput = vi.fn(async (input: AgentarioCoreStartInput) => ({
 			...input,
 			config: {
 				...input.config,

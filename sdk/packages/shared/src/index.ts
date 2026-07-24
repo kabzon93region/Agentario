@@ -232,6 +232,7 @@ export {
 } from "./llms/reasoning-effort";
 export { DEFAULT_REQUEST_HEADERS, serializeAbortReason } from "./llms/requests";
 export { CHARS_PER_TOKEN, estimateTokens } from "./llms/tokens";
+export { createThinkTagFilter } from "./llms/think-tag-filter";
 export type {
 	ToolApprovalRequest,
 	ToolApprovalResult,
@@ -262,8 +263,19 @@ export {
 export { formatHumanReadableDate, formatUptime } from "./parse/time";
 export { normalizeEditorToolInput, normalizeToolInput } from "./parse/tool-input-normalize";
 export { validateWithZod, zodToJsonSchema } from "./parse/zod";
-export type { ClineSystemPromptOptions } from "./prompt/cline";
-export { buildClineSystemPrompt, processWorkspaceInfo } from "./prompt/cline";
+export type {
+	AgentarioSystemPromptOptions,
+} from "./prompt/agentario";
+export {
+	buildAgentarioSystemPrompt,
+	processWorkspaceInfo,
+} from "./prompt/agentario";
+export {
+	DEFAULT_AGENTARIO_SYSTEM_PROMPT,
+	DEFAULT_CLINE_SYSTEM_PROMPT,
+	YOLO_AGENTARIO_SYSTEM_PROMPT,
+	YOLO_CLINE_SYSTEM_PROMPT,
+} from "./prompt/system";
 export {
 	formatDisplayUserInput,
 	formatFileContentBlock,
@@ -273,7 +285,7 @@ export {
 	parseUserCommandEnvelope,
 	xmlTagsRemoval,
 } from "./prompt/format";
-export { isClineProvider } from "./providers/utils";
+export { isAgentarioCloudProvider } from "./providers/utils";
 export {
 	buildRemoteConfigSessionBlobUploadMetadata,
 	clearRemoteConfigSessionBlobUpload,
@@ -319,8 +331,8 @@ export {
 	AwsBedrockCustomModelSchema,
 	AwsBedrockModelSchema,
 	AwsBedrockSettingsSchema,
-	ClineModelSchema,
-	ClineSettingsSchema,
+	AgentarioModelSchema,
+	AgentarioSettingsSchema,
 	EnterpriseTelemetrySchema,
 	GlobalInstructionsFileSchema,
 	LiteLLMModelSchema,
@@ -351,7 +363,7 @@ export type {
 	ChatStartSessionResponse,
 	ChatToolCallResult,
 	ChatTurnResult,
-	ClineAccountActionRequest,
+	AgentarioAccountActionRequest,
 	EnterpriseAuthenticateRequest,
 	EnterpriseAuthenticateResponse,
 	EnterpriseStatusRequest,
@@ -399,31 +411,31 @@ export {
 	TEAM_PROGRESS_EVENT_TYPE,
 } from "./rpc/team-progress";
 export type {
-	ClineBuildEnv,
-	ClineDebugRole,
-	ResolveClineBuildEnvOptions,
+	AgentarioBuildEnv,
+	AgentarioDebugRole,
+	ResolveAgentarioBuildEnvOptions,
 } from "./runtime/build-env";
 export {
 	augmentNodeCommandForDebug,
 	CLINE_BUILD_ENV_ENV,
 	CLINE_DEBUG_HOST_ENV,
 	CLINE_DEBUG_PORT_BASE_ENV,
-	resolveClineBuildEnv,
-	withResolvedClineBuildEnv,
+	resolveAgentarioBuildEnv,
+	withResolvedAgentarioBuildEnv,
 } from "./runtime/build-env";
 export type {
-	ClineEnvironment,
-	ClineEnvironmentConfig,
-	ResolveClineEnvironmentOptions,
-} from "./runtime/cline-environment";
+	AgentarioEnvironment,
+	AgentarioEnvironmentConfig,
+	ResolveAgentarioEnvironmentOptions,
+} from "./runtime/agentario-environment";
 export {
 	CLINE_ENVIRONMENT_ENV,
 	CLINE_ENVIRONMENT_OVERRIDE_ENV,
 	CLINE_ENVIRONMENTS,
 	DEFAULT_CLINE_ENVIRONMENT,
-	getClineEnvironmentConfig,
-	resolveClineEnvironment,
-} from "./runtime/cline-environment";
+	getAgentarioEnvironmentConfig,
+	resolveAgentarioEnvironment,
+} from "./runtime/agentario-environment";
 export {
 	CLINE_RUN_AS_HUB_DAEMON_ENV,
 	isHubDaemonProcess,
@@ -450,10 +462,10 @@ export {
 	normalizeSdkError,
 	SDK_ERROR_TELEMETRY_EVENT,
 } from "./services/telemetry";
-export type { ClineTelemetryServiceConfig } from "./services/telemetry-config";
+export type { AgentarioTelemetryServiceConfig } from "./services/telemetry-config";
 export {
-	createClineTelemetryServiceConfig,
-	createClineTelemetryServiceMetadata,
+	createAgentarioTelemetryServiceConfig,
+	createAgentarioTelemetryServiceMetadata,
 } from "./services/telemetry-config";
 export type {
 	HookSessionContext,

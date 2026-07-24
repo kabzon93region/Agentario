@@ -1,5 +1,5 @@
-import { StringRequest } from "@/shared/proto/cline/common"
-import { ProviderConfigResponse } from "@/shared/proto/cline/models"
+﻿import { StringRequest } from "@/shared/proto/agentario/common"
+import { ProviderConfigResponse } from "@/shared/proto/agentario/models"
 import { type ProviderCatalogController, parseProviderIdRequest, toRedactedProviderConfigResponse } from "./providerCatalogShared"
 
 export async function readProviderConfig(

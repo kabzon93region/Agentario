@@ -1,4 +1,4 @@
-export type {
+﻿export type {
 	ModelCollection,
 	ModelIdAliasRule,
 	ModelInfo,
@@ -40,9 +40,9 @@ export {
 	getClineOrgIndividualInferenceSubscriptionMessage,
 	getClineNotSubscribedMessage,
 	getClinePassSubscriptionUrl,
-	isClineNotSubscribedError,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionError,
-	isClineOrgIndividualInferenceSubscriptionMessage,
+	isAgentarioCloudNotSubscribedError,
+	isAgentarioCloudNotSubscribedMessage,
+	isAgentarioCloudOrgSubscriptionError,
+	isAgentarioCloudOrgSubscriptionMessage,
 	normalizeProviderId,
 } from "./providers.browser";

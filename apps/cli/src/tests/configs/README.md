@@ -1,6 +1,6 @@
 # Test Fixture Configs
 
-Each subdirectory here is a **Cline config directory** used by one or more test suites.
+Each subdirectory here is a **Agentario config directory** used by one or more test suites.
 Tests point to a config via `clineEnv("<name>")` in `tests/e2e/cli/helpers/env.ts`.
 
 ## Available fixtures

@@ -1,4 +1,4 @@
-import { DeleteWorktreeRequest, WorktreeResult } from "@shared/proto/cline/worktree"
+﻿import { DeleteWorktreeRequest, WorktreeResult } from "@shared/proto/agentario/worktree"
 import { deleteWorktree as deleteWorktreeUtil } from "@utils/git-worktree"
 import { getWorkspacePath } from "@utils/path"
 import simpleGit from "simple-git"

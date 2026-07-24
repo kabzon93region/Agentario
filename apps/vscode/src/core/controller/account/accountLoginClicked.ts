@@ -1,4 +1,4 @@
-import { EmptyRequest, String } from "@shared/proto/cline/common"
+﻿import { EmptyRequest, String } from "@shared/proto/agentario/common"
 import { AuthService } from "@/sdk/auth-service"
 import { Controller } from "../index"
 

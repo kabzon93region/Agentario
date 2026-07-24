@@ -1,4 +1,4 @@
-import {
+﻿import {
 	clearHubDiscovery,
 	ensureDetachedHubServer,
 	probeHubServer,
@@ -6,8 +6,8 @@ import {
 	resolveProductionHubOwnerContext,
 	resolveSharedHubOwnerContext,
 	stopLocalHubServerGracefully,
-} from "@cline/core";
-import { formatUptime, resolveClineBuildEnv } from "@cline/shared";
+} from "@agentario/core";
+import { formatUptime, resolveClineBuildEnv } from "@agentario/shared";
 import { Command } from "commander";
 
 interface HubCommandIo {

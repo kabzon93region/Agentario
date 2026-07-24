@@ -1,6 +1,6 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
-import { EmptyRequest, StringRequest } from "@shared/proto/cline/common"
-import { AskResponseRequest, NewTaskRequest } from "@shared/proto/cline/task"
+﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
+import { EmptyRequest, StringRequest } from "@shared/proto/agentario/common"
+import { AskResponseRequest, NewTaskRequest } from "@shared/proto/agentario/task"
 import { useCallback, useRef } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { SlashServiceClient, TaskServiceClient } from "@/services/grpc-client"
@@ -11,7 +11,7 @@ import type { ChatState, MessageHandlers } from "../types/chatTypes"
  * Custom hook for managing message handlers
  * Handles sending messages, button clicks, and task management
  */
-export function useMessageHandlers(messages: ClineMessage[], chatState: ChatState): MessageHandlers {
+export function useMessageHandlers(messages: AgentarioMessage[], chatState: ChatState): MessageHandlers {
 	const { backgroundCommandRunning, turnState } = useExtensionState()
 	const {
 		setInputValue,
@@ -416,8 +416,14 @@ export function useMessageHandlers(messages: ClineMessage[], chatState: ChatStat
 	)
 
 	// Handle task close button click
-	const handleTaskCloseButtonClick = useCallback(() => {
-		startNewTask()
+	const handleTaskCloseButtonClick = useCallback(async () => {
+		console.log("[handleTaskCloseButtonClick] called")
+		try {
+			await startNewTask()
+			console.log("[handleTaskCloseButtonClick] startNewTask completed")
+		} catch (error) {
+			console.error("[handleTaskCloseButtonClick] Failed to close task:", error)
+		}
 	}, [startNewTask])
 
 	return {

@@ -1,4 +1,4 @@
-import {
+﻿import {
 	mkdtempSync,
 	readdirSync,
 	readFileSync,
@@ -8,7 +8,7 @@ import {
 import { access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AgentMessage, AgentModelEvent } from "@cline/shared";
+import type { AgentMessage, AgentModelEvent } from "@agentario/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { normalizeModelsDevProviderModels } from "../catalog/catalog-live";
 import {
@@ -420,7 +420,7 @@ describe("sdk-gateway", () => {
 			"anthropic",
 			"bedrock",
 			"cline",
-			"cline-pass",
+			"agentario-pass",
 			"minimax",
 			"oca",
 			"openrouter",

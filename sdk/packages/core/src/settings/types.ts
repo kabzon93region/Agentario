@@ -1,4 +1,4 @@
-import type { UserInstructionConfigService } from "../extensions/config";
+﻿import type { UserInstructionConfigService } from "../extensions/config";
 import type { BuiltinToolAvailabilityContext } from "../extensions/tools";
 
 export type CoreSettingsType =
@@ -63,7 +63,7 @@ export interface CoreSettingsMutationResult {
 	changedTypes: CoreSettingsType[];
 }
 
-export interface ClineCoreSettingsApi {
+export interface AgentarioCoreSettingsApi {
 	list(input?: CoreSettingsListInput): Promise<CoreSettingsSnapshot>;
 	toggle(input: CoreSettingsToggleInput): Promise<CoreSettingsMutationResult>;
 }

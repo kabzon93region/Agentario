@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+﻿import { spawnSync } from "node:child_process";
 import {
 	chmodSync,
 	copyFileSync,
@@ -59,7 +59,7 @@ process.exit(Number(process.argv[2] ?? "0"));
 
 	it("passes the wrapper path to the compiled binary", () => {
 		const target = createExecutableScript(`
-console.log(process.env.CLINE_WRAPPER_PATH ?? "");
+console.log(process.env.agentario_WRAPPER_PATH ?? "");
 `);
 
 		const result = runWrapper(target);

@@ -1,4 +1,4 @@
-import { EditMessageAndRegenerateRequest } from "@shared/proto/cline/task"
+﻿import { EditMessageAndRegenerateRequest } from "@shared/proto/agentario/task"
 import type React from "react"
 import { useMemo, useState } from "react"
 import Thumbnails from "@/components/common/Thumbnails"
@@ -7,15 +7,15 @@ import { TaskServiceClient } from "@/services/grpc-client"
 import MessageBubbleHeader from "./MessageBubbleHeader"
 import MessageStatsFooter from "./MessageStatsFooter"
 import { highlightText } from "./task-header/Highlights"
-import type { ClineApiReqInfo, ClineMessage } from "@shared/ExtensionMessage"
+import type { AgentarioApiReqInfo, AgentarioMessage } from "@shared/ExtensionMessage"
 
 interface UserMessageProps {
 	text?: string
 	files?: string[]
 	images?: string[]
 	messageTs?: number
-	message?: ClineMessage
-	stats?: ClineApiReqInfo
+	message?: AgentarioMessage
+	stats?: AgentarioApiReqInfo
 	sendMessageFromChatRow?: (text: string, images: string[], files: string[]) => void
 	canRestoreWorkspace?: boolean
 }
@@ -35,7 +35,7 @@ const UserMessage: React.FC<UserMessageProps> = ({
 	const [errorMessage, setErrorMessage] = useState<string | undefined>()
 	const highlightedText = useMemo(() => highlightText(text), [text])
 	const headerMessage = useMemo(
-		(): ClineMessage =>
+		(): AgentarioMessage =>
 			message ?? {
 				ts: messageTs ?? 0,
 				type: "say",

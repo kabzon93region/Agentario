@@ -1,4 +1,4 @@
-import type { MarketplaceEntry, MarketplaceLocalInstalledEntry } from "@shared/proto/cline/marketplace"
+﻿import type { MarketplaceEntry, MarketplaceLocalInstalledEntry } from "@shared/proto/agentario/marketplace"
 import { describe, expect, it } from "vitest"
 import { entryMatchesLocalEntry } from "./marketplaceMatch"
 

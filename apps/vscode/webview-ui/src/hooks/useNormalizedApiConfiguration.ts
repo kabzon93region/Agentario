@@ -1,5 +1,5 @@
-import type { ApiProvider, ModelInfo } from "@shared/api"
-import { ResolveModelInfoRequest } from "@shared/proto/cline/models"
+﻿import type { ApiProvider, ModelInfo } from "@shared/api"
+import { ResolveModelInfoRequest } from "@shared/proto/agentario/models"
 import { fromProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
 import type { Mode } from "@shared/storage/types"
 import { useEffect, useMemo, useState } from "react"
@@ -37,7 +37,7 @@ function getActiveProviderAndModelId(apiConfiguration: ReturnType<typeof useExte
 
 	const providerSpecificModelIds: Partial<Record<string, string | undefined>> = {
 		cline: modeFields.clineModelId,
-		"cline-pass": modeFields.clinePassModelId,
+		"agentario-pass": modeFields.clinePassModelId,
 		deepseek: modeFields.apiModelId,
 		openai: modeFields.openAiModelId,
 		openrouter: modeFields.openRouterModelId,

@@ -1,4 +1,4 @@
-import type { ApiConfiguration, ModelInfo } from "@shared/api"
+﻿import type { ApiConfiguration, ModelInfo } from "@shared/api"
 import type {
 	EffectiveProviderConfig,
 	Mode,
@@ -22,7 +22,7 @@ import {
 	ProviderListing as ProviderListingProto,
 	ProviderModelsResponse,
 	WriteProviderConfigPatch,
-} from "@/shared/proto/cline/models"
+} from "@/shared/proto/agentario/models"
 import { fromProtobufModelInfo, toProtobufModelInfo } from "@/shared/proto-conversions/models/typeConversion"
 import type { GlobalStateAndSettings } from "@/shared/storage/state-keys"
 

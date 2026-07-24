@@ -1,4 +1,4 @@
-import { userInfo } from "os"
+﻿import { userInfo } from "os"
 import * as vscode from "vscode"
 
 export const WINDOWS_POWERSHELL_7_PATH = "C:\\Program Files\\PowerShell\\7\\pwsh.exe"
@@ -186,7 +186,7 @@ function getShellFromEnv(): string | null {
 // 4) Terminal Profile Interface and Utilities
 // -----------------------------------------------------
 
-import { TerminalProfile } from "@shared/proto/cline/state"
+import { TerminalProfile } from "@shared/proto/agentario/state"
 
 /** Gets available terminal profiles for the current platform */
 export function getAvailableTerminalProfiles(): TerminalProfile[] {

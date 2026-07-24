@@ -12,7 +12,7 @@ const result = await Bun.build({
 	packages: "bundle",
 	minify,
 	sourcemap,
-	external: ["@cline/core"],
+	external: ["@agentario/core"],
 });
 
 if (result.logs.length > 0) {

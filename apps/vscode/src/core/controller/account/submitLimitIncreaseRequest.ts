@@ -1,5 +1,5 @@
-import { SubmitLimitIncreaseResponse } from "@shared/proto/cline/account"
-import type { EmptyRequest } from "@shared/proto/cline/common"
+﻿import { SubmitLimitIncreaseResponse } from "@shared/proto/agentario/account"
+import type { EmptyRequest } from "@shared/proto/agentario/common"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"
 

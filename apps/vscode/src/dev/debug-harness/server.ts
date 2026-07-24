@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+﻿#!/usr/bin/env bun
 
 /**
  * Debug Harness Server
@@ -1021,7 +1021,7 @@ class DebugHarness {
 					api.postMessage({
 						type: "grpc_request",
 						grpc_request: {
-							service: "cline.TaskService",
+							service: "agentario.TaskService",
 							method: "askResponse",
 							message: { responseType, text, images, files },
 							request_id: `debug-${Date.now()}`,
@@ -1033,7 +1033,7 @@ class DebugHarness {
 					api.postMessage({
 						type: "grpc_request",
 						grpc_request: {
-							service: "cline.TaskService",
+							service: "agentario.TaskService",
 							method: "newTask",
 							message: { text, images, files },
 							request_id: `debug-${Date.now()}`,

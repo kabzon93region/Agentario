@@ -1,5 +1,5 @@
-import { Empty } from "@/shared/proto/cline/common"
-import { ProviderListingsResponse } from "@/shared/proto/cline/models"
+﻿import { Empty } from "@/shared/proto/agentario/common"
+import { ProviderListingsResponse } from "@/shared/proto/agentario/models"
 import { type ProviderCatalogController, toProviderListingProto } from "./providerCatalogShared"
 
 export async function listProviders(controller: ProviderCatalogController, _request: Empty): Promise<ProviderListingsResponse> {

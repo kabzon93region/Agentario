@@ -1,22 +1,33 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { memo } from "react"
-import { ClineAuthStatus } from "@/components/account/ClineAuthStatus"
+import { AgentarioAuthStatus } from "@/components/account/AgentarioAuthStatus"
 import CreditLimitError from "@/components/chat/CreditLimitError"
 import EntitlementError from "@/components/chat/EntitlementError"
-import OrgClinePassRestrictionError from "@/components/chat/OrgClinePassRestrictionError"
+import OrgAgentarioPassRestrictionError from "@/components/chat/OrgAgentarioPassRestrictionError"
 import SpendLimitError from "@/components/chat/SpendLimitError"
 import { Button } from "@/components/ui/button"
 import { t } from "@/i18n"
-import { useClineAuth, useClineSignIn } from "@/context/ClineAuthContext"
-import { ClineError, ClineErrorType } from "../../../../src/services/error/ClineError"
+import { useClineAuth, useClineSignIn } from "@/context/AgentarioAuthContext"
+import { AgentarioError, AgentarioErrorType } from "../../../../src/services/error/AgentarioError"
 
 const _errorColor = "var(--vscode-errorForeground)"
 
 interface ErrorRowProps {
-	message: ClineMessage
+	message: AgentarioMessage
 	errorType: "error" | "mistake_limit_reached" | "diff_error" | "clineignore_error"
 	apiRequestFailedMessage?: string
 	apiReqStreamingFailedMessage?: string
+}
+
+// Defensive helper: ensure message.text is always a string (never [object Object])
+function ensureString(text: unknown): string {
+	if (typeof text === "string") return text
+	if (text === undefined || text === null) return ""
+	if (text instanceof Error) return text.message
+	if (typeof text === "object") {
+		try { return JSON.stringify(text) } catch { return String(text) }
+	}
+	return String(text)
 }
 
 const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStreamingFailedMessage }: ErrorRowProps) => {
@@ -31,17 +42,29 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 			case "mistake_limit_reached":
 				// Handle API request errors with special error parsing
 				if (rawApiError) {
-					// FIXME: ClineError parsing should not be applied to non-Cline providers, but it seems we're using clineErrorMessage below in the default error display
-					const clineError = ClineError.parse(rawApiError)
-					const errorMessage = clineError?._error?.message || clineError?.message || rawApiError
-					const requestId = clineError?._error?.request_id
-					const providerId = clineError?.providerId || clineError?._error?.providerId
-					const isClineProvider = providerId === "cline"
-					const errorCode = clineError?._error?.code
+					// FIXME: AgentarioError parsing should not be applied to non-Cline providers, but it seems we're using clineErrorMessage below in the default error display
+					const parsedError = AgentarioError.parse(rawApiError)
+					// _error.message can be a nested object (e.g. {code:400, message:"...", type:"..."})
+					// when the original error is a plain object with a nested .error structure.
+					// Extract the deepest string message to avoid rendering [object Object].
+					const rawMsg = parsedError?._error?.message
+					const extractedMessage =
+						typeof rawMsg === "string"
+							? rawMsg
+							: typeof rawMsg === "object" && rawMsg !== null && typeof (rawMsg as Record<string, unknown>).message === "string"
+								? ((rawMsg as Record<string, unknown>).message as string)
+								: typeof parsedError?.message === "string"
+									? parsedError.message
+									: rawApiError
+					const errorMessage = ensureString(extractedMessage)
+					const requestId = parsedError?._error?.request_id
+					const providerId = parsedError?.providerId || parsedError?._error?.providerId
+					const isAgentarioProvider = providerId === "cline"
+					const errorCode = parsedError?._error?.code
 
-					if (clineError?.isErrorType(ClineErrorType.Balance)) {
-						const errorDetails = clineError._error?.details
-						if (isClineProvider || errorDetails?.buy_credits_url) {
+					if (parsedError?.isErrorType(AgentarioErrorType.Balance)) {
+						const errorDetails = parsedError._error?.details
+						if (isAgentarioProvider || errorDetails?.buy_credits_url) {
 							return (
 								<CreditLimitError
 									buyCreditsUrl={errorDetails?.buy_credits_url}
@@ -54,8 +77,8 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 						}
 					}
 
-					if (clineError?.isErrorType(ClineErrorType.SpendLimit)) {
-						const d = clineError._error?.details
+					if (parsedError?.isErrorType(AgentarioErrorType.SpendLimit)) {
+						const d = parsedError._error?.details
 						return (
 							<SpendLimitError
 								budgetPeriod={d?.budget_period}
@@ -67,16 +90,16 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 						)
 					}
 
-					if (clineError?.isErrorType(ClineErrorType.Entitlement)) {
-						const detailMessage = clineError?._error?.details?.message || errorMessage
+					if (parsedError?.isErrorType(AgentarioErrorType.Entitlement)) {
+						const detailMessage = parsedError?._error?.details?.message || errorMessage
 						return <EntitlementError message={detailMessage} />
 					}
 
-					if (clineError?.isErrorType(ClineErrorType.OrgClinePassRestriction)) {
-						return <OrgClinePassRestrictionError />
+					if (parsedError?.isErrorType(AgentarioErrorType.OrgAgentarioPassRestriction)) {
+						return <OrgAgentarioPassRestrictionError />
 					}
 
-					if (clineError?.isErrorType(ClineErrorType.RateLimit)) {
+					if (parsedError?.isErrorType(AgentarioErrorType.RateLimit)) {
 						return (
 							<p className="m-0 whitespace-pre-wrap text-error wrap-anywhere">
 								{errorMessage}
@@ -85,12 +108,12 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 						)
 					}
 
-					if (clineError?.isErrorType(ClineErrorType.QuotaExceeded)) {
-						const detailMessage = clineError?._error?.details?.message || errorMessage
+					if (parsedError?.isErrorType(AgentarioErrorType.QuotaExceeded)) {
+						const detailMessage = parsedError?._error?.details?.message || errorMessage
 						return <p className="m-0 whitespace-pre-wrap text-error wrap-anywhere">{detailMessage}</p>
 					}
 
-					if (clineError?.isErrorType(ClineErrorType.Auth) && isClineProvider) {
+					if (parsedError?.isErrorType(AgentarioErrorType.Auth) && isAgentarioProvider) {
 						return !clineUser ? (
 							// User is using Cline provider and is not logged in
 							<div className="flex flex-col gap-3">
@@ -105,7 +128,7 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 										</span>
 									)}
 								</Button>
-								<ClineAuthStatus message={authStatusMessage} />
+								<AgentarioAuthStatus message={authStatusMessage} />
 							</div>
 						) : (
 							// Don't show sign in button after the user has logged in, just ask them to retry
@@ -117,7 +140,7 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 
 					return (
 						<p className="m-0 whitespace-pre-wrap text-error wrap-anywhere flex flex-col gap-3">
-							{/* Display the well-formatted error extracted from the ClineError instance */}
+							{/* Display the well-formatted error extracted from the AgentarioError instance */}
 
 							<header>
 								{providerId && <span className="uppercase">[{providerId}] </span>}
@@ -145,8 +168,8 @@ const ErrorRow = memo(({ message, errorType, apiRequestFailedMessage, apiReqStre
 					)
 				}
 
-				// Regular error message
-				return <p className="m-0 mt-0 whitespace-pre-wrap text-error wrap-anywhere">{message.text}</p>
+				// Regular error message — ensureString prevents [object Object]
+				return <p className="m-0 mt-0 whitespace-pre-wrap text-error wrap-anywhere">{ensureString(message.text)}</p>
 
 			case "diff_error":
 				return (

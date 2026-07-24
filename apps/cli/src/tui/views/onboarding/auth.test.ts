@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const hoisted = vi.hoisted(() => ({
 	loginLocalProvider: vi.fn(),
@@ -9,7 +9,7 @@ const hoisted = vi.hoisted(() => ({
 	openMock: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	loginLocalProvider: hoisted.loginLocalProvider,
 	startClineDeviceAuth: hoisted.startClineDeviceAuth,
 	completeClineDeviceAuth: hoisted.completeClineDeviceAuth,
@@ -17,7 +17,7 @@ vi.mock("@cline/core", () => ({
 	ProviderSettingsManager: class {},
 }));
 
-vi.mock("@cline/shared", () => ({
+vi.mock("@agentario/shared", () => ({
 	getClineEnvironmentConfig: () => ({ apiBaseUrl: "https://api.example" }),
 }));
 

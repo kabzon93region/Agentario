@@ -1,4 +1,4 @@
-import type { ProviderListing } from "@shared/proto/cline/models"
+﻿import type { ProviderListing } from "@shared/proto/agentario/models"
 import type { GenericProviderSettingsProps } from "./GenericProviderSettings"
 
 type GenericProviderSettingsConfig = Omit<GenericProviderSettingsProps, "currentMode" | "isPopup" | "showModelOptions">
@@ -13,7 +13,7 @@ const CUSTOM_PROVIDER_SETTINGS_IDS = new Set([
 	"bedrock",
 	"claude-code",
 	"cline",
-	"cline-pass",
+	"agentario-pass",
 	"dify",
 	"hicap",
 	"litellm",

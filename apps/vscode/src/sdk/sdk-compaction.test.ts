@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { compactSessionMessages } from "./sdk-compaction"
 
 const createContextCompactionPrepareTurn = vi.fn()
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	createContextCompactionPrepareTurn: (...args: unknown[]) => createContextCompactionPrepareTurn(...args),
 }))
 

@@ -1,6 +1,6 @@
-import axios from "axios"
+﻿import axios from "axios"
 import { getAxiosSettings } from "@/shared/net"
-import { SapAiCoreModelDeployment, SapAiCoreModelsRequest, SapAiCoreModelsResponse } from "@/shared/proto/cline/models"
+import { SapAiCoreModelDeployment, SapAiCoreModelsRequest, SapAiCoreModelsResponse } from "@/shared/proto/agentario/models"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."
 

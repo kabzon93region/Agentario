@@ -3,8 +3,8 @@ import type {
 	HubReplyEnvelope,
 	HubScheduleCreateInput,
 	HubScheduleUpdateInput,
-} from "@cline/shared";
-import { createSessionId } from "@cline/shared";
+} from "@agentario/shared";
+import { createSessionId } from "@agentario/shared";
 import type { HubScheduleService } from "./schedule-service";
 
 function okReply(

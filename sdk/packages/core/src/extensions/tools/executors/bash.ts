@@ -10,7 +10,7 @@ import {
 	type AgentToolContext,
 	getDefaultShell,
 	getShellArgs,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { TimeoutError } from "../helpers";
 import type { ShellExecutor } from "../types";
 import {

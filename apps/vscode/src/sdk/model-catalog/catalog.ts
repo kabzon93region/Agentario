@@ -1,6 +1,6 @@
-import { listLocalProviders, type ModelCatalogConfig, resolveProviderConfig } from "@cline/core"
-import { type ProviderConfig, resolveProviderUsageCostDisplay } from "@cline/llms"
-import { type ProviderListItem } from "@cline/shared"
+﻿import { listLocalProviders, type ModelCatalogConfig, resolveProviderConfig } from "@agentario/core"
+import { type ProviderConfig, resolveProviderUsageCostDisplay } from "@agentario/llms"
+import { type ProviderListItem } from "@agentario/shared"
 import { getFeatureFlagsService } from "@/services/feature-flags"
 import { FeatureFlag } from "@/shared/services/feature-flags/feature-flags"
 import { getProviderSettingsManager } from "../provider-migration"
@@ -194,7 +194,7 @@ async function listSdkProviderListings(): Promise<ReadonlyArray<ProviderListing>
 	const manager = getProviderSettingsManager()
 	const featureFlags = getFeatureFlagsService()
 	const { providers } = await listLocalProviders(manager, {
-		isClinePassEnabled: featureFlags.getBooleanFlagEnabled(FeatureFlag.CLINE_PASS),
+		isAgentarioPassEnabled: featureFlags.getBooleanFlagEnabled(FeatureFlag.CLINE_PASS),
 	})
 	return providers.map(toProviderListing)
 }

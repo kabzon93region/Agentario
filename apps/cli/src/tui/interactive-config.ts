@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+﻿import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
 	basename,
 	dirname,
@@ -26,7 +26,7 @@ import {
 	type SkillConfig,
 	type UserInstructionConfigService,
 	type WorkflowConfig,
-} from "@cline/core";
+} from "@agentario/core";
 import { getToolCatalog } from "../runtime/tools";
 import {
 	type InteractiveSlashCommand,

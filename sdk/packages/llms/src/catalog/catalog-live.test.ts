@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+﻿import { describe, expect, it, vi } from "vitest";
 import {
 	getGeneratedModelsForProvider,
 	getGeneratedProviderModels,
 } from "./catalog.generated-access";
-import { normalizeClineRecommendedProviderModels } from "./catalog-cline-recommended";
+import { normalizeAgentarioRecommendedProviderModels } from "./catalog-agentario-recommended";
 import {
 	fetchLiveProviderModels,
 	fetchModelsDevProviderModels,
@@ -14,7 +14,7 @@ import {
 
 describe("models-dev-catalog", () => {
 	it("normalizes Cline recommended clinePass models as a generated provider source", () => {
-		const result = normalizeClineRecommendedProviderModels(
+		const result = normalizeAgentarioRecommendedProviderModels(
 			{
 				clinePass: [
 					{
@@ -44,7 +44,7 @@ describe("models-dev-catalog", () => {
 			},
 		);
 
-		expect(result["cline-pass"]).toEqual({
+		expect(result["agentario-pass"]).toEqual({
 			"base-model": {
 				id: "base-model",
 				name: "OpenRouter Base Model",
@@ -71,11 +71,11 @@ describe("models-dev-catalog", () => {
 	});
 
 	it("matches Cline recommended clinePass models against OpenRouter model names", () => {
-		const result = normalizeClineRecommendedProviderModels(
+		const result = normalizeAgentarioRecommendedProviderModels(
 			{
 				clinePass: [
 					{
-						id: "cline-pass/cline-pass/glm-5.1",
+						id: "agentario-pass/agentario-pass/glm-5.1",
 						name: "zai/glm-5.1",
 					},
 				],
@@ -94,9 +94,9 @@ describe("models-dev-catalog", () => {
 		);
 
 		expect(
-			result["cline-pass"]?.["cline-pass/cline-pass/glm-5.1"],
+			result["agentario-pass"]?.["agentario-pass/agentario-pass/glm-5.1"],
 		).toMatchObject({
-			id: "cline-pass/cline-pass/glm-5.1",
+			id: "agentario-pass/agentario-pass/glm-5.1",
 			name: "GLM 5.1",
 			contextWindow: 256_000,
 			maxInputTokens: 200_000,
@@ -106,9 +106,9 @@ describe("models-dev-catalog", () => {
 	});
 
 	it("returns no ClinePass models when clinePass is empty or missing", () => {
-		expect(normalizeClineRecommendedProviderModels({}, {})).toEqual({});
+		expect(normalizeAgentarioRecommendedProviderModels({}, {})).toEqual({});
 		expect(
-			normalizeClineRecommendedProviderModels({ clinePass: [] }, {}),
+			normalizeAgentarioRecommendedProviderModels({ clinePass: [] }, {}),
 		).toEqual({});
 	});
 
@@ -385,7 +385,7 @@ describe("models-dev-catalog", () => {
 				json: async () => ({
 					clinePass: [
 						{
-							id: "cline-pass/live-base-model",
+							id: "agentario-pass/live-base-model",
 							name: "vendor/live-base-model",
 						},
 					],
@@ -403,8 +403,8 @@ describe("models-dev-catalog", () => {
 			"https://api.cline.bot/api/v1/ai/cline/recommended-models",
 		);
 		expect(result.openrouter).toHaveProperty("vendor/live-base-model");
-		expect(result["cline-pass"]?.["cline-pass/live-base-model"]).toMatchObject({
-			id: "cline-pass/live-base-model",
+		expect(result["agentario-pass"]?.["agentario-pass/live-base-model"]).toMatchObject({
+			id: "agentario-pass/live-base-model",
 			name: "Live Base Model",
 			contextWindow: 256_000,
 			maxInputTokens: 200_000,
@@ -438,7 +438,7 @@ describe("models-dev-catalog", () => {
 		);
 
 		expect(result["openai-native"]?.["gpt-live"]?.name).toBe("GPT Live");
-		expect(result["cline-pass"]).toBeUndefined();
+		expect(result["agentario-pass"]).toBeUndefined();
 	});
 
 	it("keeps Cline recommended clinePass models when models.dev fails", async () => {
@@ -452,7 +452,7 @@ describe("models-dev-catalog", () => {
 				json: async () => ({
 					clinePass: [
 						{
-							id: "cline-pass/live-default-model",
+							id: "agentario-pass/live-default-model",
 							name: "Live Default Model",
 						},
 					],
@@ -466,8 +466,8 @@ describe("models-dev-catalog", () => {
 		);
 
 		expect(result["openai-native"]).toBeUndefined();
-		expect(result["cline-pass"]?.["cline-pass/live-default-model"]).toMatchObject({
-			id: "cline-pass/live-default-model",
+		expect(result["agentario-pass"]?.["agentario-pass/live-default-model"]).toMatchObject({
+			id: "agentario-pass/live-default-model",
 			name: "Live Default Model",
 			contextWindow: 128_000,
 			maxInputTokens: 128_000,

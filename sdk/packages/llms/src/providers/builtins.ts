@@ -1,14 +1,14 @@
-import {
+﻿import {
 	type GatewayModelCapability,
 	type GatewayModelDefinition,
 	type GatewayProviderManifest,
 	type GatewayProviderMetadata,
 	type GatewayProviderSettings,
-	getClineEnvironmentConfig,
+	getAgentarioEnvironmentConfig,
 	type JsonValue,
 	type ProviderCapability,
 	type ProviderConfigField,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { getGeneratedModelsForProvider } from "../catalog/catalog.generated-access";
 import {
 	isCanonicalModelIdForAliasRules,
@@ -24,8 +24,8 @@ import type {
 import {
 	ClineNotSubscribedError,
 	ClineOrgIndividualInferenceSubscriptionError,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionMessage,
+	isAgentarioCloudNotSubscribedMessage,
+	isAgentarioCloudOrgSubscriptionMessage,
 } from "./errors";
 import { filterOpenAICodexModels } from "./openai-codex-models";
 import {
@@ -41,7 +41,7 @@ export const DEFAULT_INTERNAL_OCA_BASE_URL =
 export const DEFAULT_EXTERNAL_OCA_BASE_URL =
 	"https://code.aiservice.us-chicago-1.oci.oraclecloud.com/20250206/app/litellm";
 const CLINE_DEFAULT_MODEL_ID = "anthropic/claude-sonnet-4.6";
-const CLINE_PASS_PROVIDER_ID = "cline-pass";
+const CLINE_PASS_PROVIDER_ID = "agentario-pass";
 const OPENAI_CODEX_DEFAULT_MODEL_ID = "gpt-5.4";
 const OPENROUTER_STICKY_SESSION_METADATA: GatewayProviderMetadata = {
 	stickySession: {
@@ -505,7 +505,7 @@ function createClineLikeSpec(
 		apiKeyEnv: ["CLINE_API_KEY"],
 		defaults: {
 			get baseUrl(): string {
-				return `${getClineEnvironmentConfig().apiBaseUrl}/api/v1`;
+				return `${getAgentarioEnvironmentConfig().apiBaseUrl}/api/v1`;
 			},
 			...input.defaults,
 		},
@@ -529,11 +529,11 @@ async function handleClineResponseError(
 		.text()
 		.catch(() => "");
 
-	if (isClineOrgIndividualInferenceSubscriptionMessage(body)) {
+	if (isAgentarioCloudOrgSubscriptionMessage(body)) {
 		throw new ClineOrgIndividualInferenceSubscriptionError(providerId);
 	}
 
-	if (isClineNotSubscribedMessage(body)) {
+	if (isAgentarioCloudNotSubscribedMessage(body)) {
 		throw new ClineNotSubscribedError(providerId);
 	}
 }

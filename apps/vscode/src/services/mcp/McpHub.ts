@@ -30,6 +30,7 @@ import {
 } from "@shared/mcp"
 import { convertMcpServersToProtoMcpServers } from "@shared/proto-conversions/mcp/mcp-server-conversion"
 import { secondsToMs } from "@utils/time"
+import * as vscode from "vscode"
 import chokidar, { type FSWatcher } from "chokidar"
 import deepEqual from "fast-deep-equal"
 import * as fs from "fs/promises"
@@ -477,12 +478,14 @@ export class McpHub {
 
 			switch (expandedConfig.type) {
 				case "stdio": {
+					const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
 					transport = new StdioClientTransport({
 						command: expandedConfig.command,
 						args: expandedConfig.args,
 						cwd: expandedConfig.cwd,
 						env: {
 							...getDefaultEnvironment(),
+							AGENTARIO_WORKSPACE_ROOT: workspaceRoot,
 							...(expandedConfig.env || {}), // Now has expanded environment variables
 						},
 						stderr: "pipe",

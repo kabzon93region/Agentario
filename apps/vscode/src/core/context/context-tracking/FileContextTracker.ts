@@ -1,5 +1,5 @@
-import { getTaskMetadata, saveTaskMetadata } from "@core/storage/disk"
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import { getTaskMetadata, saveTaskMetadata } from "@core/storage/disk"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import chokidar, { FSWatcher } from "chokidar"
 import * as path from "path"
 import { Controller } from "@/core/controller"
@@ -190,7 +190,7 @@ export class FileContextTracker {
 	 * Detects files that were edited by Cline or users after a specific message timestamp
 	 * This is used when restoring checkpoints to warn about potential file content mismatches
 	 */
-	async detectFilesEditedAfterMessage(messageTs: number, deletedMessages: ClineMessage[]): Promise<string[]> {
+	async detectFilesEditedAfterMessage(messageTs: number, deletedMessages: AgentarioMessage[]): Promise<string[]> {
 		const editedFiles: string[] = []
 
 		try {

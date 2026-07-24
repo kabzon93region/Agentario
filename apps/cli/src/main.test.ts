@@ -1,4 +1,4 @@
-import { fstatSync } from "node:fs";
+﻿import { fstatSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
 	CliMigrationNotice,
@@ -157,7 +157,7 @@ vi.mock("./runtime/run-interactive", () => {
 });
 vi.mock("./utils/session", () => sessionMocks);
 vi.mock("./session/session", () => sessionMocks);
-vi.mock("@cline/core", () => {
+vi.mock("@agentario/core", () => {
 	return {
 		resolveProviderConfig: llmMocks.resolveProviderConfig,
 		createTeamName: vi.fn(() => "team-test"),
@@ -637,7 +637,7 @@ describe("runCli lightweight command dispatch", () => {
 
 	it("passes the migration notice marker into interactive mode", async () => {
 		const notice = {
-			id: "cline-cli-cline-pass-intro",
+			id: "cline-cli-agentario-pass-intro",
 			title: "Try ClinePass",
 		};
 		migrationNoticeMocks.getClineCliMigrationNotice.mockReturnValue(notice);
@@ -671,8 +671,8 @@ describe("runCli lightweight command dispatch", () => {
 
 	it("passes the active ClinePass provider into the migration notice gate", async () => {
 		providerSettingsMocks.getLastUsedProviderSettings.mockReturnValue({
-			provider: "cline-pass",
-			model: "cline-pass/test-model",
+			provider: "agentario-pass",
+			model: "agentario-pass/test-model",
 		});
 		Object.defineProperty(process.stdout, "isTTY", {
 			value: true,
@@ -686,11 +686,11 @@ describe("runCli lightweight command dispatch", () => {
 		expect(
 			migrationNoticeMocks.getClineCliMigrationNotice,
 		).toHaveBeenCalledWith(undefined, process.env, {
-			activeProviderId: "cline-pass",
+			activeProviderId: "agentario-pass",
 		});
 		expect(runtimeMocks.runInteractive).toHaveBeenCalledWith(
 			expect.objectContaining({
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 			}),
 			expect.anything(),
 			undefined,
@@ -1027,7 +1027,7 @@ describe("runCli lightweight command dispatch", () => {
 			"--config",
 			"/tmp/cline-config",
 			"--data-dir",
-			".cline-dashboard-data",
+			".agentario-dashboard-data",
 			"--port",
 			"9090",
 			"--no-open",
@@ -1039,7 +1039,7 @@ describe("runCli lightweight command dispatch", () => {
 		expect(dashboardMocks.runDashboardCommand).toHaveBeenCalledWith(
 			expect.objectContaining({
 				configDir: "/tmp/cline-config",
-				dataDir: ".cline-dashboard-data",
+				dataDir: ".agentario-dashboard-data",
 				port: "9090",
 				openBrowser: false,
 				io: expect.any(Object),

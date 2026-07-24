@@ -1,5 +1,5 @@
-import type { Banner, BannerAction, BannerRules, BannersResponse } from "@shared/ClineBanner"
-import { BannerActionType, type BannerCardData } from "@shared/cline/banner"
+﻿import type { Banner, BannerAction, BannerRules, BannersResponse } from "@shared/AgentarioBanner"
+import { BannerActionType, type BannerCardData } from "@shared/Agentario/banner"
 import { ClineEnv } from "@/config"
 import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
 import { Controller } from "@/core/controller"

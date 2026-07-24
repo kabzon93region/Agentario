@@ -1,5 +1,5 @@
-import { clearOnboardingModelsCache, getClineOnboardingModels } from "@/core/controller/models/getClineOnboardingModels"
-import type { OnboardingModel } from "@/shared/proto/cline/state"
+﻿import { clearOnboardingModelsCache, getAgentarioOnboardingModels } from "@/core/controller/models/getAgentarioOnboardingModels"
+import type { OnboardingModel } from "@/shared/proto/agentario/state"
 import { FEATURE_FLAGS, FeatureFlag, FeatureFlagDefaultValue } from "@/shared/services/feature-flags/feature-flags"
 import { Logger } from "@/shared/services/Logger"
 import { telemetryService } from "../telemetry"
@@ -66,7 +66,7 @@ export class FeatureFlagsService {
 			throw error
 		}
 
-		getClineOnboardingModels() // Refresh onboarding models cache if relevant flag changed
+		getAgentarioOnboardingModels() // Refresh onboarding models cache if relevant flag changed
 	}
 
 	private async getFeatureFlag(flagName: FeatureFlag): Promise<FeatureFlagPayload | undefined> {

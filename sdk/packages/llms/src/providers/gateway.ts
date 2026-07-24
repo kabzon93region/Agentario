@@ -11,13 +11,13 @@ import type {
 	GatewayProviderRegistration,
 	GatewayStreamRequest,
 	ITelemetryService,
-} from "@cline/shared";
-import { estimateTokens } from "@cline/shared";
+} from "@agentario/shared";
+import { estimateTokens } from "@agentario/shared";
 import { toAsyncIterable } from "./async";
 import { BUILTIN_PROVIDER_REGISTRATIONS } from "./builtins-runtime";
 import { GatewayRegistry } from "./registry";
 
-export type * from "@cline/shared";
+export type * from "@agentario/shared";
 
 const GATEWAY_OUTPUT_RESERVE_TOKENS = 1_024;
 

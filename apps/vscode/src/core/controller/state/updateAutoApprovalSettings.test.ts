@@ -1,5 +1,5 @@
-import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
-import { AutoApprovalSettingsRequest } from "@shared/proto/cline/state"
+﻿import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
+import { AutoApprovalSettingsRequest } from "@shared/proto/agentario/state"
 import { describe, expect, it, vi } from "vitest"
 import type { Controller } from ".."
 import { updateAutoApprovalSettings } from "./updateAutoApprovalSettings"

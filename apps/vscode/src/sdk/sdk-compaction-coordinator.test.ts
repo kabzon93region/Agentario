@@ -1,4 +1,4 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { StateManager } from "@/core/storage/StateManager"
 import { SdkCompactionCoordinator, type SdkCompactionCoordinatorOptions } from "./sdk-compaction-coordinator"
@@ -177,6 +177,12 @@ function makeCoordinator(input: Partial<MakeCoordinatorInput> = {}) {
 		})),
 		resetMessageTranslator: vi.fn(),
 		postStateToWebview: vi.fn().mockResolvedValue(undefined),
+		createTempHost: vi.fn().mockResolvedValue({
+			host: {
+				readMessages: vi.fn().mockResolvedValue([{ role: "user", content: "1" }]),
+			},
+			dispose: vi.fn().mockResolvedValue(undefined),
+		}),
 	} as unknown as SdkCompactionCoordinatorOptions & {
 		sessions: SdkCompactionCoordinatorOptions["sessions"] & {
 			getActiveSession: ReturnType<typeof vi.fn>
@@ -215,14 +221,14 @@ function makeActiveSession(input: { isRunning?: boolean } = {}) {
 	}
 }
 
-function makeTask(taskId: string, messages: Array<Partial<ClineMessage>> = []) {
+function makeTask(taskId: string, messages: Array<Partial<AgentarioMessage>> = []) {
 	return {
 		taskId,
 		messageStateHandler: {
-			getClineMessages: vi.fn(() => messages as ClineMessage[]),
+			getagentarioMessages: vi.fn(() => messages as AgentarioMessage[]),
 		},
 	} as unknown as {
 		taskId: string
-		messageStateHandler: { getClineMessages: () => ClineMessage[] }
+		messageStateHandler: { getagentarioMessages: () => AgentarioMessage[] }
 	}
 }

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it, mock } from "bun:test"
+﻿import { afterEach, beforeEach, describe, it, mock } from "bun:test"
 import { expect } from "chai"
 import * as fs from "fs/promises"
 import os from "os"
@@ -41,7 +41,7 @@ describe("SharedUriHandler", () => {
 		const mockErrorService = {
 			logMessage: sandbox.stub(),
 			logException: sandbox.stub(),
-			toClineError: sandbox.stub(),
+			toAgentarioError: sandbox.stub(),
 			isEnabled: sandbox.stub().returns(false),
 			getSettings: sandbox.stub().returns({ enabled: false, hostEnabled: false }),
 			getProvider: sandbox.stub(),

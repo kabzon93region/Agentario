@@ -1,8 +1,8 @@
-import type { SqliteDb } from "@cline/shared/db";
+﻿import type { SqliteDb } from "@agentario/shared/db";
 
 /**
- * Bootstrap the dedicated cron.db schema. Unlike @cline/shared's
- * `ensureSessionSchema`, this schema is fully owned by @cline/core
+ * Bootstrap the dedicated cron.db schema. Unlike @agentario/shared's
+ * `ensureSessionSchema`, this schema is fully owned by @agentario/core
  * because cron lifecycle (specs, runs, reports) is a core concern and
  * should not be coupled to session storage.
  */

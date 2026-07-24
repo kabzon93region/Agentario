@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+﻿import { type ChildProcess, spawn } from "node:child_process";
 import { realpathSync } from "node:fs";
 import {
 	clearHubDiscovery,
@@ -8,8 +8,8 @@ import {
 	resolveProductionHubOwnerContext,
 	resolveSharedHubOwnerContext,
 	stopLocalHubServerGracefully,
-} from "@cline/core";
-import { resolveClineBuildEnv } from "@cline/shared";
+} from "@agentario/core";
+import { resolveClineBuildEnv } from "@agentario/shared";
 import { version } from "../../package.json";
 import { ensureCliHubServer } from "../utils/hub-runtime";
 import { c, writeErr, writeln } from "../utils/output";
@@ -92,7 +92,7 @@ export function getInstallationInfo(currentVersion: string): InstallationInfo {
 	const tag = getNpmTag(currentVersion);
 	try {
 		const scriptPath = realpathSync(
-			process.env.CLINE_WRAPPER_PATH || process.argv[1] || "",
+			process.env.agentario_WRAPPER_PATH || process.argv[1] || "",
 		).replace(/\\/g, "/");
 
 		if (scriptPath.includes("/.npm/_npx") || scriptPath.includes("/npm/_npx")) {
@@ -353,7 +353,7 @@ async function restartHubServerIfRunning(): Promise<void> {
  */
 export function autoUpdateOnStartup(): void {
 	if (process.env.IS_DEV === "true") return;
-	if (process.env.CLINE_NO_AUTO_UPDATE === "1") return;
+	if (process.env.agentario_NO_AUTO_UPDATE === "1") return;
 	if (!isAutoUpdateEnabledGlobally()) return;
 
 	const { packageName, packageManager, updateCommand } =

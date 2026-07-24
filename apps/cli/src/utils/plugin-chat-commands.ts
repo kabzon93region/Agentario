@@ -1,11 +1,11 @@
-import {
+﻿import {
 	type AgentExtensionCommand,
 	type AgentExtensionCommandResult,
 	type BasicLogger,
 	createContributionRegistry,
 	resolveAndLoadAgentPlugins,
-} from "@cline/core";
-import type { AgentTool, Message } from "@cline/shared";
+} from "@agentario/core";
+import type { AgentTool, Message } from "@agentario/shared";
 import {
 	type ChatCommandDefinition,
 	type ChatCommandHost,

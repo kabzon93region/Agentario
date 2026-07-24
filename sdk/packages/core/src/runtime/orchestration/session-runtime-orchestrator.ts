@@ -19,8 +19,8 @@
  * OAuth-retry and run replay feasible.
  */
 
-import type { AgentRuntime } from "@cline/agents";
-import { createAgentRuntime } from "@cline/agents";
+import type { AgentRuntime } from "@agentario/agents";
+import { createAgentRuntime } from "@agentario/agents";
 import {
 	type AgentConfig,
 	type AgentEvent,
@@ -46,7 +46,7 @@ import {
 	type ModelInfo,
 	mergeModelOptions,
 	type ToolCallRecord,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { filterDisabledTools } from "../../services/global-settings";
 import {
 	createAgentModelFromConfig,
@@ -995,6 +995,10 @@ export class SessionRuntime {
 							info: modelInfo,
 						},
 						emitStatusNotice: context.emitStatusNotice,
+						// Agentario: передаём реальные inputTokens от модели
+						lastInputTokens: this.currentRunUsage.inputTokens > 0
+							? this.currentRunUsage.inputTokens
+							: undefined,
 					})
 				: undefined;
 

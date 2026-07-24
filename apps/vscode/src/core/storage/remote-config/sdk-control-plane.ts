@@ -1,10 +1,10 @@
-import type { RemoteConfigBundle } from "@cline/shared"
+﻿import type { RemoteConfigBundle } from "@agentario/shared"
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
 import { ClineEnv } from "@/config"
-import { ClineAccountService } from "@/services/account/ClineAccountService"
+import { AgentarioAccountService } from "@/services/account/AgentarioAccountService"
 import { AuthService } from "@/services/auth/AuthService"
 import { buildBasicClineHeaders } from "@/services/EnvUtils"
-import { CLINE_API_ENDPOINT } from "@/shared/cline/api"
+import { AGENTARIO_API_ENDPOINT } from "@/shared/agentario/api"
 import { getAxiosSettings } from "@/shared/net"
 import { APIKeySchema, type APIKeySettings, type RemoteConfig, RemoteConfigSchema } from "@/shared/remote-config/schema"
 import { Logger } from "@/shared/services/Logger"
@@ -89,7 +89,7 @@ async function makeAuthenticatedRequest<T>(endpoint: string, organizationId: str
 async function fetchRemoteConfigForOrganization(organizationId: string): Promise<RemoteConfig | undefined> {
 	try {
 		const configData = await makeAuthenticatedRequest<{ value: string; enabled: boolean }>(
-			CLINE_API_ENDPOINT.REMOTE_CONFIG,
+			AGENTARIO_API_ENDPOINT.REMOTE_CONFIG,
 			organizationId,
 		)
 		if (!configData.enabled) {
@@ -113,7 +113,7 @@ async function fetchRemoteConfigForOrganization(organizationId: string): Promise
 
 async function fetchApiKeysForOrganization(organizationId: string): Promise<APIKeySettings> {
 	try {
-		const response = await makeAuthenticatedRequest<{ providerApiKeys: string }>(CLINE_API_ENDPOINT.API_KEYS, organizationId)
+		const response = await makeAuthenticatedRequest<{ providerApiKeys: string }>(AGENTARIO_API_ENDPOINT.API_KEYS, organizationId)
 		return parseApiKeys(response?.providerApiKeys)
 	} catch (error) {
 		Logger.error(`Failed to fetch API keys for organization ${organizationId}:`, error)
@@ -197,7 +197,7 @@ export class SdkRemoteConfigControlPlane {
 	}
 
 	private async discoverRemoteConfigOrg(): Promise<{ organizationId: string; discoveredValue?: string } | undefined> {
-		const accountService = ClineAccountService.getInstance()
+		const accountService = AgentarioAccountService.getInstance()
 		const discovery = await accountService.fetchUserRemoteConfig()
 		if (!discovery) {
 			return undefined

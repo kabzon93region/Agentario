@@ -43,7 +43,7 @@ export interface UserContext {
  * Everything needed to describe the workspace and build the system prompt.
  *
  * Extends WorkspaceInfo (rootPath + git fields) with the additional fields
- * required by buildClineSystemPrompt, so callers can spread a WorkspaceInfo
+ * required by buildAgentarioSystemPrompt, so callers can spread a WorkspaceInfo
  * and add only what they know.
  */
 export interface WorkspaceContext extends WorkspaceInfo {
@@ -55,7 +55,7 @@ export interface WorkspaceContext extends WorkspaceInfo {
 	/** Human-readable workspace name shown in the system prompt */
 	workspaceName?: string;
 	/**
-	 * Pre-serialized workspace metadata block that replaces {{CLINE_METADATA}}
+	 * Pre-serialized workspace metadata block that replaces {{AGENTARIO_METADATA}}
 	 * in the system prompt template.
 	 */
 	metadata?: string;
@@ -84,7 +84,7 @@ export interface ExtensionContext {
 	session?: AgentExtensionSessionContext;
 	/**
 	 * Host-provided automation ingress for plugins. Present when the session is
-	 * started through a ClineCore instance with automation enabled.
+	 * started through a AgentarioCore instance with automation enabled.
 	 */
 	automation?: AgentExtensionAutomationContext;
 	logger?: BasicLogger;

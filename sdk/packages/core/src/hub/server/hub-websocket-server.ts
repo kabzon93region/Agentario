@@ -8,7 +8,7 @@ import {
 	isHubProtocolCompatible,
 	MAX_CLIENT_HUB_PROTOCOL_VERSION,
 	MIN_CLIENT_HUB_PROTOCOL_VERSION,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { WebSocketServer } from "ws";
 import corePackage from "../../../package.json";
 import { rememberRecoverableLocalHubUrl, verifyHubConnection } from "../client";

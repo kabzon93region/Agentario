@@ -1,4 +1,4 @@
----
+﻿---
 title: "Plugins Overview"
 sidebarTitle: "Plugins"
 description: "Learn what plugins are, their benefits, and how they extend agent behavior."
@@ -42,7 +42,7 @@ Plugins are packages of reusable agent capabilities. They let you bundle tools, 
 A plugin is an `AgentPlugin` — an object that implements the SDK's extension interface. It can register tools, hook into agent lifecycle events, and provide configuration defaults.
 
 ```typescript
-import { type AgentPlugin } from "@cline/sdk"
+import { type AgentPlugin } from "@agentario/sdk"
 
 const myPlugin: AgentPlugin = {
   name: "my-plugin",

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Built-in provider IDs
  *
  * Single source of truth for all built-in provider identifiers.
@@ -10,7 +10,7 @@ export enum BUILT_IN_PROVIDER {
 	ANTHROPIC = "anthropic",
 	CLAUDE_CODE = "claude-code",
 	CLINE = "cline",
-	CLINE_PASS = "cline-pass",
+	CLINE_PASS = "agentario-pass",
 	// OpenAI variants
 	OPENAI_COMPATIBLE = "openai-compatible",
 	OPENAI_NATIVE = "openai-native",

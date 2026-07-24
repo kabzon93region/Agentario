@@ -1,4 +1,4 @@
-import * as LlmsModels from "@cline/llms";
+import * as LlmsModels from "@agentario/llms";
 import { isOAuthProvider } from "../../auth/provider-auth-registry";
 
 export type ProviderConfigFieldKey =

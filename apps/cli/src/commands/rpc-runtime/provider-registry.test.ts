@@ -1,8 +1,8 @@
-import type { SaveProviderSettingsActionRequest } from "@cline/core";
+﻿import type { SaveProviderSettingsActionRequest } from "@agentario/core";
 import {
 	type ProviderSettingsManager,
 	saveLocalProviderSettings,
-} from "@cline/core";
+} from "@agentario/core";
 import { describe, expect, it, vi } from "vitest";
 
 describe("saveLocalProviderSettings", () => {

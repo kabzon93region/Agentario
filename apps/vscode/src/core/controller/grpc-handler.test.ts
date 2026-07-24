@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, it } from "mocha"
+﻿import { afterEach, beforeEach, describe, it } from "mocha"
 import { Controller } from "@core/controller"
 import { serviceHandlers } from "@generated/hosts/vscode/protobus-services"
 import { GrpcCancel, GrpcRequest } from "@shared/WebviewMessage"
@@ -16,7 +16,7 @@ describe("grpc-handler", () => {
 	let mockStreamingHandler: sinon.SinonStub
 	let mockStreamingFailingHandler: sinon.SinonStub
 
-	const serviceName = "cline.TestService"
+	const serviceName = "agentario.TestService"
 	const mockResponse = { result: "result-1234" }
 
 	beforeEach(() => {

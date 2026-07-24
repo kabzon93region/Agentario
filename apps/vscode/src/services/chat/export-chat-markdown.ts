@@ -1,5 +1,5 @@
-import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
-import type { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
+﻿import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
+import type { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"
 import { formatMessageStatsLine } from "@shared/message-display"
 
 const LOW_STAKES_TOOLS = new Set([
@@ -23,27 +23,27 @@ const SKIP_SAY = new Set([
 	"hook",
 ])
 
-function isLowStakesTool(message: ClineMessage): boolean {
+function isLowStakesTool(message: AgentarioMessage): boolean {
 	if (message.say !== "tool" && message.ask !== "tool") {
 		return false
 	}
 	try {
-		const tool = JSON.parse(message.text || "{}") as ClineSayTool
+		const tool = JSON.parse(message.text || "{}") as AgentarioSayTool
 		return LOW_STAKES_TOOLS.has(tool.tool)
 	} catch {
 		return false
 	}
 }
 
-function parseTool(text: string | undefined): ClineSayTool {
+function parseTool(text: string | undefined): AgentarioSayTool {
 	try {
-		return JSON.parse(text || "{}") as ClineSayTool
+		return JSON.parse(text || "{}") as AgentarioSayTool
 	} catch {
-		return {} as ClineSayTool
+		return {} as AgentarioSayTool
 	}
 }
 
-function toolGroupSummary(tools: ClineSayTool[]): string {
+function toolGroupSummary(tools: AgentarioSayTool[]): string {
 	const counts = { read: 0, list: 0, search: 0, def: 0 }
 	for (const tool of tools) {
 		switch (tool.tool) {
@@ -82,8 +82,8 @@ function toolGroupSummary(tools: ClineSayTool[]): string {
 	return `Agentario${action}${parts.join(", ")}`
 }
 
-function completedLowStakesTools(messages: ClineMessage[]): ClineSayTool[] {
-	const result: ClineSayTool[] = []
+function completedLowStakesTools(messages: AgentarioMessage[]): AgentarioSayTool[] {
+	const result: AgentarioSayTool[] = []
 	for (const message of messages) {
 		if (message.say === "reasoning") {
 			continue
@@ -124,7 +124,7 @@ function appendBlock(lines: string[], heading: string, body: string, statsLine?:
 	lines.push("")
 }
 
-function formatCommandBlock(message: ClineMessage): string {
+function formatCommandBlock(message: AgentarioMessage): string {
 	const raw = message.text ?? ""
 	const [commandPart, ...outputParts] = raw.split(COMMAND_OUTPUT_STRING)
 	const command = commandPart.trim()
@@ -140,7 +140,7 @@ function formatCommandBlock(message: ClineMessage): string {
 	return lines.join("\n").trimEnd()
 }
 
-function formatHighStakesTool(message: ClineMessage): string | undefined {
+function formatHighStakesTool(message: AgentarioMessage): string | undefined {
 	const tool = parseTool(message.text)
 	if (!tool.tool) {
 		return message.text
@@ -164,7 +164,7 @@ export interface ExportChatMarkdownOptions {
 	exportedAt?: Date
 }
 
-export function exportChatToMarkdown(messages: ClineMessage[], options: ExportChatMarkdownOptions = {}): string {
+export function exportChatToMarkdown(messages: AgentarioMessage[], options: ExportChatMarkdownOptions = {}): string {
 	const lines: string[] = []
 	const exportedAt = options.exportedAt ?? new Date()
 
@@ -173,7 +173,7 @@ export function exportChatToMarkdown(messages: ClineMessage[], options: ExportCh
 	}
 	lines.push(`Exported: ${exportedAt.toISOString()}`, "", "---", "")
 
-	let pendingTools: ClineMessage[] = []
+	let pendingTools: AgentarioMessage[] = []
 
 	const flushToolGroup = () => {
 		if (pendingTools.length === 0) {

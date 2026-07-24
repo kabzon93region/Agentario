@@ -1,13 +1,16 @@
-import { ClineMessage } from "@shared/ExtensionMessage"
+﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
 import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
-import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
-import React, { useCallback, useLayoutEffect, useMemo, useState } from "react"
+import { TaskColorRequest } from "@shared/proto/agentario/task"
+import { ChevronDownIcon, ChevronRightIcon, PaletteIcon } from "lucide-react"
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react"
+import ColorPickerPopup from "@/components/common/ColorPickerPopup"
 import Thumbnails from "@/components/common/Thumbnails"
 import { getModeSpecificFields } from "@/components/settings/utils/providerUtils"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useNormalizedApiConfiguration } from "@/hooks/useNormalizedApiConfiguration"
 import { useProviderUsageCostDisplay } from "@/hooks/useProviderUsageCostDisplay"
 import { cn } from "@/lib/utils"
+import { TaskServiceClient } from "@/services/grpc-client"
 import { getEnvironmentColor } from "@/utils/environmentColors"
 import CopyTaskButton from "./buttons/CopyTaskButton"
 import DeleteTaskButton from "./buttons/DeleteTaskButton"
@@ -16,10 +19,10 @@ import OpenDiskConversationHistoryButton from "./buttons/OpenDiskConversationHis
 import ContextWindow from "./ContextWindow"
 import { highlightText } from "./Highlights"
 
-const BUTTON_CLASS = "max-h-3 border-0 font-bold bg-transparent hover:opacity-100 text-foreground"
+const BUTTON_CLASS = "max-h-3 border-0 font-bold bg-foreground/10 hover:bg-foreground/20 text-foreground rounded-sm"
 
 interface TaskHeaderProps {
-	task: ClineMessage
+	task: AgentarioMessage
 	tokensIn: number
 	tokensOut: number
 	doesModelSupportPromptCache: boolean
@@ -56,9 +59,40 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 
 	const [isHighlightedTextExpanded, setIsHighlightedTextExpanded] = useState(false)
 	const [isTextOverflowing, setIsTextOverflowing] = useState(false)
+	const [showColorPicker, setShowColorPicker] = useState(false)
 	const highlightedTextRef = React.useRef<HTMLDivElement>(null)
+	
 
-	const highlightedText = useMemo(() => highlightText(task.text, false), [task.text])
+	// Цвет плашки таска из состояния
+	const taskColor = currentTaskItem?.taskColor
+
+
+
+	// Установить цвет таска
+	const handleColorSelect = useCallback((hex: string) => {
+		if (!currentTaskItem?.id) return
+		console.log(`[TaskHeader] handleColorSelect: taskId=${currentTaskItem.id}, hex=${hex}`)
+		TaskServiceClient.setTaskColor(
+			TaskColorRequest.create({ taskId: currentTaskItem.id, taskColor: hex }),
+		).then(() => {
+			console.log(`[TaskHeader] setTaskColor OK: taskId=${currentTaskItem.id}, hex=${hex}`)
+		}).catch((err) => console.error(`[TaskHeader] setTaskColor FAILED:`, err))
+		setShowColorPicker(false)
+	}, [currentTaskItem?.id])
+
+	// Убрать цвет таска
+	const handleRemoveColor = useCallback(() => {
+		if (!currentTaskItem?.id) return
+		console.log(`[TaskHeader] handleRemoveColor: taskId=${currentTaskItem.id}`)
+		TaskServiceClient.setTaskColor(
+			TaskColorRequest.create({ taskId: currentTaskItem.id, taskColor: "" }),
+		).then(() => {
+			console.log(`[TaskHeader] removeColor OK: taskId=${currentTaskItem.id}`)
+		}).catch((err) => console.error(`[TaskHeader] removeColor FAILED:`, err))
+		setShowColorPicker(false)
+	}, [currentTaskItem?.id])
+
+	const highlightedText = useMemo(() => highlightText(currentTaskItem?.task || task.text, false), [task.text, currentTaskItem?.task])
 
 	// Check if text overflows the container (i.e., needs clamping)
 	useLayoutEffect(() => {
@@ -113,24 +147,31 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	const environmentBorderColor = getEnvironmentColor(environment, "border")
 
 	return (
-		<div className="py-2 px-4 flex flex-col gap-2">
+		<div className="py-2 px-4 flex flex-col gap-2 relative">
 			{/* Task Header */}
 			<div
 				className={cn(
 					"relative overflow-hidden cursor-pointer rounded-sm flex flex-col gap-1.5 z-10 pt-2 pb-2 px-2 hover:opacity-100 bg-(--vscode-toolbar-hoverBackground)/65",
 					{
-						"opacity-100 border-1": isTaskExpanded, // No hover effects when expanded, add border
-						"hover:bg-toolbar-hover border-1": !isTaskExpanded, // Hover effects only when collapsed
+						"opacity-100 border-1": isTaskExpanded,
+						"hover:bg-toolbar-hover border-1": !isTaskExpanded,
 					},
 				)}
 				style={{
 					borderColor: environmentBorderColor,
+					...(taskColor ? { borderLeft: `4px solid #${taskColor}` } : {}),
 				}}>
 				{/* Task Title */}
 				<div
 					aria-label={isTaskExpanded ? "Collapse task header" : "Expand task header"}
 					className="flex justify-between items-center cursor-pointer"
-					onClick={toggleTaskExpanded}
+					onClick={(e) => {
+						// Не сворачивать/разворачивать если клик по кнопке внутри
+						if ((e.target as HTMLElement).closest("button")) {
+							return
+						}
+						toggleTaskExpanded()
+					}}
 					onKeyDown={(e) => {
 						if (e.key === "Enter" || e.key === " ") {
 							e.preventDefault()
@@ -144,6 +185,18 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 						{isTaskExpanded && (
 							<div className="mt-1 flex justify-end cursor-pointer opacity-80 gap-2 mx-2">
 								<CopyTaskButton className={BUTTON_CLASS} taskText={task.text} />
+								{/* Кнопка выбора цвета плашки */}
+								<button
+									className={cn(BUTTON_CLASS, "flex items-center justify-center")}
+									onClick={(e) => {
+										e.preventDefault()
+										e.stopPropagation()
+										setShowColorPicker(true)
+									}}
+									style={taskColor ? { color: `#${taskColor}` } : undefined}
+									title="Выбрать цвет таска">
+									<PaletteIcon size={14} />
+								</button>
 								<DeleteTaskButton
 									className={BUTTON_CLASS}
 									taskId={currentTaskItem?.id}
@@ -217,6 +270,26 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 					</div>
 				)}
 			</div>
+
+			{/* Color picker popup — открывается слева, вне overflow-hidden контейнера */}
+			{showColorPicker && currentTaskItem?.id && (
+				<div className="absolute left-4 top-12 z-[100]">
+					<ColorPickerPopup
+						onClose={() => setShowColorPicker(false)}
+						onSelect={handleColorSelect}
+					/>
+					{taskColor && (
+						<button
+							className="w-full mt-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer bg-menu border border-foreground/15 rounded px-2 py-1 hover:bg-foreground/5"
+							onClick={(e) => {
+								e.stopPropagation()
+								handleRemoveColor()
+							}}>
+							Убрать цвет
+						</button>
+					)}
+				</div>
+			)}
 		</div>
 	)
 }

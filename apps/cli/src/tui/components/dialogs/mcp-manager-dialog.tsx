@@ -1,7 +1,7 @@
-import {
+﻿import {
 	resolveDefaultMcpSettingsPath,
 	setMcpServerDisabled,
-} from "@cline/core";
+} from "@agentario/core";
 import type { ChoiceContext } from "@opentui-ui/dialog";
 import { useDialogKeyboard } from "@opentui-ui/dialog/react";
 import { useState } from "react";

@@ -1,4 +1,4 @@
-import { setTimeout as delay } from "node:timers/promises"
+﻿import { setTimeout as delay } from "node:timers/promises"
 import { randomUUID } from "node:crypto"
 import {
 	existsSync,
@@ -199,7 +199,7 @@ function runPureSettingsMutator<T>(settings: Record<string, unknown>, mutator: M
  *
  * Waiting for another process to release the lock is async, but once this
  * process owns the lock, the critical section uses synchronous filesystem calls.
- * @cline/core OAuth writes use a synchronous lock in the same extension host;
+ * @agentario/core OAuth writes use a synchronous lock in the same extension host;
  * yielding here while holding the lock would let that sync waiter block the
  * event loop before this holder can resume and release it.
  */

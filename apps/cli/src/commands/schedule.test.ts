@@ -1,4 +1,4 @@
-import { readFile, rm, writeFile } from "node:fs/promises";
+﻿import { readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -7,7 +7,7 @@ import { createScheduleCommand } from "./schedule";
 const mockSendHubCommand = vi.hoisted(() => vi.fn());
 const mockEnsureCliHubServer = vi.hoisted(() => vi.fn());
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	sendHubCommand: mockSendHubCommand,
 }));
 

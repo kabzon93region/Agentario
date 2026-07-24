@@ -1,4 +1,4 @@
-import { type AgentTool, createTool } from "@cline/shared";
+import { type AgentTool, createTool } from "@agentario/shared";
 import { defaultMcpToolNameTransform } from "./name-transform";
 import type { CreateMcpToolsOptions, McpToolDescriptor } from "./types";
 

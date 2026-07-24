@@ -1,14 +1,14 @@
-import {
-	getClineEnvironmentConfig,
+﻿import {
+	getAgentarioEnvironmentConfig,
 	type ITelemetryService,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type { ProviderSettingsManager } from "../services/storage/provider-settings-manager";
 import type { ProviderSettings } from "../types/provider-settings";
 import {
 	type ClineOAuthCredentials,
 	getValidClineCredentials,
-	loginClineOAuth,
-} from "./cline";
+	loginAgentarioCloudOAuth,
+} from "./agentario";
 import { getValidOpenAICodexCredentials, loginOpenAICodex } from "./codex";
 import { getValidOcaCredentials, loginOcaOAuth } from "./oca";
 import type { OAuthCredentials, OAuthLoginCallbacks } from "./types";
@@ -207,9 +207,9 @@ function createClineAuthHandler(input: {
 		formatAccessToken: formatClineApiKey,
 		normalizeStoredAccessToken: stripClineApiKeyPrefix,
 		login: ({ settings, callbacks, telemetry }) =>
-			loginClineOAuth({
+			loginAgentarioCloudOAuth({
 				apiBaseUrl:
-					settings?.baseUrl?.trim() || getClineEnvironmentConfig().apiBaseUrl,
+					settings?.baseUrl?.trim() || getAgentarioEnvironmentConfig().apiBaseUrl,
 				useWorkOSDeviceAuth: true,
 				callbacks,
 				telemetry,
@@ -219,7 +219,7 @@ function createClineAuthHandler(input: {
 				credentials as ClineOAuthCredentials,
 				{
 					apiBaseUrl:
-						settings.baseUrl?.trim() || getClineEnvironmentConfig().apiBaseUrl,
+						settings.baseUrl?.trim() || getAgentarioEnvironmentConfig().apiBaseUrl,
 					telemetry,
 				},
 				{ forceRefresh },
@@ -230,7 +230,7 @@ function createClineAuthHandler(input: {
 const providerAuthHandlers = [
 	createClineAuthHandler({ providerId: "cline" }),
 	createClineAuthHandler({
-		providerId: "cline-pass",
+		providerId: "agentario-pass",
 		storageProviderId: "cline",
 	}),
 	createOAuthHandler({

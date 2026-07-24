@@ -1,13 +1,13 @@
-// VscodeSessionHost — wraps ClineCore with VSCode-specific customizations
+﻿// VscodeSessionHost — wraps AgentarioCore with VSCode-specific customizations
 //
-// Uses ClineCore.create() so the SDK owns session input normalization,
+// Uses AgentarioCore.create() so the SDK owns session input normalization,
 // lifecycle bootstrapping, and host selection while the VSCode extension
 // still provides its custom McpHub-backed runtime builder.
 
 import {
-	ClineCore,
-	type ClineCoreListHistoryOptions,
-	type ClineCoreStartInput,
+	AgentarioCore,
+	type AgentarioCoreListHistoryOptions,
+	type AgentarioCoreStartInput,
 	type CoreSessionEvent,
 	type HookEventPayload,
 	type ITelemetryService,
@@ -26,13 +26,14 @@ import {
 	type StartSessionInput,
 	type StartSessionResult,
 	type ToolExecutors,
-} from "@cline/core"
-import { type AgentToolContext, type ToolApprovalRequest, type ToolApprovalResult, type ToolPolicy } from "@cline/shared"
+} from "@agentario/core"
+import { type AgentToolContext, type ToolApprovalRequest, type ToolApprovalResult, type ToolPolicy } from "@agentario/shared"
 import type { ITerminalManager } from "@/integrations/terminal/types"
 import { getDistinctId } from "@/services/logging/distinctId"
 import type { McpHub } from "@/services/mcp/McpHub"
 import { Logger } from "@/shared/services/Logger"
 import type { SdkSessionHost } from "./session-host"
+import type { SdkInitialMessages } from "./session-host"
 import { createVscodeExtraTools } from "./vscode-runtime-builder"
 
 export interface VscodeSessionHostOptions {
@@ -64,9 +65,9 @@ export interface VscodeSessionHostOptions {
 
 export class VscodeSessionHost implements SdkSessionHost {
 	readonly runtimeAddress: string | undefined
-	private readonly inner: ClineCore
+	private readonly inner: AgentarioCore
 
-	private constructor(inner: ClineCore) {
+	private constructor(inner: AgentarioCore) {
 		this.inner = inner
 		this.runtimeAddress = inner.runtimeAddress
 	}
@@ -90,7 +91,7 @@ export class VscodeSessionHost implements SdkSessionHost {
 			;(toolExecutors as Record<string, unknown>).bash = undefined
 		}
 
-		const inner = await ClineCore.create({
+		const inner = await AgentarioCore.create({
 			backendMode: "local",
 			capabilities: {
 				requestToolApproval: options.requestToolApproval as
@@ -102,7 +103,7 @@ export class VscodeSessionHost implements SdkSessionHost {
 			telemetry: options.telemetry,
 			distinctId: getDistinctId() || undefined,
 			prepare: async () => ({
-				applyToStartSessionInput: async (input: ClineCoreStartInput): Promise<ClineCoreStartInput> => {
+				applyToStartSessionInput: async (input: AgentarioCoreStartInput): Promise<AgentarioCoreStartInput> => {
 					const remoteConfigIntegration = options.getRemoteConfigIntegration?.()
 					const inputWithRemoteConfig = remoteConfigIntegration
 						? await remoteConfigIntegration.applyToStartSessionInput(input)
@@ -124,7 +125,7 @@ export class VscodeSessionHost implements SdkSessionHost {
 			}),
 		})
 
-		Logger.log("[VscodeSessionHost] Initialized with ClineCore + VSCode extra tools")
+		Logger.log("[VscodeSessionHost] Initialized with AgentarioCore + VSCode extra tools")
 		if (options.getTerminalManager) {
 			Logger.log("[VscodeSessionHost] SDK run_commands suppressed; using custom foreground/background terminal tool")
 		}
@@ -132,9 +133,9 @@ export class VscodeSessionHost implements SdkSessionHost {
 	}
 
 	async start(input: StartSessionInput): Promise<StartSessionResult>
-	async start(input: ClineCoreStartInput): Promise<StartSessionResult>
-	async start(input: StartSessionInput | ClineCoreStartInput): Promise<StartSessionResult> {
-		return this.inner.start(input as ClineCoreStartInput)
+	async start(input: AgentarioCoreStartInput): Promise<StartSessionResult>
+	async start(input: StartSessionInput | AgentarioCoreStartInput): Promise<StartSessionResult> {
+		return this.inner.start(input as AgentarioCoreStartInput)
 	}
 
 	async send(input: SendSessionInput) {
@@ -183,11 +184,11 @@ export class VscodeSessionHost implements SdkSessionHost {
 		return this.inner.get(sessionId)
 	}
 
-	async list(limit?: number, options: Omit<ClineCoreListHistoryOptions, "limit"> = {}): Promise<SessionHistoryRecord[]> {
+	async list(limit?: number, options: Omit<AgentarioCoreListHistoryOptions, "limit"> = {}): Promise<SessionHistoryRecord[]> {
 		return this.inner.list(limit, options)
 	}
 
-	async listHistory(options: ClineCoreListHistoryOptions = {}): Promise<SessionHistoryRecord[]> {
+	async listHistory(options: AgentarioCoreListHistoryOptions = {}): Promise<SessionHistoryRecord[]> {
 		return this.inner.listHistory(options)
 	}
 
@@ -197,6 +198,10 @@ export class VscodeSessionHost implements SdkSessionHost {
 
 	async readMessages(sessionId: string) {
 		return this.inner.readMessages(sessionId)
+	}
+
+	async writeMessages(sessionId: string, messages: SdkInitialMessages, systemPrompt?: string) {
+		return this.inner.writeMessages(sessionId, messages, systemPrompt)
 	}
 
 	async restore(input: RestoreInput): Promise<RestoreResult> {

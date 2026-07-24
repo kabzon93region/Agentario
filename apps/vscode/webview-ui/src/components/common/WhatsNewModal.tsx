@@ -1,4 +1,4 @@
-import { BannerAction, BannerCardData } from "@shared/cline/banner"
+﻿import { BannerAction, BannerCardData } from "@shared/agentario/banner"
 import React from "react"
 import { useMount } from "react-use"
 import DiscordIcon from "@/assets/DiscordIcon"

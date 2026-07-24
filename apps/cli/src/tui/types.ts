@@ -1,15 +1,15 @@
-import type {
+﻿import type {
 	AgentEvent,
 	AgentMode,
 	CheckpointEntry,
 	ClineSubscriptionPlan,
 	TeamEvent,
-} from "@cline/core";
+} from "@agentario/core";
 import type {
 	Message,
 	ToolApprovalRequest,
 	ToolApprovalResult,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type { CliMigrationNotice } from "../kanban-migration/notice";
 import type {
 	PendingPromptSnapshot,
@@ -17,7 +17,7 @@ import type {
 } from "../runtime/session-events";
 import type { RepoStatus } from "../utils/repo-status";
 import type { CliCompactionMode, Config } from "../utils/types";
-import type { ClineAccountSnapshot } from "./cline-account";
+import type { ClineAccountSnapshot } from "./agentario-account";
 import type {
 	InteractiveConfigData,
 	InteractiveConfigItem,

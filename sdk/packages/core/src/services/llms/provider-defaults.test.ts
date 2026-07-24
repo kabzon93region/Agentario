@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	clearLiveModelsCatalogCache,
 	clearPrivateModelsCatalogCache,
@@ -85,7 +85,7 @@ describe("resolveProviderConfig", () => {
 				JSON.stringify({
 					clinePass: [
 						{
-							id: "cline-pass/live-pass-model",
+							id: "agentario-pass/live-pass-model",
 							name: "vendor/live-pass-model",
 						},
 					],
@@ -98,7 +98,7 @@ describe("resolveProviderConfig", () => {
 		});
 		vi.stubGlobal("fetch", fetchMock);
 
-		const resolved = await resolveProviderConfig("cline-pass", {
+		const resolved = await resolveProviderConfig("agentario-pass", {
 			loadLatestOnInit: true,
 			failOnError: false,
 			cacheTtlMs: 0,
@@ -106,16 +106,16 @@ describe("resolveProviderConfig", () => {
 		});
 
 		expect(fetchMock).toHaveBeenCalledTimes(2);
-		expect(resolved?.knownModels?.["cline-pass/live-pass-model"]).toMatchObject(
+		expect(resolved?.knownModels?.["agentario-pass/live-pass-model"]).toMatchObject(
 			{
-				id: "cline-pass/live-pass-model",
+				id: "agentario-pass/live-pass-model",
 				name: "Live Pass Model",
 				contextWindow: 256_000,
 				maxInputTokens: 200_000,
 				maxTokens: 32_000,
 			},
 		);
-		expect(resolved?.knownModels?.["cline-pass/mimo-v2.5-pro"]).toBeUndefined();
+		expect(resolved?.knownModels?.["agentario-pass/mimo-v2.5-pro"]).toBeUndefined();
 	});
 
 	it("falls back to generated ClinePass models when no live ClinePass models are found", async () => {
@@ -146,7 +146,7 @@ describe("resolveProviderConfig", () => {
 		});
 		vi.stubGlobal("fetch", fetchMock);
 
-		const resolved = await resolveProviderConfig("cline-pass", {
+		const resolved = await resolveProviderConfig("agentario-pass", {
 			loadLatestOnInit: true,
 			failOnError: false,
 			cacheTtlMs: 0,
@@ -154,7 +154,7 @@ describe("resolveProviderConfig", () => {
 		});
 
 		expect(fetchMock).toHaveBeenCalledTimes(2);
-		expect(resolved?.knownModels?.["cline-pass/mimo-v2.5-pro"]?.name).toBe(
+		expect(resolved?.knownModels?.["agentario-pass/mimo-v2.5-pro"]?.name).toBe(
 			"MiMo-V2.5-Pro",
 		);
 		expect(

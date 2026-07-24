@@ -1,7 +1,7 @@
-import { CLINE_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/ClineAccount"
-import type { ClineMessage, TurnPhase } from "@shared/ExtensionMessage"
+﻿import { AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/AgentarioAccount"
+import type { AgentarioMessage, TurnPhase } from "@shared/ExtensionMessage"
 import type { Mode } from "@shared/storage/types"
-import type { ClineAskResponse } from "@shared/WebviewMessage"
+import type { AgentarioAskResponse } from "@shared/WebviewMessage"
 import type { StateManager } from "@/core/storage/StateManager"
 import { Logger } from "@/shared/services/Logger"
 import type { SdkInteractionCoordinator } from "./sdk-interaction-coordinator"
@@ -30,7 +30,7 @@ export interface SdkFollowupCoordinatorOptions {
 	loadInitialMessages: (sessionHost: SdkSessionHost, taskId: string) => Promise<unknown[] | undefined>
 	buildStartSessionInput: (config: SessionConfig, input: { cwd: string; mode: Mode }) => StartInput
 	resolveContextMentions: (text: string) => Promise<string>
-	isClineProviderActive: () => boolean
+	isAgentarioCloudProviderActive: () => boolean
 	emitClineAuthError: () => void
 	resetMessageTranslator: () => void
 	postStateToWebview: () => Promise<void>
@@ -51,7 +51,7 @@ export class SdkFollowupCoordinator {
 		prompt?: string,
 		images?: string[],
 		files?: string[],
-		askResponse?: ClineAskResponse,
+		askResponse?: AgentarioAskResponse,
 		turnPhaseAtSubmit?: TurnPhase,
 	): Promise<void> {
 		if (this.options.interactions.resolvePendingMistakeLimit(prompt, askResponse)) {
@@ -82,6 +82,20 @@ export class SdkFollowupCoordinator {
 		if (!isActiveTurnInProgress() && task) {
 			Logger.log(`[SdkController] askResponse: No active session but task exists (${task.taskId}), resuming...`)
 			await this.tryResumeSessionFromTask(task.taskId, prompt, images, files)
+			return
+		}
+
+		// Session exists but is idle (e.g. after manual compaction) — send directly
+		if (activeSession && !activeSession.isRunning && task) {
+			Logger.log(`[SdkController] askResponse: Session ${activeSession.sessionId} is idle; sending directly`)
+			const { sdkHost, sessionId } = activeSession
+			this.options.sessions.setRunning(true)
+			if (prompt?.trim() || images?.length || files?.length) {
+				this.emitUserFeedback(sessionId, prompt, images, files)
+			}
+			this.options.resetMessageTranslator()
+			const resolvedPrompt = prompt ? await this.options.resolveContextMentions(prompt) : ""
+			this.options.sessions.fireAndForgetSend(sdkHost, sessionId, resolvedPrompt, images, files)
 			return
 		}
 
@@ -119,8 +133,8 @@ export class SdkFollowupCoordinator {
 
 			const errorMsg = error instanceof Error ? error.message : String(error)
 			const isClineAuth =
-				this.options.isClineProviderActive() &&
-				(errorMsg.includes(CLINE_ACCOUNT_AUTH_ERROR_MESSAGE) ||
+				this.options.isAgentarioCloudProviderActive() &&
+				(errorMsg.includes(AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE) ||
 					errorMsg.toLowerCase().includes("missing api key") ||
 					errorMsg.toLowerCase().includes("unauthorized"))
 
@@ -211,7 +225,7 @@ export class SdkFollowupCoordinator {
 			return
 		}
 
-		const userMessage: ClineMessage = {
+		const userMessage: AgentarioMessage = {
 			ts: Date.now(),
 			type: "say",
 			say: "user_feedback",

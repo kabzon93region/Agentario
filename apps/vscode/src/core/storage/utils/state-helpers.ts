@@ -1,5 +1,5 @@
-import { ApiProvider } from "@shared/api"
-import type { ClineFileStorage } from "@shared/storage/ClineFileStorage"
+﻿import { ApiProvider } from "@shared/api"
+import type { AgentarioFileStorage } from "@shared/storage/AgentarioFileStorage"
 import {
 	applyTransform,
 	GlobalStateAndSettingKeys,
@@ -19,9 +19,9 @@ import { StateManager } from "../StateManager"
 // ─── File-backed storage readers (used by StateManager) ────────────────────
 
 /**
- * Read secrets from a ClineFileStorage instance.
+ * Read secrets from a AgentarioFileStorage instance.
  */
-export function readSecretsFromStorage(store: ClineFileStorage<string>): Secrets {
+export function readSecretsFromStorage(store: AgentarioFileStorage<string>): Secrets {
 	return SecretKeys.reduce((acc, key) => {
 		acc[key] = store.get(key)
 		return acc
@@ -29,9 +29,9 @@ export function readSecretsFromStorage(store: ClineFileStorage<string>): Secrets
 }
 
 /**
- * Read workspace state from a ClineFileStorage instance.
+ * Read workspace state from a AgentarioFileStorage instance.
  */
-export function readWorkspaceStateFromStorage(store: ClineFileStorage): LocalState {
+export function readWorkspaceStateFromStorage(store: AgentarioFileStorage): LocalState {
 	return LocalStateKeys.reduce((acc, key) => {
 		acc[key] = store.get(key) || {}
 		return acc
@@ -39,7 +39,7 @@ export function readWorkspaceStateFromStorage(store: ClineFileStorage): LocalSta
 }
 
 /**
- * Read global state from a ClineFileStorage instance.
+ * Read global state from a AgentarioFileStorage instance.
  */
 export async function readGlobalStateFromStorage(store: ClineMemento): Promise<GlobalStateAndSettings> {
 	try {

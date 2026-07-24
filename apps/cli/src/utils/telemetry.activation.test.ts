@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+﻿import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 // Hoist the spy so vi.mock's factory can reference it without TDZ errors.
 const hoisted = vi.hoisted(() => ({
@@ -7,7 +7,7 @@ const hoisted = vi.hoisted(() => ({
 	getCliTelemetryService: vi.fn(() => undefined),
 }));
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	captureExtensionActivated: hoisted.captureExtensionActivated,
 	identifyAccount: hoisted.identifyAccount,
 	// CLI telemetry singleton path normally pulls in

@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------
 // Process-level helpers for headless / contract-style CLI tests.
 //
 // These helpers spawn cline as a child process and return stdout, stderr,
@@ -53,7 +53,7 @@ export function runCline(args: string[], opts: RunOptions = {}): RunResult {
 		encoding: "utf8",
 		timeout,
 		cwd,
-		env: { ...clineEnv(config), ...extraEnv },
+		env: { ...agentarioEnv(config), ...extraEnv },
 		input: stdin,
 	};
 

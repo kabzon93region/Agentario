@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
 	ClineNotSubscribedError,
 	ClineOrgIndividualInferenceSubscriptionError,
 	getClineNotSubscribedMessage,
 	getClineOrgIndividualInferenceSubscriptionMessage,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionMessage,
+	isAgentarioCloudNotSubscribedMessage,
+	isAgentarioCloudOrgSubscriptionMessage,
 } from "./errors";
 import { extractErrorMessage } from "./format";
 
@@ -63,14 +63,14 @@ describe("extractErrorMessage", () => {
 
 describe("ClineNotSubscribedError", () => {
 	it("uses the user-facing subscription message", () => {
-		expect(new ClineNotSubscribedError("cline-pass").message).toBe(
+		expect(new ClineNotSubscribedError("agentario-pass").message).toBe(
 			getClineNotSubscribedMessage(),
 		);
 	});
 
 	it("detects the ClinePass required-plan message", () => {
 		expect(
-			isClineNotSubscribedMessage(
+			isAgentarioCloudNotSubscribedMessage(
 				JSON.stringify({
 					error: {
 						message: "the user is not subscribed to required model plan",
@@ -78,14 +78,14 @@ describe("ClineNotSubscribedError", () => {
 				}),
 			),
 		).toBe(true);
-		expect(isClineNotSubscribedMessage("different forbidden error")).toBe(
+		expect(isAgentarioCloudNotSubscribedMessage("different forbidden error")).toBe(
 			false,
 		);
 	});
 
 	it("detects the formatted ClinePass subscription message regardless of URL", () => {
 		expect(
-			isClineNotSubscribedMessage(
+			isAgentarioCloudNotSubscribedMessage(
 				"No access to ClinePass subscription models yet. Subscribe to ClinePass, the low cost open weights model coding plan: https://staging-app.cline.bot/promo?code=CLI-8OFF&personal=true",
 			),
 		).toBe(true);
@@ -101,7 +101,7 @@ describe("ClineOrgIndividualInferenceSubscriptionError", () => {
 
 	it("detects the organization individual-subscription entitlement message", () => {
 		expect(
-			isClineOrgIndividualInferenceSubscriptionMessage(
+			isAgentarioCloudOrgSubscriptionMessage(
 				JSON.stringify({
 					error: {
 						code: "ENTITLEMENT_ERROR",
@@ -112,7 +112,7 @@ describe("ClineOrgIndividualInferenceSubscriptionError", () => {
 			),
 		).toBe(true);
 		expect(
-			isClineOrgIndividualInferenceSubscriptionMessage(
+			isAgentarioCloudOrgSubscriptionMessage(
 				"the user is not subscribed to required model plan",
 			),
 		).toBe(false);

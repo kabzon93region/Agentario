@@ -1,4 +1,4 @@
-import { getClineEnvironmentConfig } from "@cline/shared";
+﻿import { getAgentarioEnvironmentConfig } from "@agentario/shared";
 
 export const CLINE_NOT_SUBSCRIBED_RESPONSE_MESSAGE =
 	"the user is not subscribed to required model plan";
@@ -10,7 +10,7 @@ export const CLINE_ORG_INDIVIDUAL_INFERENCE_SUBSCRIPTION_RESPONSE_MESSAGE =
 export function getClinePassSubscriptionUrl(): string {
 	return `${new URL(
 		"/dashboard/subscription?personal=true",
-		getClineEnvironmentConfig().appBaseUrl,
+		getAgentarioEnvironmentConfig().appBaseUrl,
 	).toString()}`;
 }
 
@@ -42,19 +42,19 @@ export class ClineOrgIndividualInferenceSubscriptionError extends Error {
 	}
 }
 
-export function isClineNotSubscribedError(
+export function isAgentarioCloudNotSubscribedError(
 	error: unknown,
 ): error is ClineNotSubscribedError {
 	return error instanceof ClineNotSubscribedError;
 }
 
-export function isClineOrgIndividualInferenceSubscriptionError(
+export function isAgentarioCloudOrgSubscriptionError(
 	error: unknown,
 ): error is ClineOrgIndividualInferenceSubscriptionError {
 	return error instanceof ClineOrgIndividualInferenceSubscriptionError;
 }
 
-export function isClineNotSubscribedMessage(text: string): boolean {
+export function isAgentarioCloudNotSubscribedMessage(text: string): boolean {
 	const normalized = text.trim().toLowerCase();
 	return (
 		normalized.includes(CLINE_NOT_SUBSCRIBED_RESPONSE_MESSAGE) ||
@@ -62,7 +62,7 @@ export function isClineNotSubscribedMessage(text: string): boolean {
 	);
 }
 
-export function isClineOrgIndividualInferenceSubscriptionMessage(
+export function isAgentarioCloudOrgSubscriptionMessage(
 	text: string,
 ): boolean {
 	return text

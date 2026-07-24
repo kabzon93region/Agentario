@@ -1,22 +1,24 @@
-import type { ExtensionMessage } from "@shared/ExtensionMessage"
+﻿import type { ExtensionMessage } from "@shared/ExtensionMessage"
 import { isClineInternalTester } from "@shared/internal/account"
-import { ResetStateRequest } from "@shared/proto/cline/state"
-import type { UserOrganization } from "@shared/proto/index.cline"
+import { ResetStateRequest } from "@shared/proto/agentario/state"
+import type { UserOrganization } from "@shared/proto/index.agentario"
 import {
 	CheckCheck,
 	FlaskConical,
 	HardDriveDownload,
 	Info,
 	type LucideIcon,
+	Shield,
 	SlidersHorizontal,
 	SquareTerminal,
+	ChevronsDownUp,
 	Wrench,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { logAgentarioScreenView, logAgentarioUiClick } from "@/utils/agentario-ui-logger"
 import { useEvent } from "react-use"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { type ClineUser, useClineAuth } from "@/context/ClineAuthContext"
+import { type ClineUser, useClineAuth } from "@/context/AgentarioAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { t } from "@/i18n"
 import { cn } from "@/lib/utils"
@@ -31,12 +33,14 @@ import DebugSection from "./sections/DebugSection"
 import FeatureSettingsSection from "./sections/FeatureSettingsSection"
 import GeneralSettingsSection from "./sections/GeneralSettingsSection"
 import { RemoteConfigSection } from "./sections/RemoteConfigSection"
+import SummarizationSettingsSection from "./sections/SummarizationSettingsSection"
+import ContextProtectionSection from "./sections/ContextProtectionSection"
 import TerminalSettingsSection from "./sections/TerminalSettingsSection"
 
 const IS_DEV = process.env.IS_DEV
 
 // Tab definitions
-type SettingsTabID = "api-config" | "features" | "terminal" | "general" | "about" | "debug" | "remote-config"
+type SettingsTabID = "api-config" | "features" | "summarization" | "context-protection" | "terminal" | "general" | "about" | "debug" | "remote-config"
 interface SettingsTab {
 	id: SettingsTabID
 	name: string
@@ -60,6 +64,20 @@ const getSettingsTabs = (): SettingsTab[] => [
 		tooltipText: t("settings.tabs.features"),
 		headerText: t("settings.tabs.features"),
 		icon: CheckCheck,
+	},
+	{
+		id: "summarization",
+		name: t("settings.tabs.summarization"),
+		tooltipText: t("settings.tabs.summarization"),
+		headerText: t("settings.tabs.summarization"),
+		icon: ChevronsDownUp,
+	},
+	{
+		id: "context-protection",
+		name: t("settings.tabs.contextProtection"),
+		tooltipText: t("settings.tabs.contextProtection"),
+		headerText: t("settings.tabs.contextProtection"),
+		icon: Shield,
 	},
 	{
 		id: "terminal",
@@ -130,6 +148,8 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 			"api-config": ApiConfigurationSection,
 			general: GeneralSettingsSection,
 			features: FeatureSettingsSection,
+			summarization: SummarizationSettingsSection,
+			"context-protection": ContextProtectionSection,
 			terminal: TerminalSettingsSection,
 			"remote-config": RemoteConfigSection,
 			about: AboutSection,

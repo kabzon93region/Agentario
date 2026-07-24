@@ -12,7 +12,7 @@ import { BannerService } from "@/services/banner/BannerService"
 import { featureFlagsService } from "@/services/feature-flags"
 import { getDistinctId } from "@/services/logging/distinctId"
 import { getLatestAnnouncementId } from "@/utils/announcements"
-import { getClineOnboardingModels } from "../models/getClineOnboardingModels"
+import { getAgentarioOnboardingModels } from "../models/getAgentarioOnboardingModels"
 
 /**
  * Builds the ExtensionState object to push to the webview.
@@ -30,7 +30,7 @@ export async function getStateToPostToWebview(controller: {
 	const stateManager = controller.stateManager
 
 	// Get API configuration from cache for immediate access
-	const onboardingModels = getClineOnboardingModels()
+	const onboardingModels = getAgentarioOnboardingModels()
 	const apiConfiguration = stateManager.getApiConfiguration()
 	const lastShownAnnouncementId = stateManager.getGlobalStateKey("lastShownAnnouncementId")
 	const taskHistory = stateManager.getGlobalStateKey("taskHistory")
@@ -41,8 +41,16 @@ export async function getStateToPostToWebview(controller: {
 	const yoloModeToggled = stateManager.getGlobalSettingsKey("yoloModeToggled")
 	const useAutoCondense = stateManager.getGlobalSettingsKey("useAutoCondense")
 	const compactionStrategy = stateManager.getGlobalSettingsKey("compactionStrategy")
-	const compactionSummarizerProviderId = stateManager.getGlobalSettingsKey("compactionSummarizerProviderId")
-	const compactionSummarizerModelId = stateManager.getGlobalSettingsKey("compactionSummarizerModelId")
+	const compactionSummarizerProviderId = stateManager.getGlobalSettingsKey("compactionProviderId")
+	const compactionSummarizerModelId = stateManager.getGlobalSettingsKey("compactionModelId")
+	const compactionBaseUrl = stateManager.getGlobalSettingsKey("compactionBaseUrl")
+	const compactionApiKey = stateManager.getGlobalSettingsKey("compactionApiKey")
+	const compactionChunkSize = stateManager.getGlobalSettingsKey("compactionChunkSize")
+	const compactionDoubleSummarization = stateManager.getGlobalSettingsKey("compactionDoubleSummarization")
+	const compactionPromptTemplateBefore = stateManager.getGlobalSettingsKey("compactionPromptTemplateBefore")
+	const compactionPromptTemplateAfter = stateManager.getGlobalSettingsKey("compactionPromptTemplateAfter")
+	const compactionPostProcessTags = stateManager.getGlobalSettingsKey("compactionPostProcessTags")
+	const chatTheme = stateManager.getGlobalSettingsKey("chatTheme")
 	const modelProfilePresets = stateManager.getGlobalSettingsKey("modelProfilePresets") ?? []
 	const activeModelProfilePresetId = stateManager.getGlobalSettingsKey("activeModelProfilePresetId")
 	const codebaseIndexMode = stateManager.getGlobalSettingsKey("codebaseIndexMode") ?? "local"
@@ -56,7 +64,7 @@ export async function getStateToPostToWebview(controller: {
 	const telemetrySetting = stateManager.getGlobalSettingsKey("telemetrySetting")
 	const planActSeparateModelsSetting = stateManager.getGlobalSettingsKey("planActSeparateModelsSetting")
 	const enableCheckpointsSetting = stateManager.getGlobalSettingsKey("enableCheckpointsSetting")
-	const globalClineRulesToggles = stateManager.getGlobalSettingsKey("globalClineRulesToggles")
+	const globalAgentarioRulesToggles = stateManager.getGlobalSettingsKey("globalAgentarioRulesToggles")
 	const globalWorkflowToggles = stateManager.getGlobalSettingsKey("globalWorkflowToggles")
 	const globalSkillsToggles = stateManager.getGlobalSettingsKey("globalSkillsToggles")
 	const localSkillsToggles = stateManager.getWorkspaceStateKey("localSkillsToggles")
@@ -79,7 +87,7 @@ export async function getStateToPostToWebview(controller: {
 	const dismissedBanners = stateManager.getGlobalStateKey("dismissedBanners")
 	const showFeatureTips = stateManager.getGlobalSettingsKey("showFeatureTips")
 
-	const localClineRulesToggles = stateManager.getWorkspaceStateKey("localClineRulesToggles")
+	const localAgentarioRulesToggles = stateManager.getWorkspaceStateKey("localAgentarioRulesToggles")
 	const localWindsurfRulesToggles = stateManager.getWorkspaceStateKey("localWindsurfRulesToggles")
 	const localCursorRulesToggles = stateManager.getWorkspaceStateKey("localCursorRulesToggles")
 	const localAgentsRulesToggles = stateManager.getWorkspaceStateKey("localAgentsRulesToggles")
@@ -88,7 +96,7 @@ export async function getStateToPostToWebview(controller: {
 	const currentTaskItem = controller.task?.taskId
 		? (taskHistory || []).find((item: any) => item.id === controller.task?.taskId)
 		: undefined
-	const clineMessages = [...(controller.task?.messageStateHandler?.getClineMessages?.() || [])]
+	const agentarioMessages = [...(controller.task?.messageStateHandler?.getagentarioMessages?.() || [])]
 	const checkpointRestoreInput = controller.checkpointRestoreInput
 
 	const processedTaskHistory = (taskHistory || [])
@@ -119,7 +127,7 @@ export async function getStateToPostToWebview(controller: {
 		version,
 		apiConfiguration,
 		currentTaskItem,
-		clineMessages,
+		agentarioMessages,
 		checkpointRestoreInput,
 		autoApprovalSettings,
 		browserSettings,
@@ -128,8 +136,17 @@ export async function getStateToPostToWebview(controller: {
 		yoloModeToggled,
 		useAutoCondense,
 		compactionStrategy,
-		compactionSummarizerProviderId,
-		compactionSummarizerModelId,
+		compactionProviderId: compactionSummarizerProviderId,
+		compactionModelId: compactionSummarizerModelId,
+		compactionBaseUrl,
+		compactionApiKey,
+		compactionChunkSize,
+		compactionDoubleSummarization,
+		compactionReserveTokens: stateManager.getGlobalSettingsKey("compactionReserveTokens"),
+		compactionPromptTemplateBefore,
+		compactionPromptTemplateAfter,
+		compactionPostProcessTags,
+		chatTheme,
 		modelProfilePresets,
 		activeModelProfilePresetId,
 		codebaseIndexMode,
@@ -146,8 +163,8 @@ export async function getStateToPostToWebview(controller: {
 		platform,
 		environment,
 		distinctId,
-		globalClineRulesToggles: globalClineRulesToggles || {},
-		localClineRulesToggles: localClineRulesToggles || {},
+		globalAgentarioRulesToggles: globalAgentarioRulesToggles || {},
+		localAgentarioRulesToggles: localAgentarioRulesToggles || {},
 		localWindsurfRulesToggles: localWindsurfRulesToggles || {},
 		localCursorRulesToggles: localCursorRulesToggles || {},
 		localAgentsRulesToggles: localAgentsRulesToggles || {},

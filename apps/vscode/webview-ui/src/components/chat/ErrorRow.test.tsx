@@ -1,4 +1,4 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import ErrorRow from "./ErrorRow"
@@ -6,7 +6,7 @@ import ErrorRow from "./ErrorRow"
 const mockSetUserOrganization = vi.hoisted(() => vi.fn())
 
 // Mock the auth context
-vi.mock("@/context/ClineAuthContext", () => ({
+vi.mock("@/context/AgentarioAuthContext", () => ({
 	useClineAuth: () => ({
 		clineUser: null,
 	}),
@@ -32,23 +32,23 @@ vi.mock("@/services/grpc-client", () => ({
 	},
 }))
 
-// Mock ClineError
-vi.mock("../../../../src/services/error/ClineError", () => ({
-	ClineError: {
+// Mock AgentarioError
+vi.mock("../../../../src/services/error/AgentarioError", () => ({
+	AgentarioError: {
 		parse: vi.fn(),
 	},
-	ClineErrorType: {
+	AgentarioErrorType: {
 		Balance: "balance",
 		RateLimit: "rateLimit",
 		Auth: "auth",
 		Entitlement: "entitlement",
-		OrgClinePassRestriction: "orgClinePassRestriction",
+		OrgAgentarioPassRestriction: "orgAgentarioPassRestriction",
 		QuotaExceeded: "quotaExceeded",
 	},
 }))
 
 describe("ErrorRow", () => {
-	const mockMessage: ClineMessage = {
+	const mockMessage: AgentarioMessage = {
 		ts: 123456789,
 		type: "say",
 		say: "error",
@@ -91,7 +91,7 @@ describe("ErrorRow", () => {
 
 	describe("API error handling", () => {
 		it("renders credit limit error when balance error is detected", async () => {
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: "Insufficient credits",
 				isErrorType: vi.fn((type) => type === "balance"),
 				_error: {
@@ -105,8 +105,8 @@ describe("ErrorRow", () => {
 				},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage="Insufficient credits error" errorType="error" message={mockMessage} />)
 
@@ -115,7 +115,7 @@ describe("ErrorRow", () => {
 		})
 
 		it("does not show Cline credits CTA for non-Cline balance errors without a provider URL", async () => {
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: "Not enough credits available",
 				providerId: "zai",
 				isErrorType: vi.fn((type) => type === "balance"),
@@ -129,8 +129,8 @@ describe("ErrorRow", () => {
 				},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage="Insufficient credits error" errorType="error" message={mockMessage} />)
 
@@ -139,7 +139,7 @@ describe("ErrorRow", () => {
 		})
 
 		it("renders rate limit error with request ID", async () => {
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: "Rate limit exceeded",
 				isErrorType: vi.fn((type) => type === "rateLimit"),
 				_error: {
@@ -147,8 +147,8 @@ describe("ErrorRow", () => {
 				},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage="Rate limit exceeded" errorType="error" message={mockMessage} />)
 
@@ -157,53 +157,53 @@ describe("ErrorRow", () => {
 		})
 
 		it("renders quota exceeded error", async () => {
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: "Inference cap reached",
 				isErrorType: vi.fn((type) => type === "quotaexceeded"),
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage="The message" errorType="error" message="" />)
 			expect(screen.getByText("Inference cap reached")).toBeInTheDocument()
 		})
 
-		it("renders entitlement error when ClineError detects ClineNotSubscribedError", async () => {
+		it("renders entitlement error when AgentarioError detects ClineNotSubscribedError", async () => {
 			const cliMessage =
 				"No access to ClinePass subscription models yet. Subscribe to ClinePass, the low cost open weights model coding plan: https://app.cline.bot/promo?code=CLI-8OFF&personal=true"
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: cliMessage,
 				isErrorType: vi.fn((type) => type === "entitlement"),
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 				_error: {
 					message: cliMessage,
 				},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage={cliMessage} errorType="error" message={mockMessage} />)
 
 			expect(screen.getByTestId("entitlement-error")).toBeInTheDocument()
 			expect(screen.getByText(cliMessage)).toBeInTheDocument()
-			expect(screen.queryByText(/\[cline-pass\]/i)).not.toBeInTheDocument()
+			expect(screen.queryByText(/\[agentario-pass\]/i)).not.toBeInTheDocument()
 		})
 
-		it("renders entitlement error when ClineError detects a raw required-plan message", async () => {
+		it("renders entitlement error when AgentarioError detects a raw required-plan message", async () => {
 			const rawMessage = "403 Error 403: the user is not subscribed to required model plan"
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: rawMessage,
 				isErrorType: vi.fn((type) => type === "entitlement"),
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 				_error: {
 					message: rawMessage,
 				},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage={rawMessage} errorType="error" message={mockMessage} />)
 
@@ -213,21 +213,21 @@ describe("ErrorRow", () => {
 
 		it("renders organization account ClinePass restriction with friendly account switching copy", async () => {
 			const rawMessage = "403 Error 403: organization accounts cannot use individual model inference subscriptions"
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: rawMessage,
-				isErrorType: vi.fn((type) => type === "orgClinePassRestriction"),
+				isErrorType: vi.fn((type) => type === "orgAgentarioPassRestriction"),
 				providerId: "cline",
 				_error: {
 					message: rawMessage,
 				},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage={rawMessage} errorType="error" message={mockMessage} />)
 
-			expect(screen.getByTestId("org-cline-pass-restriction-error")).toBeInTheDocument()
+			expect(screen.getByTestId("org-agentario-pass-restriction-error")).toBeInTheDocument()
 			expect(screen.getByText(/Organization accounts cannot use ClinePass subscriptions/)).toBeInTheDocument()
 			expect(screen.queryByText(rawMessage)).not.toBeInTheDocument()
 
@@ -237,37 +237,37 @@ describe("ErrorRow", () => {
 			expect(screen.getByText("Switched to personal account")).toBeInTheDocument()
 		})
 
-		it("renders organization ClinePass restriction when ClineError detects the SDK formatted message", async () => {
+		it("renders organization ClinePass restriction when AgentarioError detects the SDK formatted message", async () => {
 			const formattedMessage =
 				"Organization accounts cannot use ClinePass subscriptions. Go to /account -> change account to switch to your personal account for ClinePass"
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: formattedMessage,
-				isErrorType: vi.fn((type) => type === "orgClinePassRestriction"),
-				providerId: "cline-pass",
+				isErrorType: vi.fn((type) => type === "orgAgentarioPassRestriction"),
+				providerId: "agentario-pass",
 				_error: {
 					message: formattedMessage,
 				},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage={formattedMessage} errorType="error" message={mockMessage} />)
 
-			expect(screen.getByTestId("org-cline-pass-restriction-error")).toBeInTheDocument()
+			expect(screen.getByTestId("org-agentario-pass-restriction-error")).toBeInTheDocument()
 			expect(screen.queryByText(formattedMessage)).not.toBeInTheDocument()
 		})
 
 		it("renders friendly logged-out message and sign in button when user is not signed in", async () => {
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: "Authentication failed",
 				isErrorType: vi.fn((type) => type === "auth"),
 				providerId: "cline",
 				_error: {},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiRequestFailedMessage="Authentication failed" errorType="error" message={mockMessage} />)
 
@@ -277,14 +277,14 @@ describe("ErrorRow", () => {
 		})
 
 		it("renders PowerShell troubleshooting link when error mentions PowerShell", async () => {
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: "PowerShell is not recognized as an internal or external command",
 				isErrorType: vi.fn(() => false),
 				_error: {},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(
 				<ErrorRow
@@ -303,28 +303,28 @@ describe("ErrorRow", () => {
 		})
 
 		it("handles apiReqStreamingFailedMessage instead of apiRequestFailedMessage", async () => {
-			const mockClineError = {
+			const mockAgentarioError = {
 				message: "Streaming failed",
 				isErrorType: vi.fn(() => false),
 				_error: {},
 			}
 
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(mockClineError as any)
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(mockAgentarioError as any)
 
 			render(<ErrorRow apiReqStreamingFailedMessage="Streaming failed" errorType="error" message={mockMessage} />)
 
 			expect(screen.getByText("Streaming failed")).toBeInTheDocument()
 		})
 
-		it("falls back to regular error message when ClineError.parse returns null", async () => {
-			const { ClineError } = await import("../../../../src/services/error/ClineError")
-			vi.mocked(ClineError.parse).mockReturnValue(undefined)
+		it("falls back to regular error message when AgentarioError.parse returns null", async () => {
+			const { AgentarioError } = await import("../../../../src/services/error/AgentarioError")
+			vi.mocked(AgentarioError.parse).mockReturnValue(undefined)
 
 			render(<ErrorRow apiRequestFailedMessage="Some API error" errorType="error" message={mockMessage} />)
 
-			// When ClineError.parse returns null, we display the raw error message for non-Cline providers
-			// Since clineError is undefined, isClineProvider is false, so we show the raw apiRequestFailedMessage
+			// When AgentarioError.parse returns null, we display the raw error message for non-Cline providers
+			// Since AgentarioError is undefined, isAgentarioProvider is false, so we show the raw apiRequestFailedMessage
 			expect(screen.getByText("Some API error")).toBeInTheDocument()
 		})
 

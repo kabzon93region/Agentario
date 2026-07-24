@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import type {
 	AutomationEventEnvelope,
 	CronSpec,
@@ -6,21 +6,21 @@ import type {
 	CronTriggerKind,
 	HubScheduleCreateInput,
 	HubScheduleUpdateInput,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	asOptionalString,
 	asString,
 	loadSqliteDb,
 	nowIso,
 	type SqliteDb,
-} from "@cline/shared/db";
-import { resolveCronDbPath } from "@cline/shared/storage";
+} from "@agentario/shared/db";
+import { resolveCronDbPath } from "@agentario/shared/storage";
 import { getNextCronTime } from "../schedule/scheduler";
 import { ensureCronSchema } from "./cron-schema";
 
 /**
  * Generalized cron/automation store backed by `cron.db`. Sessions stay in
- * their own database (see @cline/shared `ensureSessionSchema`). cron_runs
+ * their own database (see @agentario/shared `ensureSessionSchema`). cron_runs
  * here absorb one-off, recurring, and event-driven work under one queue.
  */
 

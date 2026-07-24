@@ -13,7 +13,7 @@ import {
 	type AgentToolContext,
 	ClineCore,
 	createTool,
-} from "@cline/core";
+} from "@agentario/core";
 import YAML from "yaml";
 import { z } from "zod";
 

@@ -1,5 +1,5 @@
-import type { AgentEvent } from "@cline/core";
-import { getClineEnvironmentConfig } from "@cline/shared";
+﻿import type { AgentEvent } from "@agentario/core";
+import { getClineEnvironmentConfig } from "@agentario/shared";
 import type { Config } from "./types";
 
 const CLINE_RECOMMENDED_MODELS_TIMEOUT_MS = 5_000;

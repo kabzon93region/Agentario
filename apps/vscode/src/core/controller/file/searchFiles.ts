@@ -1,4 +1,4 @@
-import {
+﻿import {
 	type FileSearchSource,
 	RipgrepError,
 	type SearchWorkspaceFilesResult,
@@ -7,14 +7,14 @@ import {
 } from "@services/search/file-search"
 
 import { telemetryService } from "@services/telemetry"
-import { FileSearchRequest, FileSearchResults, FileSearchType } from "@shared/proto/cline/file"
+import { FileSearchRequest, FileSearchResults, FileSearchType } from "@shared/proto/agentario/file"
 import { convertSearchResultsToProtoFileInfos } from "@shared/proto-conversions/file/search-result-conversion"
 import { type FsInfo, getFsInfo } from "@utils/fs-info"
 import { getWorkspacePath } from "@utils/path"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."
 
-// error_reason values surfaced on FileSearchResults; see proto/cline/file.proto.
+// error_reason values surfaced on FileSearchResults; see proto/agentario/file.proto.
 const ERROR_REASON_WORKSPACE_UNAVAILABLE = "workspace_unavailable"
 const ERROR_REASON_RIPGREP_SPAWN_FAILED = "ripgrep_spawn_failed"
 const ERROR_REASON_UNKNOWN = "unknown"

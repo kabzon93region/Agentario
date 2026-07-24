@@ -1,7 +1,7 @@
-import { refreshClineRulesToggles } from "@core/context/instructions/user-instructions/cline-rules"
+﻿import { refreshAgentarioRulesToggles } from "@core/context/instructions/user-instructions/agentario-rules"
 import { createRuleFile as createRuleFileImpl } from "@core/context/instructions/user-instructions/rule-helpers"
 import { getWorkspaceBasename } from "@core/workspace"
-import { RuleFile, RuleFileRequest } from "@shared/proto/cline/file"
+import { RuleFile, RuleFileRequest } from "@shared/proto/agentario/file"
 import { refreshWorkflowToggles } from "@/core/context/instructions/user-instructions/workflows"
 import { HostProvider } from "@/hosts/host-provider"
 import { ShowMessageType } from "@/shared/proto/host/window"
@@ -64,15 +64,15 @@ export async function createRuleFile(controller: Controller, request: RuleFileRe
 				controller.stateManager.setWorkspaceState("workflowToggles", toggles)
 			}
 		} else {
-			await refreshClineRulesToggles(controller, cwd)
+			await refreshAgentarioRulesToggles(controller, cwd)
 			if (request.isGlobal) {
-				const toggles = { ...controller.stateManager.getGlobalSettingsKey("globalClineRulesToggles") }
+				const toggles = { ...controller.stateManager.getGlobalSettingsKey("globalAgentarioRulesToggles") }
 				toggles[normalizedFilePath] = true
-				controller.stateManager.setGlobalState("globalClineRulesToggles", toggles)
+				controller.stateManager.setGlobalState("globalAgentarioRulesToggles", toggles)
 			} else {
-				const toggles = { ...controller.stateManager.getWorkspaceStateKey("localClineRulesToggles") }
+				const toggles = { ...controller.stateManager.getWorkspaceStateKey("localAgentarioRulesToggles") }
 				toggles[normalizedFilePath] = true
-				controller.stateManager.setWorkspaceState("localClineRulesToggles", toggles)
+				controller.stateManager.setWorkspaceState("localAgentarioRulesToggles", toggles)
 			}
 		}
 

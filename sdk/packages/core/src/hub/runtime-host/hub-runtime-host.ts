@@ -10,7 +10,7 @@ import type {
 	ITelemetryService,
 	JsonValue,
 	ToolApprovalRequest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	captureSdkError,
 	createSessionId,
@@ -22,7 +22,7 @@ import {
 	HUB_TOOL_EXECUTOR_CAPABILITY_PREFIX,
 	HUB_USER_INSTRUCTIONS_SNAPSHOT_CAPABILITY,
 	isHubToolExecutorName,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type { HookEventPayload } from "../../hooks";
 import type { RuntimeCapabilities } from "../../runtime/capabilities";
 import { normalizeRuntimeCapabilities } from "../../runtime/capabilities";
@@ -1012,7 +1012,7 @@ export class HubRuntimeHost implements RuntimeHost {
 			this.ensureSessionSubscription(newSessionId);
 		}
 		const messages = Array.isArray(reply.payload?.messages)
-			? (reply.payload.messages as import("@cline/llms").Message[])
+			? (reply.payload.messages as import("@agentario/llms").Message[])
 			: undefined;
 		const checkpoint = reply.payload?.checkpoint as
 			| RestoreSessionResult["checkpoint"]
@@ -1279,7 +1279,7 @@ export class HubRuntimeHost implements RuntimeHost {
 
 	async readSessionMessages(
 		sessionId: string,
-	): Promise<import("@cline/llms").Message[]> {
+	): Promise<import("@agentario/llms").Message[]> {
 		const target = sessionId.trim();
 		if (!target) {
 			return [];
@@ -1307,8 +1307,30 @@ export class HubRuntimeHost implements RuntimeHost {
 		}
 		const messages = reply.payload?.messages;
 		return Array.isArray(messages)
-			? (messages as import("@cline/llms").Message[])
+			? (messages as import("@agentario/llms").Message[])
 			: [];
+	}
+
+	async writeSessionMessages(
+		sessionId: string,
+		_messages: import("@agentario/llms").Message[],
+		_systemPrompt?: string,
+	): Promise<void> {
+		// Hub mode does not support direct message writes from the client.
+		// Compaction in hub mode would need a server-side implementation.
+		captureSdkError(this.telemetry, {
+			component: "core",
+			operation: "hub.runtime_host.write_session_messages",
+			error: new Error(
+				"writeSessionMessages is not supported in hub mode",
+			),
+			severity: "warn",
+			handled: true,
+			context: {
+				sessionId: sessionId.trim(),
+				runtimeAddress: this.runtimeAddress,
+			},
+		});
 	}
 
 	async dispatchHookEvent(_payload: HookEventPayload): Promise<void> {

@@ -1,4 +1,4 @@
-import type {
+﻿import type {
 	Agent,
 	AgentSideConnection,
 	AuthenticateRequest,
@@ -27,8 +27,8 @@ import {
 	Llms,
 	ProviderSettingsManager,
 	SessionSource,
-} from "@cline/core";
-import type { Message } from "@cline/shared";
+} from "@agentario/core";
+import type { Message } from "@agentario/shared";
 import { getPersistedProviderApiKey } from "../commands/auth";
 import { resolveSystemPrompt } from "../runtime/prompt";
 import { subscribeToAgentEvents } from "../runtime/session-events";
@@ -111,7 +111,7 @@ export class AcpAgent implements Agent {
 
 	async newSession(params: NewSessionRequest): Promise<NewSessionResponse> {
 		// Require authentication unless an API key is provided via env var.
-		if (!this.authResult && !process.env.CLINE_API_KEY) {
+		if (!this.authResult && !process.env.agentario_API_KEY) {
 			// Check for valid persisted credentials from a previous session
 			// before forcing the client to re-authenticate.
 			this.authResult = this.tryRestoreAuth();
@@ -128,9 +128,9 @@ export class AcpAgent implements Agent {
 
 		const defaultMode = "act";
 		const providerId =
-			process.env.CLINE_PROVIDER ?? this.authResult?.providerId ?? "cline";
+			process.env.agentario_PROVIDER ?? this.authResult?.providerId ?? "cline";
 		const defaultModelId =
-			process.env.CLINE_MODEL ?? "anthropic/claude-sonnet-4.6";
+			process.env.agentario_MODEL ?? "anthropic/claude-sonnet-4.6";
 
 		this.sessions.set(sessionId, {
 			id: sessionId,
@@ -307,7 +307,7 @@ export class AcpAgent implements Agent {
 
 		switch (params.configId) {
 			case "provider": {
-				if (process.env.CLINE_PROVIDER) {
+				if (process.env.agentario_PROVIDER) {
 					throw RequestError.invalidParams(
 						undefined,
 						"Cannot change provider: CLINE_PROVIDER environment variable is set",
@@ -512,8 +512,8 @@ export class AcpAgent implements Agent {
 	private async buildConfig(session: SessionState): Promise<Config> {
 		const cwd = session.cwd || process.cwd();
 		// Resolve credentials: env vars take precedence, then session provider.
-		const providerId = process.env.CLINE_PROVIDER ?? session.currentProviderId;
-		const apiKey = process.env.CLINE_API_KEY ?? this.authResult?.apiKey ?? "";
+		const providerId = process.env.agentario_PROVIDER ?? session.currentProviderId;
+		const apiKey = process.env.agentario_API_KEY ?? this.authResult?.apiKey ?? "";
 		const systemPrompt = await resolveSystemPrompt({
 			cwd,
 			providerId,

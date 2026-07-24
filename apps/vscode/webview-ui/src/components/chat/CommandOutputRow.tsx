@@ -1,7 +1,7 @@
-import { COMMAND_OUTPUT_STRING, COMMAND_REQ_APP_STRING } from "@shared/combineCommandSequences"
-import { ClineMessage } from "@shared/ExtensionMessage"
-import { StringRequest } from "@shared/proto/cline/common"
-import { memo, useEffect, useRef } from "react"
+﻿import { COMMAND_OUTPUT_STRING, COMMAND_REQ_APP_STRING } from "@shared/combineCommandSequences"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
+import { StringRequest } from "@shared/proto/agentario/common"
+import { memo, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { FileServiceClient } from "@/services/grpc-client"
@@ -128,7 +128,7 @@ export const CommandOutputRow = memo(
 		setIsOutputFullyExpanded,
 		onOutputChange,
 	}: {
-		message: ClineMessage
+		message: AgentarioMessage
 		isCommandExecuting?: boolean
 		isCommandPending?: boolean
 		isCommandCompleted?: boolean
@@ -140,6 +140,9 @@ export const CommandOutputRow = memo(
 		setIsOutputFullyExpanded: (expanded: boolean) => void
 		onOutputChange?: () => void
 	}) => {
+		// Agentario: command output collapsed by default for compact view
+		const [isOutputVisible, setIsOutputVisible] = useState(false)
+
 		const splitMessage = (text: string) => {
 			const outputIndex = text.indexOf(COMMAND_OUTPUT_STRING)
 			if (outputIndex === -1) {
@@ -177,7 +180,8 @@ export const CommandOutputRow = memo(
 			(isCommandExecuting || isCommandPending) && typeof onCancelCommand === "function" && isBackgroundExec
 
 		const commandHeader = (
-			<div className="flex items-center gap-2.5 mb-3">
+			<div className="flex items-center gap-2.5 mb-3 cursor-pointer select-none" onClick={() => setIsOutputVisible(!isOutputVisible)}>
+				<span className={cn("codicon transition-transform", isOutputVisible ? "codicon-chevron-down" : "codicon-chevron-right")} style={{ fontSize: 14 }} />
 				{icon}
 				{title}
 			</div>
@@ -230,19 +234,23 @@ export const CommandOutputRow = memo(
 							</div>
 						</div>
 					)}
-
-					<div className="bg-code opacity-60 text-sm">
-						<CodeBlock forceWrap={true} source={`${"```"}shell\n${command}\n${"```"}`} />
-					</div>
-
-					{output.length > 0 && (
-						<CommandOutputContent
-							isContainerExpanded={true}
-							isOutputFullyExpanded={isOutputFullyExpanded}
-							onToggle={() => setIsOutputFullyExpanded(!isOutputFullyExpanded)}
-							onOutputChange={onOutputChange}
-							output={output}
-						/>
+					
+					{isOutputVisible && (
+						<>
+							<div className="bg-code opacity-60 text-sm">
+								<CodeBlock forceWrap={true} source={`${"```"}shell\n${command}\n${"```"}`} />
+							</div>
+					
+							{output.length > 0 && (
+								<CommandOutputContent
+									isContainerExpanded={true}
+									isOutputFullyExpanded={isOutputFullyExpanded}
+									onToggle={() => setIsOutputFullyExpanded(!isOutputFullyExpanded)}
+									onOutputChange={onOutputChange}
+									output={output}
+								/>
+							)}
+						</>
 					)}
 				</div>
 				{requestsApproval && (

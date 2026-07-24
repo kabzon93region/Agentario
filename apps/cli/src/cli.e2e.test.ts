@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+﻿import { spawnSync } from "node:child_process";
 import {
 	existsSync,
 	mkdirSync,
@@ -96,7 +96,7 @@ describe("cli e2e", () => {
 		return {
 			...process.env,
 			HOME: homeDir,
-			CLINE_DIR: path.join(homeDir, ".cline"),
+			AGENTARIO_DIR: path.join(homeDir, ".agentario"),
 			CLINE_DATA_DIR: dataDir,
 			CLINE_DB_DATA_DIR: path.join(dataDir, "db"),
 			CLINE_SESSION_DATA_DIR: sessionDir,
@@ -296,7 +296,7 @@ describe("cli e2e", () => {
 	it("lists enabled workflows in text mode", () => {
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-workflows-"));
 		tempDirs.push(workspace);
-		const workflowsDir = path.join(workspace, ".clinerules", "workflows");
+		const workflowsDir = path.join(workspace, ".agentariorules", "workflows");
 		mkdirSync(workflowsDir, { recursive: true });
 		writeFileSync(
 			path.join(workflowsDir, "release.md"),
@@ -332,7 +332,7 @@ Do not list this.`,
 	it("lists workflows from workspace root when run in a subdirectory", () => {
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-workflows-"));
 		tempDirs.push(workspace);
-		const workflowsDir = path.join(workspace, ".clinerules", "workflows");
+		const workflowsDir = path.join(workspace, ".agentariorules", "workflows");
 		const nestedDir = path.join(workspace, "packages", "app");
 		mkdirSync(workflowsDir, { recursive: true });
 		mkdirSync(nestedDir, { recursive: true });
@@ -360,7 +360,7 @@ Release checklist.`,
 	it("lists enabled workflows in json mode", () => {
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-workflows-"));
 		tempDirs.push(workspace);
-		const workflowsDir = path.join(workspace, ".clinerules", "workflows");
+		const workflowsDir = path.join(workspace, ".agentariorules", "workflows");
 		mkdirSync(workflowsDir, { recursive: true });
 		writeFileSync(
 			path.join(workflowsDir, "review.md"),
@@ -416,7 +416,7 @@ Release from docs path.`,
 	it("lists enabled rules", () => {
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-rules-"));
 		tempDirs.push(workspace);
-		const rulesDir = path.join(workspace, ".clinerules");
+		const rulesDir = path.join(workspace, ".agentariorules");
 		mkdirSync(rulesDir, { recursive: true });
 		writeFileSync(
 			path.join(rulesDir, "rule.md"),
@@ -440,7 +440,7 @@ Do not force push.`,
 	it("lists enabled skills", () => {
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-skills-"));
 		tempDirs.push(workspace);
-		const skillsDir = path.join(workspace, ".clinerules", "skills", "commit");
+		const skillsDir = path.join(workspace, ".agentariorules", "skills", "commit");
 		mkdirSync(skillsDir, { recursive: true });
 		writeFileSync(
 			path.join(skillsDir, "SKILL.md"),
@@ -517,8 +517,8 @@ Skill from docs path.`,
 		const homeDir = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-home-"));
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-workspace-"));
 		tempDirs.push(homeDir, workspace);
-		const globalAgentsDir = path.join(homeDir, ".cline", "agents");
-		const workspaceAgentsDir = path.join(workspace, ".cline", "agents");
+		const globalAgentsDir = path.join(homeDir, ".agentario", "agents");
+		const workspaceAgentsDir = path.join(workspace, ".agentario", "agents");
 		mkdirSync(globalAgentsDir, { recursive: true });
 		mkdirSync(workspaceAgentsDir, { recursive: true });
 		writeFileSync(
@@ -545,7 +545,7 @@ Break work into clear steps.`,
 			env: {
 				...createIsolatedEnv(),
 				HOME: homeDir,
-				CLINE_DIR: path.join(homeDir, ".cline"),
+				AGENTARIO_DIR: path.join(homeDir, ".agentario"),
 			},
 		});
 		expect(textResult.status).toBe(0);
@@ -564,7 +564,7 @@ Break work into clear steps.`,
 			env: {
 				...createIsolatedEnv(),
 				HOME: homeDir,
-				CLINE_DIR: path.join(homeDir, ".cline"),
+				AGENTARIO_DIR: path.join(homeDir, ".agentario"),
 			},
 		});
 		expect(jsonResult.status).toBe(0);
@@ -586,8 +586,8 @@ Break work into clear steps.`,
 		const dataDir = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-data-"));
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-workspace-"));
 		tempDirs.push(homeDir, dataDir, workspace);
-		const workspacePluginsDir = path.join(workspace, ".cline", "plugins");
-		const userPluginsDir = path.join(homeDir, ".cline", "plugins");
+		const workspacePluginsDir = path.join(workspace, ".agentario", "plugins");
+		const userPluginsDir = path.join(homeDir, ".agentario", "plugins");
 		const documentsPluginsDir = path.join(
 			homeDir,
 			"Documents",
@@ -618,7 +618,7 @@ Break work into clear steps.`,
 			env: {
 				...createIsolatedEnv(),
 				HOME: homeDir,
-				CLINE_DIR: path.join(homeDir, ".cline"),
+				AGENTARIO_DIR: path.join(homeDir, ".agentario"),
 				CLINE_DATA_DIR: dataDir,
 			},
 		});
@@ -642,7 +642,7 @@ Break work into clear steps.`,
 			env: {
 				...createIsolatedEnv(),
 				HOME: homeDir,
-				CLINE_DIR: path.join(homeDir, ".cline"),
+				AGENTARIO_DIR: path.join(homeDir, ".agentario"),
 				CLINE_DATA_DIR: dataDir,
 			},
 		});
@@ -659,13 +659,13 @@ Break work into clear steps.`,
 		expect(
 			parsed.some((plugin) =>
 				plugin.path.endsWith(
-					path.join(".cline", "plugins", "workspace-plugin.ts"),
+					path.join(".agentario", "plugins", "workspace-plugin.ts"),
 				),
 			),
 		).toBe(true);
 		expect(
 			parsed.some((plugin) =>
-				plugin.path.endsWith(path.join(".cline", "plugins", "user-plugin.js")),
+				plugin.path.endsWith(path.join(".agentario", "plugins", "user-plugin.js")),
 			),
 		).toBe(true);
 		expect(
@@ -772,7 +772,7 @@ Break work into clear steps.`,
 		const dataDir = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-data-"));
 		const workspace = mkdtempSync(path.join(os.tmpdir(), "cli-e2e-workspace-"));
 		tempDirs.push(homeDir, dataDir, workspace);
-		const workspacePluginsDir = path.join(workspace, ".cline", "plugins");
+		const workspacePluginsDir = path.join(workspace, ".agentario", "plugins");
 		const globalSettingsPath = path.join(
 			dataDir,
 			"settings",
@@ -896,7 +896,7 @@ Break work into clear steps.`,
 		const hookPath = path.join(logDir, "hook-events.jsonl");
 		const defaultHookPath = path.join(
 			homeDir,
-			".cline",
+			".agentario",
 			"data",
 			"logs",
 			"hooks.jsonl",

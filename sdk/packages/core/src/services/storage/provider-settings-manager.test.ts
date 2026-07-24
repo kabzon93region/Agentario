@@ -1,7 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+﻿import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import * as LlmsModels from "@cline/llms";
+import * as LlmsModels from "@agentario/llms";
 import { afterEach, describe, expect, it } from "vitest";
 import { ProviderSettingsManager } from "./provider-settings-manager";
 
@@ -72,31 +72,31 @@ describe("ProviderSettingsManager", () => {
 			{ setLastUsed: false, tokenSource: "oauth" },
 		);
 
-		expect(manager.getProviderSettings("cline-pass")).toEqual({
-			provider: "cline-pass",
+		expect(manager.getProviderSettings("agentario-pass")).toEqual({
+			provider: "agentario-pass",
 			baseUrl: "https://api.example.test",
 			auth: {
 				accessToken: "workos:shared-token",
 				refreshToken: "shared-refresh",
 			},
 		});
-		expect(manager.getProviderConfig("cline-pass")).toMatchObject({
-			providerId: "cline-pass",
+		expect(manager.getProviderConfig("agentario-pass")).toMatchObject({
+			providerId: "agentario-pass",
 			apiKey: "workos:shared-token",
 			baseUrl: "https://api.example.test",
 		});
 
 		manager.saveProviderSettings(
 			{
-				provider: "cline-pass",
-				model: "cline-pass/glm-5.1",
+				provider: "agentario-pass",
+				model: "agentario-pass/glm-5.1",
 			},
 			{ setLastUsed: true },
 		);
 
-		expect(manager.getProviderSettings("cline-pass")).toEqual({
-			provider: "cline-pass",
-			model: "cline-pass/glm-5.1",
+		expect(manager.getProviderSettings("agentario-pass")).toEqual({
+			provider: "agentario-pass",
+			model: "agentario-pass/glm-5.1",
 			baseUrl: "https://api.example.test",
 			auth: {
 				accessToken: "workos:shared-token",
@@ -105,7 +105,7 @@ describe("ProviderSettingsManager", () => {
 		});
 	});
 
-	it("falls back to cline when last-used provider is cline-pass and the feature is disabled", () => {
+	it("falls back to cline when last-used provider is agentario-pass and the feature is disabled", () => {
 		const tempDir = mkdtempSync(
 			path.join(os.tmpdir(), "core-provider-settings-"),
 		);
@@ -127,18 +127,18 @@ describe("ProviderSettingsManager", () => {
 		);
 		manager.saveProviderSettings(
 			{
-				provider: "cline-pass",
-				model: "cline-pass/glm-5.1",
+				provider: "agentario-pass",
+				model: "agentario-pass/glm-5.1",
 			},
 			{ setLastUsed: true },
 		);
 
 		expect(manager.getLastUsedProviderSettings()).toMatchObject({
-			provider: "cline-pass",
-			model: "cline-pass/glm-5.1",
+			provider: "agentario-pass",
+			model: "agentario-pass/glm-5.1",
 		});
 		expect(
-			manager.getLastUsedProviderSettings({ isClinePassEnabled: false }),
+			manager.getLastUsedProviderSettings({ isAgentarioPassEnabled: false }),
 		).toEqual({
 			provider: "cline",
 			model: "anthropic/claude-sonnet-4.6",
@@ -149,7 +149,7 @@ describe("ProviderSettingsManager", () => {
 			},
 		});
 		expect(
-			manager.getLastUsedProviderConfig({ isClinePassEnabled: false }),
+			manager.getLastUsedProviderConfig({ isAgentarioPassEnabled: false }),
 		).toMatchObject({
 			providerId: "cline",
 			apiKey: "workos:shared-token",
@@ -157,7 +157,7 @@ describe("ProviderSettingsManager", () => {
 		});
 	});
 
-	it("returns default cline settings when cline-pass is last-used and no cline settings exist", () => {
+	it("returns default cline settings when agentario-pass is last-used and no cline settings exist", () => {
 		const tempDir = mkdtempSync(
 			path.join(os.tmpdir(), "core-provider-settings-"),
 		);
@@ -167,8 +167,8 @@ describe("ProviderSettingsManager", () => {
 
 		manager.saveProviderSettings(
 			{
-				provider: "cline-pass",
-				model: "cline-pass/glm-5.1",
+				provider: "agentario-pass",
+				model: "agentario-pass/glm-5.1",
 			},
 			{ setLastUsed: true },
 		);
@@ -181,10 +181,10 @@ describe("ProviderSettingsManager", () => {
 		);
 
 		expect(
-			manager.getLastUsedProviderSettings({ isClinePassEnabled: false }),
+			manager.getLastUsedProviderSettings({ isAgentarioPassEnabled: false }),
 		).toEqual({ provider: "cline" });
 		expect(
-			manager.getLastUsedProviderConfig({ isClinePassEnabled: false })
+			manager.getLastUsedProviderConfig({ isAgentarioPassEnabled: false })
 				?.providerId,
 		).toBe("cline");
 	});

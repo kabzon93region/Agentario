@@ -1,4 +1,4 @@
-import {
+﻿import {
 	buildRemoteConfigSessionBlobUploadMetadata,
 	ClineAccountService,
 	type ClineCoreStartInput,
@@ -10,12 +10,12 @@ import {
 	registerRemoteConfigSessionBlobUpload,
 	resolveLocalClineAuthToken,
 	type SessionMessagesArtifactUploader,
-} from "@cline/core";
+} from "@agentario/core";
 import {
 	getClineEnvironmentConfig,
 	type RemoteConfigBundle,
 	RemoteConfigSchema,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { getCliTelemetryService } from "./telemetry";
 
 const initializedRemoteConfigKeys = new Set<string>();
@@ -66,7 +66,7 @@ async function loadCliRemoteConfigBundleUncached(): Promise<
 	}
 
 	return {
-		source: "cline-account",
+		source: "agentario-account",
 		version: response.organizationId?.trim() || "remote-config",
 		remoteConfig: remoteConfigResult.data,
 	};
@@ -150,7 +150,7 @@ export async function prepareCliEnterpriseIntegration(
 		workspacePath: input.config.workspaceRoot ?? input.config.cwd,
 		pluginName: "enterprise",
 		controlPlane: {
-			name: "cline-account",
+			name: "agentario-account",
 			async fetchBundle() {
 				return bundle;
 			},

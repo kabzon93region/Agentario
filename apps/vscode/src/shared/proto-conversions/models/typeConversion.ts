@@ -1,11 +1,11 @@
-import { LiteLLMModelInfo, ModelInfo, OcaModelInfo, OpenAiCompatibleModelInfo } from "@shared/api"
+﻿import { LiteLLMModelInfo, ModelInfo, OcaModelInfo, OpenAiCompatibleModelInfo } from "@shared/api"
 import {
 	OpenRouterModelInfo,
 	LiteLLMModelInfo as ProtoLiteLLMModelInfo,
 	OcaModelInfo as ProtoOcaModelInfo,
 	OpenAiCompatibleModelInfo as ProtoOpenAiCompatibleModelInfo,
 	ThinkingConfig,
-} from "@shared/proto/cline/models"
+} from "@shared/proto/agentario/models"
 
 /**
  * Convert protobuf ThinkingConfig to application ThinkingConfig

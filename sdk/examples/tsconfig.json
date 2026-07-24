@@ -28,28 +28,28 @@
 		"noUnusedParameters": false,
 		"noPropertyAccessFromIndexSignature": false,
 		"paths": {
-			"@cline/agents": ["../packages/agents/src/index.ts"],
-			"@cline/agents/*": [
+			"@agentario/agents": ["../packages/agents/src/index.ts"],
+			"@agentario/agents/*": [
 				"../packages/agents/src/*",
 				"../packages/agents/src/*/index.ts"
 			],
-			"@cline/cline-hub": ["./cline-hub/src/server.ts"],
-			"@cline/core": ["../packages/core/src/index.ts"],
-			"@cline/core/hub/daemon-entry": [
+			"@agentario/cline-hub": ["./cline-hub/src/server.ts"],
+			"@agentario/core": ["../packages/core/src/index.ts"],
+			"@agentario/core/hub/daemon-entry": [
 				"../packages/core/src/hub/daemon/entry.ts"
 			],
-			"@cline/core/*": [
+			"@agentario/core/*": [
 				"../packages/core/src/*",
 				"../packages/core/src/*/index.ts"
 			],
-			"@cline/core/telemetry": [
+			"@agentario/core/telemetry": [
 				"../packages/core/src/services/telemetry/index.ts"
 			],
-			"@cline/llms": ["../packages/llms/src/index.ts"],
-			"@cline/shared": ["../packages/shared/src/index.ts"],
-			"@cline/shared/storage": ["../packages/shared/src/storage/index.ts"],
-			"@cline/shared/db": ["../packages/shared/src/db/index.ts"],
-			"@cline/shared/*": [
+			"@agentario/llms": ["../packages/llms/src/index.ts"],
+			"@agentario/shared": ["../packages/shared/src/index.ts"],
+			"@agentario/shared/storage": ["../packages/shared/src/storage/index.ts"],
+			"@agentario/shared/db": ["../packages/shared/src/db/index.ts"],
+			"@agentario/shared/*": [
 				"../packages/shared/src/*",
 				"../packages/shared/src/*/index.ts"
 			]

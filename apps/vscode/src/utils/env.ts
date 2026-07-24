@@ -1,4 +1,4 @@
-import { EmptyRequest, StringRequest } from "@shared/proto/cline/common"
+﻿import { EmptyRequest, StringRequest } from "@shared/proto/agentario/common"
 import { ShowMessageType } from "@shared/proto/host/window"
 import { HostProvider } from "@/hosts/host-provider"
 import { Logger } from "@/shared/services/Logger"
@@ -84,7 +84,7 @@ async function captureBrowserUrl(url: string): Promise<void> {
 		const fs = await import("node:fs")
 		const path = await import("node:path")
 		const os = await import("node:os")
-		const clineDir = process.env.CLINE_DIR || path.join(os.homedir(), ".cline")
+		const clineDir = process.env.CLINE_DIR || path.join(os.homedir(), ".agentario")
 		const dataDir = path.join(clineDir, "data")
 		fs.mkdirSync(dataDir, { recursive: true })
 		const captureFile = path.join(dataDir, "debug-captured-urls.jsonl")

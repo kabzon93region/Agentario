@@ -1,5 +1,5 @@
-import { openFile as openFileIntegration } from "@integrations/misc/open-file"
-import { Empty, EmptyRequest } from "@shared/proto/cline/common"
+﻿import { openFile as openFileIntegration } from "@integrations/misc/open-file"
+import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
 import { Controller } from ".."
 
 /**

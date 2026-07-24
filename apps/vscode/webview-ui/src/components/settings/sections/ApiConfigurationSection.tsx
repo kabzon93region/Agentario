@@ -1,4 +1,4 @@
-import { UpdateSettingsRequest } from "@shared/proto/cline/state"
+import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { Mode } from "@shared/storage/types"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { useState, useEffect } from "react"
@@ -8,6 +8,7 @@ import { StateServiceClient } from "@/services/grpc-client"
 import { TabButton } from "../../mcp/configuration/McpConfigurationView"
 import ApiOptions from "../ApiOptions"
 import Section from "../Section"
+import CollapsibleSection from "../CollapsibleSection"
 import { ModelProfilePresetsSection } from "./ModelProfilePresetsSection"
 import { syncModeConfigurations } from "../utils/providerUtils"
 import { useApiConfigurationHandlers } from "../utils/useApiConfigurationHandlers"
@@ -32,74 +33,78 @@ const ApiConfigurationSection = ({ renderSectionHeader, initialModelTab }: ApiCo
 		<div>
 			{renderSectionHeader?.("api-config")}
 			<Section>
-				{planActSeparateModelsSetting ? (
-					<div className="rounded-md mb-5">
-						<div className="flex gap-px mb-[10px] -mt-2 border-0 border-b border-solid border-(--vscode-panel-border)">
-							<TabButton
-								disabled={currentTab === "plan"}
-								isActive={currentTab === "plan"}
-								onClick={() => setCurrentTab("plan")}
-								style={{
-									opacity: 1,
-									cursor: "pointer",
-								}}>
-								{t("api.planMode")}
-							</TabButton>
-							<TabButton
-								disabled={currentTab === "act"}
-								isActive={currentTab === "act"}
-								onClick={() => setCurrentTab("act")}
-								style={{
-									opacity: 1,
-									cursor: "pointer",
-								}}>
-								{t("api.actMode")}
-							</TabButton>
-						</div>
+				<CollapsibleSection defaultExpanded={false} title="Настройка провайдера">
+					{planActSeparateModelsSetting ? (
+						<div className="rounded-md mb-2">
+							<div className="flex gap-px mb-[10px] -mt-2 border-0 border-b border-solid border-(--vscode-panel-border)">
+								<TabButton
+									disabled={currentTab === "plan"}
+									isActive={currentTab === "plan"}
+									onClick={() => setCurrentTab("plan")}
+									style={{
+										opacity: 1,
+										cursor: "pointer",
+									}}>
+									{t("api.planMode")}
+								</TabButton>
+								<TabButton
+									disabled={currentTab === "act"}
+									isActive={currentTab === "act"}
+									onClick={() => setCurrentTab("act")}
+									style={{
+										opacity: 1,
+										cursor: "pointer",
+									}}>
+									{t("api.actMode")}
+								</TabButton>
+							</div>
 
-						<div className="-mb-3">
-							<ApiOptions
-								currentMode={currentTab}
-								initialModelTab={initialModelTab}
-								key={apiOptionsKey}
-								showModelOptions={true}
-							/>
+							<div className="-mb-3">
+								<ApiOptions
+									currentMode={currentTab}
+									initialModelTab={initialModelTab}
+									key={apiOptionsKey}
+									showModelOptions={true}
+								/>
+							</div>
 						</div>
-					</div>
-				) : (
-					<ApiOptions
-						currentMode={mode}
-						initialModelTab={initialModelTab}
-						key={apiOptionsKey}
-						showModelOptions={true}
-					/>
-				)}
+					) : (
+						<ApiOptions
+							currentMode={mode}
+							initialModelTab={initialModelTab}
+							key={apiOptionsKey}
+							showModelOptions={true}
+						/>
+					)}
 
-				<div className="mb-[5px]">
-					<VSCodeCheckbox
-						checked={planActSeparateModelsSetting}
-						className="mb-[5px]"
-						onChange={async (e: any) => {
-							const checked = e.target.checked === true
-							try {
-								if (!checked) {
-									await syncModeConfigurations(apiConfiguration, currentTab, handleFieldsChange)
+					<div className="mb-[5px]">
+						<VSCodeCheckbox
+							checked={planActSeparateModelsSetting}
+							className="mb-[5px]"
+							onChange={async (e: any) => {
+								const checked = e.target.checked === true
+								try {
+									if (!checked) {
+										await syncModeConfigurations(apiConfiguration, currentTab, handleFieldsChange)
+									}
+									await StateServiceClient.updateSettings(
+										UpdateSettingsRequest.create({
+											planActSeparateModelsSetting: checked,
+										}),
+									)
+								} catch (error) {
+									console.error("Failed to update separate models setting:", error)
 								}
-								await StateServiceClient.updateSettings(
-									UpdateSettingsRequest.create({
-										planActSeparateModelsSetting: checked,
-									}),
-								)
-							} catch (error) {
-								console.error("Failed to update separate models setting:", error)
-							}
-						}}>
-						{t("api.separateModels")}
-					</VSCodeCheckbox>
-					<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">{t("api.separateModelsHint")}</p>
-				</div>
+							}}>
+							{t("api.separateModels")}
+						</VSCodeCheckbox>
+						<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">{t("api.separateModelsHint")}</p>
+					</div>
+				</CollapsibleSection>
 
-				<ModelProfilePresetsSection />
+				<CollapsibleSection defaultExpanded={false} title="Пресеты">
+					<ModelProfilePresetsSection />
+				</CollapsibleSection>
 			</Section>
 		</div>
 	)

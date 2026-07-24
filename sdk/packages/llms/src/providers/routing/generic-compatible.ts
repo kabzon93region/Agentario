@@ -1,7 +1,7 @@
 import type {
 	GatewayProviderContext,
 	GatewayStreamRequest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	isAnthropicCompatibleModel,
 	isQwenModel,

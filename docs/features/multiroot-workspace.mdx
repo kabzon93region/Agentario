@@ -1,4 +1,4 @@
----
+﻿---
 title: "Multi-Root Workspaces"
 sidebarTitle: "Multi-Root Workspaces"
 ---
@@ -111,7 +111,7 @@ For each workspace folder, Cline detects:
 This means Cline understands that your frontend and backend might be at different commits, on different branches, or even use different version control systems.
 
 <Note>
-While Cline detects VCS information for all workspace folders, certain features only use the **primary workspace** (the first folder): [Cline rules](/customization/cline-rules), [skills](/customization/skills#triggering-skills-with-slash-commands), and [Git-related features](/core-workflows/working-with-files) like `@git` mentions.
+While Cline detects VCS information for all workspace folders, certain features only use the **primary workspace** (the first folder): [Cline rules](/customization/agentario-rules), [skills](/customization/skills#triggering-skills-with-slash-commands), and [Git-related features](/core-workflows/working-with-files) like `@git` mentions.
 </Note>
 
 ## Referencing Files Across Workspaces
@@ -217,7 +217,7 @@ Two features have limitations in multi-root workspace mode:
 
 ### Cline Rules
 
-[Cline rules](/customization/cline-rules) (`.clinerules/` directory) only work in the **primary workspace** (the first folder in your workspace). Rules in other workspace folders are ignored.
+[Cline rules](/customization/agentario-rules) (`.clinerules/` directory) only work in the **primary workspace** (the first folder in your workspace). Rules in other workspace folders are ignored.
 
 **Workaround:** Place shared rules in the primary workspace, or use global rules (`~/Documents/Cline/Rules/`) which apply everywhere.
 
@@ -251,7 +251,7 @@ Both limitations are restored when you return to a single-folder workspace.
 
 - Break large tasks into workspace-specific operations when possible
 - Use [Plan mode](/core-workflows/plan-and-act) to let Cline understand structure first
-- Add a `.clineignore` file to reduce noise, speed up scanning, and keep Cline focused on source code:
+- Add a `.AgentarioIgnore` file to reduce noise, speed up scanning, and keep Cline focused on source code:
 
 ```text
 # Dependencies
@@ -265,4 +265,4 @@ Both limitations are restored when you return to a single-folder workspace.
 **/.git/
 ```
 
-For more patterns and gotchas, see the [.clineignore File Guide](/customization/clineignore).
+For more patterns and gotchas, see the [.AgentarioIgnore File Guide](/customization/AgentarioIgnore).

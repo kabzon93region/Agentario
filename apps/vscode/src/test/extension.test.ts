@@ -1,4 +1,4 @@
-import { after, describe, it } from "mocha"
+﻿import { after, describe, it } from "mocha"
 import { readFile } from "fs/promises"
 import path from "path"
 import "should"
@@ -21,7 +21,7 @@ describe("Cline Extension", () => {
 
 	it("should successfully execute the plus button command", async () => {
 		await new Promise((resolve) => setTimeout(resolve, 400))
-		await vscode.commands.executeCommand("cline.plusButtonClicked")
+		await vscode.commands.executeCommand("agentario.plusButtonClicked")
 	})
 
 	// New test to verify xvfb and webview functionality

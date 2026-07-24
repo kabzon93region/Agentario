@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Vertex global-endpoint allowlist.
  *
  * Google Vertex AI's `location: "global"` value routes requests to the
@@ -21,7 +21,7 @@
  * `${prefix}@...` snapshot variant or `${prefix}:...` legacy
  * context-window/speed suffix (for example `claude-opus-4-7:1m`).
  *
- * The `@cline/llms` SDK does not carry per-model global-endpoint
+ * The `@agentario/llms` SDK does not carry per-model global-endpoint
  * metadata, so the allowlist lives here. When the SDK adopts a
  * capability flag for this, the file (and the override in
  * `host-overrides.ts` that applies it) should be deleted.

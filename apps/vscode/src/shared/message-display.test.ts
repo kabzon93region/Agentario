@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
-import type { ClineMessage } from "./ExtensionMessage"
+﻿import { describe, expect, it } from "vitest"
+import type { AgentarioMessage } from "./ExtensionMessage"
 import { findFollowingApiStats, formatMessageStatsLine, isApiReqComplete } from "./message-display"
 
 describe("isApiReqComplete", () => {
@@ -11,7 +11,7 @@ describe("isApiReqComplete", () => {
 
 describe("findFollowingApiStats", () => {
 	it("returns usage after a user message", () => {
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{ ts: 1, type: "say", say: "user_feedback", text: "hi" },
 			{ ts: 2, type: "say", say: "text", text: "hello" },
 			{

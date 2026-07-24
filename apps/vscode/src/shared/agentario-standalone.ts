@@ -1,4 +1,4 @@
-import { ClineEndpoint } from "@/config"
+﻿import { ClineEndpoint } from "@/config"
 import type { ApiConfiguration } from "@shared/api"
 import type { StateManager } from "@/core/storage/StateManager"
 
@@ -7,7 +7,7 @@ export function isAgentarioStandaloneMode(): boolean {
 	return ClineEndpoint.isSelfHosted()
 }
 
-const CLINE_CLOUD_PROVIDERS = new Set(["cline", "cline-pass"])
+const CLINE_CLOUD_PROVIDERS = new Set(["cline", "agentario-pass"])
 
 /** Rewrites legacy Cline cloud provider selection to LM Studio on startup. */
 export function migrateStandaloneProviderSettings(stateManager: StateManager): void {

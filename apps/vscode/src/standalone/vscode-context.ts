@@ -4,7 +4,8 @@ import path from "path"
 import type { Extension, ExtensionContext } from "vscode"
 import { ExtensionKind, ExtensionMode } from "vscode"
 import { URI } from "vscode-uri"
-import { ExtensionRegistryInfo } from "@/registry"
+import { resolveClineDir } from "@agentario/shared/storage"
+import { ExtensionRegistryInfo } from "@registry"
 import { log } from "./utils"
 import { EnvironmentVariableCollection, MementoStore, readJson, SecretStore } from "./vscode-context-utils"
 
@@ -15,7 +16,7 @@ log(`CLINE_ENVIRONMENT: ${process.env.CLINE_ENVIRONMENT}`)
 const SETTINGS_SUBFOLDER = "data"
 
 export function initializeContext(clineDir?: string) {
-	const CLINE_DIR = clineDir || process.env.CLINE_DIR || `${os.homedir()}/.cline`
+	const CLINE_DIR = clineDir || process.env.CLINE_DIR || resolveClineDir()
 	const DATA_DIR = path.join(CLINE_DIR, SETTINGS_SUBFOLDER)
 	const INSTALL_DIR = process.env.INSTALL_DIR || __dirname
 	const WORKSPACE_STORAGE_DIR = process.env.WORKSPACE_STORAGE_DIR || path.join(DATA_DIR, "workspace")

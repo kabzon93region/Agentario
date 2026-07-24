@@ -1,13 +1,13 @@
-export {
+﻿export {
 	ClineNotSubscribedError,
 	ClineOrgIndividualInferenceSubscriptionError,
 	getClineOrgIndividualInferenceSubscriptionMessage,
 	getClineNotSubscribedMessage,
 	getClinePassSubscriptionUrl,
-	isClineNotSubscribedError,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionError,
-	isClineOrgIndividualInferenceSubscriptionMessage,
+	isAgentarioCloudNotSubscribedError,
+	isAgentarioCloudNotSubscribedMessage,
+	isAgentarioCloudOrgSubscriptionError,
+	isAgentarioCloudOrgSubscriptionMessage,
 } from "./providers/errors";
 export {
 	normalizeProviderId,

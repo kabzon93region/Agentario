@@ -1,5 +1,5 @@
-import { EmptyRequest } from "@shared/proto/cline/common"
-import { SlashCommandInfo, SlashCommandsResponse } from "@shared/proto/cline/slash"
+﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { SlashCommandInfo, SlashCommandsResponse } from "@shared/proto/agentario/slash"
 import { BASE_SLASH_COMMANDS } from "@/shared/slashCommands"
 import { Controller } from ".."
 

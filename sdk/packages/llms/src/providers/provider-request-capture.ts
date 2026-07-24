@@ -9,8 +9,8 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
-import type { GatewayStreamRequest } from "@cline/shared";
-import { estimateTokens } from "@cline/shared";
+import type { GatewayStreamRequest } from "@agentario/shared";
+import { estimateTokens } from "@agentario/shared";
 
 type CaptureMode = "off" | "summary" | "full";
 type CaptureStage = "ai_sdk_prompt" | "wire_request";

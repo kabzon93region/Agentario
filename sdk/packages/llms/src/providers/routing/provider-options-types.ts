@@ -1,7 +1,7 @@
 import type {
 	GatewayProviderContext,
 	GatewayStreamRequest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type { AnthropicReasoningRequestPolicy } from "./anthropic-compatible";
 import type { ProviderOptionsPatch } from "./utils";
 

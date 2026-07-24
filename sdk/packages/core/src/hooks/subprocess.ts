@@ -32,7 +32,7 @@ import {
 	type ToolResultHookPayload,
 	type UserPromptSubmitData,
 	type WorkspaceInfo,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { z } from "zod";
 import {
 	type RunSubprocessEventResult,

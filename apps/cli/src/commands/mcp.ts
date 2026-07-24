@@ -1,12 +1,12 @@
-import {
+﻿import {
 	type McpInstallOptions as CoreMcpInstallOptions,
 	installMcpServer,
 	type McpInstallResult,
 	type McpServerTransportConfig,
-} from "@cline/core";
+} from "@agentario/core";
 import type { McpAddDefaults } from "../wizards/mcp";
 
-export { buildMcpInstallTransport } from "@cline/core";
+export { buildMcpInstallTransport } from "@agentario/core";
 
 export interface McpCommandIo {
 	writeln?: (text: string) => void;

@@ -71,7 +71,7 @@ export function createDefaultShellExecutor(options: ShellExecutorOptions = {}) {
  *
  * @example
  * ```typescript
- * import { createDefaultTools, createDefaultExecutors } from "@cline/core"
+ * import { createDefaultTools, createDefaultExecutors } from "@agentario/core"
  *
  * const executors = createDefaultExecutors({
  *   bash: { timeoutMs: 60000 },

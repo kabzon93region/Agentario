@@ -1,4 +1,4 @@
-import { Empty, EmptyRequest } from "@shared/proto/cline/common"
+﻿import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
 import { HostProvider } from "@/hosts/host-provider"
 import { StateManager } from "@/core/storage/StateManager"
 import { ShowMessageType } from "@/shared/proto/host/window"

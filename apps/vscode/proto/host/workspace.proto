@@ -1,12 +1,12 @@
-syntax = "proto3";
+﻿syntax = "proto3";
 
 package host;
 
-import "cline/common.proto";
+import "agentario/common.proto";
 
-option go_package = "github.com/cline/grpc-go/host";
+option go_package = "github.com/agentario/grpc-go/host";
 option java_multiple_files = true;
-option java_package = "bot.cline.host.proto";
+option java_package = "bot.agentario.host.proto";
 
 // Provides methods for working with workspaces/projects.
 service WorkspaceService {
@@ -27,8 +27,8 @@ service WorkspaceService {
   // Opens the IDE file explorer panel and selects a file or directory.
   rpc openInFileExplorerPanel(OpenInFileExplorerPanelRequest) returns (OpenInFileExplorerPanelResponse);
 
-  // Opens and focuses the Cline sidebar panel in the host IDE.
-  rpc openClineSidebarPanel(OpenClineSidebarPanelRequest) returns (OpenClineSidebarPanelResponse);
+  // Opens and focuses the Agentario sidebar panel in the host IDE.
+  rpc openAgentarioSidebarPanel(openAgentarioSidebarPanelRequest) returns (openAgentarioSidebarPanelResponse);
 
   // Opens and focuses the terminal panel.
   rpc openTerminalPanel(OpenTerminalRequest) returns (OpenTerminalResponse);
@@ -67,11 +67,11 @@ message SaveOpenDocumentIfDirtyResponse {
 }
 
 message GetDiagnosticsRequest {
-  optional cline.Metadata metadata = 1;
+  optional agentario.Metadata metadata = 1;
 }
 
 message GetDiagnosticsResponse {
-  repeated cline.FileDiagnostics file_diagnostics = 1;
+  repeated agentario.FileDiagnostics file_diagnostics = 1;
 }
 
 // Request for host-side workspace search (files/folders) used by mentions autocomplete
@@ -107,8 +107,8 @@ message OpenInFileExplorerPanelRequest {
   string path = 1;
 }
 message OpenInFileExplorerPanelResponse {}
-message OpenClineSidebarPanelRequest {}
-message OpenClineSidebarPanelResponse {}
+message openAgentarioSidebarPanelRequest {}
+message openAgentarioSidebarPanelResponse {}
 message OpenTerminalRequest {}
 message OpenTerminalResponse {}
 

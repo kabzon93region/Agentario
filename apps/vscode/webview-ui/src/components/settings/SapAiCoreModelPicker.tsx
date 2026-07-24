@@ -1,4 +1,4 @@
-import { SapAiCoreModelDeployment } from "@shared/proto/index.cline"
+﻿import { SapAiCoreModelDeployment } from "@shared/proto/index.agentario"
 import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import React, { memo, useEffect, useMemo } from "react"
 import { useProviderModels } from "@/hooks/useProviderModels"

@@ -1,7 +1,7 @@
-import { t } from "@/i18n"
+﻿import { t } from "@/i18n"
 
 export enum NEW_USER_TYPE {
-	CLINE_PASS = "cline-pass",
+	CLINE_PASS = "agentario-pass",
 	FREE = "free",
 	POWER = "power",
 	BYOK = "byok",

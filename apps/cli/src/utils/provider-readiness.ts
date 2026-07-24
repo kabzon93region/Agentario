@@ -1,8 +1,8 @@
-import {
+﻿import {
 	getProviderConfigFields,
 	type ProviderConfig,
 	type ProviderSettings,
-} from "@cline/core";
+} from "@agentario/core";
 import {
 	getPersistedProviderApiKey,
 	isOAuthProvider,

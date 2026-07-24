@@ -1,5 +1,5 @@
-import { ApiConfiguration } from "@shared/api"
-import { UpdateApiConfigurationPartialRequest } from "@shared/proto/cline/models"
+﻿import { ApiConfiguration } from "@shared/api"
+import { UpdateApiConfigurationPartialRequest } from "@shared/proto/agentario/models"
 import { convertApiConfigurationToProto } from "@shared/proto-conversions/models/api-configuration-conversion"
 import { Mode } from "@shared/storage/types"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -55,7 +55,9 @@ export const useApiConfigurationHandlers = () => {
 		currentMode: Mode,
 	) => {
 		if (planActSeparateModelsSetting) {
-			const targetField = fieldPair[currentMode]
+			// Agent mode uses act config
+			const modeKey = currentMode === "agent" ? "act" : currentMode
+			const targetField = fieldPair[modeKey as "plan" | "act"]
 			await handleFieldChange(targetField, value)
 		} else {
 			await handleFieldsChange({

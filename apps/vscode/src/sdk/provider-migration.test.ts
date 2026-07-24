@@ -1,8 +1,8 @@
-import fs from "node:fs"
+﻿import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
 // The SDK's ProviderSettingsManager is stubbed under vitest (see
-// vitest.config.ts → cline-core-vitest-stub.ts), so these tests cover the
+// vitest.config.ts → agentario-core-vitest-stub.ts), so these tests cover the
 // adapter's responsibilities only: that `migrateProviders` faithfully maps the
 // manager's state into a ProviderMigrationResult, and that
 // `getProviderSettingsManager` caches per dataDir. The actual legacy

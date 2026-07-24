@@ -1,13 +1,13 @@
-import { createWhatsAppAdapter } from "@chat-adapter/whatsapp";
-import type { ChatStartSessionRequest } from "@cline/core";
+﻿import { createWhatsAppAdapter } from "@chat-adapter/whatsapp";
+import type { ChatStartSessionRequest } from "@agentario/core";
 import {
 	createUserInstructionConfigService,
 	HubSessionClient,
-} from "@cline/core";
+} from "@agentario/core";
 import type {
 	ConnectWhatsAppOptions,
 	WhatsAppConnectorState,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { Chat, ConsoleLogger, type Thread } from "chat";
 import type { Command } from "commander";
 import type { CliLoggerAdapter } from "../../logging/adapter";
@@ -296,7 +296,7 @@ class WhatsAppConnector extends ConnectorBase<
 			.option(
 				"--rpc-address <host:port>",
 				"RPC address",
-				process.env.CLINE_RPC_ADDRESS?.trim() || resolveDefaultCliRpcAddress(),
+				process.env.agentario_RPC_ADDRESS?.trim() || resolveDefaultCliRpcAddress(),
 			)
 			.option("--host <host>", "Webhook listen host")
 			.option("--port <port>", "Webhook listen port")
@@ -366,11 +366,11 @@ class WhatsAppConnector extends ConnectorBase<
 			enableTools: Boolean(opts.enableTools),
 			rpcAddress:
 				opts.rpcAddress?.trim() ||
-				process.env.CLINE_RPC_ADDRESS?.trim() ||
+				process.env.agentario_RPC_ADDRESS?.trim() ||
 				resolveDefaultCliRpcAddress(),
 			hookCommand:
 				opts.hookCommand?.trim() ||
-				process.env.CLINE_CONNECT_HOOK_COMMAND?.trim(),
+				process.env.agentario_CONNECT_HOOK_COMMAND?.trim(),
 			port,
 			host: opts.host?.trim() || process.env.HOST?.trim() || "0.0.0.0",
 			baseUrl:

@@ -1,4 +1,4 @@
-import type { ITelemetryService } from "@cline/shared";
+import type { ITelemetryService } from "@agentario/shared";
 import type { OAuthServerCloseInfo, OAuthServerListeningInfo } from "./server";
 
 export interface OAuthPrompt {

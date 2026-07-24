@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+﻿import { readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,13 +19,13 @@ interface TestMcpSettings {
 	mcpServers?: Record<string, { disabled?: boolean }>;
 }
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	resolveDefaultMcpSettingsPath: () =>
-		process.env.CLINE_MCP_SETTINGS_PATH ?? "cline_mcp_settings.json",
+		process.env.agentario_MCP_SETTINGS_PATH ?? "cline_mcp_settings.json",
 	setMcpServerDisabled: (options: SetMcpServerDisabledOptions) => {
 		const filePath =
 			options.filePath ??
-			process.env.CLINE_MCP_SETTINGS_PATH ??
+			process.env.agentario_MCP_SETTINGS_PATH ??
 			"cline_mcp_settings.json";
 		const settings = JSON.parse(readFileSync(filePath, "utf8")) as {
 			mcpServers?: Record<string, { disabled?: boolean }>;
@@ -54,14 +54,14 @@ async function readSettings(filePath: string): Promise<TestMcpSettings> {
 describe("mcp manager dialog helpers", () => {
 	const tempRoots: string[] = [];
 	const envSnapshot = {
-		CLINE_MCP_SETTINGS_PATH: process.env.CLINE_MCP_SETTINGS_PATH,
+		CLINE_MCP_SETTINGS_PATH: process.env.agentario_MCP_SETTINGS_PATH,
 	};
 
 	afterEach(async () => {
-		if (envSnapshot.CLINE_MCP_SETTINGS_PATH === undefined) {
-			delete process.env.CLINE_MCP_SETTINGS_PATH;
+		if (envSnapshot.agentario_MCP_SETTINGS_PATH === undefined) {
+			delete process.env.agentario_MCP_SETTINGS_PATH;
 		} else {
-			process.env.CLINE_MCP_SETTINGS_PATH = envSnapshot.CLINE_MCP_SETTINGS_PATH;
+			process.env.agentario_MCP_SETTINGS_PATH = envSnapshot.agentario_MCP_SETTINGS_PATH;
 		}
 		await Promise.all(
 			tempRoots.map((directory) =>
@@ -76,7 +76,7 @@ describe("mcp manager dialog helpers", () => {
 		tempRoots.push(tempRoot);
 		const loadedPath = join(tempRoot, "loaded.json");
 		const currentDefaultPath = join(tempRoot, "current-default.json");
-		process.env.CLINE_MCP_SETTINGS_PATH = currentDefaultPath;
+		process.env.agentario_MCP_SETTINGS_PATH = currentDefaultPath;
 		const settings = {
 			mcpServers: {
 				docs: {

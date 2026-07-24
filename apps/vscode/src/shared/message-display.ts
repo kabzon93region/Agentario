@@ -1,7 +1,7 @@
-import type { ClineApiReqInfo, ClineMessage } from "./ExtensionMessage"
+﻿import type { AgentarioApiReqInfo, AgentarioMessage } from "./ExtensionMessage"
 
 /** Whether an API request row has finished (works for local LM Studio without cost). */
-export function isApiReqComplete(info: ClineApiReqInfo): boolean {
+export function isApiReqComplete(info: AgentarioApiReqInfo): boolean {
 	return (
 		info.cost != null ||
 		info.tokensIn != null ||
@@ -25,23 +25,23 @@ export function formatMessageTimestamp(createdAtMs: number, locale?: string): st
 	}
 }
 
-function parseApiReqInfo(message: ClineMessage): ClineApiReqInfo | undefined {
+function parseApiReqInfo(message: AgentarioMessage): AgentarioApiReqInfo | undefined {
 	if (message.type !== "say" || message.say !== "api_req_started" || !message.text) {
 		return undefined
 	}
 	try {
-		return JSON.parse(message.text) as ClineApiReqInfo
+		return JSON.parse(message.text) as AgentarioApiReqInfo
 	} catch {
 		return undefined
 	}
 }
 
-function isUserMessage(message: ClineMessage): boolean {
+function isUserMessage(message: AgentarioMessage): boolean {
 	return message.type === "say" && (message.say === "user_feedback" || message.say === "task")
 }
 
 /** API usage row that follows `fromTs` before the next user message. */
-export function findFollowingApiStats(messages: ClineMessage[], fromTs: number): ClineApiReqInfo | undefined {
+export function findFollowingApiStats(messages: AgentarioMessage[], fromTs: number): AgentarioApiReqInfo | undefined {
 	const startIndex = messages.findIndex((message) => message.ts === fromTs)
 	if (startIndex === -1) {
 		return undefined
@@ -61,7 +61,7 @@ export function findFollowingApiStats(messages: ClineMessage[], fromTs: number):
 	return undefined
 }
 
-export function formatMessageStatsLine(info: ClineApiReqInfo): string | undefined {
+export function formatMessageStatsLine(info: AgentarioApiReqInfo): string | undefined {
 	const tokensIn = info.tokensIn
 	const tokensOut = info.tokensOut
 	if (tokensIn == null && tokensOut == null) {
@@ -82,11 +82,12 @@ export function formatMessageStatsLine(info: ClineApiReqInfo): string | undefine
 		const seconds = (info.durationMs / 1000).toFixed(1)
 		parts.push(`time: ${seconds}s`)
 	}
-	if (info.generationDurationMs != null && info.generationDurationMs > 0) {
+	// Agentario: подавляем gen/tok/s при слишком малом duration (артефакт старых чатов)
+	if (info.generationDurationMs != null && info.generationDurationMs >= 100) {
 		const genSeconds = (info.generationDurationMs / 1000).toFixed(1)
 		parts.push(`gen: ${genSeconds}s`)
 	}
-	if (info.tokensPerSecond != null && info.tokensPerSecond > 0) {
+	if (info.tokensPerSecond != null && info.tokensPerSecond > 0 && info.tokensPerSecond < 10000) {
 		parts.push(`${info.tokensPerSecond} tok/s`)
 	}
 	if (info.cost != null && info.cost > 0) {
@@ -98,7 +99,7 @@ export function formatMessageStatsLine(info: ClineApiReqInfo): string | undefine
 
 export type MessageBubbleRole = "User" | "Agentario" | "Thinking" | "Plan" | "Subagent"
 
-export function getMessageBubbleRole(message: ClineMessage): MessageBubbleRole | undefined {
+export function getMessageBubbleRole(message: AgentarioMessage): MessageBubbleRole | undefined {
 	if (message.type === "say") {
 		switch (message.say) {
 			case "task":

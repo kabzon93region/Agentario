@@ -10,7 +10,7 @@ import {
 	createTool,
 	validateWithZod,
 	zodToJsonSchema,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { captureRunCommandsTimeout } from "../../services/telemetry/core-events";
 import { getToolContextTelemetry } from "../../services/telemetry/tool-context";
 import { CommandExitError } from "./executors/bash";
@@ -62,6 +62,7 @@ import type {
 	EditorExecutor,
 	FileReadExecutor,
 	SearchExecutor,
+	SemanticSearchExecutor,
 	ShellExecutor,
 	SkillsExecutorWithMetadata,
 	ToolOperationResult,
@@ -246,11 +247,12 @@ export function createReadFilesTool(
 	return createTool<ReadFilesInput, ToolOperationResult[]>({
 		name: "read_files",
 		description:
-			"Read the content of text or image files at the provided absolute paths, or return only an inclusive one-based line range when start_line/end_line are provided. " +
+			"Read file content. IMPORTANT: Always use start_line/end_line to read only needed lines. " +
+			"For large files (>500 lines), read in chunks of 200 lines. Use semantic_search first to find relevant lines. " +
 			"When you already know multiple files you need, read them together in one call, and call this tool in the same response as other independent tool calls. " +
 			`Each read returns at most ${MAX_READ_LINES} lines / ~${Math.round(MAX_READ_OUTPUT_CHARS / 1024)}k characters; longer files report their total line count, page through them with start_line/end_line. ` +
 			"Binary files that are not image and large files are not supported. " +
-			"Returns file contents or error messages for each path. ",
+			"Returns line-numbered content with pagination hints. ",
 		inputSchema: zodToJsonSchema(ReadFilesInputSchema),
 		timeoutMs: timeoutMs * 2, // Account for multiple files
 		retryable: true,
@@ -388,8 +390,9 @@ export function createSearchTool(
 }
 
 const RUN_COMMANDS_SHARED_INSTRUCTIONS =
-	"Use for listing files, checking git status, running builds, executing tests, etc. " +
-	"Commands must be non-interactive. Commands that require follow-up input like pagers should be skipped or used with supported flags/env (e.g. git --no-pager, --non-interactive) to bypass the interaction steps. ";
+	"Use for git, builds, tests, and other shell operations — not for reading or writing source files. " +
+	"Commands must be non-interactive. Commands that require follow-up input like pagers should be skipped or used with supported flags/env (e.g. git --no-pager, --non-interactive) to bypass the interaction steps. " +
+	"Input must be a JSON object with a commands array of strings or { command, args } objects — never a stringified JSON array. ";
 
 /**
  * Create the run_commands shell tool for the current platform.
@@ -412,10 +415,12 @@ export function createShellTool(
 	return createTool<unknown, ToolOperationResult[]>({
 		name: "run_commands",
 		description: isWindows
-			? "Run non-interactive shell commands from the root of the workspace in Windows environment. " +
+			? "Run non-interactive Windows PowerShell commands from the workspace root. " +
 				RUN_COMMANDS_SHARED_INSTRUCTIONS +
 				`Output beyond ~${Math.round(MAX_COMMAND_OUTPUT_CHARS / 1000)}k characters is middle-truncated (start and end preserved); filter output when you need specific sections. ` +
-				"Prefer structured { command, args } entries for portability; plain string commands should be properly shell-escaped. Include multiple commands in the same call when they are independent and safe to run concurrently. When independent reads, searches, or edits are also needed, call those tools in the same response."
+				"Do not use Bash/CMD syntax, && chaining, or powershell -Command wrappers unless required — pass plain PowerShell cmdlets as command strings. " +
+				"Prefer read_files/search_codebase/editor for file work. Include multiple independent commands in one call when safe. " +
+				"When independent reads, searches, or edits are also needed, call those tools in the same response."
 			: "Run non-interactive shell commands from the root of the workspace. " +
 				RUN_COMMANDS_SHARED_INSTRUCTIONS +
 				"Commands should be properly shell-escaped and targeted to avoid error or timeout. Include multiple commands in the same call when they are independent complete shell commands and safe to run concurrently; multiline scripts and heredocs must be a single command string. When independent reads, searches, or edits are also needed, call those tools in the same response. " +
@@ -599,9 +604,11 @@ export function createEditorTool(
 		name: "editor",
 		description:
 			"An editor for controlled filesystem edits on the text file at the provided path. " +
+			"Always use this tool to create or modify files — never write files through shell (echo, Set-Content, >, >>). " +
+			"For replacements: read_files first, then set old_text to an exact verbatim excerpt from the file. " +
 			"Provide `insert_line` to insert `new_text` at a specific line number. " +
 			"Otherwise, the tool replaces `old_text` with `new_text`, or creates the file with `new_text` if file does not exist. " +
-			"Use this tool for making small, precise edits to existing files or creating new files over shell commands. If several edits to different files or non-overlapping regions are already known, emit multiple editor tool calls in the same response instead of serializing them across turns.",
+			"If several edits to different files or non-overlapping regions are already known, emit multiple editor tool calls in the same response instead of serializing them across turns.",
 
 		inputSchema: zodToJsonSchema(EditFileInputSchema),
 		timeoutMs,
@@ -762,6 +769,59 @@ export function createSubmitAndExitTool(
 }
 
 // =============================================================================
+// Semantic Search Tool
+// =============================================================================
+
+const SEMANTIC_SEARCH_DESCRIPTION =
+	"Search codebase using semantic similarity via embeddings. ALWAYS use this BEFORE reading files " +
+	"to find relevant code fragments. Returns matching code chunks with file paths and similarity scores. " +
+	"Unlike search_codebase (regex), this finds code by MEANING — " +
+	"use it when you need to find conceptually related code, understand how something works, " +
+	"or locate files related to a topic without knowing exact keywords. " +
+	"Returns ranked results with file paths, relevance scores, and matching code chunks. " +
+	"Best for: finding implementations of concepts, understanding architecture, " +
+	"locating relevant code for a feature, or when regex search fails to find what you need. " +
+	"Workflow: semantic_search → read_files(found lines ±50) → editor(fixes)."
+
+function createSemanticSearchTool(
+	executor: SemanticSearchExecutor,
+): AgentTool {
+	return createTool({
+		name: "semantic_search",
+		description: SEMANTIC_SEARCH_DESCRIPTION,
+		inputSchema: {
+			type: "object",
+			properties: {
+				query: {
+					type: "string",
+					description: "Natural language description of what to find (e.g. 'how does context compaction work', 'authentication logic', 'error handling for API calls')",
+				},
+				limit: {
+					type: "number",
+					description: "Maximum number of results to return (default: 10, max: 20)",
+					default: 10,
+				},
+			},
+			required: ["query"],
+		},
+		execute: async (input: unknown) => {
+			const { query, limit = 10 } = input as { query: string; limit?: number }
+			if (!query?.trim()) {
+				return { query: "", result: "Error: query is empty", success: false }
+			}
+			const clampedLimit = Math.min(Math.max(1, limit), 20)
+			try {
+				const result = await executor(query.trim(), clampedLimit)
+				return { query, result, success: true }
+			} catch (error) {
+				const msg = error instanceof Error ? error.message : String(error)
+				return { query, result: "", error: `Semantic search failed: ${msg}`, success: false }
+			}
+		},
+	})
+}
+
+// =============================================================================
 // Default Tools Factory
 // =============================================================================
 
@@ -774,7 +834,7 @@ export function createSubmitAndExitTool(
  *
  * @example
  * ```typescript
- * import { Agent, createDefaultTools } from "@cline/core"
+ * import { Agent, createDefaultTools } from "@agentario/core"
  * import * as fs from "fs/promises"
  * import { exec } from "child_process"
  *
@@ -817,6 +877,7 @@ export function createDefaultTools(
 		enableSkills = true,
 		enableAskQuestion = true,
 		enableSubmitAndExit = false,
+		enableSemanticSearch = true,
 		...config
 	} = options;
 
@@ -866,6 +927,11 @@ export function createDefaultTools(
 	// Add submit_and_exit tool if enabled and executor provided
 	if (submitExecutor) {
 		tools.push(createSubmitAndExitTool(submitExecutor, config));
+	}
+
+	// Add semantic_search tool if enabled and executor provided
+	if (enableSemanticSearch && executors.semanticSearch) {
+		tools.push(createSemanticSearchTool(executors.semanticSearch));
 	}
 
 	return tools as unknown as AgentTool[];

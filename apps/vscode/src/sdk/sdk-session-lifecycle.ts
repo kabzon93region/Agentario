@@ -1,16 +1,16 @@
-import type {
+﻿import type {
 	CoreSessionEvent,
 	ITelemetryService,
 	PreparedRemoteConfigCoreIntegration,
 	RestoreInput,
 	RestoreResult,
 	StartSessionResult,
-} from "@cline/core"
+} from "@agentario/core"
 import { StateManager } from "@/core/storage/StateManager"
 import { ITerminalManager } from "@/integrations/terminal"
 import { McpHub } from "@/services/mcp/McpHub"
 import { Logger } from "@/shared/services/Logger"
-import type { ActiveSession } from "./cline-session-factory"
+import type { ActiveSession } from "./agentario-session-factory"
 import { buildToolPolicies } from "./sdk-tool-policies"
 import type { SdkSessionHost } from "./session-host"
 import { VscodeSessionHost } from "./vscode-session-host"

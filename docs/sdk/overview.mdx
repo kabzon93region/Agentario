@@ -1,4 +1,4 @@
----
+﻿---
 title: "Cline SDK"
 sidebarTitle: "Overview"
 description: "TypeScript packages for embedding Cline's agent runtime in your own applications."
@@ -11,10 +11,10 @@ Use the Cline SDK to run agents from CI/CD pipelines, create automations for end
 ## Install
 
 ```bash
-npm install @cline/sdk
+npm install @agentario/sdk
 ```
 
-`@cline/sdk` exports all SDK packages: `@cline/core` for the full agent harness, `@cline/agents` for the stateless agent loop, `@cline/llms` for control over the model gateway, and `@cline/shared` for common utilities.
+`@agentario/sdk` exports all SDK packages: `@agentario/core` for the full agent harness, `@agentario/agents` for the stateless agent loop, `@agentario/llms` for control over the model gateway, and `@agentario/shared` for common utilities.
 
 Requires Node.js 22 or later.
 
@@ -31,7 +31,7 @@ Prompt it to scaffold agents, create custom tools, wire up plugins, configure pr
 ## Your First Agent
 
 ```typescript
-import { Agent } from "@cline/sdk"
+import { Agent } from "@agentario/sdk"
 
 const agent = new Agent({
   providerId: "anthropic",
@@ -57,11 +57,11 @@ const result = await agent.run("Explain what an SDK is in two sentences.")
 
 | Package | Purpose |
 |---------|---------|
-| `@cline/sdk` | Public SDK surface (re-exports `@cline/core`) |
-| `@cline/core` | Node runtime for sessions, built-in tools, persistence, hub support, automation |
-| `@cline/agents` | Browser-compatible stateless agent execution loop |
-| `@cline/llms` | Provider gateway and model catalogs |
-| `@cline/shared` | Types, schemas, tool helpers, hooks, storage helpers |
+| `@agentario/sdk` | Public SDK surface (re-exports `@agentario/core`) |
+| `@agentario/core` | Node runtime for sessions, built-in tools, persistence, hub support, automation |
+| `@agentario/agents` | Browser-compatible stateless agent execution loop |
+| `@agentario/llms` | Provider gateway and model catalogs |
+| `@agentario/shared` | Types, schemas, tool helpers, hooks, storage helpers |
 
 
 

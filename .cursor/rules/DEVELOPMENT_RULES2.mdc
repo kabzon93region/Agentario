@@ -1,0 +1,147 @@
+---
+alwaysApply: true
+---
+# Development Rules — Agentario
+
+## CRITICAL: Language Rule
+
+> **The agent MUST respond to the user exclusively in Russian (RU).**
+> **All documentation (CHANGELOG, README, release notes, comments in user-facing files) MUST be written in Russian.**
+> Internal code identifiers, commit messages, and variable names remain in English per standard practice.
+
+If the user explicitly requests another language, follow that request for this session only.
+
+---
+
+## CRITICAL: Version Bump
+
+**After EVERY code change (bug fix, refactor, UI, proto, config) — ALWAYS bump the version.**
+**No exceptions. Do not defer. Do not merge sessions without bumping.**
+**Violation = task block.**
+
+Scheme: `MAJOR.MINOR.PATCH` (see [VERSIONING.md](../../VERSIONING.md)).
+
+- **PATCH** — fix, minor tweak, text/logic correction without new functionality.
+- **MINOR** — new feature, new screen, new API/proto, noticeable behavior change (backward-compatible).
+- **MAJOR** — only by explicit project owner decision.
+
+### Files to update (Agentario)
+
+| File | What to update |
+|------|----------------|
+| `apps/vscode/package.json` | `"version"` — **source of truth** for VSIX |
+| `CHANGELOG.md` | New `[x.y.z]` section with date and Added/Changed/Fixed items |
+| `release/notes/v{x.y.z}.md` | **GitHub Release** text (script picks it up automatically) |
+| `README.md` | Extension version line and example `release/agentario-x.y.z.vsix` |
+
+### End-of-task checklist
+
+1. Finish code.
+2. Bump version + update `CHANGELOG.md` + `README.md` (if needed).
+3. Build if necessary: `build.cmd` → `release/agentario-<version>.vsix`.
+4. Before publishing to GitHub: create `release/notes/v<version>.md` (see [config/RELEASE.md](../../config/RELEASE.md)).
+
+---
+
+## 1. Documentation
+
+After user- or build-affecting changes:
+
+- `CHANGELOG.md` — always on version bump.
+- `README.md` — if install, build, or capabilities change.
+- `VERSIONING.md` — if versioning policy changes.
+- `config/*.md` — if new templates (rules, prompts) are added.
+
+No separate `PROGRESS.md` — `CHANGELOG.md` is sufficient.
+
+---
+
+## 2. Environment & Build (Windows)
+
+- **OS:** Windows 10+.
+- **Repo root:** `Z:\T\Agentario` (or current workspace path).
+- **Build:** `build.cmd` — syncs to local disk (`C:\Users\Admin\Agentario`), SDK, webview, VSIX in `release/`.
+- **No `pause` / `Read-Host`** in root `.cmd` or `scripts/*.ps1` for user waits. End scripts (success or error) with **15-second delay**: `scripts/wait-before-exit.cmd` (from `.cmd`) or `scripts/wait-before-exit.ps1` / `Start-Sleep -Seconds 15` (from `.ps1`). This prevents background builds from hanging.
+- **Do not rely** on `bun run protos` from network `Z:` without `node_modules` — use `build.cmd`.
+- **Node/Bun:** paths from `build.cmd` / README.
+
+### Proto / gRPC (VS Code extension)
+
+1. Edit `.proto` in `apps/vscode/proto/`.
+2. Webview build generates types (`build.cmd` or `bun run protos` in `apps/vscode`).
+3. Handlers: `apps/vscode/src/core/controller/<service>/`.
+4. UI: `apps/vscode/webview-ui/`.
+
+---
+
+## 3. Architecture
+
+- **VS Code extension:** `apps/vscode/` — UI (webview), `SdkController`, gRPC handlers.
+- **SDK:** `sdk/packages/` — core, shared, agents.
+- **User config:** `%USERPROFILE%\.agentario\`, `Documents/Agentario\`.
+- **Branding:** Agentario (not Cline) in user-facing strings; upstream identifiers in code can stay unless necessary.
+- **Minimal diff:** do not refactor or change unrelated code in the same task.
+
+---
+
+## 4. Git & Commits
+
+- Commit **only on explicit user request**.
+- Never commit `.env`, keys, tokens.
+- No force push to main/master without explicit request.
+
+---
+
+## 5. Code Quality
+
+- Read the context of the file being changed; follow project style.
+- After TypeScript edits — run `read_lints` on affected files.
+- For notable extension changes — build with `build.cmd` if possible.
+- Comments — only for non-obvious logic; never duplicate code in comments.
+
+---
+
+## 6. Agent Workflow
+
+1. Understand the task; read `CHANGELOG.md` and related code if needed.
+2. Implement the minimal sufficient solution.
+3. **Mandatory:** bump version + update `CHANGELOG.md` (+ `README.md` if needed).
+4. Report the new version and VSIX path to the user if a build was made.
+
+---
+
+## 7. Release Publishing
+
+Full instructions: **[config/RELEASE.md](../../config/RELEASE.md)**.
+
+### Version source
+
+`apps/vscode/package.json` → `"version"`.
+
+### Release description file (script picks it up automatically)
+
+Search order:
+
+1. `release/notes/v{VERSION}.md` — **recommended** (copy from `release/notes/TEMPLATE.md`)
+2. `release/notes/{VERSION}.md`
+3. `## [{VERSION}]` section in `CHANGELOG.md`
+
+### Run
+
+```bat
+publish-release.cmd
+```
+
+Does: commit → push `main` → tag `v{VERSION}` → `gh release create` with VSIX from `release/agentario-{VERSION}.vsix`. Ends with 15s delay and summary.
+
+Requirements: `gh auth login`, Git remote `origin` → `kabzon93region/Agentario`.
+
+---
+
+## References
+
+- [CHANGELOG.md](../../CHANGELOG.md)
+- [VERSIONING.md](../../VERSIONING.md)
+- [config/RELEASE.md](../../config/RELEASE.md)
+- [README.md](../../README.md)
+- Universal template for other projects: [config/templates/DEVELOPMENT_RULES.universal.mdc](../../config/templates/DEVELOPMENT_RULES.universal.mdc)

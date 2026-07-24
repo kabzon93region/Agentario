@@ -1,9 +1,9 @@
-import type { Anthropic } from "@anthropic-ai/sdk"
-import type { ClineMessageMetricsInfo, ClineMessageModelInfo } from "./metrics"
+﻿import type { Anthropic } from "@anthropic-ai/sdk"
+import type { AgentarioMessageMetricsInfo, AgentarioMessageModelInfo } from "./metrics"
 
 export type ClinePromptInputContent = string
 
-export type ClineMessageRole = "user" | "assistant"
+export type AgentarioMessageRole = "user" | "assistant"
 
 export interface ClineReasoningDetailParam {
 	type: "reasoning.text" | string
@@ -85,19 +85,19 @@ export interface ClineStorageMessage extends Anthropic.MessageParam {
 	 * Response ID associated with this message
 	 */
 	id?: string
-	role: ClineMessageRole
+	role: AgentarioMessageRole
 	content: ClinePromptInputContent | ClineContent[]
 	/**
 	 * NOTE: model information used when generating this message.
 	 * Internal use for message conversion only.
 	 * MUST be removed before sending message to any LLM provider.
 	 */
-	modelInfo?: ClineMessageModelInfo
+	modelInfo?: AgentarioMessageModelInfo
 	/**
 	 * LLM operational and performance metrics for this message
 	 * Includes token counts, costs.
 	 */
-	metrics?: ClineMessageMetricsInfo
+	metrics?: AgentarioMessageMetricsInfo
 	/**
 	 * Timestamp of when the message was created
 	 */
@@ -109,10 +109,10 @@ export interface ClineStorageMessage extends Anthropic.MessageParam {
  * Cline-specific fields (like modelInfo, reasoning_details) are properly omitted.
  */
 export function convertClineStorageToAnthropicMessage(
-	clineMessage: ClineStorageMessage,
+	AgentarioMessage: ClineStorageMessage,
 	provider = "anthropic",
 ): Anthropic.MessageParam {
-	const { role, content } = clineMessage
+	const { role, content } = AgentarioMessage
 
 	// Handle string content - fast path
 	if (typeof content === "string") {

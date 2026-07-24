@@ -1,11 +1,11 @@
-import {
+﻿import {
 	type ConfiguredTelemetryHandle,
-	createClineTelemetryServiceConfig,
+	createAgentarioTelemetryServiceConfig,
 	createConfiguredTelemetryHandle,
 	type ITelemetryService,
 	type TelemetryMetadata,
 	type TelemetryProperties,
-} from "@cline/core"
+} from "@agentario/core"
 import * as os from "os"
 import { StateManager } from "@/core/storage/StateManager"
 import { HostProvider } from "@/hosts/host-provider"
@@ -31,7 +31,7 @@ export function createVscodeSdkTelemetryHandle(options: CreateVscodeSdkTelemetry
 	const sdkHandle =
 		options.telemetryHandle ??
 		createConfiguredTelemetryHandle({
-			...createClineTelemetryServiceConfig({
+			...createAgentarioTelemetryServiceConfig({
 				metadata: {
 					extension_version: ExtensionRegistryInfo.version,
 					cline_type: "VSCode Extension",

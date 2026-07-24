@@ -1,10 +1,10 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EnsureHubServerOptions } from "./start-shared-server";
 
 const {
 	mockEnsureHubWebSocketServer,
 	mockResolveHubEndpointOptions,
-	mockResolveClineBuildEnv,
+	mockresolveAgentarioBuildEnv,
 	mockResolveProductionHubOwnerContext,
 	mockResolveSharedHubOwnerContext,
 	mockStartHubWebSocketServer,
@@ -21,7 +21,7 @@ const {
 			pathname: options.pathname ?? "/hub",
 		}),
 	),
-	mockResolveClineBuildEnv: vi.fn(() => "production"),
+	mockresolveAgentarioBuildEnv: vi.fn(() => "production"),
 	mockResolveProductionHubOwnerContext: vi.fn(() => ({
 		ownerId: "production",
 		discoveryPath: "/tmp/cline-data/locks/hub/production.json",
@@ -33,8 +33,8 @@ const {
 	mockStartHubWebSocketServer: vi.fn(),
 }));
 
-vi.mock("@cline/shared", () => ({
-	resolveClineBuildEnv: mockResolveClineBuildEnv,
+vi.mock("@agentario/shared", () => ({
+	resolveAgentarioBuildEnv: mockresolveAgentarioBuildEnv,
 }));
 
 vi.mock("../discovery/defaults", () => ({
@@ -59,8 +59,8 @@ describe("ensureHubServer", () => {
 	afterEach(() => {
 		mockEnsureHubWebSocketServer.mockClear();
 		mockResolveHubEndpointOptions.mockClear();
-		mockResolveClineBuildEnv.mockClear();
-		mockResolveClineBuildEnv.mockReturnValue("production");
+		mockresolveAgentarioBuildEnv.mockClear();
+		mockresolveAgentarioBuildEnv.mockReturnValue("production");
 		mockResolveProductionHubOwnerContext.mockClear();
 		mockResolveSharedHubOwnerContext.mockClear();
 		mockStartHubWebSocketServer.mockClear();
@@ -90,7 +90,7 @@ describe("ensureHubServer", () => {
 
 	it("allows port fallback by default in development when no port is explicit", async () => {
 		delete process.env.CLINE_HUB_PORT;
-		mockResolveClineBuildEnv.mockReturnValue("development");
+		mockresolveAgentarioBuildEnv.mockReturnValue("development");
 		const { ensureHubServer } = await import("./start-shared-server");
 
 		await ensureHubServer({ runtimeHandlers });

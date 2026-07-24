@@ -1,11 +1,11 @@
-import { describe, it } from "bun:test"
+﻿import { describe, it } from "bun:test"
 import { strict as assert } from "node:assert"
-import type { ClineMessage } from "../ExtensionMessage"
+import type { AgentarioMessage } from "../ExtensionMessage"
 import { getApiMetrics, getLastApiReqTotalTokens, getLastContextBudget } from "../getApiMetrics"
 
 describe("getApiMetrics", () => {
 	it("includes subagent_usage in aggregate totals", () => {
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts: 1,
 				type: "say",
@@ -55,7 +55,7 @@ describe("getApiMetrics", () => {
 	})
 
 	it("ignores malformed usage payloads", () => {
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts: 1,
 				type: "say",
@@ -73,7 +73,7 @@ describe("getApiMetrics", () => {
 
 describe("getLastApiReqTotalTokens", () => {
 	it("uses only the latest api_req_started payload", () => {
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts: 1,
 				type: "say",
@@ -98,11 +98,12 @@ describe("getLastApiReqTotalTokens", () => {
 		]
 
 		const total = getLastApiReqTotalTokens(messages)
-		assert.equal(total, 23)
+		// Agentario: tokensOut не включается — это выходные токены, не занимающие контекст
+		assert.equal(total, 16) // 11 + 2 + 3 (без tokensOut: 7)
 	})
 
 	it("falls back to contextBudget.totalEstimated when usage tokens are zero", () => {
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts: 1,
 				type: "say",
@@ -135,7 +136,7 @@ describe("getLastContextBudget", () => {
 			categories: { system: 2_000, rules: 3_000, tools: 5_000, chat: 40_000 },
 			rulesDetail: [{ name: "agentario-global-rules.md", tokens: 3_000 }],
 		}
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts: 1,
 				type: "say",
@@ -162,7 +163,7 @@ describe("getLastContextBudget", () => {
 	})
 
 	it("ignores malformed or incomplete contextBudget payloads", () => {
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts: 1,
 				type: "say",

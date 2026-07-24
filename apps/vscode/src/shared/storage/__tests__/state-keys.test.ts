@@ -1,4 +1,4 @@
-/**
+﻿/**
  * State Keys Type Safety Tests
  *
  * This test suite validates the type safety guarantees of the state-keys module,
@@ -412,7 +412,7 @@ describe("State Keys Type Safety", () => {
 			const globalKey: GlobalStateKey = "isNewUser"
 			const settingsKey: SettingsKey = "preferredLanguage"
 			const secretKey: SecretKey = "apiKey"
-			const localKey: LocalStateKey = "localClineRulesToggles"
+			const localKey: LocalStateKey = "localAgentarioRulesToggles"
 
 			expect(globalKey).to.be.a("string")
 			expect(settingsKey).to.be.a("string")
@@ -431,12 +431,12 @@ describe("State Keys Type Safety", () => {
 			expect(combined.preferredLanguage).to.equal("English")
 		})
 
-		it("should have LocalState keys map to ClineRulesToggles", () => {
+		it("should have LocalState keys map to AgentarioRulesToggles", () => {
 			const localState: Partial<LocalState> = {
-				localClineRulesToggles: {},
+				localAgentarioRulesToggles: {},
 				localCursorRulesToggles: { "some-rule": true },
 			}
-			expect(localState.localClineRulesToggles).to.deep.equal({})
+			expect(localState.localAgentarioRulesToggles).to.deep.equal({})
 		})
 	})
 

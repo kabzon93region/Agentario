@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
-import { Empty } from "@shared/proto/cline/common"
-import { PlanActMode, McpDisplayMode as ProtoMcpDisplayMode, UpdateSettingsRequest } from "@shared/proto/cline/state"
+import { Empty } from "@shared/proto/agentario/common"
+import { PlanActMode, McpDisplayMode as ProtoMcpDisplayMode, UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { convertProtoToApiProvider } from "@shared/proto-conversions/models/api-configuration-conversion"
 import { OpenaiReasoningEffort } from "@shared/storage/types"
 import { TelemetrySetting } from "@shared/TelemetrySetting"
@@ -186,13 +186,48 @@ export async function updateSettings(controller: Controller, request: UpdateSett
 			const strategy = request.compactionStrategy === "basic" ? "basic" : "agentic"
 			controller.stateManager.setGlobalState("compactionStrategy", strategy)
 		}
-		if (request.compactionSummarizerProviderId !== undefined) {
-			const trimmed = request.compactionSummarizerProviderId.trim()
-			controller.stateManager.setGlobalState("compactionSummarizerProviderId", trimmed.length > 0 ? trimmed : undefined)
+
+		// Agentario: chat theme
+		if (request.chatTheme !== undefined) {
+			controller.stateManager.setGlobalState("chatTheme", request.chatTheme === "cursor" ? "cursor" : "default")
 		}
-		if (request.compactionSummarizerModelId !== undefined) {
-			const trimmed = request.compactionSummarizerModelId.trim()
-			controller.stateManager.setGlobalState("compactionSummarizerModelId", trimmed.length > 0 ? trimmed : undefined)
+
+		if (request.compactionProviderId !== undefined) {
+			const trimmed = request.compactionProviderId.trim()
+			controller.stateManager.setGlobalState("compactionProviderId", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.compactionModelId !== undefined) {
+			const trimmed = request.compactionModelId.trim()
+			controller.stateManager.setGlobalState("compactionModelId", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.compactionBaseUrl !== undefined) {
+			const trimmed = request.compactionBaseUrl.trim()
+			controller.stateManager.setGlobalState("compactionBaseUrl", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.compactionApiKey !== undefined) {
+			const trimmed = request.compactionApiKey.trim()
+			controller.stateManager.setGlobalState("compactionApiKey", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.compactionChunkSize !== undefined) {
+			controller.stateManager.setGlobalState("compactionChunkSize", request.compactionChunkSize)
+		}
+		if (request.compactionDoubleSummarization !== undefined) {
+			controller.stateManager.setGlobalState("compactionDoubleSummarization", request.compactionDoubleSummarization)
+		}
+		if (request.compactionReserveTokens !== undefined) {
+			controller.stateManager.setGlobalState("compactionReserveTokens", request.compactionReserveTokens)
+		}
+		if (request.compactionPromptTemplateBefore !== undefined) {
+			const trimmed = request.compactionPromptTemplateBefore.trim()
+			controller.stateManager.setGlobalState("compactionPromptTemplateBefore", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.compactionPromptTemplateAfter !== undefined) {
+			const trimmed = request.compactionPromptTemplateAfter.trim()
+			controller.stateManager.setGlobalState("compactionPromptTemplateAfter", trimmed.length > 0 ? trimmed : undefined)
+		}
+		if (request.compactionPostProcessTags !== undefined) {
+			const trimmed = request.compactionPostProcessTags.trim()
+			controller.stateManager.setGlobalState("compactionPostProcessTags", trimmed.length > 0 ? trimmed : undefined)
 		}
 
 		if (request.modelProfilePresetsJson !== undefined) {

@@ -1,5 +1,5 @@
-import { createDefaultShellExecutor, createMcpTools } from "@cline/core"
-import { type AgentTool, type AgentToolContext, createTool } from "@cline/shared"
+import { createDefaultShellExecutor, createMcpTools } from "@agentario/core"
+import { type AgentTool, type AgentToolContext, createTool } from "@agentario/shared"
 import type { ITerminalManager } from "@/integrations/terminal/types"
 import type { McpHub } from "@/services/mcp/McpHub"
 import { Logger } from "@/shared/services/Logger"
@@ -157,6 +157,25 @@ export async function createVscodeExtraTools(mcpHub: McpHub, options?: VscodeExt
 			}),
 		)
 		Logger.log("[VscodeRuntimeTools] Added custom run_commands tool (foreground/background terminal)")
+	}
+
+	// Add semantic_search tool if index exists for workspace
+	if (options?.cwd) {
+		try {
+			const { createSemanticSearchExecutor } = await import("./semantic-search-executor")
+			const { createSemanticSearchTool } = await import("./semantic-search-tool")
+			const executor = await createSemanticSearchExecutor({ workspacePath: options.cwd })
+			if (executor) {
+				tools.push(createSemanticSearchTool(executor))
+				Logger.log("[VscodeRuntimeTools] Added semantic_search tool")
+			}
+		} catch (error) {
+			Logger.warn(
+				`[VscodeRuntimeTools] Failed to create semantic_search tool: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+			)
+		}
 	}
 
 	Logger.log(`[VscodeRuntimeTools] Prepared ${tools.length} VSCode extra tools`)

@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
-import type * as LlmsProviders from "@cline/llms";
-import type { AgentResult, BasicLogger } from "@cline/shared";
+import type * as LlmsProviders from "@agentario/llms";
+import type { AgentResult, BasicLogger } from "@agentario/shared";
 import { nanoid } from "nanoid";
 import type {
 	SubAgentEndContext,

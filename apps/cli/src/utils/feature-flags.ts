@@ -1,4 +1,4 @@
-import { join } from "node:path";
+﻿import { join } from "node:path";
 import {
 	type BasicLogger,
 	type FeatureFlagsContext,
@@ -7,12 +7,12 @@ import {
 	NoOpFeatureFlagsProvider,
 	registerDisposable,
 	resolveCoreDistinctId,
-} from "@cline/core";
+} from "@agentario/core";
 import {
 	buildClinePostHogClient,
 	PostHogFeatureFlagsProvider,
-} from "@cline/core/services/feature-flags/posthog";
-import { resolveClineDataDir } from "@cline/shared/storage";
+} from "@agentario/core/services/feature-flags/posthog";
+import { resolveClineDataDir } from "@agentario/shared/storage";
 
 let cliFeatureFlagsContext: FeatureFlagsContext = { clientName: "cline-cli" };
 let cliFeatureFlagsService: FeatureFlagsService | undefined;

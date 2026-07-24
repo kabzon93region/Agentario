@@ -12,8 +12,8 @@ import type {
 	ThinkingContent,
 	ToolResultContent,
 	ToolUseContent,
-} from "@cline/shared";
-import { EMPTY_CONTENT_TEXT } from "@cline/shared";
+} from "@agentario/shared";
+import { EMPTY_CONTENT_TEXT } from "@agentario/shared";
 
 export function messageToAgentMessages(
 	message: MessageWithMetadata,

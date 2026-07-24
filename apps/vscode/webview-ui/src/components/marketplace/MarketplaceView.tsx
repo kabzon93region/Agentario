@@ -1,4 +1,4 @@
-import { EmptyRequest } from "@shared/proto/cline/common"
+﻿import { EmptyRequest } from "@shared/proto/agentario/common"
 import {
 	MarketplaceEntriesRequest,
 	type MarketplaceEntry,
@@ -6,7 +6,7 @@ import {
 	type MarketplaceLocalInstalledEntry,
 	MarketplaceLocalInstalledEntryRequest,
 	ToggleMarketplaceLocalInstalledEntryRequest,
-} from "@shared/proto/cline/marketplace"
+} from "@shared/proto/agentario/marketplace"
 import { VSCodeButton, VSCodeLink, VSCodeProgressRing, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import {
 	CheckIcon,

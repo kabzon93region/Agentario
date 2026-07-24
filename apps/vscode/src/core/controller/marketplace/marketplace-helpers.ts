@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+﻿import { spawn } from "node:child_process"
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 import { homedir, platform } from "node:os"
@@ -19,12 +19,13 @@ import {
 	syncPluginMcpServersToSettings,
 	uninstallMarketplaceEntry as uninstallCoreMarketplaceEntry,
 	uninstallPlugin,
-} from "@cline/core"
+} from "@agentario/core"
+import { resolveClineDir } from "@agentario/shared/storage"
 import { deleteSkillFile } from "@core/controller/file/deleteSkillFile"
 import { refreshSkills } from "@core/controller/file/refreshSkills"
 import { toggleSkill } from "@core/controller/file/toggleSkill"
 import { resolveActiveModelIdFromApiConfiguration } from "@core/controller/models/taskApiModel"
-import { DeleteSkillRequest, ToggleSkillRequest } from "@shared/proto/cline/file"
+import { DeleteSkillRequest, ToggleSkillRequest } from "@shared/proto/agentario/file"
 import {
 	MarketplaceCatalog,
 	MarketplaceEntry,
@@ -34,7 +35,7 @@ import {
 	MarketplaceLocalInstalledEntry,
 	MarketplaceLocalInstalledEntryRequest,
 	ToggleMarketplaceLocalInstalledEntryRequest,
-} from "@shared/proto/cline/marketplace"
+} from "@shared/proto/agentario/marketplace"
 import { HostProvider } from "@/hosts/host-provider"
 import type { Controller } from "../index"
 
@@ -150,7 +151,7 @@ function hashSource(source: string): string {
 }
 
 function resolveClineHome(): string {
-	return process.env.CLINE_DIR?.trim() || join(homedir(), ".cline")
+	return process.env.CLINE_DIR?.trim() || resolveClineDir()
 }
 
 function sanitizeSegment(value: string): string {

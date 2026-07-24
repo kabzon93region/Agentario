@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
 	mockGetLastUsedProviderSettings,
@@ -14,9 +14,9 @@ const {
 	mockGetBooleanFlagEnabled: vi.fn(),
 }));
 
-vi.mock("@cline/core", async () => {
+vi.mock("@agentario/core", async () => {
 	const actual =
-		await vi.importActual<typeof import("@cline/core")>("@cline/core");
+		await vi.importActual<typeof import("@agentario/core")>("@agentario/core");
 	return {
 		...actual,
 		ProviderSettingsManager: class {
@@ -106,9 +106,9 @@ describe("buildConnectorStartRequest", () => {
 	});
 
 	it("uses auth material resolved by provider settings manager", async () => {
-		mockGetLastUsedProviderSettings.mockReturnValue({ provider: "cline-pass" });
+		mockGetLastUsedProviderSettings.mockReturnValue({ provider: "agentario-pass" });
 		mockGetProviderSettings.mockReturnValue({
-			provider: "cline-pass",
+			provider: "agentario-pass",
 			auth: { accessToken: "workos:resolved-token" },
 		});
 		mockGetProviderCollection.mockReturnValue({
@@ -125,18 +125,18 @@ describe("buildConnectorStartRequest", () => {
 			io: { writeln: vi.fn(), writeErr: vi.fn() },
 			loggerConfig: { enabled: false, level: "info", destination: "stdout" },
 			systemRules: "Rules",
-			defaultModel: "cline-pass/glm-5.1",
+			defaultModel: "agentario-pass/glm-5.1",
 		});
 
-		expect(request.provider).toBe("cline-pass");
+		expect(request.provider).toBe("agentario-pass");
 		expect(request.apiKey).toBe("workos:resolved-token");
-		expect(request.model).toBe("cline-pass/glm-5.1");
+		expect(request.model).toBe("agentario-pass/glm-5.1");
 	});
 
 	it("uses auth material resolved by provider settings manager", async () => {
-		mockGetLastUsedProviderSettings.mockReturnValue({ provider: "cline-pass" });
+		mockGetLastUsedProviderSettings.mockReturnValue({ provider: "agentario-pass" });
 		mockGetProviderSettings.mockReturnValue({
-			provider: "cline-pass",
+			provider: "agentario-pass",
 			auth: { accessToken: "workos:resolved-token" },
 		});
 		mockGetProviderCollection.mockReturnValue({
@@ -153,11 +153,11 @@ describe("buildConnectorStartRequest", () => {
 			io: { writeln: vi.fn(), writeErr: vi.fn() },
 			loggerConfig: { enabled: false, level: "info", destination: "stdout" },
 			systemRules: "Rules",
-			defaultModel: "cline-pass/glm-5.1",
+			defaultModel: "agentario-pass/glm-5.1",
 		});
 
-		expect(request.provider).toBe("cline-pass");
+		expect(request.provider).toBe("agentario-pass");
 		expect(request.apiKey).toBe("workos:resolved-token");
-		expect(request.model).toBe("cline-pass/glm-5.1");
+		expect(request.model).toBe("agentario-pass/glm-5.1");
 	});
 });

@@ -1,4 +1,4 @@
-import type { ProviderSettingsManager } from "@cline/core";
+﻿import type { ProviderSettingsManager } from "@agentario/core";
 import { useTerminalDimensions } from "@opentui/react";
 import { useMouseTracker } from "../../components/tracked-robot";
 import { HOME_VIEW_MAX_WIDTH } from "../../types";
@@ -111,9 +111,9 @@ export function OnboardingView(props: OnboardingViewProps) {
 	if (state.step === "cline_model") {
 		return (
 			<OnboardingClineModelScreen
-				clineEntries={state.clineEntries}
-				clineKnownModels={state.clineKnownModels}
-				clineModelSelected={state.clineModelSelected}
+				clineEntries={state.agentarioEntries}
+				clineKnownModels={state.agentarioKnownModels}
+				clineModelSelected={state.agentarioModelSelected}
 				compact={compact}
 				contentWidth={contentWidth}
 				mouse={mouse}
@@ -127,15 +127,15 @@ export function OnboardingView(props: OnboardingViewProps) {
 			<OnboardingClinePassSubscriptionScreen
 				compact={compact}
 				contentWidth={contentWidth}
-				currentPlanName={state.clinePassCurrentPlanName}
-				error={state.clinePassSubscriptionError}
+				currentPlanName={state.agentarioPassCurrentPlanName}
+				error={state.agentarioPassSubscriptionError}
 				mouse={mouse}
-				openStatus={state.clinePassSubscriptionOpenStatus}
-				options={state.clinePassSubscriptionOptions}
-				planFeatures={state.clinePassPlanFeatures}
-				selected={state.clinePassSubscriptionSelected}
-				status={state.clinePassSubscriptionStatus}
-				subscriptionUrl={state.clinePassSubscriptionUrl}
+				openStatus={state.agentarioPassSubscriptionOpenStatus}
+				options={state.agentarioPassSubscriptionOptions}
+				planFeatures={state.agentarioPassPlanFeatures}
+				selected={state.agentarioPassSubscriptionSelected}
+				status={state.agentarioPassSubscriptionStatus}
+				subscriptionUrl={state.agentarioPassSubscriptionUrl}
 			/>
 		);
 	}

@@ -6,8 +6,8 @@ import {
 	type AgentTool,
 	createContributionRegistry,
 	type Message,
-} from "@cline/shared";
-import { setHomeDir } from "@cline/shared/storage";
+} from "@agentario/shared";
+import { setHomeDir } from "@agentario/shared/storage";
 import { afterEach, describe, expect, it } from "vitest";
 import { createUserInstructionConfigService } from "../../extensions/config";
 import { TelemetryService } from "../../services/telemetry/TelemetryService";

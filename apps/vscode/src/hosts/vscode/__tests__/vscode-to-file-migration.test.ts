@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, it } from "bun:test"
+﻿import { afterEach, beforeEach, describe, it } from "bun:test"
 import "should"
-import { ClineFileStorage } from "@shared/storage/ClineFileStorage"
+import { AgentarioFileStorage } from "@shared/storage/AgentarioFileStorage"
 import { createStorageContext, type StorageContext } from "@shared/storage/storage-context"
 import fs from "fs"
 import os from "os"
@@ -126,7 +126,7 @@ describe("vscode-to-file-migration", () => {
 			storageContext.workspaceState.set("__vscodeMigrationVersion", 1)
 			const mockCtx = createMockVSCodeContext()
 			mockCtx._globalStateStore.set("mode", "plan")
-			mockCtx._workspaceStateStore.set("localClineRulesToggles", { "rule-1": true })
+			mockCtx._workspaceStateStore.set("localAgentarioRulesToggles", { "rule-1": true })
 			const extensionStorage = path.join(tempDir, "vscode-global-storage")
 			mockCtx.globalStorageUri.fsPath = extensionStorage
 			fs.mkdirSync(path.join(extensionStorage, "settings"), { recursive: true })
@@ -143,7 +143,7 @@ describe("vscode-to-file-migration", () => {
 			result.workspaceStateCount.should.equal(0)
 			result.mcpServersAdded.should.equal(1)
 			;(storageContext.globalState.get("mode") === undefined).should.be.true()
-			;(storageContext.workspaceState.get("localClineRulesToggles") === undefined).should.be.true()
+			;(storageContext.workspaceState.get("localAgentarioRulesToggles") === undefined).should.be.true()
 			storageContext.globalState.get("__vscodeMigrationVersion")!.should.equal(2)
 			storageContext.workspaceState.get("__vscodeMigrationVersion")!.should.equal(2)
 		})
@@ -155,7 +155,7 @@ describe("vscode-to-file-migration", () => {
 
 			const mockCtx = createMockVSCodeContext()
 			mockCtx._globalStateStore.set("mode", "plan")
-			mockCtx._workspaceStateStore.set("localClineRulesToggles", { "rule-1": true })
+			mockCtx._workspaceStateStore.set("localAgentarioRulesToggles", { "rule-1": true })
 
 			const result = await exportVSCodeStorageToSharedFiles(mockCtx as any, storageContext)
 
@@ -203,7 +203,7 @@ describe("vscode-to-file-migration", () => {
 			const mockCtx = createMockVSCodeContext()
 			mockCtx._globalStateStore.set("mode", "plan") // should be skipped
 			mockCtx._secretsStore.set("apiKey", "sk-test") // should be skipped
-			mockCtx._workspaceStateStore.set("localClineRulesToggles", { "rule-1": true })
+			mockCtx._workspaceStateStore.set("localAgentarioRulesToggles", { "rule-1": true })
 
 			const result = await exportVSCodeStorageToSharedFiles(mockCtx as any, storageContext)
 
@@ -213,7 +213,7 @@ describe("vscode-to-file-migration", () => {
 			result.secretsCount.should.equal(0)
 			// Workspace state SHOULD have been migrated
 			result.workspaceStateCount.should.equal(1)
-			const stored = storageContext.workspaceState.get("localClineRulesToggles") as any
+			const stored = storageContext.workspaceState.get("localAgentarioRulesToggles") as any
 			stored.should.deepEqual({ "rule-1": true })
 			// Workspace sentinel should now be set
 			storageContext.workspaceState.get("__vscodeMigrationVersion")!.should.equal(2)
@@ -226,7 +226,7 @@ describe("vscode-to-file-migration", () => {
 
 			const mockCtx = createMockVSCodeContext()
 			mockCtx._globalStateStore.set("mode", "plan")
-			mockCtx._workspaceStateStore.set("localClineRulesToggles", { "rule-1": true }) // should be skipped
+			mockCtx._workspaceStateStore.set("localAgentarioRulesToggles", { "rule-1": true }) // should be skipped
 
 			const result = await exportVSCodeStorageToSharedFiles(mockCtx as any, storageContext)
 
@@ -588,27 +588,27 @@ describe("vscode-to-file-migration", () => {
 		it("should migrate workspace state keys", async () => {
 			const toggles = { "rule-1": true, "rule-2": false }
 			const mockCtx = createMockVSCodeContext()
-			mockCtx._workspaceStateStore.set("localClineRulesToggles", toggles)
+			mockCtx._workspaceStateStore.set("localAgentarioRulesToggles", toggles)
 
 			const result = await exportVSCodeStorageToSharedFiles(mockCtx as any, storageContext)
 
 			result.migrated.should.be.true()
 			result.workspaceStateCount.should.equal(1)
-			const stored = storageContext.workspaceState.get("localClineRulesToggles") as any
+			const stored = storageContext.workspaceState.get("localAgentarioRulesToggles") as any
 			stored.should.deepEqual(toggles)
 		})
 
 		it("should NOT overwrite existing workspace state", async () => {
 			const existingToggles = { "rule-existing": true }
-			storageContext.workspaceState.set("localClineRulesToggles", existingToggles)
+			storageContext.workspaceState.set("localAgentarioRulesToggles", existingToggles)
 
 			const mockCtx = createMockVSCodeContext()
-			mockCtx._workspaceStateStore.set("localClineRulesToggles", { "rule-vscode": true })
+			mockCtx._workspaceStateStore.set("localAgentarioRulesToggles", { "rule-vscode": true })
 
 			const result = await exportVSCodeStorageToSharedFiles(mockCtx as any, storageContext)
 
 			result.migrated.should.be.true()
-			const stored = storageContext.workspaceState.get("localClineRulesToggles") as any
+			const stored = storageContext.workspaceState.get("localAgentarioRulesToggles") as any
 			stored.should.deepEqual(existingToggles)
 		})
 	})
@@ -679,9 +679,9 @@ describe("createStorageContext", () => {
 	it("should create all three stores", () => {
 		const ctx = createStorageContext({ clineDir: tempDir, workspacePath: "/fake/workspace" })
 
-		ctx.globalState.should.be.instanceOf(ClineFileStorage)
-		ctx.secrets.should.be.instanceOf(ClineFileStorage)
-		ctx.workspaceState.should.be.instanceOf(ClineFileStorage)
+		ctx.globalState.should.be.instanceOf(AgentarioFileStorage)
+		ctx.secrets.should.be.instanceOf(AgentarioFileStorage)
+		ctx.workspaceState.should.be.instanceOf(AgentarioFileStorage)
 	})
 
 	it("should create directories", () => {

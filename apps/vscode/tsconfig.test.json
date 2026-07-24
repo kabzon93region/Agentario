@@ -47,7 +47,7 @@
 			"@utils/*": [
 				"./src/utils/*"
 			],
-			"@cline/shared/*": [
+			"@agentario/shared/*": [
 				"./node_modules/@cline/shared/dist/*"
 			]
 		},

@@ -1,17 +1,17 @@
-// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
+﻿// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
 //
 // Bridges SDK session events to the webview's gRPC streaming subscriptions.
 // When the SDK emits session events (text chunks, tool calls, etc.), this
-// module translates them to proto ClineMessages and pushes them through
+// module translates them to proto agentarioMessages and pushes them through
 // the subscribeToPartialMessage and subscribeToState streams the webview
 // already listens on.
 
-import type { CoreSessionEvent } from "@cline/core"
+import type { CoreSessionEvent } from "@agentario/core"
 import { sendStateUpdate } from "@core/controller/state/subscribeToState"
 import { sendPartialMessageEvent } from "@core/controller/ui/subscribeToPartialMessage"
-import type { ClineMessage, ExtensionState } from "@shared/ExtensionMessage"
-import type { ClineMessage as ProtoClineMessage } from "@shared/proto/cline/ui"
-import { convertClineMessageToProto } from "@shared/proto-conversions/cline-message"
+import type { AgentarioMessage, ExtensionState } from "@shared/ExtensionMessage"
+import type { AgentarioMessage as ProtoAgentarioMessage } from "@shared/proto/agentario/ui"
+import { convertAgentarioMessageToProto } from "@shared/proto-conversions/agentario-message"
 import { Logger } from "@shared/services/Logger"
 import type { MessageTranslatorState } from "./message-translator"
 import type { SessionEventListener } from "./sdk-message-coordinator"
@@ -20,8 +20,8 @@ import type { SessionEventListener } from "./sdk-message-coordinator"
  * Manages the bridge between SDK session events and webview gRPC streams.
  *
  * When the SDK emits events, this bridge:
- * 1. Translates them to ClineMessage[] via the message translator
- * 2. Converts each ClineMessage to proto format
+ * 1. Translates them to AgentarioMessage[] via the message translator
+ * 2. Converts each AgentarioMessage to proto format
  * 3. Pushes them through the subscribeToPartialMessage gRPC stream
  * 4. Pushes state updates through the subscribeToState gRPC stream
  *    on significant events (turn complete, session ended)
@@ -53,7 +53,7 @@ export class WebviewGrpcBridge {
 	 * This is passed to SdkController.onSessionEvent().
 	 */
 	createListener(): SessionEventListener {
-		return (messages: ClineMessage[], event: CoreSessionEvent) => {
+		return (messages: AgentarioMessage[], event: CoreSessionEvent) => {
 			this.handleSessionEvent(messages, event)
 		}
 	}
@@ -66,7 +66,7 @@ export class WebviewGrpcBridge {
 	 * the MessageTranslatorState (e.g., state.reset() on iteration_start would
 	 * clear streaming timestamps that the first translation used).
 	 */
-	private handleSessionEvent(messages: ClineMessage[], event: CoreSessionEvent): void {
+	private handleSessionEvent(messages: AgentarioMessage[], event: CoreSessionEvent): void {
 		// Push each translated message through the partial message stream
 		for (const message of messages) {
 			this.pushPartialMessage(message)
@@ -88,11 +88,11 @@ export class WebviewGrpcBridge {
 	}
 
 	/**
-	 * Push a ClineMessage to the webview via the subscribeToPartialMessage stream.
+	 * Push a AgentarioMessage to the webview via the subscribeToPartialMessage stream.
 	 */
-	private async pushPartialMessage(message: ClineMessage): Promise<void> {
+	private async pushPartialMessage(message: AgentarioMessage): Promise<void> {
 		try {
-			const protoMessage: ProtoClineMessage = convertClineMessageToProto(message)
+			const protoMessage: ProtoAgentarioMessage = convertAgentarioMessageToProto(message)
 			await sendPartialMessageEvent(protoMessage)
 		} catch (error) {
 			Logger.error("[WebviewGrpcBridge] Failed to push partial message:", error)
@@ -148,12 +148,12 @@ export class WebviewGrpcBridge {
 }
 
 /**
- * Standalone function to push a ClineMessage to the webview.
+ * Standalone function to push a AgentarioMessage to the webview.
  * Useful for one-off messages outside the bridge's event loop.
  */
-export async function pushMessageToWebview(message: ClineMessage): Promise<void> {
+export async function pushMessageToWebview(message: AgentarioMessage): Promise<void> {
 	try {
-		const protoMessage: ProtoClineMessage = convertClineMessageToProto(message)
+		const protoMessage: ProtoAgentarioMessage = convertAgentarioMessageToProto(message)
 		await sendPartialMessageEvent(protoMessage)
 	} catch (error) {
 		Logger.error("[WebviewGrpcBridge] Failed to push message to webview:", error)

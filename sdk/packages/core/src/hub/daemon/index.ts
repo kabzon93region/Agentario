@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+﻿import { spawn } from "node:child_process";
 import { closeSync, mkdirSync, openSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,9 +6,9 @@ import {
 	CLINE_RUN_AS_HUB_DAEMON_ENV,
 	isHubDaemonProcess,
 	isHubProtocolCompatible,
-	resolveClineBuildEnv,
-	withResolvedClineBuildEnv,
-} from "@cline/shared";
+	resolveAgentarioBuildEnv,
+	withResolvedAgentarioBuildEnv,
+} from "@agentario/shared";
 import {
 	rememberRecoverableLocalHubUrl,
 	requestHubShutdown,
@@ -60,7 +60,7 @@ function openDetachedHubLogFile(): { fd: number; logPath: string } | undefined {
 }
 
 function resolveDefaultHubOwnerContext() {
-	return resolveClineBuildEnv() === "production"
+	return resolveAgentarioBuildEnv() === "production"
 		? resolveProductionHubOwnerContext()
 		: resolveSharedHubOwnerContext();
 }
@@ -146,7 +146,7 @@ async function retireIncompatibleHub(
  * record so upgrades do not leave orphaned daemons running stale code.
  */
 async function retireLegacySharedHub(owner: HubOwnerContext): Promise<void> {
-	if (resolveClineBuildEnv() !== "production") {
+	if (resolveAgentarioBuildEnv() !== "production") {
 		return;
 	}
 	const legacy = resolveSharedHubOwnerContext();
@@ -195,7 +195,7 @@ function resolveLaunchCommand(
 		args: [...entryArgs, "--cwd", workspaceRoot, ...endpointArgs(endpoint)],
 		cwd: workspaceRoot,
 		env: {
-			...withResolvedClineBuildEnv(process.env),
+			...withResolvedAgentarioBuildEnv(process.env),
 			CLINE_NO_INTERACTIVE: "1",
 			[CLINE_RUN_AS_HUB_DAEMON_ENV]: "1",
 		},

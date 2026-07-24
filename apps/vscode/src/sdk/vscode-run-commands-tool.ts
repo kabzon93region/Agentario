@@ -18,8 +18,8 @@ import {
 	type ShellExecutor,
 	type StructuredCommandInput,
 	truncateCommandOutput,
-} from "@cline/core"
-import type { AgentTool } from "@cline/shared"
+} from "@agentario/core"
+import type { AgentTool } from "@agentario/shared"
 import { StateManager } from "@/core/storage/StateManager"
 import type { ITerminalManager } from "@/integrations/terminal/types"
 import { resolveAgentToolTimeoutMs } from "@/shared/agent-tool-timeout"

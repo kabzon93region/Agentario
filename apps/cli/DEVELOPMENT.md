@@ -1,6 +1,6 @@
 # CLI Development Guide
 
-This guide covers everything you need to build and run the Cline CLI locally after cloning the repository. It includes setup instructions, a tech stack overview, and a walkthrough of the TUI architecture.
+This guide covers everything you need to build and run the Agentario CLI locally after cloning the repository. It includes setup instructions, a tech stack overview, and a walkthrough of the TUI architecture.
 
 For CLI command reference and usage, see [DOC.md](./DOC.md) and [README.md](./README.md).
 
@@ -416,7 +416,7 @@ Then attach VS Code or Chrome DevTools to `ws://127.0.0.1:6499`.
 
 ## Publishing
 
-The CLI is published as the `cline` wrapper package on npm with platform-specific binaries under `@cline/cli-*`. The release flow lives in the `publish-cli` skill (`.cline/skills/publish-cli/SKILL.md` at the repo root).
+The CLI is published as the `agentario` wrapper package on npm with platform-specific binaries under `@agentario/cli-*`. The release flow lives in the `publish-cli` skill (`.cline/skills/publish-cli/SKILL.md` at the repo root).
 
 From the `apps/cli` workspace:
 

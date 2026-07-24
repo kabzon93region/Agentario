@@ -1,4 +1,4 @@
-import {
+﻿import {
 	completeClineDeviceAuth,
 	type ITelemetryService,
 	isOAuthProvider,
@@ -6,8 +6,8 @@ import {
 	type ProviderSettingsManager,
 	saveLocalProviderOAuthCredentials,
 	startClineDeviceAuth,
-} from "@cline/core";
-import { getClineEnvironmentConfig } from "@cline/shared";
+} from "@agentario/core";
+import { getClineEnvironmentConfig } from "@agentario/shared";
 import open from "open";
 import { identifyFeatureFlagsAccount } from "../../../utils/feature-flags";
 
@@ -20,7 +20,7 @@ export function isOnboardingOAuthProviderId(
 }
 
 function isClineAccountOAuthProvider(providerId: string): boolean {
-	return providerId === "cline" || providerId === "cline-pass";
+	return providerId === "cline" || providerId === "agentario-pass";
 }
 
 export function runOAuthAuthFlow(input: {

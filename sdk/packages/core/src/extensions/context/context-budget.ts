@@ -1,10 +1,10 @@
-import type { AgentToolDefinition } from "@cline/shared";
+import type { AgentToolDefinition } from "@agentario/shared";
 import {
 	type ContextBudgetBreakdown,
 	type ContextBudgetRuleDetail,
 	CONTEXT_BUDGET_NOTICE_KIND,
-} from "@cline/shared";
-import type { MessageWithMetadata } from "@cline/shared";
+} from "@agentario/shared";
+import type { MessageWithMetadata } from "@agentario/shared";
 import {
 	createTokenEstimator,
 	estimateTokens,
@@ -49,6 +49,30 @@ function estimateToolsTokens(tools: readonly AgentToolDefinition[]): number {
 	}
 }
 
+// Agentario: проверка, является ли инструмент MCP (имеет __ в имени)
+function isMcpTool(tool: AgentToolDefinition): boolean {
+	return tool.name.includes("__");
+}
+
+// Agentario: навыки (skills) регистрируются как инструмент с именем "skills"
+function isSkillsTool(tool: AgentToolDefinition): boolean {
+	return tool.name === "skills";
+}
+
+function estimateMcpAndToolsTokens(tools: readonly AgentToolDefinition[]): { mcp: number; tools: number; skills: number } {
+	if (tools.length === 0) {
+		return { mcp: 0, tools: 0, skills: 0 };
+	}
+	const mcpTools = tools.filter(isMcpTool);
+	const skillsTools = tools.filter(isSkillsTool);
+	const regularTools = tools.filter((t) => !isMcpTool(t) && !isSkillsTool(t));
+	return {
+		mcp: estimateToolsTokens(mcpTools),
+		tools: estimateToolsTokens(regularTools),
+		skills: estimateToolsTokens(skillsTools),
+	};
+}
+
 export function estimateContextBudget(
 	input: EstimateContextBudgetInput,
 ): ContextBudgetBreakdown {
@@ -60,13 +84,13 @@ export function estimateContextBudget(
 		tokens: estimateTextTokens(rule.content),
 	}));
 	const rules = rulesDetail.reduce((total, entry) => total + entry.tokens, 0);
-	const tools = estimateToolsTokens(input.tools);
+	const { mcp, tools, skills } = estimateMcpAndToolsTokens(input.tools);
 	const chat = input.messages.reduce(
 		(total, message) => total + estimateMessageTokens(message),
 		0,
 	);
 
-	const pinnedEstimated = system + rules + tools;
+	const pinnedEstimated = system + rules + tools + mcp + skills;
 	const compressibleEstimated = chat;
 	const totalEstimated = pinnedEstimated + compressibleEstimated;
 	const contextWindow = Math.max(1, input.contextWindow);
@@ -76,7 +100,7 @@ export function estimateContextBudget(
 		totalEstimated,
 		pinnedEstimated,
 		compressibleEstimated,
-		categories: { system, rules, tools, chat },
+		categories: { system, rules, tools, mcp, skills, chat },
 		...(rulesDetail.length > 0 ? { rulesDetail } : {}),
 		measuredAt: Date.now(),
 	};

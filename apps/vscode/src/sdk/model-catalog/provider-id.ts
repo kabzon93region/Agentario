@@ -1,4 +1,4 @@
-import type { ApiProvider } from "@shared/api"
+﻿import type { ApiProvider } from "@shared/api"
 import { Logger } from "../../shared/services/Logger"
 import type { KnownProviderId, ProviderId } from "./contracts"
 
@@ -57,7 +57,7 @@ const KNOWN_API_PROVIDERS = {
 	nousResearch: true,
 	wandb: true,
 	xiaomi: true,
-	"cline-pass": true,
+	"agentario-pass": true,
 } satisfies Record<ApiProvider, true>
 
 const normalizeProviderId = (raw: string): string => raw.trim().toLowerCase()

@@ -1,5 +1,5 @@
-import type { ModelInfo } from "@shared/api"
-import { OpenRouterCompatibleModelInfo } from "@shared/proto/cline/models"
+﻿import type { ModelInfo } from "@shared/api"
+import { OpenRouterCompatibleModelInfo } from "@shared/proto/agentario/models"
 import { StateManager } from "@/core/storage/StateManager"
 import { parseProviderId } from "@/sdk/model-catalog/provider-id"
 import { toProtobufModels } from "@/shared/proto-conversions/models/typeConversion"

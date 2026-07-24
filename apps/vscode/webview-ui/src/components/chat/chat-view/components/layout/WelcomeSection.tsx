@@ -1,7 +1,7 @@
-import { BANNER_DATA, BannerAction, BannerActionType, BannerCardData } from "@shared/cline/banner"
-import { EmptyRequest } from "@shared/proto/cline/common"
-import type { Worktree } from "@shared/proto/cline/worktree"
-import { TrackWorktreeViewOpenedRequest } from "@shared/proto/cline/worktree"
+﻿import { BANNER_DATA, BannerAction, BannerActionType, BannerCardData } from "@shared/agentario/banner"
+import { EmptyRequest } from "@shared/proto/agentario/common"
+import type { Worktree } from "@shared/proto/agentario/worktree"
+import { TrackWorktreeViewOpenedRequest } from "@shared/proto/agentario/worktree"
 import { GitBranch } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import BannerCarousel from "@/components/common/BannerCarousel"
@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import HomeHeader from "@/components/welcome/HomeHeader"
 import { SuggestedTasks } from "@/components/welcome/SuggestedTasks"
 import CreateWorktreeModal from "@/components/worktrees/CreateWorktreeModal"
-import { useClineAuth } from "@/context/ClineAuthContext"
+import { useClineAuth } from "@/context/AgentarioAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { AccountServiceClient, StateServiceClient, UiServiceClient, WorktreeServiceClient } from "@/services/grpc-client"
 import { convertBannerData } from "@/utils/bannerUtils"
@@ -194,7 +194,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 					break
 
 				case BannerActionType.InstallCli:
-					StateServiceClient.installClineCli({}).catch((error) =>
+					StateServiceClient.installAgentarioCli({}).catch((error) =>
 						console.error("Failed to initiate CLI installation:", error),
 					)
 					break

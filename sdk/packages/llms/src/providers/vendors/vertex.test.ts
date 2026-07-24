@@ -1,7 +1,7 @@
 import type {
 	GatewayProviderContext,
 	GatewayResolvedProviderConfig,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createVertexProviderModule } from "./vertex";
 

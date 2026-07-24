@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package agentario;
+
+import "agentario/common.proto";
+
+option go_package = "github.com/agentario/grpc-go/cline";
+option java_multiple_files = true;
+option java_package = "bot.agentario.proto";
+
+// Service for running IDE commands, for example context menu actions,
+// commands, etc.
+// In contrast to the rest of the ProtoBus services, these are
+// intended to be called by the IDE directly instead of through the webview,
+// because they are triggered by interactions in the IDE.
+service CommandsService {
+  rpc addToAgentario(CommandContext) returns (Empty);
+  rpc fixWithAgentario(CommandContext) returns (Empty);
+  rpc explainWithAgentario(CommandContext) returns (Empty);
+  rpc improveWithAgentario(CommandContext) returns (Empty);
+}
+
+message CommandContext {
+  // The absolute path of the current file.
+  optional string file_path = 1;
+  // The selected source text.
+  optional string selected_text = 2;
+  // The language identifier for the current file.
+  optional string language = 3;
+  // Any diagnostic problems for the current file.
+  repeated agentario.Diagnostic diagnostics = 4;
+}

@@ -1,4 +1,4 @@
-export type {
+﻿export type {
 	AgentRunResult,
 	AgentRunStatus,
 	FeatureFlag,
@@ -9,19 +9,19 @@ export type {
 	IFeatureFlagsProvider,
 	WorkspaceInfo,
 	WorkspaceManifest,
-} from "@cline/shared";
+} from "@agentario/shared";
 export {
 	FEATURE_FLAGS,
 	FeatureFlagDefaultValue,
-} from "@cline/shared";
-export { ClineCore } from "./ClineCore";
+} from "@agentario/shared";
+export { AgentarioCore } from "./AgentarioCore";
 export type {
-	ClineCoreListHistoryOptions,
-	ClineCoreOptions,
-	ClineCoreStartInput,
+	AgentarioCoreListHistoryOptions,
+	AgentarioCoreOptions,
+	AgentarioCoreStartInput,
 	HubOptions,
 	RemoteOptions,
-} from "./cline-core/types";
+} from "./agentario-core/types";
 export type {
 	LoadAgentPluginFromPathOptions,
 	ResolveAgentPluginPathsOptions,

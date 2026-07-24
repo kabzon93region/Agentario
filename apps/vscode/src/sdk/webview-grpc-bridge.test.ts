@@ -1,4 +1,4 @@
-import type { ExtensionState } from "@shared/ExtensionMessage"
+﻿import type { ExtensionState } from "@shared/ExtensionMessage"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MessageTranslatorState } from "./message-translator"
 import { pushMessageToWebview, WebviewGrpcBridge } from "./webview-grpc-bridge"
@@ -13,8 +13,8 @@ vi.mock("@core/controller/state/subscribeToState", () => ({
 }))
 
 // Mock the proto conversion
-vi.mock("@shared/proto-conversions/cline-message", () => ({
-	convertClineMessageToProto: vi.fn((msg: Record<string, unknown>) => ({
+vi.mock("@shared/proto-conversions/agentario-message", () => ({
+	convertAgentarioMessageToProto: vi.fn((msg: Record<string, unknown>) => ({
 		ts: msg.ts,
 		type: msg.type === "ask" ? 1 : 2,
 		ask: 0,

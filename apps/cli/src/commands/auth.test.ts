@@ -1,6 +1,6 @@
-import { spawnSync } from "node:child_process";
+﻿import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import type { ProviderSettingsManager } from "@cline/core";
+import type { ProviderSettingsManager } from "@agentario/core";
 import { describe, expect, it, vi } from "vitest";
 import {
 	getPersistedProviderApiKey,
@@ -107,7 +107,7 @@ describe("loadAuthTuiRuntime", () => {
 	it("loads OpenTUI React after provider catalog initialization", async () => {
 		const cliRoot = fileURLToPath(new URL("../..", import.meta.url));
 		const script = `
-import { ProviderSettingsManager, ensureCustomProvidersLoaded, listLocalProviders } from "@cline/core";
+import { ProviderSettingsManager, ensureCustomProvidersLoaded, listLocalProviders } from "@agentario/core";
 import { loadAuthTuiRuntime } from "./src/commands/auth.ts";
 const manager = new ProviderSettingsManager();
 await ensureCustomProvidersLoaded(manager);

@@ -1,4 +1,4 @@
-import { getGeneratedModelsForProvider, MODEL_COLLECTIONS_BY_PROVIDER_ID } from "@cline/llms"
+﻿import { getGeneratedModelsForProvider, MODEL_COLLECTIONS_BY_PROVIDER_ID } from "@agentario/llms"
 import { type ApiConfiguration, type ApiProvider, type ModelInfo, openAiModelInfoSafeDefaults } from "@shared/api"
 import { getProviderModelIdKey } from "@shared/storage/provider-keys"
 import { isSecretKey, isSettingsKey, type SecretKey, type SettingsKey } from "@shared/storage/state-keys"
@@ -94,7 +94,7 @@ const providerConfigStateKeys: Record<ProviderSettingsPatchKey, Partial<Record<s
 
 const modelInfoKeysByProvider: Partial<Record<string, ModelInfoKeys>> = {
 	openrouter: { plan: "planModeOpenRouterModelInfo", act: "actModeOpenRouterModelInfo" },
-	cline: { plan: "planModeClineModelInfo", act: "actModeClineModelInfo" },
+	cline: { plan: "planModeAgentarioModelInfo", act: "actModeAgentarioModelInfo" },
 	openai: { plan: "planModeOpenAiModelInfo", act: "actModeOpenAiModelInfo" },
 	litellm: { plan: "planModeLiteLlmModelInfo", act: "actModeLiteLlmModelInfo" },
 	requesty: { plan: "planModeRequestyModelInfo", act: "actModeRequestyModelInfo" },

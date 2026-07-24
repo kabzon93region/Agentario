@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+﻿import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -8,7 +8,7 @@ import type {
 	AgentTool,
 	AgentToolContext,
 	Message,
-} from "@cline/shared";
+} from "@agentario/shared";
 import {
 	afterAll,
 	beforeAll,
@@ -262,7 +262,7 @@ describe("plugin-sandbox", () => {
 		await writeFile(
 			join(sdkDepDir, "package.json"),
 			JSON.stringify({
-				name: "@cline/shared",
+				name: "@agentario/shared",
 				type: "module",
 				exports: "./index.js",
 			}),
@@ -276,7 +276,7 @@ describe("plugin-sandbox", () => {
 		await writeFile(
 			join(dir, "plugin-sdk.ts"),
 			[
-				"import { sdkMarker } from '@cline/shared';",
+				"import { sdkMarker } from '@agentario/shared';",
 				"export default {",
 				"  name: sdkMarker,",
 				"  manifest: { capabilities: ['tools'] },",
@@ -288,7 +288,7 @@ describe("plugin-sandbox", () => {
 		await writeFile(
 			join(dir, "plugin-host-dep.ts"),
 			[
-				"import { resolveClineDataDir } from '@cline/shared/storage';",
+				"import { resolveClineDataDir } from '@agentario/shared/storage';",
 				"import YAML from 'yaml';",
 				"export default {",
 				"  name: YAML.stringify({ host: !!resolveClineDataDir() }).trim(),",
@@ -301,7 +301,7 @@ describe("plugin-sandbox", () => {
 		await writeFile(
 			join(dir, "plugin-create-tool.ts"),
 			[
-				"import { createTool } from '@cline/agents';",
+				"import { createTool } from '@agentario/agents';",
 				"export default {",
 				"  name: 'sandbox-create-tool',",
 				"  manifest: { capabilities: ['tools'] },",
@@ -527,7 +527,7 @@ describe("plugin-sandbox", () => {
 			await writeFile(
 				join(packageRoot, "package.json"),
 				JSON.stringify({
-					name: `@cline/cli-${platform}-${process.arch}`,
+					name: `@agentario/cli-${platform}-${process.arch}`,
 					version: "0.0.0-test",
 					type: "module",
 				}),

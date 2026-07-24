@@ -1,5 +1,5 @@
-import type * as LlmsProviders from "@cline/llms";
-import type { AgentFinishReason } from "@cline/shared";
+import type * as LlmsProviders from "@agentario/llms";
+import type { AgentFinishReason } from "@agentario/shared";
 import type { SessionAccumulatedUsage } from "../runtime/host/runtime-host";
 import type { BuiltRuntime } from "../runtime/orchestration/session-runtime";
 import type { SessionRuntime } from "../runtime/orchestration/session-runtime-orchestrator";

@@ -24,7 +24,7 @@ import {
 	removeStaleFileRecords,
 	writeFileRecord,
 	writeIndexMeta,
-} from "@cline/shared"
+} from "@agentario/shared"
 import { StateManager } from "@/core/storage/StateManager"
 import { fetch } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"
@@ -36,33 +36,72 @@ const MAX_READ_BYTES = 2 * 1024 * 1024
 
 /** Text/code formats: read entire file without size limit. */
 const UNLIMITED_READ_EXTENSIONS = new Set([
-	".ts",
-	".tsx",
-	".js",
-	".jsx",
-	".mjs",
-	".cjs",
-	".md",
-	".mdx",
-	".css",
-	".scss",
-	".html",
-	".py",
-	".ps1",
-	".sh",
-	".yml",
-	".yaml",
-	".toml",
-	".go",
-	".rs",
-	".java",
-	".kt",
+	// Web
+	".html", ".htm", ".css", ".scss", ".sass", ".less", ".styl",
+	// JavaScript / TypeScript
+	".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts",
+	".vue", ".svelte", ".astro",
+	// Markdown / docs
+	".md", ".mdx", ".txt", ".rst", ".adoc", ".org", ".tex", ".bib",
+	// Config / data
+	".json", ".json5", ".jsonc", ".yaml", ".yml", ".toml", ".ini",
+	".cfg", ".conf", ".properties", ".env", ".editorconfig", ".gitignore",
+	".gitattributes", ".dockerignore", ".npmrc", ".nvmrc",
+	// Shell / scripting
+	".sh", ".bash", ".zsh", ".fish", ".ps1", ".psm1", ".bat", ".cmd",
+	".cmd", ".vbs", ".ahk",
+	// Python
+	".py", ".pyw", ".pyi", ".ipynb",
+	// Go / Rust / C / C++
+	".go", ".rs", ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hxx",
+	".hh", ".ino",
+	// JVM
+	".java", ".kt", ".kts", ".scala", ".sc", ".groovy", ".gradle",
+	".clj", ".cljs", ".cljc",
+	// Other languages
+	".cs", ".vb", ".fs", ".fsx", ".rb", ".php", ".swift", ".dart",
+	".lua", ".r", ".jl", ".ex", ".exs", ".erl", ".hrl", ".hs",
+	".lhs", ".ml", ".mli", ".nim", ".zig", ".v", ".d", ".pas",
+	".pl", ".pm", ".tcl", ".asm", ".s", ".S",
+	// Functional / Lisp
+	".rkt", ".scm", ".ss", ".lisp", ".el", ".clj",
+	// Mobile / game
+	".m", ".mm", ".gd", ".tres", ".tscn",
+	// Markup / templates
+	".xml", ".svg", ".plist", ".xaml", ".pug", ".haml", ".ejs",
+	".hbs", ".handlebars", ".mustache", ".liquid",
+	// Query / API
+	".sql", ".graphql", ".gql", ".proto", ".thrift", ".graphqls",
+	".avsc", ".raml", ".openapi", ".swagger",
+	// Build / infra
+	".cmake", ".make", ".mk", ".dockerfile", ".containerfile",
+	".tf", ".tfvars", ".hcl", ".sln", ".csproj", ".vbproj",
+	".fsproj", ".vcxproj", ".props", ".targets", ".resx",
+	".gemspec", ".podspec",
+	// Logs / diffs
+	".log", ".diff", ".patch",
+	// Data
+	".csv", ".tsv", ".xml",
+])
+
+/**
+ * Binary/media extensions that should NEVER be indexed.
+ * Used to reject files before attempting to read them.
+ */
+const BINARY_EXTENSIONS = new Set([
+	".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".webp", ".tiff", ".tif",
+	".mp3", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv",
+	".wav", ".flac", ".ogg", ".aac", ".m4a",
+	".zip", ".gz", ".tar", ".rar", ".7z", ".bz2", ".xz", ".lz4",
+	".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+	".exe", ".dll", ".so", ".dylib", ".bin", ".dat", ".db", ".sqlite",
+	".class", ".jar", ".war", ".ear", ".pyc", ".pyo", ".wasm",
+	".ttf", ".otf", ".woff", ".woff2", ".eot",
+	".mp3", ".mp4", ".avi", ".mov",
 ])
 
 const INCLUDE_EXTENSIONS = new Set([
 	...UNLIMITED_READ_EXTENSIONS,
-	".json",
-	".sql",
 ])
 
 const EXCLUDE_DIRS = new Set([
@@ -202,6 +241,23 @@ function toRelative(workspacePath: string, filePath: string): string {
 	return path.relative(workspacePath, filePath).replace(/\\/g, "/")
 }
 
+/** Known text file basenames without extensions (Makefile, Dockerfile, etc.) */
+const TEXT_BASENAMES = new Set([
+	"dockerfile", "containerfile",
+	"makefile", "gnumakefile",
+	"rakefile", "gemfile", "gemfile.lock",
+	"brewfile", "podfile", "cartfile",
+	"procfile",
+	"vagrantfile",
+	"jenkinsfile",
+	"license", "licence", "copying",
+	"authors", "contributors",
+	"changelog", "news",
+	"readme",
+	"cmakelists.txt",
+	"workspace", "build", "build.bazel",
+])
+
 function shouldIndexFile(relativePath: string): boolean {
 	const segments = relativePath.split("/")
 	if (segments.some((segment) => EXCLUDE_DIRS.has(segment))) {
@@ -211,7 +267,20 @@ function shouldIndexFile(relativePath: string): boolean {
 	if (EXCLUDE_BASENAMES.has(basename)) {
 		return false
 	}
-	return INCLUDE_EXTENSIONS.has(path.extname(relativePath).toLowerCase())
+	const ext = path.extname(relativePath).toLowerCase()
+	// Reject known binary/media files
+	if (ext && BINARY_EXTENSIONS.has(ext)) {
+		return false
+	}
+	// Known extension in the text/code whitelist
+	if (ext && INCLUDE_EXTENSIONS.has(ext)) {
+		return true
+	}
+	// Known text basenames without extension (Dockerfile, Makefile, etc.)
+	if (TEXT_BASENAMES.has(basename.toLowerCase())) {
+		return true
+	}
+	return false
 }
 
 async function walkFiles(workspacePath: string, dir = workspacePath, result: string[] = []): Promise<string[]> {

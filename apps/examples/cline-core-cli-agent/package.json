@@ -1,5 +1,5 @@
 {
-	"name": "@cline/example-cline-core-cli-agent",
+	"name": "@agentario/example-cline-core-cli-agent",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -10,7 +10,7 @@
 		"start": "node dist/index.js"
 	},
 	"dependencies": {
-		"@cline/sdk": "workspace:*"
+		"@agentario/sdk": "workspace:*"
 	},
 	"devDependencies": {
 		"typescript": "^5.9.3"

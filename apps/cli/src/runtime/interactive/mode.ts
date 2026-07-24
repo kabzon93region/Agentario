@@ -1,4 +1,4 @@
-import { createTool } from "@cline/shared";
+﻿import { createTool } from "@agentario/shared";
 import type { Config } from "../../utils/types";
 import { resolveSystemPrompt } from "../prompt";
 

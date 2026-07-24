@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+﻿import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -103,7 +103,7 @@ describe("plugin-loader", () => {
 		await writeFile(
 			join(sdkDir, "package.json"),
 			JSON.stringify({
-				name: "@cline/shared",
+				name: "@agentario/shared",
 				type: "module",
 				exports: "./index.js",
 			}),
@@ -117,7 +117,7 @@ describe("plugin-loader", () => {
 		await writeFile(
 			join(dir, "plugin-with-sdk-dep.ts"),
 			[
-				"import { sdkMarker } from '@cline/shared';",
+				"import { sdkMarker } from '@agentario/shared';",
 				"export default {",
 				"  name: sdkMarker,",
 				"  manifest: { capabilities: ['tools'] },",
@@ -129,8 +129,8 @@ describe("plugin-loader", () => {
 		await writeFile(
 			join(copyDir, "portable-subagents.ts"),
 			[
-				"import { safeJsonStringify } from '@cline/shared';",
-				"import { resolveClineDataDir } from '@cline/shared/storage';",
+				"import { safeJsonStringify } from '@agentario/shared';",
+				"import { resolveClineDataDir } from '@agentario/shared/storage';",
 				"import YAML from 'yaml';",
 				"export default {",
 				"  name: typeof safeJsonStringify === 'function' ? YAML.stringify({ ok: !!resolveClineDataDir() }) : 'invalid',",
@@ -181,7 +181,7 @@ describe("plugin-loader", () => {
 		await writeFile(
 			join(packagedSdkSubpathDir, "index.ts"),
 			[
-				"import { createConfiguredTelemetryHandle } from '@cline/core/telemetry';",
+				"import { createConfiguredTelemetryHandle } from '@agentario/core/telemetry';",
 				"export default {",
 				"  name: typeof createConfiguredTelemetryHandle === 'function' ? 'sdk-subpath-ok' : 'invalid',",
 				"  manifest: { capabilities: ['tools'] },",

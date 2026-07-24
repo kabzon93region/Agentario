@@ -1,10 +1,11 @@
-import { validateWithZod } from "@cline/shared";
+import { validateWithZod } from "@agentario/shared";
 import {
 	type EditFileInput,
 	INPUT_ARG_CHAR_LIMIT,
 	type ReadFileRequest,
 	RunCommandsInputUnionSchema,
 	type StructuredCommandInput,
+	validateShellCommandString,
 } from "./schemas";
 
 /**
@@ -18,6 +19,7 @@ export function formatError(error: unknown): string {
 }
 
 export function getEditorSizeError(input: EditFileInput): string | null {
+	// old_text limit: 6000 chars (search/replace should be small for accuracy)
 	if (
 		typeof input.old_text === "string" &&
 		input.old_text.length > INPUT_ARG_CHAR_LIMIT
@@ -25,8 +27,12 @@ export function getEditorSizeError(input: EditFileInput): string | null {
 		return `Editor input too large: old_text was ${input.old_text.length} characters, exceeding the recommended limit of ${INPUT_ARG_CHAR_LIMIT}. Split the edit into smaller tool calls so later tool calls are less likely to be truncated or time out.`;
 	}
 
-	if (input.new_text.length > INPUT_ARG_CHAR_LIMIT) {
-		return `Editor input too large: new_text was ${input.new_text.length} characters, exceeding the recommended limit of ${INPUT_ARG_CHAR_LIMIT}. Split the edit into smaller tool calls so later tool calls are less likely to be truncated or time out.`;
+	// new_text limit: 50000 chars (file creation can be large; increased from 6000 to allow
+	// creating substantial files in a single operation. Models can generate 10-30k chars
+	// of code, and blocking file creation forces them to fabricate success messages.)
+	const NEW_TEXT_CHAR_LIMIT = 50000;
+	if (input.new_text.length > NEW_TEXT_CHAR_LIMIT) {
+		return `Editor input too large: new_text was ${input.new_text.length} characters, exceeding the recommended limit of ${NEW_TEXT_CHAR_LIMIT}. Split the operation into smaller tool calls.`;
 	}
 
 	return null;
@@ -82,29 +88,35 @@ export function normalizeRunCommandsInput(
 ): Array<string | StructuredCommandInput> {
 	const validate = validateWithZod(RunCommandsInputUnionSchema, input);
 
+	let commands: Array<string | StructuredCommandInput>;
+
 	if (typeof validate === "string") {
-		return [validate];
-	}
-
-	if (Array.isArray(validate)) {
-		return validate;
-	}
-
-	if ("commands" in validate) {
-		return Array.isArray(validate.commands)
+		commands = [validate];
+	} else if (Array.isArray(validate)) {
+		commands = validate;
+	} else if ("commands" in validate) {
+		commands = Array.isArray(validate.commands)
 			? validate.commands
 			: [validate.commands];
+	} else if ("command" in validate) {
+		commands = "args" in validate ? [validate] : [validate.command];
+	} else if ("cmd" in validate) {
+		commands = [validate.cmd];
+	} else {
+		commands = [validate];
 	}
 
-	if ("command" in validate) {
-		return "args" in validate ? [validate] : [validate.command];
+	for (const command of commands) {
+		if (typeof command !== "string") {
+			continue;
+		}
+		const syntaxError = validateShellCommandString(command);
+		if (syntaxError) {
+			throw new Error(syntaxError);
+		}
 	}
 
-	if ("cmd" in validate) {
-		return [validate.cmd];
-	}
-
-	return [validate];
+	return commands;
 }
 
 export function formatRunCommandQuery(

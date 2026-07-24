@@ -9,7 +9,7 @@ import {
 	resolveWorkflowsConfigSearchPaths as resolveWorkflowsConfigSearchPathsFromShared,
 	SKILLS_CONFIG_DIRECTORY_NAME,
 	WORKFLOWS_CONFIG_DIRECTORY_NAME,
-} from "@cline/shared/storage";
+} from "@agentario/shared/storage";
 import YAML from "yaml";
 import { resolveAgentPluginSkillDirectories } from "../plugin/plugin-config-loader";
 import {

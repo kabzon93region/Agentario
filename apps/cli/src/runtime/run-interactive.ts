@@ -1,9 +1,9 @@
-import {
+﻿import {
 	getCurrentContextSize,
 	type ProviderSettings,
 	ProviderSettingsManager,
 	type UserInstructionConfigService,
-} from "@cline/core";
+} from "@agentario/core";
 import type { CliMigrationNotice } from "../kanban-migration/notice";
 import { logCliError } from "../logging/errors";
 import {
@@ -11,7 +11,7 @@ import {
 	loadIndividualSubscriptionPlans,
 	onProviderChange,
 	switchClineAccount,
-} from "../tui/cline-account";
+} from "../tui/agentario-account";
 import type {
 	InteractiveConfigItem,
 	LoadInteractiveConfigDataOptions,
@@ -420,25 +420,25 @@ export async function runInteractive(
 		loadWelcomeLine: async () =>
 			await resolveClineWelcomeLine({
 				config,
-				clineApiBaseUrl: options?.clineApiBaseUrl,
-				clineProviderSettings: options?.clineProviderSettings,
+				clineApiBaseUrl: options?.agentarioApiBaseUrl,
+				clineProviderSettings: options?.agentarioProviderSettings,
 			}),
 		loadClineAccount: async () =>
 			await loadClineAccountSnapshot({
 				config,
-				clineApiBaseUrl: options?.clineApiBaseUrl,
+				clineApiBaseUrl: options?.agentarioApiBaseUrl,
 			}),
 		loadIndividualSubscriptionPlans: async () =>
 			await loadIndividualSubscriptionPlans({
 				config,
-				clineApiBaseUrl: options?.clineApiBaseUrl,
-				clineProviderSettings: options?.clineProviderSettings,
+				clineApiBaseUrl: options?.agentarioApiBaseUrl,
+				clineProviderSettings: options?.agentarioProviderSettings,
 			}),
 		switchClineAccount: async (organizationId) =>
 			await switchClineAccount({
 				config,
 				organizationId,
-				clineApiBaseUrl: options?.clineApiBaseUrl,
+				clineApiBaseUrl: options?.agentarioApiBaseUrl,
 			}),
 		loadConfigData: configDataLoader.loadConfigData,
 		onToggleConfigItem,
@@ -677,7 +677,7 @@ export async function runInteractive(
 			await sessionRuntime.ensureReady();
 			await loadClineAccountSnapshot({
 				config,
-				clineApiBaseUrl: options?.clineApiBaseUrl,
+				clineApiBaseUrl: options?.agentarioApiBaseUrl,
 			}).catch((error) => {
 				logCliError(
 					config.logger,

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, describe, expect, it, vi } from "vitest";
 
 const {
 	mockClearHubDiscovery,
@@ -24,7 +24,7 @@ const {
 	mockStopLocalHubServerGracefully: vi.fn(),
 }));
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	clearHubDiscovery: mockClearHubDiscovery,
 	ensureDetachedHubServer: mockEnsureDetachedHubServer,
 	probeHubServer: mockProbeHubServer,
@@ -36,15 +36,15 @@ vi.mock("@cline/core", () => ({
 
 import { createHubCommand } from "./hub";
 
-const originalBuildEnv = process.env.CLINE_BUILD_ENV;
+const originalBuildEnv = process.env.agentario_BUILD_ENV;
 
 describe("createHubCommand", () => {
 	afterEach(() => {
 		vi.clearAllMocks();
 		if (originalBuildEnv === undefined) {
-			delete process.env.CLINE_BUILD_ENV;
+			delete process.env.agentario_BUILD_ENV;
 		} else {
-			process.env.CLINE_BUILD_ENV = originalBuildEnv;
+			process.env.agentario_BUILD_ENV = originalBuildEnv;
 		}
 	});
 
@@ -92,7 +92,7 @@ describe("createHubCommand", () => {
 	});
 
 	it("passes the selected owner to graceful stop", async () => {
-		process.env.CLINE_BUILD_ENV = "development";
+		process.env.agentario_BUILD_ENV = "development";
 		mockReadHubDiscovery.mockResolvedValue({
 			url: "ws://127.0.0.1:25466/hub",
 			port: 25466,

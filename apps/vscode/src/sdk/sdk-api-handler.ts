@@ -1,18 +1,18 @@
-// Replaces classic src/core/api buildApiHandler (see origin/main).
+﻿// Replaces classic src/core/api buildApiHandler (see origin/main).
 //
-// Builds an SDK ApiHandler (from `@cline/llms`) directly from the extension's
+// Builds an SDK ApiHandler (from `@agentario/llms`) directly from the extension's
 // legacy ApiConfiguration. This is the single inference path: the main task
-// loop runs through ClineCore (see cline-session-factory.ts), and standalone
+// loop runs through AgentarioCore (see agentario-session-factory.ts), and standalone
 // utility callers (commit message generation) use the handler
 // returned here. Both share the same provider/model/key/baseUrl resolution so
 // there is no second source of truth.
 
-import { type ApiHandler, createHandler, type ProviderConfig } from "@cline/llms"
+import { type ApiHandler, createHandler, type ProviderConfig } from "@agentario/llms"
 import type { ApiConfiguration } from "@shared/api"
 import type { Mode } from "@shared/storage/types"
 import { fetch } from "@/shared/net"
 import { buildBedrockProviderConfig } from "./bedrock-config"
-import { resolveApiKey, resolveBaseUrl, resolveModelId, resolveVertexProviderConfig } from "./cline-session-factory"
+import { resolveApiKey, resolveBaseUrl, resolveModelId, resolveVertexProviderConfig } from "./agentario-session-factory"
 import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
 
 export interface BuildApiHandlerOptions {

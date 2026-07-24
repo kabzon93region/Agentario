@@ -1,11 +1,11 @@
-import type { SessionHistoryRecord } from "@cline/core"
+﻿import type { SessionHistoryRecord } from "@agentario/core"
 import type { HistoryItem } from "@shared/HistoryItem"
 import getFolderSize from "get-folder-size"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { McpHub } from "@/services/mcp/McpHub"
 import type { TelemetryService } from "@/services/telemetry/TelemetryService"
 import { deleteLegacyTask, readApiConversationHistory, readTaskHistory } from "./legacy-state-reader"
-import { sdkMessagesToClineMessages } from "./message-translator"
+import { sdkMessagesToagentarioMessages } from "./message-translator"
 import type { SdkSessionLifecycle } from "./sdk-session-lifecycle"
 import { SdkTaskHistory, sessionHistoryRecordToHistoryItem } from "./sdk-task-history"
 import type { VscodeSessionHost } from "./vscode-session-host"
@@ -64,7 +64,7 @@ vi.mock("./legacy-state-reader", () => ({
 	),
 }))
 
-vi.mock("./cline-session-factory", () => ({
+vi.mock("./agentario-session-factory", () => ({
 	buildSessionConfig: vi.fn(async ({ cwd, workspaceRoot, mode }) => ({
 		cwd,
 		workspaceRoot,
@@ -121,7 +121,7 @@ describe("SdkTaskHistory", () => {
 	})
 
 	it("converts SDK persisted conversation messages to Cline messages", () => {
-		const result = sdkMessagesToClineMessages([
+		const result = sdkMessagesToagentarioMessages([
 			{ role: "user", content: "Build the feature" },
 			{ role: "assistant", content: [{ type: "text", text: "Done" }] },
 			{ role: "user", content: "Follow up" },
@@ -138,7 +138,7 @@ describe("SdkTaskHistory", () => {
 	})
 
 	it("includes persisted SDK message metrics for task header pricing", () => {
-		const result = sdkMessagesToClineMessages([
+		const result = sdkMessagesToagentarioMessages([
 			{ role: "user", content: "Build the feature" },
 			{
 				role: "assistant",
@@ -171,7 +171,7 @@ describe("SdkTaskHistory", () => {
 			success: true,
 		})
 
-		const result = sdkMessagesToClineMessages([
+		const result = sdkMessagesToagentarioMessages([
 			{ role: "user", content: "add a joke" },
 			{
 				role: "assistant",
@@ -412,7 +412,7 @@ describe("SdkTaskHistory", () => {
 		const telemetry = makeTelemetry()
 		const { history, startSession } = makeHistory([], telemetry)
 
-		await history.getClineMessages("legacy-task")
+		await history.getagentarioMessages("legacy-task")
 
 		expect(startSession).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -498,7 +498,7 @@ describe("SdkTaskHistory", () => {
 		])
 		const { history, startSession } = makeHistory([], undefined, "/legacy/globalStorage")
 
-		await history.getClineMessages("extension-storage-task")
+		await history.getagentarioMessages("extension-storage-task")
 
 		expect(readApiConversationHistory).toHaveBeenCalledWith("extension-storage-task", "/legacy/globalStorage")
 		expect(startSession).toHaveBeenCalledWith(

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 import path from "path"
 import { fileURLToPath } from "url"
@@ -49,7 +49,7 @@ async function generateWebviewProtobusClients(protobusServices) {
 			}
 		}
 		clients.push(`export class ${serviceName}Client extends ProtoBusClient {
-	static override serviceName: string = "cline.${serviceName}"
+	static override serviceName: string = "agentario.${serviceName}"
 ${rpcs.join("\n")}
 }`)
 	}
@@ -123,7 +123,7 @@ async function generateVscodeProtobusServers(protobusServices) {
 			servers.push(`    ${rpcName}: ${rpcName},`)
 		}
 		servers.push(`} \n`)
-		serviceMap.push(`    "cline.${serviceName}": ${serviceName}Handlers,`)
+		serviceMap.push(`    "agentario.${serviceName}": ${serviceName}Handlers,`)
 		imports.push("")
 	}
 
@@ -157,8 +157,8 @@ async function generateStandaloneProtobusServiceSetup(protobusServices) {
 		handlerSetup.push(`    server.addService(cline.${name}Service, {`)
 		for (const [rpcName, rpc] of Object.entries(def.service)) {
 			imports.push(`import { ${rpcName} } from "@core/controller/${dir}/${rpcName}"`)
-			const requestType = "cline." + rpc.requestType.type.name
-			const responseType = "cline." + rpc.responseType.type.name
+			const requestType = "agentario." + rpc.requestType.type.name
+			const responseType = "agentario." + rpc.responseType.type.name
 			if (rpc.requestStream) {
 				throw new Error("Request streaming is not supported")
 			}

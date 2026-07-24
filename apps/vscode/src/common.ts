@@ -1,10 +1,10 @@
-import { WebviewProvider } from "./core/webview"
+﻿import { WebviewProvider } from "./core/webview"
 import "./utils/path" // necessary to have access to String.prototype.toPosix
 
 import { HostProvider } from "@/hosts/host-provider"
 import { Logger } from "@/shared/services/Logger"
 import type { StorageContext } from "@/shared/storage/storage-context"
-import { clearOnboardingModelsCache } from "./core/controller/models/getClineOnboardingModels"
+import { clearOnboardingModelsCache } from "./core/controller/models/getAgentarioOnboardingModels"
 import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
 import { HookProcessRegistry } from "./core/hooks/HookProcessRegistry"
 import { StateManager } from "./core/storage/StateManager"
@@ -16,7 +16,7 @@ import { featureFlagsService } from "./services/feature-flags"
 import { getDistinctId } from "./services/logging/distinctId"
 import { telemetryService } from "./services/telemetry"
 import { PostHogClientProvider } from "./services/telemetry/providers/posthog/PostHogClientProvider"
-import { ClineTempManager } from "./services/temp"
+import { AgentarioTempManager } from "./services/temp"
 import { ShowMessageType } from "./shared/proto/host/window"
 import { syncWorker } from "./shared/services/worker/sync"
 import { getBlobStoreSettingsFromEnv } from "./shared/services/worker/worker"
@@ -87,7 +87,7 @@ export async function initialize(storageContext: StorageContext): Promise<Webvie
 		syncWorker().init({ ...blobStoreSettings, userDistinctId: getDistinctId() })
 	}
 	// Clean up old temp files in background (non-blocking) and start periodic cleanup every 24 hours
-	ClineTempManager.startPeriodicCleanup()
+	AgentarioTempManager.startPeriodicCleanup()
 
 	if (!ClineEndpoint.isSelfHosted()) {
 		telemetryService.captureExtensionActivated()
@@ -181,7 +181,7 @@ export async function tearDown(): Promise<void> {
 		// Clean up hook discovery cache
 		HookDiscoveryCache.getInstance().dispose()
 		// Stop periodic temp file cleanup
-		ClineTempManager.stopPeriodicCleanup()
+		AgentarioTempManager.stopPeriodicCleanup()
 	} finally {
 		try {
 			await StateManager.get().flushPendingState()

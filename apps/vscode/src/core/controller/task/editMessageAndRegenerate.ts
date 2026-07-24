@@ -1,5 +1,5 @@
-import { Empty } from "@shared/proto/cline/common"
-import { EditMessageAndRegenerateRequest } from "@shared/proto/cline/task"
+﻿import { Empty } from "@shared/proto/agentario/common"
+import { EditMessageAndRegenerateRequest } from "@shared/proto/agentario/task"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."
 

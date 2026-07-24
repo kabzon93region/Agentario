@@ -1,4 +1,4 @@
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import type React from "react"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
@@ -14,9 +14,9 @@ import { createMessageRenderer } from "../messages/MessageRenderer"
 const WAITING_ROW_TS = Number.MIN_SAFE_INTEGER
 
 interface MessagesAreaProps {
-	task: ClineMessage
-	groupedMessages: (ClineMessage | ClineMessage[])[]
-	modifiedMessages: ClineMessage[]
+	task: AgentarioMessage
+	groupedMessages: (AgentarioMessage | AgentarioMessage[])[]
+	modifiedMessages: AgentarioMessage[]
 	scrollBehavior: ScrollBehavior
 	chatState: ChatState
 	messageHandlers: MessageHandlers
@@ -34,8 +34,8 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 	chatState,
 	messageHandlers,
 }) => {
-	const { clineMessages, turnState } = useExtensionState()
-	const lastRawMessage = useMemo(() => clineMessages.at(-1), [clineMessages])
+	const { agentarioMessages, turnState } = useExtensionState()
+	const lastRawMessage = useMemo(() => agentarioMessages.at(-1), [agentarioMessages])
 
 	const {
 		virtuosoRef,
@@ -57,8 +57,8 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 		if (!scrolledPastUserMessage) {
 			return -1
 		}
-		return clineMessages.findIndex((msg) => msg.ts === scrolledPastUserMessage.ts)
-	}, [clineMessages, scrolledPastUserMessage])
+		return agentarioMessages.findIndex((msg) => msg.ts === scrolledPastUserMessage.ts)
+	}, [agentarioMessages, scrolledPastUserMessage])
 
 	// Handler to scroll to the scrolled past user message
 	const handleScrollToUserMessage = useCallback(() => {
@@ -181,11 +181,11 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 		return isWaitingForResponse || handoffToReasoningPending
 	}, [isWaitingForResponse, lastRawMessage, lastVisibleMessage?.say])
 
-	const displayedGroupedMessages = useMemo<(ClineMessage | ClineMessage[])[]>(() => {
+	const displayedGroupedMessages = useMemo<(AgentarioMessage | AgentarioMessage[])[]>(() => {
 		if (!showThinkingLoaderRow) {
 			return groupedMessages
 		}
-		const waitingRow: ClineMessage = {
+		const waitingRow: AgentarioMessage = {
 			ts: WAITING_ROW_TS,
 			type: "say",
 			say: "reasoning",

@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+﻿import { existsSync } from "node:fs";
 import { arch, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,7 +69,7 @@ async function withDashboardEnvironment<T>(
 	const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
 	const restore = [
 		setEnvValue("WORKSPACE_ROOT", options.cwd ? cwd : undefined),
-		setEnvValue("CLINE_DIR", options.configDir?.trim() || undefined),
+		setEnvValue("AGENTARIO_DIR", options.configDir?.trim() || undefined),
 		setEnvValue("HOST", options.host),
 		setEnvValue(DASHBOARD_PORT_ENV, options.port),
 		setEnvValue("PUBLIC_URL", options.publicUrl),
@@ -77,7 +77,7 @@ async function withDashboardEnvironment<T>(
 		setEnvValue(WEBVIEW_DIST_ENV, resolveDefaultWebviewDistDir()),
 		...SANDBOX_ENV_KEYS.map((key) => setEnvValue(key, undefined)),
 	];
-	if (options.dataDir || process.env.CLINE_SANDBOX?.trim() === "1") {
+	if (options.dataDir || process.env.agentario_SANDBOX?.trim() === "1") {
 		configureSandboxEnvironment({
 			enabled: true,
 			cwd,
@@ -115,8 +115,8 @@ function resolveDefaultWebviewDistDir(): string | undefined {
 function resolveInstalledPlatformPackageWebviewCandidates(): string[] {
 	const packageName = resolvePlatformPackageName();
 	const starts = [
-		process.env.CLINE_WRAPPER_PATH
-			? dirname(process.env.CLINE_WRAPPER_PATH)
+		process.env.agentario_WRAPPER_PATH
+			? dirname(process.env.agentario_WRAPPER_PATH)
 			: undefined,
 		dirname(process.execPath),
 	].filter((value): value is string => !!value?.trim());
@@ -137,11 +137,11 @@ function resolveInstalledPlatformPackageWebviewCandidates(): string[] {
 
 function resolvePlatformPackageName(): string {
 	const platformName = platform() === "win32" ? "windows" : platform();
-	return `@cline/cli-${platformName}-${arch()}`;
+	return `@agentario/cli-${platformName}-${arch()}`;
 }
 
 async function startDefaultDashboardServer(): Promise<DashboardServerHandle> {
-	const { startClineHubDashboardServer } = await import("@cline/cline-hub");
+	const { startClineHubDashboardServer } = await import("@agentario/cline-hub");
 	return await startClineHubDashboardServer();
 }
 

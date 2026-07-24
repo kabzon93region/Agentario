@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
 	spawn,
@@ -57,7 +57,7 @@ vi.mock("node:fs", () => ({
 	openSync,
 }));
 
-vi.mock("@cline/shared", () => ({
+vi.mock("@agentario/shared", () => ({
 	CLINE_RUN_AS_HUB_DAEMON_ENV,
 	CLINE_HUB_PORT: 25463,
 	CLINE_HUB_DEV_PORT: 25466,
@@ -66,8 +66,8 @@ vi.mock("@cline/shared", () => ({
 	}),
 	isHubDaemonProcess: (env: NodeJS.ProcessEnv = process.env) =>
 		env[CLINE_RUN_AS_HUB_DAEMON_ENV] === "1",
-	resolveClineBuildEnv: () => "production",
-	withResolvedClineBuildEnv: (env: NodeJS.ProcessEnv) => env,
+	resolveAgentarioBuildEnv: () => "production",
+	withResolvedAgentarioBuildEnv: (env: NodeJS.ProcessEnv) => env,
 }));
 
 vi.mock("../client", () => ({

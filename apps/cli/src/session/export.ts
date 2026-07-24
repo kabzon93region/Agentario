@@ -1,10 +1,10 @@
-import {
+﻿import {
 	type ContentBlock,
 	type MessageWithMetadata,
 	normalizeUserInput,
 	type ToolResultContent,
 	type ToolUseContent,
-} from "@cline/shared";
+} from "@agentario/shared";
 
 export interface ConversationHistory {
 	version: number;

@@ -1,10 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { relative } from "node:path";
-import type { CronSpecParseResult } from "@cline/shared";
+import type { CronSpecParseResult } from "@agentario/shared";
 import {
 	type ResolveCronSpecsDirOptions,
 	resolveCronSpecsDir,
-} from "@cline/shared/storage";
+} from "@agentario/shared/storage";
 import { getNextCronTime } from "../schedule/scheduler";
 import type {
 	CronSpecRecord,

@@ -1,5 +1,5 @@
-import type { ContextBudgetBreakdown } from "@cline/shared"
-import { ClineMessage } from "./ExtensionMessage"
+﻿import type { ContextBudgetBreakdown } from "@agentario/shared"
+import { AgentarioMessage } from "./ExtensionMessage"
 
 export type { ContextBudgetBreakdown }
 
@@ -12,7 +12,7 @@ interface ApiMetrics {
 }
 
 /**
- * Calculates API metrics from an array of ClineMessages.
+ * Calculates API metrics from an array of agentarioMessages.
  *
  * This function processes usage-carrying say messages.
  * It includes:
@@ -21,7 +21,7 @@ interface ApiMetrics {
  * - 'subagent_usage' messages, which are aggregated usage snapshots emitted by subagent batches
  * It extracts and sums up the tokensIn, tokensOut, cacheWrites, cacheReads, and cost from these messages.
  *
- * @param messages - An array of ClineMessage objects to process.
+ * @param messages - An array of AgentarioMessage objects to process.
  * @returns An ApiMetrics object containing totalTokensIn, totalTokensOut, totalCacheWrites, totalCacheReads, and totalCost.
  *
  * @example
@@ -31,7 +31,7 @@ interface ApiMetrics {
  * const { totalTokensIn, totalTokensOut, totalCost } = getApiMetrics(messages);
  * // Result: { totalTokensIn: 10, totalTokensOut: 20, totalCost: 0.005 }
  */
-export function getApiMetrics(messages: ClineMessage[]): ApiMetrics {
+export function getApiMetrics(messages: AgentarioMessage[]): ApiMetrics {
 	const result: ApiMetrics = {
 		totalTokensIn: 0,
 		totalTokensOut: 0,
@@ -75,15 +75,18 @@ export function getApiMetrics(messages: ClineMessage[]): ApiMetrics {
 }
 
 /**
- * Gets the total token count from the last API request.
+ * Gets the total INPUT token count from the last API request.
  *
  * This is used for context window progress display - it shows how much of the
  * context window is used in the current/most recent request, not cumulative totals.
  *
- * @param messages - An array of ClineMessage objects to process.
- * @returns The total tokens (tokensIn + tokensOut + cacheWrites + cacheReads) from the last api_req_started message, or 0 if none found.
+ * Agentario: НЕ включаем tokensOut — это выходные токены модели, которые НЕ
+ * занимают контекст. Контекст — это только input (tokensIn + cacheWrites + cacheReads).
+ *
+ * @param messages - An array of AgentarioMessage objects to process.
+ * @returns The total INPUT tokens from the last api_req_started message, or 0 if none found.
  */
-export function getLastApiReqTotalTokens(messages: ClineMessage[]): number {
+export function getLastApiReqTotalTokens(messages: AgentarioMessage[]): number {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i]
 		if (msg.type === "say" && msg.say === "api_req_started" && msg.text) {
@@ -95,9 +98,10 @@ export function getLastApiReqTotalTokens(messages: ClineMessage[]): number {
 					cacheReads?: number
 					contextBudget?: ContextBudgetBreakdown
 				}
+				// Agentario: только INPUT токены (tokensIn + cache).
+				// tokensOut — это выходные токены, они не занимают контекст.
 				const total =
 					(parsed.tokensIn || 0) +
-					(parsed.tokensOut || 0) +
 					(parsed.cacheWrites || 0) +
 					(parsed.cacheReads || 0)
 				if (total > 0) {
@@ -126,11 +130,13 @@ function isContextBudgetBreakdown(value: unknown): value is ContextBudgetBreakdo
 		typeof candidate.categories.system === "number" &&
 		typeof candidate.categories.rules === "number" &&
 		typeof candidate.categories.tools === "number" &&
+		typeof candidate.categories.mcp === "number" &&
+		typeof candidate.categories.skills === "number" &&
 		typeof candidate.categories.chat === "number"
 	)
 }
 
-export function getLastContextBudget(messages: ClineMessage[]): ContextBudgetBreakdown | undefined {
+export function getLastContextBudget(messages: AgentarioMessage[]): ContextBudgetBreakdown | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i]
 		if (msg.type === "say" && msg.say === "api_req_started" && msg.text) {

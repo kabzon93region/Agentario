@@ -1,5 +1,5 @@
-import type { EmptyRequest } from "@shared/proto/cline/common"
-import type { CodebaseIndex } from "@shared/proto/cline/indexing"
+﻿import type { EmptyRequest } from "@shared/proto/agentario/common"
+import type { CodebaseIndex } from "@shared/proto/agentario/indexing"
 import { CodebaseIndexService } from "@/services/indexing/CodebaseIndexService"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"

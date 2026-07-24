@@ -1,8 +1,8 @@
-import { AskResponseRequest } from "@shared/proto/cline/task"
+﻿import { AskResponseRequest } from "@shared/proto/agentario/task"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import React from "react"
 import VSCodeButtonLink from "@/components/common/VSCodeButtonLink"
-import { useClineAuth } from "@/context/ClineAuthContext"
+import { useClineAuth } from "@/context/AgentarioAuthContext"
 import { TaskServiceClient } from "@/services/grpc-client"
 
 interface EntitlementErrorProps {

@@ -1,4 +1,4 @@
-import {
+﻿import {
 	appendFileSync,
 	existsSync,
 	mkdirSync,
@@ -60,7 +60,7 @@ vi.mock("node:child_process", () => ({
 	spawnSync: mockSpawnSync,
 }));
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	resolveClineDataDir: mockResolveClineDataDir,
 	resolveProductionHubOwnerContext: mockResolveProductionHubOwnerContext,
 	resolveSharedHubOwnerContext: mockResolveSharedHubOwnerContext,

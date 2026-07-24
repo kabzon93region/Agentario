@@ -1,5 +1,5 @@
-import { describe, it } from "bun:test"
-import { getProviderCollectionSync } from "@cline/llms"
+﻿import { describe, it } from "bun:test"
+import { getProviderCollectionSync } from "@agentario/llms"
 import { expect } from "chai"
 import { getProviderDefaultModelId, getProviderModelIdKey } from "../provider-keys"
 
@@ -41,8 +41,8 @@ describe("Provider key mapping", () => {
 	})
 
 	it("uses separate model keys for ClinePass", () => {
-		expect(getProviderModelIdKey("cline-pass", "act")).to.equal("actModeClinePassModelId")
-		expect(getProviderModelIdKey("cline-pass", "plan")).to.equal("planModeClinePassModelId")
+		expect(getProviderModelIdKey("agentario-pass", "act")).to.equal("actModeAgentarioPassModelId")
+		expect(getProviderModelIdKey("agentario-pass", "plan")).to.equal("planModeAgentarioPassModelId")
 	})
 
 	it("uses the SDK-declared default for Nous Research through SDK-boundary casing", () => {

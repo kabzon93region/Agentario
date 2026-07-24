@@ -1,6 +1,6 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: static */
+﻿/** biome-ignore-all lint/style/noNonNullAssertion: static */
 
-import * as Llms from "@cline/llms";
+import * as Llms from "@agentario/llms";
 import {
 	fetchModelIdsFromSource,
 	resolveModelsSourceUrl,
@@ -183,7 +183,7 @@ async function mergeKnownModels(
 			...userKnownModels,
 		});
 	}
-	if (providerId === "cline-pass" && Object.keys(liveModels).length > 0) {
+	if (providerId === "agentario-pass" && Object.keys(liveModels).length > 0) {
 		return Llms.sortModelsByReleaseDate({
 			...liveModels,
 			...userKnownModels,

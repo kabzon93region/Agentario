@@ -1,4 +1,4 @@
-import {
+﻿import {
 	completeClineDeviceAuth,
 	getProviderConfigFields,
 	isOAuthProvider,
@@ -9,8 +9,8 @@ import {
 	saveLocalProviderOAuthCredentials,
 	saveLocalProviderSettings,
 	startClineDeviceAuth,
-} from "@cline/core";
-import { getClineEnvironmentConfig } from "@cline/shared";
+} from "@agentario/core";
+import { getClineEnvironmentConfig } from "@agentario/shared";
 import type { ChoiceContext } from "@opentui-ui/dialog";
 import { useDialogKeyboard } from "@opentui-ui/dialog/react";
 import open from "open";

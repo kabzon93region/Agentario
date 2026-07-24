@@ -1,4 +1,4 @@
-export type {
+﻿export type {
 	ModelCollection,
 	ModelIdAliasRule,
 	ModelInfo,
@@ -68,10 +68,10 @@ export {
 	getRegisteredHandlerAsync,
 	hasRegisteredHandler,
 	isBuiltInProviderId,
-	isClineNotSubscribedError,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionError,
-	isClineOrgIndividualInferenceSubscriptionMessage,
+	isAgentarioCloudNotSubscribedError,
+	isAgentarioCloudNotSubscribedMessage,
+	isAgentarioCloudOrgSubscriptionError,
+	isAgentarioCloudOrgSubscriptionMessage,
 	isRegisteredHandlerAsync,
 	normalizeProviderId,
 	registerAsyncHandler,

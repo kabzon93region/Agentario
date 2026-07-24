@@ -1,4 +1,4 @@
-import {
+﻿import {
 	chmodSync,
 	existsSync,
 	mkdirSync,
@@ -6,7 +6,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { basename, dirname } from "node:path";
-import { resolveProviderSettingsPath } from "@cline/shared/storage";
+import { resolveProviderSettingsPath } from "@agentario/shared/storage";
 import { getLiveModelsCatalog } from "../..";
 import { getProviderAuthHandler } from "../../auth/provider-auth-registry";
 import {
@@ -41,11 +41,11 @@ export interface SaveProviderSettingsOptions {
 }
 
 export interface ResolveLastUsedProviderSettingsOptions {
-	isClinePassEnabled?: boolean;
+	isAgentarioPassEnabled?: boolean;
 }
 
 const CLINE_PROVIDER_ID = "cline";
-const CLINE_PASS_PROVIDER_ID = "cline-pass";
+const CLINE_PASS_PROVIDER_ID = "agentario-pass";
 
 function inferLegacyDataDir(filePath: string): string | undefined {
 	if (basename(filePath) !== "providers.json") {
@@ -194,7 +194,7 @@ export class ProviderSettingsManager {
 		const providerId = state.lastUsedProvider;
 		if (
 			providerId === CLINE_PASS_PROVIDER_ID &&
-			options.isClinePassEnabled === false
+			options.isAgentarioPassEnabled === false
 		) {
 			return CLINE_PROVIDER_ID;
 		}

@@ -1,4 +1,4 @@
-import { createInterface } from "node:readline";
+﻿import { createInterface } from "node:readline";
 import {
 	BUILT_IN_PROVIDER,
 	createOAuthClientCallbacks,
@@ -8,7 +8,7 @@ import {
 	type ProviderSettings,
 	type ProviderSettingsManager,
 	saveProviderOAuthCredentials,
-} from "@cline/core";
+} from "@agentario/core";
 import { Command } from "commander";
 import open from "open";
 import React from "react";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
 	createOpenAICompatibleProvider,
 	createOpenAIProvider,
@@ -92,19 +92,19 @@ describe("provider-ids", () => {
 	});
 
 	it("registers ClinePass as a distinct Cline-compatible built-in provider", async () => {
-		expect(BUILT_IN_PROVIDER_IDS).toContain("cline-pass");
-		const models = await getModelsForProvider("cline-pass");
-		const provider = await getProvider("cline-pass");
+		expect(BUILT_IN_PROVIDER_IDS).toContain("agentario-pass");
+		const models = await getModelsForProvider("agentario-pass");
+		const provider = await getProvider("agentario-pass");
 
 		expect(provider).toMatchObject({
-			id: "cline-pass",
+			id: "agentario-pass",
 			name: "ClinePass",
 			client: "openai-compatible",
 		});
 		expect(models).toHaveProperty(provider?.defaultModelId ?? "");
 
 		const registration = BUILTIN_PROVIDER_REGISTRATIONS.find(
-			(item) => item.manifest.id === "cline-pass",
+			(item) => item.manifest.id === "agentario-pass",
 		);
 		await expect(registration?.loadProvider?.()).resolves.toMatchObject({
 			createProvider: createOpenAICompatibleProvider,

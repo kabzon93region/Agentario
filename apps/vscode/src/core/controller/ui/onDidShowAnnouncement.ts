@@ -1,5 +1,5 @@
-import type { EmptyRequest } from "@shared/proto/cline/common"
-import { Boolean } from "@shared/proto/cline/common"
+﻿import type { EmptyRequest } from "@shared/proto/agentario/common"
+import { Boolean } from "@shared/proto/agentario/common"
 import { Logger } from "@/shared/services/Logger"
 import { getLatestAnnouncementId } from "@/utils/announcements"
 import type { Controller } from "../index"

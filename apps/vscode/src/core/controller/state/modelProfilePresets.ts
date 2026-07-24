@@ -32,6 +32,20 @@ function readProviderConfigSnapshot(providerId: string): ModelProfileProviderCon
 			effort: typeof reasoning.effort === "string" ? reasoning.effort : undefined,
 		}
 	}
+	// Сохраняем modelInfo (цены, контекст и т.д.) для каждого mode
+	const sdkProviderId = toSdkProviderId(providerId)
+	const store = getProviderSettingsManager()
+	const planSelection = store.readSelection?.(sdkProviderId, "plan")
+	const actSelection = store.readSelection?.(sdkProviderId, "act")
+	if (planSelection || actSelection) {
+		snapshot.selections = {}
+		if (planSelection?.modelId && planSelection?.modelInfo) {
+			snapshot.selections.plan = { modelId: planSelection.modelId, modelInfo: planSelection.modelInfo }
+		}
+		if (actSelection?.modelId && actSelection?.modelInfo) {
+			snapshot.selections.act = { modelId: actSelection.modelId, modelInfo: actSelection.modelInfo }
+		}
+	}
 	return Object.keys(snapshot).length > 0 ? snapshot : undefined
 }
 
@@ -76,12 +90,22 @@ function syncProviderSelectionsFromPreset(controller: Controller, preset: ModelP
 		if (!modelId) {
 			continue
 		}
+		// Приоритет: 1) сохранённый в пресете modelInfo, 2) текущий store, 3) fallback
+		const providerConfig = preset.providerConfigs[provider]
+		const savedSelection = providerConfig?.selections?.[mode]
 		const existing = store.readSelection(providerId, mode)
+		const modelInfo =
+			savedSelection?.modelId === modelId && savedSelection?.modelInfo
+				? savedSelection.modelInfo
+				: existing?.modelInfo ?? { name: modelId, supportsPromptCache: false }
 		store.commitSelection(providerId, mode, {
 			providerId: providerId.toString(),
 			modelId,
-			modelInfo: existing?.modelInfo ?? { name: modelId },
+			modelInfo,
 		})
+		Logger.log(
+			`[ModelProfilePreset] Synced ${provider}/${mode}: modelId=${modelId}, inputPrice=${modelInfo.inputPrice ?? "N/A"}, outputPrice=${modelInfo.outputPrice ?? "N/A"}`,
+		)
 	}
 }
 

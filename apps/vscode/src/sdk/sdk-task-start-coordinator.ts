@@ -1,7 +1,7 @@
-import { getProviderAuthStorageId } from "@cline/core"
-import { createSessionId } from "@cline/shared"
-import { CLINE_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/ClineAccount"
-import type { ClineMessage } from "@shared/ExtensionMessage"
+﻿import { getProviderAuthStorageId } from "@agentario/core"
+import { createSessionId } from "@agentario/shared"
+import { AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/AgentarioAccount"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import type { HistoryItem } from "@shared/HistoryItem"
 import type { Settings } from "@shared/storage/state-keys"
 import type { Mode } from "@shared/storage/types"
@@ -19,7 +19,7 @@ type StartInput = Parameters<VscodeSessionHost["start"]>[0]
 type InitialMessages = StartInput["initialMessages"]
 type SessionConfig = Awaited<ReturnType<SdkSessionConfigBuilder["build"]>>
 
-function usesClineAccountAuth(providerId: string): boolean {
+function usesAgentarioAccountAuth(providerId: string): boolean {
 	return getProviderAuthStorageId(providerId) === "cline"
 }
 
@@ -50,7 +50,7 @@ export interface SdkTaskStartCoordinatorOptions {
 	createTempSessionHost: () => Promise<SdkSessionHost>
 	loadInitialMessages: (reader: SdkSessionHost, taskId: string) => Promise<unknown[] | undefined>
 	resolveContextMentions: (text: string) => Promise<string>
-	isClineProviderActive: () => boolean
+	isAgentarioCloudProviderActive: () => boolean
 	emitClineAuthError: (task?: string) => void
 	postStateToWebview: () => Promise<void>
 }
@@ -87,7 +87,7 @@ export class SdkTaskStartCoordinator {
 				`[SdkController] Session config: provider=${config.providerId}, model=${config.modelId}, hasApiKey=${!!config.apiKey}`,
 			)
 
-			if (usesClineAccountAuth(config.providerId) && !config.apiKey) {
+			if (usesAgentarioAccountAuth(config.providerId) && !config.apiKey) {
 				Logger.warn(
 					`[SdkController] ${config.providerId} provider selected but no Cline auth token — emitting auth error`,
 				)
@@ -201,7 +201,7 @@ export class SdkTaskStartCoordinator {
 	}
 
 	private emitInitialTaskMessage(sessionId: string, task: string): void {
-		const taskMessage: ClineMessage = {
+		const taskMessage: AgentarioMessage = {
 			ts: Date.now(),
 			type: "say",
 			say: "task",
@@ -239,8 +239,8 @@ export class SdkTaskStartCoordinator {
 
 		const reinitErrorMsg = error instanceof Error ? error.message : String(error)
 		const isClineAuthReinit =
-			this.options.isClineProviderActive() &&
-			(reinitErrorMsg.includes(CLINE_ACCOUNT_AUTH_ERROR_MESSAGE) ||
+			this.options.isAgentarioCloudProviderActive() &&
+			(reinitErrorMsg.includes(AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE) ||
 				reinitErrorMsg.toLowerCase().includes("missing api key") ||
 				reinitErrorMsg.toLowerCase().includes("unauthorized"))
 

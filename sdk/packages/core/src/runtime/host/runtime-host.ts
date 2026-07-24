@@ -1,9 +1,9 @@
-import type * as LlmsProviders from "@cline/llms";
+import type * as LlmsProviders from "@agentario/llms";
 import type {
 	AgentMode,
 	AgentResult,
 	RuntimeConfigExtensionKind,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type { HookEventPayload } from "../../hooks";
 import type { CheckpointEntry } from "../../hooks/checkpoint-hooks";
 import type { ProviderSettings } from "../../services/llms/provider-settings";
@@ -113,7 +113,7 @@ export interface StartSessionInput {
 	 */
 	localRuntime?: LocalRuntimeStartOptions;
 	capabilities?: RuntimeCapabilities;
-	toolPolicies?: import("@cline/shared").AgentConfig["toolPolicies"];
+	toolPolicies?: import("@agentario/shared").AgentConfig["toolPolicies"];
 }
 
 export function splitCoreSessionConfig(config: CoreSessionConfig): {
@@ -309,6 +309,11 @@ export interface RuntimeHost {
 		},
 	): Promise<{ updated: boolean }>;
 	readSessionMessages(sessionId: string): Promise<LlmsProviders.Message[]>;
+	writeSessionMessages(
+		sessionId: string,
+		messages: LlmsProviders.Message[],
+		systemPrompt?: string,
+	): Promise<void>;
 	dispatchHookEvent(payload: HookEventPayload): Promise<void>;
 	subscribe(
 		listener: (event: CoreSessionEvent) => void,

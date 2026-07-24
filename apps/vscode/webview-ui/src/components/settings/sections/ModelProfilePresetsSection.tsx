@@ -1,5 +1,5 @@
-import type { ModelProfilePreset } from "@shared/model-profile-presets"
-import { UpdateSettingsRequest } from "@shared/proto/cline/state"
+﻿import type { ModelProfilePreset } from "@shared/model-profile-presets"
+import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { useMemo, useState } from "react"
 import Section from "@/components/settings/Section"
@@ -12,7 +12,7 @@ async function persistModelProfilePresets(presets: ModelProfilePreset[], activeP
 	await StateServiceClient.updateSettings(
 		UpdateSettingsRequest.create({
 			modelProfilePresetsJson: JSON.stringify({ presets, activePresetId }),
-		}),
+		} as any),
 	)
 }
 
@@ -36,7 +36,7 @@ export const ModelProfilePresetsSection = () => {
 		await StateServiceClient.updateSettings(
 			UpdateSettingsRequest.create({
 				captureModelProfilePresetName: name,
-			}),
+			} as any),
 		)
 		setDraftName("")
 	}
@@ -47,7 +47,7 @@ export const ModelProfilePresetsSection = () => {
 		await StateServiceClient.updateSettings(
 			UpdateSettingsRequest.create({
 				applyModelProfilePresetId: presetId,
-			}),
+			} as any),
 		)
 	}
 

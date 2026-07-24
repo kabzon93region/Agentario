@@ -1,7 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+﻿import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import * as LlmsModels from "@cline/llms";
+import * as LlmsModels from "@agentario/llms";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearLiveModelsCatalogCache } from "../llms/provider-defaults";
 import { ProviderSettingsManager } from "../storage/provider-settings-manager";
@@ -253,7 +253,7 @@ describe("addLocalProvider – model ID parsing via modelsSourceUrl", () => {
 				JSON.stringify({
 					clinePass: [
 						{
-							id: "cline-pass/live-pass-model",
+							id: "agentario-pass/live-pass-model",
 							name: "vendor/live-pass-model",
 						},
 					],
@@ -266,14 +266,14 @@ describe("addLocalProvider – model ID parsing via modelsSourceUrl", () => {
 		});
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { models } = await getLocalProviderModels("cline-pass");
+		const { models } = await getLocalProviderModels("agentario-pass");
 
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(models.map((model) => model.id)).toEqual([
-			"cline-pass/live-pass-model",
+			"agentario-pass/live-pass-model",
 		]);
 		expect(models[0]).toMatchObject({
-			id: "cline-pass/live-pass-model",
+			id: "agentario-pass/live-pass-model",
 			name: "Live Pass Model",
 			supportsReasoning: true,
 		});
@@ -307,11 +307,11 @@ describe("addLocalProvider – model ID parsing via modelsSourceUrl", () => {
 		});
 		vi.stubGlobal("fetch", fetchMock);
 
-		const { models } = await getLocalProviderModels("cline-pass");
+		const { models } = await getLocalProviderModels("agentario-pass");
 
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(models.map((model) => model.id)).toContain(
-			"cline-pass/mimo-v2.5-pro",
+			"agentario-pass/mimo-v2.5-pro",
 		);
 		expect(models.map((model) => model.id)).not.toContain(
 			"vendor/live-openrouter-model",
@@ -1210,18 +1210,18 @@ describe("listLocalProviders", () => {
 
 	it("hides ClinePass when the ClinePass feature flag is disabled", async () => {
 		const { providers } = await listLocalProviders(manager, {
-			isClinePassEnabled: false,
+			isAgentarioPassEnabled: false,
 		});
 
-		expect(providers.map((p) => p.id)).not.toContain("cline-pass");
+		expect(providers.map((p) => p.id)).not.toContain("agentario-pass");
 	});
 
 	it("includes ClinePass when the ClinePass feature flag is enabled", async () => {
 		const { providers } = await listLocalProviders(manager, {
-			isClinePassEnabled: true,
+			isAgentarioPassEnabled: true,
 		});
 
-		expect(providers.map((p) => p.id)).toContain("cline-pass");
+		expect(providers.map((p) => p.id)).toContain("agentario-pass");
 	});
 
 	it("marks enabled providers correctly", async () => {

@@ -1,4 +1,4 @@
-import { beforeAll, describe, it } from "bun:test"
+﻿import { beforeAll, describe, it } from "bun:test"
 import { GrpcRecorder, IRecorder } from "@core/controller/grpc-recorder/grpc-recorder"
 import { expect } from "chai"
 import { ExtensionMessage } from "@/shared/ExtensionMessage"
@@ -121,11 +121,11 @@ describe("grpc-recorder", () => {
 			const customRecorder = GrpcRecorder.builder()
 				.withFilters(
 					(req) => req.is_streaming,
-					(req) => ["cline.UiService", "cline.McpService", "cline.WebService"].includes(req.service),
+					(req) => ["agentario.UiService", "agentario.McpService", "agentario.WebService"].includes(req.service),
 				)
 				.enableIf(true)
 				.build()
-			const unwantedServices = ["cline.UiService", "cline.McpService", "cline.WebService"]
+			const unwantedServices = ["agentario.UiService", "agentario.McpService", "agentario.WebService"]
 			unwantedServices.forEach((us) => {
 				customRecorder.recordRequest({
 					service: us,

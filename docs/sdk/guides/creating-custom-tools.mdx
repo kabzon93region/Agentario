@@ -1,4 +1,4 @@
----
+﻿---
 title: "Creating Custom Tools"
 sidebarTitle: "Creating Custom Tools"
 description: "Define, register, and test your own tools with type-safe schemas and execution handlers."
@@ -11,7 +11,7 @@ Custom tools extend what your agent can do. A tool is a function with a name, a 
 Use `createTool` with a zod schema for the simplest approach:
 
 ```typescript
-import { createTool } from "@cline/sdk"
+import { createTool } from "@agentario/sdk"
 import { z } from "zod"
 
 const getCurrentTime = createTool({

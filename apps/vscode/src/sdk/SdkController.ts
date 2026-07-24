@@ -2,7 +2,7 @@
 //
 // The SDK-backed Controller. It provides the same interface as the classic
 // Controller but delegates session lifecycle (initTask, askResponse,
-// cancelTask, …) to the Cline SDK (@cline/core) and bridges SDK events to
+// cancelTask, …) to the Cline SDK (@agentario/core) and bridges SDK events to
 // the webview's gRPC streams.
 import * as fs from "node:fs/promises"
 import * as path from "node:path"
@@ -14,20 +14,20 @@ import {
 	type SessionHistoryRecord,
 	setTelemetryOptOutGlobally,
 	type UserInstructionConfigService,
-} from "@cline/core"
-import { formatDisplayUserInput, type RemoteConfig, type RemoteConfigBundle } from "@cline/shared"
-import { resolveDocumentsAgentarioDirectoryPath } from "@cline/shared/storage"
+} from "@agentario/core"
+import { formatDisplayUserInput, type RemoteConfig, type RemoteConfigBundle } from "@agentario/shared"
+import { resolveDocumentsAgentarioDirectoryPath } from "@agentario/shared/storage"
 import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
 import type { ChatContent } from "@shared/ChatContent"
-import { CLINE_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/ClineAccount"
+import { AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/AgentarioAccount"
 import { mentionRegexGlobal } from "@shared/context-mentions"
-import type { ClineApiReqInfo, ClineMessage, ExtensionState } from "@shared/ExtensionMessage"
+import type { AgentarioApiReqInfo, AgentarioMessage, ExtensionState } from "@shared/ExtensionMessage"
 import type { HistoryItem } from "@shared/HistoryItem"
-import { DeleteAllTaskHistoryCount, type GetTaskHistoryRequest, TaskHistoryArray, TaskResponse } from "@shared/proto/cline/task"
+import { DeleteAllTaskHistoryCount, type GetTaskHistoryRequest, TaskHistoryArray, TaskResponse } from "@shared/proto/agentario/task"
 import type { Settings } from "@shared/storage/state-keys"
 import type { Mode } from "@shared/storage/types"
 import type { TelemetrySetting } from "@shared/TelemetrySetting"
-import type { ClineCheckpointRestore } from "@shared/WebviewMessage"
+import type { AgentarioCheckpointRestore } from "@shared/WebviewMessage"
 import { parseMentions } from "@/core/mentions"
 import { ensureMcpServersDirectoryExists } from "@/core/storage/disk"
 import { refreshSdkRemoteConfig } from "@/core/storage/remote-config/sdk-refresh"
@@ -39,17 +39,17 @@ import type { ITerminalManager } from "@/integrations/terminal/types"
 import { ExtensionRegistryInfo } from "@/registry"
 import { OcaAuthService } from "@/services/auth/oca/OcaAuthService"
 import { UrlContentFetcher } from "@/services/browser/UrlContentFetcher"
-import { ClineError } from "@/services/error/ClineError"
+import { AgentarioError } from "@/services/error/AgentarioError"
 import { McpHub } from "@/services/mcp/McpHub"
 import { telemetryService } from "@/services/telemetry"
-import type { ClineExtensionContext } from "@/shared/cline"
+import type { AgentarioExtensionContext } from "@/shared/cline"
 import { ShowMessageRequest, ShowMessageType, ShowSaveDialogRequest } from "@/shared/proto/host/window"
 import { Logger } from "@/shared/services/Logger"
 import { arePathsEqual, getDesktopDir } from "@/utils/path"
 import { exportChatToMarkdown } from "@/services/chat/export-chat-markdown"
-import { ClineAccountService } from "./account-service"
+import { AgentarioAccountService } from "./account-service"
 import { AuthService, LogoutReason } from "./auth-service"
-import { buildStartSessionInput, createHistoryItemFromSession } from "./cline-session-factory"
+import { buildStartSessionInput, createHistoryItemFromSession } from "./agentario-session-factory"
 import { MessageTranslatorState, reshapeErrorForWebview } from "./message-translator"
 import { createProviderCatalog } from "./model-catalog/catalog"
 import type { Disposable, ProviderCatalog, ProviderConfigChange, ProviderConfigStore } from "./model-catalog/contracts"
@@ -67,7 +67,7 @@ import { SdkMcpCoordinator } from "./sdk-mcp-coordinator"
 import { SdkMessageCoordinator, type SessionEventListener } from "./sdk-message-coordinator"
 import { SdkModeCoordinator } from "./sdk-mode-coordinator"
 import { SdkProviderChangeCoordinator } from "./sdk-provider-change-coordinator"
-import { SdkSessionConfigBuilder } from "./sdk-session-config-builder"
+import { SdkSessionConfigBuilder, type CapturedModelContext } from "./sdk-session-config-builder"
 import { SdkSessionEventCoordinator } from "./sdk-session-event-coordinator"
 import { SdkSessionHistoryLoader } from "./sdk-session-history-loader"
 import { SdkSessionLifecycle } from "./sdk-session-lifecycle"
@@ -75,6 +75,7 @@ import { SdkTaskControlCoordinator } from "./sdk-task-control-coordinator"
 import { SdkTaskHistory, sessionHistoryRecordToHistoryItem } from "./sdk-task-history"
 import { SdkTaskStartCoordinator } from "./sdk-task-start-coordinator"
 import { createVscodeSdkTelemetryHandle, type VscodeSdkTelemetryHandle } from "./sdk-telemetry"
+import { applyModelProfilePreset, readActiveModelProfilePresetId } from "@/core/controller/state/modelProfilePresets"
 import { isToolAutoApproved } from "./sdk-tool-policies"
 import {
 	extractSdkUserText,
@@ -101,7 +102,7 @@ function metadataNumber(metadata: SessionHistoryRecord["metadata"] | undefined, 
 	return typeof value === "number" && Number.isFinite(value) ? value : undefined
 }
 
-function usesClineAccountAuth(providerId: string): boolean {
+function usesAgentarioAccountAuth(providerId: string): boolean {
 	return getProviderAuthStorageId(providerId) === "cline"
 }
 
@@ -174,21 +175,21 @@ export class Controller {
 	task?: TaskProxy
 
 	mcpHub: McpHub
-	accountService: ClineAccountService
+	accountService: AgentarioAccountService
 	authService: AuthService
 	ocaAuthService: OcaAuthService
 	readonly stateManager: StateManager
 
 	// Lazy terminal manager for foreground terminal execution.
 	// Concrete impl comes from HostProvider (VscodeTerminalManager in VSCode,
-	// StandaloneTerminalManager in cline-core / JetBrains).
+	// StandaloneTerminalManager in agentario-core / JetBrains).
 	// Created on first use; shared across all sessions in this Controller's lifetime.
 	private _terminalManager?: ITerminalManager
 
 	// Private state kept for stub compatibility
 	private backgroundCommandRunning = false
 	private backgroundCommandTaskId?: string
-	private pendingClineAuthRetryPrompt?: string
+	private pendingAgentarioAuthRetryPrompt?: string
 	checkpointRestoreInput?: ExtensionState["checkpointRestoreInput"]
 
 	// Timer for periodic remote config fetching (enterprise policy enforcement)
@@ -207,6 +208,12 @@ export class Controller {
 	private userInstructionServiceRoot?: string
 	private isDisposed = false
 
+	// When set, the next beforeModel call will capture the full model request
+	// (system prompt, messages, tools) and resolve this promise. Used by the
+	// "export context" feature to intercept the real model context without
+	// actually calling the LLM.
+	private contextCaptureResolver?: (data: CapturedModelContext) => void
+
 	get remoteConfig(): RemoteConfig | undefined {
 		return this.remoteConfigCoreIntegration?.prepared.bundle?.remoteConfig
 	}
@@ -215,7 +222,7 @@ export class Controller {
 		return this.remoteConfigCoreIntegration?.prepared.bundle
 	}
 
-	constructor(readonly context: ClineExtensionContext) {
+	constructor(readonly context: AgentarioExtensionContext) {
 		// StateManager must be initialized before creating the Controller
 		this.stateManager = StateManager.get()
 		syncTelemetrySettingFromSharedGlobalSettings(this.stateManager)
@@ -245,7 +252,7 @@ export class Controller {
 		// Initialize SDK-backed auth and account services.
 		this.authService = AuthService.getInstance(this)
 		this.ocaAuthService = OcaAuthService.initialize(this)
-		this.accountService = ClineAccountService.getInstance()
+		this.accountService = AgentarioAccountService.getInstance()
 
 		// Initialize message translator state
 		this.messageTranslatorState = new MessageTranslatorState(undefined, () => this.getActiveProviderId())
@@ -265,6 +272,11 @@ export class Controller {
 			},
 			shouldStopAfterModeSwitch: () => this.mode.hasPendingModeChange(),
 			onConsecutiveMistakeLimitReached: (context) => this.interactions.handleConsecutiveMistakeLimitReached(context),
+			consumeContextCapture: () => {
+				const resolver = this.contextCaptureResolver
+				this.contextCaptureResolver = undefined
+				return resolver
+			},
 		})
 		this.interactions = new SdkInteractionCoordinator({
 			messages: this.messages,
@@ -279,6 +291,10 @@ export class Controller {
 			recordDeniedToolApproval: (toolCallId, toolName, reason) =>
 				this.messageTranslatorState.recordDeniedToolApproval(toolCallId, toolName, reason),
 			shouldAutoApproveTool: (request) => {
+				const mode = this.stateManager.getGlobalSettingsKey("mode")
+				if (mode === "agent") {
+					return true
+				}
 				const autoApprovalSettings = this.stateManager.getGlobalSettingsKey("autoApprovalSettings")
 				return autoApprovalSettings ? isToolAutoApproved(request.toolName, autoApprovalSettings, this.mcpHub) : false
 			},
@@ -314,16 +330,29 @@ export class Controller {
 			onSendError: async (error, sessionId) => {
 				// A turn failed — the UI shows error recovery (Retry / Sign In / Add Credits).
 				this.turnStateTracker.set("error")
-				const errorMessage = error instanceof Error ? error.message : String(error)
-				const isClineAuthError =
-					this.isClineProviderActive() &&
-					(errorMessage.includes(CLINE_ACCOUNT_AUTH_ERROR_MESSAGE) ||
+				// Defensive error stringification — avoid `[object Object]` for plain objects
+				let errorMessage: string
+				if (error instanceof Error) {
+					errorMessage = error.message
+				} else if (typeof error === "object" && error !== null) {
+					const obj = error as Record<string, unknown>
+					if (typeof obj.message === "string") {
+						errorMessage = obj.message
+					} else {
+						try { errorMessage = JSON.stringify(error) } catch { errorMessage = String(error) }
+					}
+				} else {
+					errorMessage = String(error)
+				}
+				const isAgentarioCloudAuthError =
+					this.isAgentarioCloudProviderActive() &&
+					(errorMessage.includes(AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE) ||
 						errorMessage.toLowerCase().includes("missing api key") ||
 						errorMessage.toLowerCase().includes("unauthorized"))
 
-				if (isClineAuthError) {
+				if (isAgentarioCloudAuthError) {
 					this.emitClineAuthError()
-				} else if (this.isClineProviderActive() && this.isClineBalanceError(errorMessage)) {
+				} else if (this.isAgentarioCloudProviderActive() && this.isClineBalanceError(errorMessage)) {
 					this.emitClineBalanceError(errorMessage)
 				} else {
 					this.messages.emitSessionEvents(
@@ -412,7 +441,7 @@ export class Controller {
 			loadInitialMessages: (sessionHost, taskId) => this.sessionHistory.loadInitialMessages(sessionHost, taskId),
 			buildStartSessionInput,
 			resolveContextMentions: (text) => this.resolveContextMentions(text),
-			isClineProviderActive: () => this.isClineProviderActive(),
+			isAgentarioCloudProviderActive: () => this.isAgentarioCloudProviderActive(),
 			emitClineAuthError: () => this.emitClineAuthError(),
 			resetMessageTranslator: () => this.resetMessageTranslatorAndFence(),
 			postStateToWebview: () => this.postStateToWebview(),
@@ -449,7 +478,7 @@ export class Controller {
 			buildStartSessionInput,
 			createHistoryItemFromSession,
 			clearTask: async () => {
-				this.pendingClineAuthRetryPrompt = undefined
+				this.pendingAgentarioAuthRetryPrompt = undefined
 				await this.taskControl.clearTask()
 			},
 			setTask: (task) => {
@@ -461,7 +490,7 @@ export class Controller {
 			createTempSessionHost: () => VscodeSessionHost.create({ mcpHub: this.mcpHub }),
 			loadInitialMessages: (reader, taskId) => this.sessionHistory.loadInitialMessages(reader, taskId),
 			resolveContextMentions: (text) => this.resolveContextMentions(text),
-			isClineProviderActive: () => this.isClineProviderActive(),
+			isAgentarioCloudProviderActive: () => this.isAgentarioCloudProviderActive(),
 			emitClineAuthError: (task) => this.emitClineAuthError(task),
 			postStateToWebview: () => this.postStateToWebview(),
 		})
@@ -475,6 +504,10 @@ export class Controller {
 			buildStartSessionInput,
 			resetMessageTranslator: () => this.resetMessageTranslatorAndFence(),
 			postStateToWebview: () => this.postStateToWebview(),
+			createTempHost: async () => {
+				const host = await VscodeSessionHost.create({ mcpHub: this.mcpHub })
+				return { host, dispose: () => host.dispose("compactHistoryTask") }
+			},
 		})
 		this.sessionEvents = new SdkSessionEventCoordinator({
 			messageTranslatorState: this.messageTranslatorState,
@@ -520,11 +553,76 @@ export class Controller {
 			Logger.log("[SdkController] Standalone mode: skipping Cline auth restore and remote config")
 		}
 
+		// Auto-apply active preset on startup so provider settings (token costs,
+		// baseUrl, apiLine, reasoning, modelInfo) are restored after restart.
+		// Without this, the preset's apiConfiguration is loaded from globalState
+		// but providerConfigs (modelInfo, selections) are NOT re-applied —
+		// causing token costs to revert to catalog defaults.
+		try {
+			const activePresetId = readActiveModelProfilePresetId(this)
+			if (activePresetId) {
+				Logger.log(`[SdkController] Auto-applying active preset on startup: ${activePresetId}`)
+				applyModelProfilePreset(this, activePresetId).catch((err) => {
+					Logger.error("[SdkController] Failed to auto-apply preset on startup:", err)
+				})
+			}
+		} catch (err) {
+			Logger.error("[SdkController] Error during preset auto-apply:", err)
+		}
+
 		Logger.log("[SdkController] Initialized with SDK adapter layer + gRPC bridge + auth services")
 	}
 
 	getProviderConfigStore(): ProviderConfigStore {
 		return this.providerConfigStore
+	}
+
+	/**
+	 * Triggers a "dry run" model turn: sends a trivial prompt to the active SDK
+	 * session, but the beforeModel hook intercepts the full model request
+	 * (system prompt + messages + tools) and aborts the turn before the LLM is
+	 * called. Returns the captured context, or null if there is no active
+	 * session.
+	 */
+	async captureModelContext(): Promise<CapturedModelContext | null> {
+		const activeSession = this.sessions.getActiveSession()
+		if (!activeSession) {
+			Logger.log("[SdkController] captureModelContext: no active session")
+			return null
+		}
+
+		Logger.log(`[SdkController] captureModelContext: sessionId=${activeSession.sessionId}`)
+
+		return new Promise<CapturedModelContext | null>((resolve) => {
+			// Set the resolver — the beforeModel hook will call it with the captured request
+			this.contextCaptureResolver = (data) => {
+				Logger.log(
+					`[SdkController] captureModelContext: captured ${data.messages.length} messages, systemPrompt=${data.systemPrompt.length} chars, tools=${data.tools.length}`,
+				)
+				resolve(data)
+			}
+
+			// Send a trivial prompt to trigger the model pipeline.
+			// The beforeModel hook will capture the request and return {stop:true}
+			// to abort the turn before the model is called.
+			const sessionId = activeSession.sessionId
+			activeSession.sdkHost
+				.send({ sessionId, prompt: " " })
+				.then(() => {
+					// If the resolver is still set, the capture never fired
+					// (e.g. send completed without hitting beforeModel).
+					if (this.contextCaptureResolver) {
+						Logger.warn("[SdkController] captureModelContext: send completed without capture")
+						this.contextCaptureResolver = undefined
+						resolve(null)
+					}
+				})
+				.catch((err) => {
+					Logger.error("[SdkController] captureModelContext: send failed:", err)
+					this.contextCaptureResolver = undefined
+					resolve(null)
+				})
+		})
 	}
 
 	getProviderCatalog(): ProviderCatalog {
@@ -552,8 +650,10 @@ export class Controller {
 	private isSelectionForActiveModeProvider(event: Extract<ProviderConfigChange, { kind: "selection" }>): boolean {
 		try {
 			const modeValue = this.stateManager.getGlobalSettingsKey("mode")
-			const mode = modeValue === "plan" ? "plan" : "act"
-			if (event.mode !== mode) {
+			const mode: Mode = modeValue === "plan" || modeValue === "agent" ? modeValue : "act"
+			// Agent mode uses act provider config
+			const providerMode = mode === "agent" ? "act" : mode
+			if (event.mode !== providerMode) {
 				return false
 			}
 
@@ -805,7 +905,7 @@ export class Controller {
 	// ---- Session event subscription ----
 
 	/**
-	 * Subscribe to session events translated to ClineMessages.
+	 * Subscribe to session events translated to agentarioMessages.
 	 * Returns an unsubscribe function.
 	 */
 	onSessionEvent(listener: SessionEventListener): () => void {
@@ -819,8 +919,8 @@ export class Controller {
 		try {
 			const apiConfig = this.stateManager.getApiConfiguration()
 			const modeValue = this.stateManager.getGlobalSettingsKey("mode")
-			const mode = modeValue === "plan" ? "plan" : "act"
-			return mode === "plan" ? apiConfig.planModeApiProvider : apiConfig.actModeApiProvider
+			const mode: Mode = modeValue === "plan" || modeValue === "agent" ? modeValue : "act"
+			return (mode === "plan" ? apiConfig.planModeApiProvider : apiConfig.actModeApiProvider)
 		} catch {
 			return undefined
 		}
@@ -829,7 +929,7 @@ export class Controller {
 	/**
 	 * Check if the active API provider is 'cline' (for current mode).
 	 */
-	private isClineProviderActive(): boolean {
+	private isAgentarioCloudProviderActive(): boolean {
 		return this.getActiveProviderId() === "cline"
 	}
 
@@ -841,11 +941,11 @@ export class Controller {
 	 * Message sequence:
 	 *   1. say:'task'           – the user's message text
 	 *   2. say:'api_req_started' – opens the API request row
-	 *   3. ask:'api_req_failed'  – ClineError JSON → ErrorRow renders auth UI
+	 *   3. ask:'api_req_failed'  – AgentarioError JSON → ErrorRow renders auth UI
 	 */
 	private emitClineAuthError(task?: string): void {
 		const ts = Date.now()
-		this.pendingClineAuthRetryPrompt = task
+		this.pendingAgentarioAuthRetryPrompt = task
 
 		if (!this.task) {
 			this.task = createTaskProxy(
@@ -855,15 +955,15 @@ export class Controller {
 			)
 		}
 
-		const clineError = new ClineError(
-			{ message: CLINE_ACCOUNT_AUTH_ERROR_MESSAGE, status: 401 },
+		const AgentarioError = new AgentarioError(
+			{ message: AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE, status: 401 },
 			undefined, // modelId
 			"cline",
 		)
-		const serializedError = clineError.serialize()
+		const serializedError = AgentarioError.serialize()
 
 		const failedAskTs = ts + 2
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts,
 				type: "say",
@@ -877,7 +977,7 @@ export class Controller {
 				say: "api_req_started",
 				text: JSON.stringify({
 					streamingFailedMessage: serializedError,
-				} satisfies ClineApiReqInfo),
+				} satisfies AgentarioApiReqInfo),
 				partial: false,
 			},
 			{
@@ -904,7 +1004,7 @@ export class Controller {
 
 	/**
 	 * Check if an error message indicates an insufficient credits / balance error
-	 * by reshaping it into ClineError format and inspecting the result.
+	 * by reshaping it into AgentarioError format and inspecting the result.
 	 */
 	private isClineBalanceError(errorMessage: string): boolean {
 		try {
@@ -921,28 +1021,28 @@ export class Controller {
 	 * webview renders the "Buy Credits" button via CreditLimitError.
 	 *
 	 * Message sequence:
-	 *   1. say:'api_req_started' – streamingFailedMessage holds the ClineError JSON
-	 *   2. ask:'api_req_failed'  – ClineError JSON → ErrorRow renders balance UI
+	 *   1. say:'api_req_started' – streamingFailedMessage holds the AgentarioError JSON
+	 *   2. ask:'api_req_failed'  – AgentarioError JSON → ErrorRow renders balance UI
 	 */
 	private emitClineBalanceError(rawErrorMessage: string): void {
 		const ts = Date.now()
 
 		// reshapeErrorForWebview extracts structured fields from the SDK error
 		// message (which may be plain text or embedded JSON) and produces the
-		// ClineError-serialized JSON that the webview's ErrorRow expects.
+		// AgentarioError-serialized JSON that the webview's ErrorRow expects.
 		const serializedError = reshapeErrorForWebview({
 			message: rawErrorMessage,
 		})
 
 		const failedAskTs = ts + 1
-		const messages: ClineMessage[] = [
+		const messages: AgentarioMessage[] = [
 			{
 				ts,
 				type: "say",
 				say: "api_req_started",
 				text: JSON.stringify({
 					streamingFailedMessage: serializedError,
-				} satisfies ClineApiReqInfo),
+				} satisfies AgentarioApiReqInfo),
 				partial: false,
 			},
 			{
@@ -1042,17 +1142,27 @@ export class Controller {
 	 * Mirrors the CLI's `/compact` local command: runs an SDK manual compaction
 	 * and restarts the session with the compacted transcript so the model's
 	 * working context is actually reduced.
+	 *
+	 * Agentario: supports two modes:
+	 * - "context" (default): summarize context only
+	 * - "full": re-summarize entire chat history
 	 */
-	async compactTask(): Promise<void> {
-		await this.compaction.compactTask()
+	async compactTask(mode: "context" | "full" = "context"): Promise<void> {
+		await this.compaction.compactTask(mode)
+		// После compaction устанавливаем idle чтобы разблокировать ввод
+		this.turnStateTracker.set("idle")
+		await this.postStateToWebview()
 	}
 
 	async clearTask(): Promise<void> {
-		this.pendingClineAuthRetryPrompt = undefined
+		Logger.log(`[SdkController.clearTask] starting...`)
+		this.pendingAgentarioAuthRetryPrompt = undefined
 		// No active task — UI returns to idle (input enabled, no buttons/thinking).
 		this.turnStateTracker.set("idle")
 		await this.taskControl.clearTask()
+		Logger.log(`[SdkController.clearTask] taskControl.clearTask done, posting state...`)
 		await this.postStateToWebview()
+		Logger.log(`[SdkController.clearTask] done`)
 	}
 
 	async handleTaskCreation(prompt: string): Promise<void> {
@@ -1069,9 +1179,9 @@ export class Controller {
 	 * return immediately so the webview stays responsive.
 	 */
 	async askResponse(prompt?: string, images?: string[], files?: string[]): Promise<void> {
-		if (this.pendingClineAuthRetryPrompt !== undefined && this.task?.taskState?.askResponse === "yesButtonClicked") {
-			const retryPrompt = this.pendingClineAuthRetryPrompt
-			this.pendingClineAuthRetryPrompt = undefined
+		if (this.pendingAgentarioAuthRetryPrompt !== undefined && this.task?.taskState?.askResponse === "yesButtonClicked") {
+			const retryPrompt = this.pendingAgentarioAuthRetryPrompt
+			this.pendingAgentarioAuthRetryPrompt = undefined
 			await this.initTask(retryPrompt, images, files)
 			return
 		}
@@ -1108,20 +1218,20 @@ export class Controller {
 			throw new Error("No active task to edit")
 		}
 
-		const clineMessages = currentTask.messageStateHandler.getClineMessages()
-		const targetIndex = clineMessages.findIndex((message) => message.ts === input.messageTs)
+		const agentarioMessages = currentTask.messageStateHandler.getagentarioMessages()
+		const targetIndex = agentarioMessages.findIndex((message) => message.ts === input.messageTs)
 		if (targetIndex === -1) {
 			throw new Error("Message to edit was not found")
 		}
-		const targetMessage = clineMessages[targetIndex]
+		const targetMessage = agentarioMessages[targetIndex]
 		if (targetMessage.type !== "say" || (targetMessage.say !== "task" && targetMessage.say !== "user_feedback")) {
 			throw new Error("Only user messages can be edited")
 		}
 
-		const userOrdinal = clineMessages
+		const userOrdinal = agentarioMessages
 			.slice(0, targetIndex + 1)
 			.filter((message) => message.type === "say" && (message.say === "task" || message.say === "user_feedback")).length
-		const checkpointRunCount = getCheckpointRunCountForMessage(clineMessages, targetIndex)
+		const checkpointRunCount = getCheckpointRunCountForMessage(agentarioMessages, targetIndex)
 		const sourceSessionId = activeSession?.sessionId ?? currentTask.taskId
 		let sdkMessages: SdkUserMessage[]
 		let tempHost: VscodeSessionHost | undefined
@@ -1142,7 +1252,7 @@ export class Controller {
 			const historyTitle =
 				userOrdinal === 1
 					? editedText
-					: extractSdkUserText(firstUserMessage ?? {}) || clineMessages[0]?.text || editedText
+					: extractSdkUserText(firstUserMessage ?? {}) || agentarioMessages[0]?.text || editedText
 			const fallbackCwd = await this.getWorkspaceRoot()
 			const [sessionRecord, historyItem] = await Promise.all([
 				sessionHost.get(sourceSessionId).catch(() => undefined),
@@ -1153,9 +1263,10 @@ export class Controller {
 				sessionRecord?.workspaceRoot?.trim() ||
 				historyItem?.cwdOnTaskInitialization?.trim() ||
 				fallbackCwd
-			const mode = this.stateManager.getGlobalSettingsKey("mode") === "plan" ? "plan" : "act"
+			const modeValue = this.stateManager.getGlobalSettingsKey("mode")
+			const mode: Mode = modeValue === "plan" || modeValue === "agent" ? modeValue : "act"
 			const config = await this.sessionConfigBuilder.build({ cwd, mode, prompt: historyTitle })
-			if (usesClineAccountAuth(config.providerId) && !config.apiKey) {
+			if (usesAgentarioAccountAuth(config.providerId) && !config.apiKey) {
 				this.emitClineAuthError(editedText)
 				return
 			}
@@ -1205,7 +1316,7 @@ export class Controller {
 			const newHistoryItem = createHistoryItemFromSession(startResult.sessionId, historyTitle, config.modelId, cwd)
 			await this.taskHistory.updateTaskHistoryItem(newHistoryItem)
 
-			const visibleMessages = clineMessages.slice(0, targetIndex)
+			const visibleMessages = agentarioMessages.slice(0, targetIndex)
 			if (visibleMessages.length > 0) {
 				task.messageStateHandler.addMessages(visibleMessages)
 			}
@@ -1228,7 +1339,7 @@ export class Controller {
 		}
 	}
 
-	async restoreCheckpoint(input: { checkpointRunCount: number; restoreType: ClineCheckpointRestore }): Promise<void> {
+	async restoreCheckpoint(input: { checkpointRunCount: number; restoreType: AgentarioCheckpointRestore }): Promise<void> {
 		const restoreMessages = input.restoreType === "task" || input.restoreType === "taskAndWorkspace"
 		const restoreWorkspace = input.restoreType === "workspace" || input.restoreType === "taskAndWorkspace"
 		const checkpointRunCount = Number(input.checkpointRunCount)
@@ -1245,19 +1356,20 @@ export class Controller {
 			await this.cancelTask()
 		}
 
-		const currentMessages = currentTask.messageStateHandler.getClineMessages()
+		const currentMessages = currentTask.messageStateHandler.getagentarioMessages()
 		const target = restoreMessages ? findVisibleCheckpointUserMessageByRun(currentMessages, checkpointRunCount) : undefined
 		if (restoreMessages && !target) {
 			throw new Error(`Could not find user message for checkpoint run ${checkpointRunCount}`)
 		}
 
 		const cwd = await this.getWorkspaceRoot()
-		const mode = this.stateManager.getGlobalSettingsKey("mode") === "plan" ? "plan" : "act"
+		const modeValue = this.stateManager.getGlobalSettingsKey("mode")
+		const mode: Mode = modeValue === "plan" || modeValue === "agent" ? modeValue : "act"
 		const firstUserMessage = currentMessages.find(isVisibleCheckpointUserMessage)
 		const restoredText = target?.message.text ?? ""
 		const historyTitle = checkpointRunCount === 1 ? restoredText : firstUserMessage?.text || restoredText
 		const config = restoreMessages ? await this.sessionConfigBuilder.build({ cwd, mode, prompt: historyTitle }) : undefined
-		if (config && usesClineAccountAuth(config.providerId) && !config.apiKey) {
+		if (config && usesAgentarioAccountAuth(config.providerId) && !config.apiKey) {
 			this.emitClineAuthError(restoredText)
 			return
 		}
@@ -1329,7 +1441,7 @@ export class Controller {
 	 * this.task = undefined and may trigger async operations (session stop/dispose)
 	 * that race with the new task proxy creation. If any of those async operations
 	 * trigger postStateToWebview() while this.task is undefined, the webview
-	 * receives a state with no currentTaskItem/clineMessages and flashes back
+	 * receives a state with no currentTaskItem/agentarioMessages and flashes back
 	 * to the welcome screen (S6-6/S6-23 fix).
 	 *
 	 * Instead, we:
@@ -1521,7 +1633,7 @@ export class Controller {
 
 		if (offset === 0 && !favoritesOnly && this.task?.taskId && !tasks.some((task) => task.id === this.task?.taskId)) {
 			const taskMessage = this.task.messageStateHandler
-				.getClineMessages()
+				.getagentarioMessages()
 				.find((message) => message.type === "say" && message.say === "task" && message.text)
 			const matchesSearch = !searchQuery || taskMessage?.text?.toLowerCase().includes(searchQuery.toLowerCase())
 			if (taskMessage?.text && matchesSearch) {
@@ -1551,11 +1663,11 @@ export class Controller {
 			throw new Error(`Task not found in history: ${id}`)
 		}
 
-		let messages: ClineMessage[]
+		let messages: AgentarioMessage[]
 		if (this.task?.taskId === id) {
-			messages = this.task.messageStateHandler.getClineMessages()
+			messages = this.task.messageStateHandler.getagentarioMessages()
 		} else {
-			messages = await this.taskHistory.getClineMessages(id)
+			messages = await this.taskHistory.getagentarioMessages(id)
 		}
 
 		if (messages.length === 0) {
@@ -1692,6 +1804,24 @@ export class Controller {
 		await this.postStateToWebview()
 	}
 
+	async setTaskColor(taskId: string, taskColor?: string): Promise<void> {
+		Logger.log(`[SdkController.setTaskColor] taskId=${taskId}, taskColor=${taskColor ?? "(undefined)"}`)
+		const historyItem = await this.taskHistory.findHistoryItem(taskId)
+		if (!historyItem) {
+			Logger.log(`[setTaskColor] Task not found in history: ${taskId}`)
+			return
+		}
+
+		Logger.log(`[SdkController.setTaskColor] found historyItem, updating with taskColor=${taskColor ?? "(undefined)"}`)
+		await this.taskHistory.updateTaskHistory({
+			...historyItem,
+			taskColor,
+		})
+		Logger.log(`[SdkController.setTaskColor] updateTaskHistory done, posting state to webview...`)
+		await this.postStateToWebview()
+		Logger.log(`[SdkController.setTaskColor] postStateToWebview done`)
+	}
+
 	// ---- Background command state ----
 
 	updateBackgroundCommandState(running: boolean, taskId?: string): void {
@@ -1755,7 +1885,7 @@ export class Controller {
 			// asserts that taskHistory reflects newTask before the model turn completes.
 			if (this.task?.taskId && !mergedTaskHistoryById.has(this.task.taskId)) {
 				const taskMessage = this.task.messageStateHandler
-					.getClineMessages()
+					.getagentarioMessages()
 					.find((message) => message.type === "say" && message.say === "task" && message.text)
 				if (taskMessage?.text) {
 					mergedTaskHistoryById.set(this.task.taskId, {

@@ -1,5 +1,5 @@
-import { Controller } from "@/sdk"
-import { RemoteConfigSetting, StringRequest } from "@/shared/proto/index.cline"
+﻿import { Controller } from "@/sdk"
+import { RemoteConfigSetting, StringRequest } from "@/shared/proto/index.agentario"
 
 export async function toggleRemoteConfigSetting(_controller: Controller, _request: StringRequest): Promise<RemoteConfigSetting> {
 	// TODO(ENG): Toggling remote config settings is not implemented yet. The

@@ -1,4 +1,4 @@
-import type { ClineMessage, TurnState } from "@shared/ExtensionMessage"
+﻿import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
 import { describe, expect, it } from "vitest"
 import { isAgentTaskRunning } from "./taskRunning"
 
@@ -16,7 +16,7 @@ describe("isAgentTaskRunning", () => {
 	})
 
 	it("falls back to partial last message when turnState is missing", () => {
-		const lastMessage = { partial: true } as ClineMessage
+		const lastMessage = { partial: true } as AgentarioMessage
 		expect(isAgentTaskRunning(undefined, lastMessage)).toBe(true)
 	})
 
@@ -25,7 +25,7 @@ describe("isAgentTaskRunning", () => {
 			type: "say",
 			say: "api_req_started",
 			text: JSON.stringify({}),
-		} as ClineMessage
+		} as AgentarioMessage
 		expect(isAgentTaskRunning(undefined, lastMessage)).toBe(true)
 	})
 })

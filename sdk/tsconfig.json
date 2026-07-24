@@ -10,34 +10,34 @@
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
 		"paths": {
-			"@cline/agents": ["./packages/agents/src/index.ts"],
-			"@cline/agents/*": [
+			"@agentario/agents": ["./packages/agents/src/index.ts"],
+			"@agentario/agents/*": [
 				"./packages/agents/src/*",
 				"./packages/agents/src/*/index.ts"
 			],
-			"@cline/cline-hub": ["./apps/cline-hub/src/server.ts"],
-			"@cline/core": ["./packages/core/src/index.ts"],
-			"@cline/core/hub": ["./packages/core/src/hub/index.ts"],
-			"@cline/core/hub/daemon-entry": [
+			"@agentario/cline-hub": ["./apps/cline-hub/src/server.ts"],
+			"@agentario/core": ["./packages/core/src/index.ts"],
+			"@agentario/core/hub": ["./packages/core/src/hub/index.ts"],
+			"@agentario/core/hub/daemon-entry": [
 				"./packages/core/src/hub/daemon/entry.ts"
 			],
-			"@cline/core/telemetry": [
+			"@agentario/core/telemetry": [
 				"./packages/core/src/services/telemetry/index.ts"
 			],
-			"@cline/core/*": [
+			"@agentario/core/*": [
 				"./packages/core/src/*",
 				"./packages/core/src/*/index.ts"
 			],
-			"@cline/llms": ["./packages/llms/src/index.ts"],
-			"@cline/llms/browser": ["./packages/llms/src/index.browser.ts"],
-			"@cline/sdk": ["./packages/sdk/src/index.ts"],
-			"@cline/shared": ["./packages/shared/src/index.ts"],
-			"@cline/shared/automation": ["./packages/shared/src/automation/index.ts"],
-			"@cline/shared/browser": ["./packages/shared/src/index.browser.ts"],
-			"@cline/shared/db": ["./packages/shared/src/db/index.ts"],
-			"@cline/shared/storage": ["./packages/shared/src/storage/index.ts"],
-			"@cline/shared/types": ["./packages/shared/src/types/index.ts"],
-			"@cline/shared/*": [
+			"@agentario/llms": ["./packages/llms/src/index.ts"],
+			"@agentario/llms/browser": ["./packages/llms/src/index.browser.ts"],
+			"@agentario/sdk": ["./packages/sdk/src/index.ts"],
+			"@agentario/shared": ["./packages/shared/src/index.ts"],
+			"@agentario/shared/automation": ["./packages/shared/src/automation/index.ts"],
+			"@agentario/shared/browser": ["./packages/shared/src/index.browser.ts"],
+			"@agentario/shared/db": ["./packages/shared/src/db/index.ts"],
+			"@agentario/shared/storage": ["./packages/shared/src/storage/index.ts"],
+			"@agentario/shared/types": ["./packages/shared/src/types/index.ts"],
+			"@agentario/shared/*": [
 				"./packages/shared/src/*",
 				"./packages/shared/src/*/index.ts"
 			]

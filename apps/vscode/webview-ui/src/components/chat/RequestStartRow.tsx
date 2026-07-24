@@ -1,4 +1,4 @@
-import type { ClineMessage, ClineSayTool } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"
 import { isApiReqComplete } from "@shared/message-display"
 import type { Mode } from "@shared/storage/types"
 import type { LucideIcon } from "lucide-react"
@@ -12,13 +12,13 @@ import { ThinkingRow } from "./ThinkingRow"
 import { TypewriterText } from "./TypewriterText"
 
 interface RequestStartRowProps {
-	message: ClineMessage
+	message: AgentarioMessage
 	apiRequestFailedMessage?: string
 	apiReqStreamingFailedMessage?: string
 	cost?: number
 	reasoningContent?: string
 	responseStarted?: boolean
-	clineMessages: ClineMessage[]
+	agentarioMessages: AgentarioMessage[]
 	mode?: Mode
 	classNames?: string
 	isExpanded: boolean
@@ -40,7 +40,7 @@ const formatSearchRegex = (regex: string, path: string, filePattern?: string): s
 	return filePattern && filePattern !== "*" ? `"${terms}" in ${pathDisplay} (${filePattern})` : `"${terms}" in ${pathDisplay}`
 }
 // Format activity text based on tool type
-const getActivityText = (tool: ClineSayTool): string | null => {
+const getActivityText = (tool: AgentarioSayTool): string | null => {
 	const cleanedPath = cleanPathPrefix(tool.path || "")
 	switch (tool.tool) {
 		case "readFile":
@@ -59,10 +59,10 @@ const getActivityText = (tool: ClineSayTool): string | null => {
 
 // Collect tools in a given range, with optional stop condition
 const collectToolsInRange = (
-	messages: ClineMessage[],
+	messages: AgentarioMessage[],
 	startIdx: number,
 	endIdx: number,
-	stopCondition?: (msg: ClineMessage) => boolean,
+	stopCondition?: (msg: AgentarioMessage) => boolean,
 ): { icon: LucideIcon; text: string }[] => {
 	const activities: { icon: LucideIcon; text: string }[] = []
 
@@ -80,7 +80,7 @@ const collectToolsInRange = (
 		}
 
 		try {
-			const tool = JSON.parse(msg.text || "{}") as ClineSayTool
+			const tool = JSON.parse(msg.text || "{}") as AgentarioSayTool
 			const activityText = getActivityText(tool)
 			if (activityText) {
 				const toolIcon = getIconByToolName(tool.tool)
@@ -94,7 +94,7 @@ const collectToolsInRange = (
 }
 
 // Find current api_req and determine if it has cost
-const findCurrentApiReq = (messages: ClineMessage[]): { index: number; hasCost: boolean } | null => {
+const findCurrentApiReq = (messages: AgentarioMessage[]): { index: number; hasCost: boolean } | null => {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i]
 		if (msg.say === "api_req_started" && msg.text) {
@@ -110,7 +110,7 @@ const findCurrentApiReq = (messages: ClineMessage[]): { index: number; hasCost: 
 }
 
 // Find the most recent completed api_req before the given index
-const findPrevCompletedApiReq = (messages: ClineMessage[], beforeIdx: number): number => {
+const findPrevCompletedApiReq = (messages: AgentarioMessage[], beforeIdx: number): number => {
 	for (let i = beforeIdx - 1; i >= 0; i--) {
 		const msg = messages[i]
 		if (msg.say === "api_req_started" && msg.text) {
@@ -136,7 +136,7 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 	cost,
 	reasoningContent,
 	responseStarted,
-	clineMessages,
+	agentarioMessages,
 	mode,
 	handleToggle,
 	isExpanded,
@@ -155,7 +155,7 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 		return cost != null
 	}, [cost, message.say, message.text])
 	const hasReasoning = !!reasoningContent
-	const hasCompletionResult = clineMessages.some(
+	const hasCompletionResult = agentarioMessages.some(
 		(msg) => msg.ask === "completion_result" || msg.say === "completion_result" || msg.ask === "plan_mode_respond",
 	)
 
@@ -171,13 +171,13 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 
 	// Check if this api_req will be absorbed into a tool group (reasoning will disappear)
 	const willBeAbsorbed = useMemo(() => {
-		return isApiReqAbsorbable(message.ts, clineMessages)
-	}, [message.ts, clineMessages])
+		return isApiReqAbsorbable(message.ts, agentarioMessages)
+	}, [message.ts, agentarioMessages])
 
 	// Find all exploratory tool activities that are currently in flight.
 	// Tools come AFTER the api_req_started message, so we look from currentApiReq forward.
 	const currentActivities = useMemo(() => {
-		const currentApiReq = findCurrentApiReq(clineMessages)
+		const currentApiReq = findCurrentApiReq(agentarioMessages)
 		if (!currentApiReq) {
 			return []
 		}
@@ -185,21 +185,21 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 		if (!currentApiReq.hasCost) {
 			// CASE A: Current api_req is INCOMPLETE
 			// Look for ask === "tool" messages AFTER the current api_req_started
-			return collectToolsInRange(clineMessages, currentApiReq.index + 1, clineMessages.length)
+			return collectToolsInRange(agentarioMessages, currentApiReq.index + 1, agentarioMessages.length)
 		}
 		// CASE B: Current api_req is COMPLETE - no activities to show
 		return []
-	}, [clineMessages])
+	}, [agentarioMessages])
 
 	// Check if there are any completed tools in the tool group
 	const hasCompletedTools = useMemo(() => {
 		// Look for any completed low-stakes tool messages that would be in a tool group
-		return clineMessages.some((msg, idx) => {
+		return agentarioMessages.some((msg, idx) => {
 			if (msg.say === "tool" && isLowStakesTool(msg)) {
 				// Check if this tool is from a completed API request
 				// (looking backwards for an api_req with cost)
 				for (let i = idx - 1; i >= 0; i--) {
-					const prevMsg = clineMessages[i]
+					const prevMsg = agentarioMessages[i]
 					if (prevMsg.say === "api_req_started" && prevMsg.text) {
 						try {
 							const info = JSON.parse(prevMsg.text)
@@ -212,7 +212,7 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 			}
 			return false
 		})
-	}, [clineMessages])
+	}, [agentarioMessages])
 
 	// Only show currentActivities if there are NO completed tools
 	// (otherwise they'll be shown in the unified ToolGroupRenderer list)
@@ -243,7 +243,7 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 					<div className="ml-1 pl-0 mb-1 -mt-1.25 pt-1">
 						<div className="inline-flex justify-baseline gap-0.5 text-left select-none px-0 w-full">
 							<span className="animate-shimmer bg-linear-90 from-foreground to-description bg-[length:200%_100%] bg-clip-text text-transparent text-[13px] leading-none">
-								Thinking...
+								{reasoningContent?.trim() ? `Thinking... ${reasoningContent.trim().split(/\s+/).slice(-5).join(" ")}` : "Thinking..."}
 							</span>
 						</div>
 					</div>

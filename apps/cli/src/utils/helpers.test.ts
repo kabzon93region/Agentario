@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+﻿import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -22,20 +22,20 @@ type EnvSnapshot = {
 
 function captureEnv(): EnvSnapshot {
 	return {
-		CLINE_DATA_DIR: process.env.CLINE_DATA_DIR,
-		CLINE_DB_DATA_DIR: process.env.CLINE_DB_DATA_DIR,
-		CLINE_HOOKS_LOG_PATH: process.env.CLINE_HOOKS_LOG_PATH,
-		CLINE_SESSION_ID: process.env.CLINE_SESSION_ID,
-		CLINE_SESSION_DATA_DIR: process.env.CLINE_SESSION_DATA_DIR,
+		CLINE_DATA_DIR: process.env.agentario_DATA_DIR,
+		CLINE_DB_DATA_DIR: process.env.agentario_DB_DATA_DIR,
+		CLINE_HOOKS_LOG_PATH: process.env.agentario_HOOKS_LOG_PATH,
+		CLINE_SESSION_ID: process.env.agentario_SESSION_ID,
+		CLINE_SESSION_DATA_DIR: process.env.agentario_SESSION_DATA_DIR,
 	};
 }
 
 function restoreEnv(snapshot: EnvSnapshot): void {
-	process.env.CLINE_DATA_DIR = snapshot.CLINE_DATA_DIR;
-	process.env.CLINE_DB_DATA_DIR = snapshot.CLINE_DB_DATA_DIR;
-	process.env.CLINE_HOOKS_LOG_PATH = snapshot.CLINE_HOOKS_LOG_PATH;
-	process.env.CLINE_SESSION_ID = snapshot.CLINE_SESSION_ID;
-	process.env.CLINE_SESSION_DATA_DIR = snapshot.CLINE_SESSION_DATA_DIR;
+	process.env.agentario_DATA_DIR = snapshot.agentario_DATA_DIR;
+	process.env.agentario_DB_DATA_DIR = snapshot.agentario_DB_DATA_DIR;
+	process.env.agentario_HOOKS_LOG_PATH = snapshot.agentario_HOOKS_LOG_PATH;
+	process.env.agentario_SESSION_ID = snapshot.agentario_SESSION_ID;
+	process.env.agentario_SESSION_DATA_DIR = snapshot.agentario_SESSION_DATA_DIR;
 }
 
 describe("parseArgs", () => {
@@ -403,10 +403,10 @@ describe("hook payload validation and audit logging", () => {
 		tempDir = mkdtempSync(path.join(os.tmpdir(), "cli-helper-audit-"));
 		const expectedPath = path.join(tempDir, "logs", "hooks.jsonl");
 		const env = captureEnv();
-		process.env.CLINE_DATA_DIR = tempDir;
-		delete process.env.CLINE_HOOKS_LOG_PATH;
-		delete process.env.CLINE_SESSION_ID;
-		delete process.env.CLINE_SESSION_DATA_DIR;
+		process.env.agentario_DATA_DIR = tempDir;
+		delete process.env.agentario_HOOKS_LOG_PATH;
+		delete process.env.agentario_SESSION_ID;
+		delete process.env.agentario_SESSION_DATA_DIR;
 
 		await appendHookAudit({
 			clineVersion: "",
@@ -437,10 +437,10 @@ describe("hook payload validation and audit logging", () => {
 		tempDir = mkdtempSync(path.join(os.tmpdir(), "cli-helper-env-audit-"));
 		const expectedPath = path.join(tempDir, "hooks", "from-env.jsonl");
 		const env = captureEnv();
-		process.env.CLINE_HOOKS_LOG_PATH = expectedPath;
-		delete process.env.CLINE_DATA_DIR;
-		delete process.env.CLINE_SESSION_ID;
-		delete process.env.CLINE_SESSION_DATA_DIR;
+		process.env.agentario_HOOKS_LOG_PATH = expectedPath;
+		delete process.env.agentario_DATA_DIR;
+		delete process.env.agentario_SESSION_ID;
+		delete process.env.agentario_SESSION_DATA_DIR;
 
 		await appendHookAudit({
 			clineVersion: "",
@@ -474,14 +474,14 @@ describe("sandbox environment", () => {
 	it("sets sandbox-specific storage paths", () => {
 		const root = mkdtempSync(path.join(os.tmpdir(), "cli-helper-sandbox-"));
 		const previous = {
-			CLINE_SANDBOX: process.env.CLINE_SANDBOX,
-			CLINE_SANDBOX_DATA_DIR: process.env.CLINE_SANDBOX_DATA_DIR,
-			CLINE_DATA_DIR: process.env.CLINE_DATA_DIR,
-			CLINE_DB_DATA_DIR: process.env.CLINE_DB_DATA_DIR,
-			CLINE_SESSION_DATA_DIR: process.env.CLINE_SESSION_DATA_DIR,
-			CLINE_TEAM_DATA_DIR: process.env.CLINE_TEAM_DATA_DIR,
-			CLINE_PROVIDER_SETTINGS_PATH: process.env.CLINE_PROVIDER_SETTINGS_PATH,
-			CLINE_HOOKS_LOG_PATH: process.env.CLINE_HOOKS_LOG_PATH,
+			CLINE_SANDBOX: process.env.agentario_SANDBOX,
+			CLINE_SANDBOX_DATA_DIR: process.env.agentario_SANDBOX_DATA_DIR,
+			CLINE_DATA_DIR: process.env.agentario_DATA_DIR,
+			CLINE_DB_DATA_DIR: process.env.agentario_DB_DATA_DIR,
+			CLINE_SESSION_DATA_DIR: process.env.agentario_SESSION_DATA_DIR,
+			CLINE_TEAM_DATA_DIR: process.env.agentario_TEAM_DATA_DIR,
+			CLINE_PROVIDER_SETTINGS_PATH: process.env.agentario_PROVIDER_SETTINGS_PATH,
+			CLINE_HOOKS_LOG_PATH: process.env.agentario_HOOKS_LOG_PATH,
 		};
 		try {
 			const resolved = configureSandboxEnvironment({
@@ -490,36 +490,36 @@ describe("sandbox environment", () => {
 				explicitDir: "./sandbox-state",
 			});
 			expect(resolved).toBe(path.join(root, "sandbox-state"));
-			expect(process.env.CLINE_SANDBOX).toBe("1");
-			expect(process.env.CLINE_SANDBOX_DATA_DIR).toBe(
+			expect(process.env.agentario_SANDBOX).toBe("1");
+			expect(process.env.agentario_SANDBOX_DATA_DIR).toBe(
 				path.join(root, "sandbox-state"),
 			);
-			expect(process.env.CLINE_DATA_DIR).toBe(path.join(root, "sandbox-state"));
-			expect(process.env.CLINE_DB_DATA_DIR).toBe(
+			expect(process.env.agentario_DATA_DIR).toBe(path.join(root, "sandbox-state"));
+			expect(process.env.agentario_DB_DATA_DIR).toBe(
 				path.join(root, "sandbox-state", "db"),
 			);
-			expect(process.env.CLINE_SESSION_DATA_DIR).toBe(
+			expect(process.env.agentario_SESSION_DATA_DIR).toBe(
 				path.join(root, "sandbox-state", "sessions"),
 			);
-			expect(process.env.CLINE_TEAM_DATA_DIR).toBe(
+			expect(process.env.agentario_TEAM_DATA_DIR).toBe(
 				path.join(root, "sandbox-state", "teams"),
 			);
-			expect(process.env.CLINE_PROVIDER_SETTINGS_PATH).toBe(
+			expect(process.env.agentario_PROVIDER_SETTINGS_PATH).toBe(
 				path.join(root, "sandbox-state", "settings", "providers.json"),
 			);
-			expect(process.env.CLINE_HOOKS_LOG_PATH).toBe(
+			expect(process.env.agentario_HOOKS_LOG_PATH).toBe(
 				path.join(root, "sandbox-state", "logs", "hooks.jsonl"),
 			);
 		} finally {
-			process.env.CLINE_SANDBOX = previous.CLINE_SANDBOX;
-			process.env.CLINE_SANDBOX_DATA_DIR = previous.CLINE_SANDBOX_DATA_DIR;
-			process.env.CLINE_DATA_DIR = previous.CLINE_DATA_DIR;
-			process.env.CLINE_DB_DATA_DIR = previous.CLINE_DB_DATA_DIR;
-			process.env.CLINE_SESSION_DATA_DIR = previous.CLINE_SESSION_DATA_DIR;
-			process.env.CLINE_TEAM_DATA_DIR = previous.CLINE_TEAM_DATA_DIR;
-			process.env.CLINE_PROVIDER_SETTINGS_PATH =
-				previous.CLINE_PROVIDER_SETTINGS_PATH;
-			process.env.CLINE_HOOKS_LOG_PATH = previous.CLINE_HOOKS_LOG_PATH;
+			process.env.agentario_SANDBOX = previous.agentario_SANDBOX;
+			process.env.agentario_SANDBOX_DATA_DIR = previous.agentario_SANDBOX_DATA_DIR;
+			process.env.agentario_DATA_DIR = previous.agentario_DATA_DIR;
+			process.env.agentario_DB_DATA_DIR = previous.agentario_DB_DATA_DIR;
+			process.env.agentario_SESSION_DATA_DIR = previous.agentario_SESSION_DATA_DIR;
+			process.env.agentario_TEAM_DATA_DIR = previous.agentario_TEAM_DATA_DIR;
+			process.env.agentario_PROVIDER_SETTINGS_PATH =
+				previous.agentario_PROVIDER_SETTINGS_PATH;
+			process.env.agentario_HOOKS_LOG_PATH = previous.agentario_HOOKS_LOG_PATH;
 			rmSync(root, { recursive: true, force: true });
 		}
 	});

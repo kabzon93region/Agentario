@@ -1,6 +1,6 @@
-import type { ConsecutiveMistakeLimitContext, ConsecutiveMistakeLimitDecision } from "@cline/shared"
-import type { ClineAskQuestion, ClineMessage, TurnPhase } from "@shared/ExtensionMessage"
-import type { ClineAskResponse } from "@shared/WebviewMessage"
+﻿import type { ConsecutiveMistakeLimitContext, ConsecutiveMistakeLimitDecision } from "@agentario/shared"
+import type { AgentarioAskQuestion, AgentarioMessage, TurnPhase } from "@shared/ExtensionMessage"
+import type { AgentarioAskResponse } from "@shared/WebviewMessage"
 import { Logger } from "@/shared/services/Logger"
 import { MessageIdMinter } from "./message-id-minter"
 import { buildToolApprovalAskMessage } from "./message-translator"
@@ -57,7 +57,7 @@ export class SdkInteractionCoordinator {
 	): Promise<ConsecutiveMistakeLimitDecision> {
 		const detail = context.details?.trim()
 		const latest = detail ? `${context.reason}: ${detail}` : `${context.reason} at iteration ${context.iteration}`
-		const askMessage: ClineMessage = {
+		const askMessage: AgentarioMessage = {
 			ts: this.nextMessageTs(),
 			type: "ask",
 			ask: "mistake_limit_reached",
@@ -83,7 +83,7 @@ export class SdkInteractionCoordinator {
 			return { approved: true }
 		}
 
-		const toolAskMessage: ClineMessage = buildToolApprovalAskMessage(request.toolName, request.input, this.nextMessageTs())
+		const toolAskMessage: AgentarioMessage = buildToolApprovalAskMessage(request.toolName, request.input, this.nextMessageTs())
 
 		this.options.messages.appendAndEmit([toolAskMessage], {
 			type: "status",
@@ -103,11 +103,11 @@ export class SdkInteractionCoordinator {
 	}
 
 	async handleAskQuestion(question: string, options: string[], _context: unknown): Promise<string> {
-		const askData: ClineAskQuestion = {
+		const askData: AgentarioAskQuestion = {
 			question,
 			options: options?.length ? options : undefined,
 		}
-		const askMessage: ClineMessage = {
+		const askMessage: AgentarioMessage = {
 			ts: this.nextMessageTs(),
 			type: "ask",
 			ask: "followup",
@@ -129,7 +129,7 @@ export class SdkInteractionCoordinator {
 
 	resolvePendingToolApproval(
 		prompt: string | undefined,
-		responseType: ClineAskResponse | undefined,
+		responseType: AgentarioAskResponse | undefined,
 		images?: string[],
 		files?: string[],
 	): boolean {
@@ -161,7 +161,7 @@ export class SdkInteractionCoordinator {
 		this.options.setTurnPhase?.("streaming")
 		const denialReason = prompt || DEFAULT_TOOL_APPROVAL_DENIAL_REASON
 		if (!approved && (prompt?.trim() || images?.length || files?.length)) {
-			const userMessage: ClineMessage = {
+			const userMessage: AgentarioMessage = {
 				ts: this.nextMessageTs(),
 				type: "say",
 				say: "user_feedback",
@@ -196,7 +196,7 @@ export class SdkInteractionCoordinator {
 		Logger.log(`[SdkController] Resolving pending ask_question with: "${responseText.substring(0, 80)}"`)
 
 		if (responseText) {
-			const userMessage: ClineMessage = {
+			const userMessage: AgentarioMessage = {
 				ts: this.nextMessageTs(),
 				type: "say",
 				say: "user_feedback",
@@ -215,7 +215,7 @@ export class SdkInteractionCoordinator {
 		return true
 	}
 
-	resolvePendingMistakeLimit(prompt: string | undefined, responseType: ClineAskResponse | undefined): boolean {
+	resolvePendingMistakeLimit(prompt: string | undefined, responseType: AgentarioAskResponse | undefined): boolean {
 		if (!this.pendingMistakeLimitResolve) {
 			return false
 		}
@@ -231,7 +231,7 @@ export class SdkInteractionCoordinator {
 
 		const trimmedPrompt = prompt?.trim()
 		if (trimmedPrompt) {
-			const userMessage: ClineMessage = {
+			const userMessage: AgentarioMessage = {
 				ts: this.nextMessageTs(),
 				type: "say",
 				say: "user_feedback",

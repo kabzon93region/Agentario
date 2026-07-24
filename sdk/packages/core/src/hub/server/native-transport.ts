@@ -2,7 +2,7 @@ import type {
 	HubCommandEnvelope,
 	HubEventEnvelope,
 	HubReplyEnvelope,
-} from "@cline/shared";
+} from "@agentario/shared";
 import type { HubCommandTransport } from "./command-transport";
 
 export interface NativeHubTransport {

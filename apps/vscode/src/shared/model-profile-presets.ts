@@ -1,4 +1,4 @@
-import type { ApiConfiguration } from "./api"
+import type { ApiConfiguration, ModelInfo } from "./api"
 import { SecretKeys } from "./storage/state-keys"
 
 /** Non-secret provider fields captured alongside apiConfiguration. */
@@ -8,6 +8,11 @@ export type ModelProfileProviderConfig = {
 	reasoning?: {
 		enabled?: boolean
 		effort?: string
+	}
+	/** Сохранённая информация о модели (цены, контекст и т.д.) для каждого mode. */
+	selections?: {
+		plan?: { modelId: string; modelInfo: ModelInfo }
+		act?: { modelId: string; modelInfo: ModelInfo }
 	}
 }
 

@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
-import type * as LlmsProviders from "@cline/llms";
+import type * as LlmsProviders from "@agentario/llms";
 import {
 	type AgentConfig,
 	type AgentEvent,
@@ -11,8 +11,8 @@ import {
 	type ITelemetryService,
 	isLikelyAuthError,
 	normalizeUserInput,
-} from "@cline/shared";
-import { setHomeDirIfUnset } from "@cline/shared/storage";
+} from "@agentario/shared";
+import { setHomeDirIfUnset } from "@agentario/shared/storage";
 import { isOAuthProvider } from "../../auth/provider-auth-registry";
 import { createContextCompactionPrepareTurn } from "../../extensions/context/compaction";
 import type { ToolExecutors } from "../../extensions/tools";
@@ -456,6 +456,22 @@ export class LocalRuntimeHost implements RuntimeHost {
 		const tools = [...runtime.tools, ...(configWithProvider.extraTools ?? [])];
 		const extensions = runtime.extensions ?? bootstrap.extensions;
 
+		// Agentario: пробрасываем providerContextWindow (LM Studio/Ollama) в knownModels,
+		// чтобы orchestrator использовал реальное контекст-окно, а не дефолт 128000 из каталога.
+		// compaction.maxInputTokens уже вычислен в buildCompactionConfig с правильным приоритетом.
+		const compactionMaxInput = configWithProvider.compaction?.maxInputTokens;
+		let knownModels = providerConfig.knownModels;
+		if (compactionMaxInput && Number.isFinite(compactionMaxInput) && compactionMaxInput > 0 && providerConfig.modelId) {
+			const existing = knownModels?.[providerConfig.modelId];
+			const modelEntry = existing
+				? { ...existing, contextWindow: compactionMaxInput }
+				: { id: providerConfig.modelId, contextWindow: compactionMaxInput };
+			knownModels = {
+				...(knownModels ?? {}),
+				[providerConfig.modelId]: modelEntry,
+			};
+		}
+
 		const agentConfig = {
 			sessionId,
 			providerId: providerConfig.providerId,
@@ -463,7 +479,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 			apiKey: providerConfig.apiKey,
 			baseUrl: providerConfig.baseUrl,
 			headers: providerConfig.headers,
-			knownModels: providerConfig.knownModels,
+			knownModels,
 			providerConfig,
 			thinking: configWithProvider.thinking,
 			reasoningEffort:
@@ -472,7 +488,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 			systemPrompt: configWithProvider.systemPrompt,
 			maxIterations: configWithProvider.maxIterations,
 			execution: configWithProvider.execution,
-			prepareTurn: createContextCompactionPrepareTurn(configWithProvider),
+			prepareTurn: createContextCompactionPrepareTurn(configWithProvider, { statusCallback: configWithProvider.compaction?.statusCallback }),
 			tools,
 			hooks: bootstrap.hooks,
 			extensions,
@@ -939,6 +955,28 @@ export class LocalRuntimeHost implements RuntimeHost {
 		}
 		const manifest = await this.readManifest(target);
 		return readPersistedMessagesFile(manifest?.messages_path);
+	}
+
+	async writeSessionMessages(
+		sessionId: string,
+		messages: LlmsProviders.Message[],
+		systemPrompt?: string,
+	): Promise<void> {
+		const target = sessionId.trim();
+		if (!target) return;
+		await this.invoke<void>(
+			"persistSessionMessages",
+			target,
+			messages,
+			systemPrompt,
+		);
+		// Update the in-memory session's persisted messages so the agent
+		// and future turns use the compacted transcript.
+		const session = this.sessions.get(target);
+		if (session) {
+			session.persistedMessages = messages;
+			session.agent.restore(messages);
+		}
 	}
 
 	async dispatchHookEvent(payload: HookEventPayload): Promise<void> {

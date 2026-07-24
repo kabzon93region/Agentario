@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { resolveExistingFilePath } from "@cline/shared/storage";
+﻿import { readFileSync } from "node:fs";
+import { resolveExistingFilePath } from "@agentario/shared/storage";
 
 const IMAGE_EXTENSIONS = new Set([
 	".png",

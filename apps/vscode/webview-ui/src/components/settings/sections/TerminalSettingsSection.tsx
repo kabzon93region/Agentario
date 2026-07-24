@@ -1,4 +1,4 @@
-import { UpdateTerminalConnectionTimeoutResponse } from "@shared/proto/index.cline"
+import { UpdateTerminalConnectionTimeoutResponse } from "@shared/proto/index.agentario"
 import { VSCodeCheckbox, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import React, { useState } from "react"
 import { PlatformType } from "@/config/platform.config"
@@ -6,6 +6,7 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { usePlatform } from "@/context/PlatformContext"
 import { t } from "@/i18n"
 import { StateServiceClient } from "../../../services/grpc-client"
+import CollapsibleSection from "../CollapsibleSection"
 import Section from "../Section"
 import { updateSetting } from "../utils/settingsHandlers"
 
@@ -90,90 +91,96 @@ const TerminalSettingsSection: React.FC<TerminalSettingsSectionProps> = ({ rende
 		<div>
 			{renderSectionHeader("terminal")}
 			<Section>
-				<div className="mb-5" id="terminal-settings-section">
-					<div className="mb-4">
-						<label className="font-medium block mb-1" htmlFor="default-terminal-profile">
-							{t("terminal.defaultProfile")}
-						</label>
-						<VSCodeDropdown
-							className="w-full"
-							id="default-terminal-profile"
-							onChange={handleDefaultTerminalProfileChange}
-							value={defaultTerminalProfile || "default"}>
-							{profilesToShow.map((profile) => (
-								<VSCodeOption key={profile.id} title={profile.description} value={profile.id}>
-									{profile.name}
-								</VSCodeOption>
-							))}
-						</VSCodeDropdown>
-						<p className="text-xs text-(--vscode-descriptionForeground) mt-1">{t("terminal.defaultProfileHint")}</p>
-					</div>
-
-					<div className="mb-4">
-						<div className="mb-2">
-							<label className="font-medium block mb-1">{t("terminal.shellTimeout")}</label>
-							<div className="flex items-center">
-								<VSCodeTextField
-									className="w-full"
-									onBlur={handleInputBlur}
-									onChange={(event) => handleTimeoutChange(event as Event)}
-									placeholder={t("terminal.timeoutPlaceholder")}
-									value={inputValue}
-								/>
-							</div>
-							{inputError && <div className="text-(--vscode-errorForeground) text-xs mt-1">{inputError}</div>}
-						</div>
-						<p className="text-xs text-(--vscode-descriptionForeground)">{t("terminal.shellTimeoutHint")}</p>
-					</div>
-
-					<div className="mb-4">
-						<div className="flex items-center mb-2">
-							<VSCodeCheckbox
-								checked={terminalReuseEnabled ?? true}
-								onChange={(event) => handleTerminalReuseChange(event as Event)}>
-								{t("terminal.reuseTerminals")}
-							</VSCodeCheckbox>
-						</div>
-						<p className="text-xs text-(--vscode-descriptionForeground)">{t("terminal.reuseTerminalsHint")}</p>
-					</div>
-					{isVsCodePlatform && (
+				<CollapsibleSection defaultExpanded={false} title="Настройки терминала">
+					<div className="mb-4" id="terminal-settings-section">
 						<div className="mb-4">
-							<label className="font-medium block mb-1" htmlFor="terminal-execution-mode">
-								{t("terminal.executionMode")}
+							<label className="font-medium block mb-1" htmlFor="default-terminal-profile">
+								{t("terminal.defaultProfile")}
 							</label>
 							<VSCodeDropdown
 								className="w-full"
-								id="terminal-execution-mode"
-								onChange={(event) => handleExecutionModeChange(event as Event)}
-								value={vscodeTerminalExecutionMode ?? "vscodeTerminal"}>
-								<VSCodeOption value="vscodeTerminal">{t("terminal.vscodeTerminal")}</VSCodeOption>
-								<VSCodeOption value="backgroundExec">{t("terminal.backgroundExec")}</VSCodeOption>
+								id="default-terminal-profile"
+								onChange={handleDefaultTerminalProfileChange}
+								value={defaultTerminalProfile || "default"}>
+								{profilesToShow.map((profile) => (
+									<VSCodeOption key={profile.id} title={profile.description} value={profile.id}>
+										{profile.name}
+									</VSCodeOption>
+								))}
 							</VSCodeDropdown>
-							<p className="text-xs text-[var(--vscode-descriptionForeground)] mt-1">{t("terminal.executionModeHint")}</p>
+							<p className="text-xs text-(--vscode-descriptionForeground) mt-1">{t("terminal.defaultProfileHint")}</p>
 						</div>
-					)}
-					<div className="mt-5 p-3 bg-(--vscode-textBlockQuote-background) rounded border border-(--vscode-textBlockQuote-border)">
-						<p className="text-[13px] m-0">
-							<strong>{t("terminal.troubleshootingTitle")}</strong> {t("terminal.troubleshootingBefore")}{" "}
-							<a
-								className="text-(--vscode-textLink-foreground) underline hover:no-underline"
-								href="https://docs.cline.bot/troubleshooting/terminal-quick-fixes"
-								rel="noopener noreferrer"
-								target="_blank">
-								{t("terminal.quickFixes")}
-							</a>{" "}
-							{t("terminal.or")}{" "}
-							<a
-								className="text-(--vscode-textLink-foreground) underline hover:no-underline"
-								href="https://docs.cline.bot/troubleshooting/terminal-integration-guide"
-								rel="noopener noreferrer"
-								target="_blank">
-								{t("terminal.fullGuide")}
-							</a>
-							.
-						</p>
+
+						<div className="mb-4">
+							<div className="mb-2">
+								<label className="font-medium block mb-1">{t("terminal.shellTimeout")}</label>
+								<div className="flex items-center">
+									<VSCodeTextField
+										className="w-full"
+										onBlur={handleInputBlur}
+										onChange={(event) => handleTimeoutChange(event as Event)}
+										placeholder={t("terminal.timeoutPlaceholder")}
+										value={inputValue}
+									/>
+								</div>
+								{inputError && <div className="text-(--vscode-errorForeground) text-xs mt-1">{inputError}</div>}
+							</div>
+							<p className="text-xs text-(--vscode-descriptionForeground)">{t("terminal.shellTimeoutHint")}</p>
+						</div>
+
+						<div className="mb-4">
+							<div className="flex items-center mb-2">
+								<VSCodeCheckbox
+									checked={terminalReuseEnabled ?? true}
+									onChange={(event) => handleTerminalReuseChange(event as Event)}>
+									{t("terminal.reuseTerminals")}
+								</VSCodeCheckbox>
+							</div>
+							<p className="text-xs text-(--vscode-descriptionForeground)">{t("terminal.reuseTerminalsHint")}</p>
+						</div>
+
+						{isVsCodePlatform && (
+							<div className="mb-4">
+								<label className="font-medium block mb-1" htmlFor="terminal-execution-mode">
+									{t("terminal.executionMode")}
+								</label>
+								<VSCodeDropdown
+									className="w-full"
+									id="terminal-execution-mode"
+									onChange={(event) => handleExecutionModeChange(event as Event)}
+									value={vscodeTerminalExecutionMode ?? "vscodeTerminal"}>
+									<VSCodeOption value="vscodeTerminal">{t("terminal.vscodeTerminal")}</VSCodeOption>
+									<VSCodeOption value="backgroundExec">{t("terminal.backgroundExec")}</VSCodeOption>
+								</VSCodeDropdown>
+								<p className="text-xs text-[var(--vscode-descriptionForeground)] mt-1">
+									{t("terminal.executionModeHint")}
+								</p>
+							</div>
+						)}
+
+						<div className="mt-2 p-3 bg-(--vscode-textBlockQuote-background) rounded border border-(--vscode-textBlockQuote-border)">
+							<p className="text-[13px] m-0">
+								<strong>{t("terminal.troubleshootingTitle")}</strong> {t("terminal.troubleshootingBefore")}{" "}
+								<a
+									className="text-(--vscode-textLink-foreground) underline hover:no-underline"
+									href="https://docs.cline.bot/troubleshooting/terminal-quick-fixes"
+									rel="noopener noreferrer"
+									target="_blank">
+									{t("terminal.quickFixes")}
+								</a>{" "}
+								{t("terminal.or")}{" "}
+								<a
+									className="text-(--vscode-textLink-foreground) underline hover:no-underline"
+									href="https://docs.cline.bot/troubleshooting/terminal-integration-guide"
+									rel="noopener noreferrer"
+									target="_blank">
+									{t("terminal.fullGuide")}
+								</a>
+								.
+							</p>
+						</div>
 					</div>
-				</div>
+				</CollapsibleSection>
 			</Section>
 		</div>
 	)

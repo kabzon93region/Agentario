@@ -1,4 +1,4 @@
-import { UpdateSettingsRequest } from "@shared/proto/cline/state"
+import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { memo, type ReactNode } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { t } from "@/i18n"
-import { DebouncedTextField } from "../common/DebouncedTextField"
+import CollapsibleSection from "../CollapsibleSection"
 import Section from "../Section"
 import { updateSetting, updateSettingsPatch } from "../utils/settingsHandlers"
 
@@ -31,15 +31,8 @@ interface FeatureToggle {
 	stateKey: string
 }
 
-const getAgentFeatures = (): FeatureToggle[] => [
-	{
-		id: "auto-compact",
-		label: t("features.autoCompactLabel"),
-		description: t("features.autoCompactDesc"),
-		stateKey: "useAutoCondense",
-		settingKey: "useAutoCondense",
-	},
-]
+// Agentario: auto-compact moved to Summarization tab, agent features list is empty
+const getAgentFeatures = (): FeatureToggle[] => []
 
 const getEditorFeatures = (): FeatureToggle[] => [
 	{
@@ -155,14 +148,12 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 		mcpDisplayMode,
 		yoloModeToggled,
 		useAutoCondense,
-		compactionStrategy,
-		compactionSummarizerProviderId,
-		compactionSummarizerModelId,
 		subagentsEnabled,
 		worktreesEnabled,
 		remoteConfigSettings,
 		backgroundEditEnabled,
 		showFeatureTips,
+		chatTheme,
 	} = useExtensionState()
 
 	const isYoloRemoteLocked = remoteConfigSettings?.yoloModeToggled !== undefined
@@ -189,12 +180,10 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 			{renderSectionHeader("features")}
 			<Section>
 				<div className="mb-5 flex flex-col gap-3">
-					{/* Core features */}
-					<div>
-						<div className="text-xs font-medium text-foreground/80 uppercase tracking-wider mb-3">{t("features.sectionAgent")}</div>
-						<div
-							className="relative p-3 pt-0 my-3 rounded-md border border-editor-widget-border/50"
-							id="agent-features">
+					{/* Agent features - hidden when empty (auto-compact moved to Summarization tab) */}
+					{getAgentFeatures().length > 0 && (
+					<CollapsibleSection title={t("features.sectionAgent")} defaultExpanded={false}>
+						<div id="agent-features">
 							{getAgentFeatures().map((feature) => (
 								<FeatureRow
 									checked={featureState[feature.stateKey]}
@@ -205,61 +194,13 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 									onChange={(checked) => updateSetting(feature.settingKey, checked)}
 								/>
 							))}
-							<div className="mt-3 space-y-3 border-t border-editor-widget-border/40 pt-3">
-								<div className="space-y-1">
-									<Label className="text-sm font-semibold">{t("features.compactionStrategyLabel")}</Label>
-									<p className="text-xs text-description">{t("features.compactionStrategyDesc")}</p>
-									<Select
-										onValueChange={(value) =>
-											updateSettingsPatch({
-												compactionStrategy: value === "basic" ? "basic" : "agentic",
-											})
-										}
-										value={compactionStrategy === "basic" ? "basic" : "agentic"}>
-										<SelectTrigger className="w-full">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="agentic">{t("features.compactionStrategyAgentic")}</SelectItem>
-											<SelectItem value="basic">{t("features.compactionStrategyBasic")}</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="space-y-1">
-									<Label className="text-sm font-semibold">{t("features.compactionSummarizerLabel")}</Label>
-									<p className="text-xs text-description">{t("features.compactionSummarizerDesc")}</p>
-									<DebouncedTextField
-										initialValue={compactionSummarizerModelId ?? ""}
-										onChange={(value) =>
-											updateSettingsPatch({
-												compactionSummarizerModelId: value.trim(),
-											})
-										}
-										placeholder={t("features.compactionSummarizerPlaceholder")}
-										style={{ width: "100%" }}
-									/>
-									<DebouncedTextField
-										initialValue={compactionSummarizerProviderId ?? ""}
-										onChange={(value) =>
-											updateSettingsPatch({
-												compactionSummarizerProviderId: value.trim(),
-											})
-										}
-										placeholder="lmstudio"
-										style={{ width: "100%" }}>
-										<span className="text-xs text-description">Provider ID (optional)</span>
-									</DebouncedTextField>
-								</div>
-							</div>
 						</div>
-					</div>
+					</CollapsibleSection>
+					)}
 
 					{/* Editor features */}
-					<div>
-						<div className="text-xs font-medium text-foreground/80 uppercase tracking-wider mb-3">{t("features.sectionEditor")}</div>
-						<div
-							className="relative p-3 pt-0 my-3 rounded-md border border-editor-widget-border/50"
-							id="optional-features">
+					<CollapsibleSection title={t("features.sectionEditor")} defaultExpanded={false}>
+						<div id="optional-features">
 							{getEditorFeatures().map((feature) => (
 								<FeatureRow
 									checked={featureState[feature.stateKey]}
@@ -271,14 +212,11 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 								/>
 							))}
 						</div>
-					</div>
+					</CollapsibleSection>
 
 					{/* Experimental features */}
-					<div>
-						<div className="text-xs font-medium uppercase tracking-wider mb-3 text-warning/80">{t("features.sectionExperimental")}</div>
-						<div
-							className="relative p-3 pt-0 my-3 rounded-md border border-editor-widget-border/50 w-full"
-							id="experimental-features">
+					<CollapsibleSection title={t("features.sectionExperimental")} defaultExpanded={false}>
+						<div id="experimental-features">
 							{getExperimentalFeatures().map((feature) => (
 								<FeatureRow
 									checked={featureState[feature.stateKey]}
@@ -293,14 +231,31 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 								/>
 							))}
 						</div>
-					</div>
-				</div>
+					</CollapsibleSection>
 
-				{/* Advanced */}
-				<div>
-					<div className="text-xs font-medium text-foreground/80 uppercase tracking-wider mb-3">{t("features.sectionAdvanced")}</div>
-					<div className="relative p-3 my-3 rounded-md border border-editor-widget-border/50" id="advanced-features">
+					{/* Appearance */}
+					<CollapsibleSection title={t("features.sectionAppearance")} defaultExpanded={false}>
 						<div className="space-y-3">
+							{/* Chat Theme */}
+							<div className="space-y-2">
+								<Label className="text-sm font-medium text-foreground">{t("features.chatThemeLabel")}</Label>
+								<p className="text-xs text-muted-foreground">{t("features.chatThemeDesc")}</p>
+								<Select onValueChange={(v) => updateSettingsPatch({ chatTheme: v })} value={chatTheme ?? "default"}>
+									<SelectTrigger className="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="default">{t("features.chatThemeDefault")}</SelectItem>
+										<SelectItem value="cursor">{t("features.chatThemeCursor")}</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</CollapsibleSection>
+
+					{/* Advanced */}
+					<CollapsibleSection title={t("features.sectionAdvanced")} defaultExpanded={false}>
+						<div className="space-y-3" id="advanced-features">
 							{getAdvancedFeatures().map((feature) => (
 								<FeatureRow
 									checked={featureState[feature.stateKey]}
@@ -328,7 +283,7 @@ const FeatureSettingsSection = ({ renderSectionHeader }: FeatureSettingsSectionP
 								</Select>
 							</div>
 						</div>
-					</div>
+					</CollapsibleSection>
 				</div>
 			</Section>
 		</div>

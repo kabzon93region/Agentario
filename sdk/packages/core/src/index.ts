@@ -1,21 +1,21 @@
 /**
- * @cline/core
+ * @agentario/core
  *
  * Core contracts, shared state utilities, and Node runtime services.
  */
 
-export * as Llms from "@cline/llms";
+export * as Llms from "@agentario/llms";
 export {
 	ClineNotSubscribedError,
 	ClineOrgIndividualInferenceSubscriptionError,
 	getClineOrgIndividualInferenceSubscriptionMessage,
 	getClineNotSubscribedMessage,
 	getClinePassSubscriptionUrl,
-	isClineNotSubscribedError,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionError,
-	isClineOrgIndividualInferenceSubscriptionMessage,
-} from "@cline/llms";
+	isAgentarioCloudNotSubscribedError,
+	isAgentarioCloudNotSubscribedMessage,
+	isAgentarioCloudOrgSubscriptionError,
+	isAgentarioCloudOrgSubscriptionMessage,
+} from "@agentario/llms";
 // Shared contracts and path helpers re-exported for app consumers.
 export type {
 	AddProviderActionRequest,
@@ -41,7 +41,7 @@ export type {
 	ChatStartSessionArtifacts,
 	ChatStartSessionRequest,
 	ChatTurnResult,
-	ClineAccountActionRequest,
+	AgentarioAccountActionRequest,
 	ConnectorHookEvent,
 	ContentBlock,
 	FeatureFlag,
@@ -88,14 +88,14 @@ export type {
 	WorkspaceInfoSchema,
 	WorkspaceManifest,
 	WorkspaceManifestSchema,
-} from "@cline/shared";
+} from "@agentario/shared";
 export {
-	buildClineSystemPrompt as getClineDefaultSystemPrompt,
+	buildAgentarioSystemPrompt as getClineDefaultSystemPrompt,
 	buildSdkErrorProperties,
 	ContributionRegistry,
 	captureSdkError,
-	createClineTelemetryServiceConfig,
-	createClineTelemetryServiceMetadata,
+	createAgentarioTelemetryServiceConfig,
+	createAgentarioTelemetryServiceMetadata,
 	createContributionRegistry,
 	createTool,
 	emptyWorkspaceManifest,
@@ -108,8 +108,8 @@ export {
 	parseUserCommandEnvelope,
 	registerDisposable,
 	SDK_ERROR_TELEMETRY_EVENT,
-} from "@cline/shared";
-export * from "@cline/shared/storage";
+} from "@agentario/shared";
+export * from "@agentario/shared/storage";
 export {
 	type ClineAccountBalance,
 	type ClineAccountOperations,
@@ -125,7 +125,7 @@ export {
 	type ClineSubscriptionPlan,
 	executeClineAccountAction,
 	type FeaturebaseTokenResponse,
-	isClineAccountActionRequest,
+	isAgentarioAccountActionRequest,
 	type ProviderActionExecutor,
 	RpcClineAccountService,
 	type UserRemoteConfigOrganization,
@@ -139,10 +139,10 @@ export {
 export {
 	completeClineDeviceAuth,
 	getValidClineCredentials,
-	loginClineOAuth,
-	refreshClineToken,
-	startClineDeviceAuth,
-} from "./auth/cline";
+	loginAgentarioCloudOAuth,
+	refreshAgentarioCloudToken,
+	startAgentarioCloudDeviceAuth,
+} from "./auth/agentario";
 export {
 	getValidOpenAICodexCredentials,
 	loginOpenAICodex,
@@ -189,7 +189,7 @@ export type {
 	OcaOAuthProviderOptions,
 	OcaTokenResolution,
 } from "./auth/types";
-export { ClineCore } from "./ClineCore";
+export { AgentarioCore } from "./AgentarioCore";
 export type {
 	ClineAutomationEventIngressResult,
 	ClineAutomationEventLog,
@@ -200,12 +200,12 @@ export type {
 	ClineAutomationRun,
 	ClineAutomationRunStatus,
 	ClineAutomationSpec,
-	ClineCoreAutomationApi,
-	ClineCoreAutomationOptions,
-	ClineCoreListHistoryOptions,
-	ClineCoreOptions,
-	ClineCoreSettingsApi,
-	ClineCoreStartInput,
+	AgentarioCoreAutomationApi,
+	AgentarioCoreAutomationOptions,
+	AgentarioCoreListHistoryOptions,
+	AgentarioCoreOptions,
+	AgentarioCoreSettingsApi,
+	AgentarioCoreStartInput,
 	CompareCheckpointInput,
 	CompareCheckpointResult,
 	HubOptions,
@@ -213,7 +213,7 @@ export type {
 	RestoreInput,
 	RestoreOptions,
 	RestoreResult,
-} from "./cline-core/types";
+} from "./agentario-core/types";
 export type {
 	LoadAgentPluginFromPathOptions,
 	PluginInitializationFailure,
@@ -755,7 +755,7 @@ export { CORE_BUILD_VERSION } from "./version";
 export async function loadOpenTelemetryAdapter() {
 	return import("./services/telemetry/index.js");
 }
-export { Agent, createAgentRuntime } from "@cline/agents";
+export { Agent, createAgentRuntime } from "@agentario/agents";
 export { createContextCompactionPrepareTurn } from "./extensions/context/compaction";
 export {
 	CONTEXT_BUDGET_NOTICE_KIND,
@@ -803,9 +803,11 @@ export {
 	type ClineRecommendedModel,
 	type ClineRecommendedModelsData,
 	FALLBACK_CLINE_RECOMMENDED_MODELS,
+	FALLBACK_CLINE_RECOMMENDED_MODELS as FALLBACK_AGENTARIO_RECOMMENDED_MODELS,
 	type FetchClineRecommendedModelsOptions,
 	fetchClineRecommendedModels,
-} from "./services/llms/cline-recommended-models";
+	fetchClineRecommendedModels as fetchAgentarioRecommendedModels,
+} from "./services/llms/agentario-recommended-models";
 export {
 	clearLiveModelsCatalogCache,
 	clearPrivateModelsCatalogCache,
@@ -926,3 +928,9 @@ export type {
 	SessionRef,
 } from "./types/sessions";
 export type { ArtifactStore, SessionStore, TeamStore } from "./types/storage";
+export {
+	performSemanticSearch,
+	type SemanticSearchConfig,
+	type SemanticSearchResult,
+	type SemanticSearchResponse,
+} from "./extensions/tools/executors/semantic-search";

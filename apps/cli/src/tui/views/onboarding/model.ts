@@ -1,4 +1,4 @@
-import { isOpenAICodexCliProvider } from "../../../utils/codex-cli";
+﻿import { isOpenAICodexCliProvider } from "../../../utils/codex-cli";
 import { isOAuthProvider } from "../../../utils/provider-auth";
 
 export type OnboardingStep =
@@ -57,7 +57,7 @@ export const MAIN_MENU: MenuOption[] = [
 	},
 	{
 		label: "Sign in with ClinePass",
-		value: "cline-pass",
+		value: "agentario-pass",
 		detail: "Low cost subscription for everyone",
 		icon: "\u2726",
 	},
@@ -79,7 +79,7 @@ export function getMainMenuOptions(options?: {
 	isClinePassEnabled?: boolean;
 }): MenuOption[] {
 	return MAIN_MENU.filter(
-		(option) => option.value !== "cline-pass" || options?.isClinePassEnabled,
+		(option) => option.value !== "agentario-pass" || options?.isClinePassEnabled,
 	);
 }
 
@@ -190,7 +190,7 @@ export function toModelEntriesFromKnownModels(
 }
 
 export function getOAuthProviderLabel(providerId: string): string {
-	if (providerId === "cline-pass") {
+	if (providerId === "agentario-pass") {
 		return "ClinePass";
 	}
 	if (providerId === "cline") {

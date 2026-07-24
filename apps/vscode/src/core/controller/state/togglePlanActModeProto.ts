@@ -1,5 +1,5 @@
-import { Boolean } from "@shared/proto/cline/common"
-import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/cline/state"
+﻿import { Boolean } from "@shared/proto/agentario/common"
+import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/agentario/state"
 import { Mode } from "@shared/storage/types"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."
@@ -17,6 +17,8 @@ export async function togglePlanActModeProto(controller: Controller, request: To
 			mode = "plan"
 		} else if (request.mode === PlanActMode.ACT) {
 			mode = "act"
+		} else if (request.mode === PlanActMode.AGENT) {
+			mode = "agent"
 		} else {
 			throw new Error(`Invalid mode value: ${request.mode}`)
 		}

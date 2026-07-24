@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, describe, expect, it, vi } from "vitest";
 
 const {
 	connect,
@@ -22,7 +22,7 @@ const {
 	writeln: vi.fn(),
 }));
 
-vi.mock("@cline/core", () => ({
+vi.mock("@agentario/core", () => ({
 	HubSessionClient: class {
 		connect = connect;
 		close = close;
@@ -50,7 +50,7 @@ import { runZen } from "./run-zen";
 
 describe("runZen", () => {
 	afterEach(() => {
-		delete process.env.CLINE_SESSION_BACKEND_MODE;
+		delete process.env.agentario_SESSION_BACKEND_MODE;
 		vi.clearAllMocks();
 	});
 

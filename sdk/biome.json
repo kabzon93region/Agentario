@@ -44,10 +44,10 @@
 						"patterns": [
 							{
 								"group": [
-									"@cline/llms/*",
-									"@cline/agents/*",
-									"@cline/core/*",
-									"@cline/shared/*",
+									"@agentario/llms/*",
+									"@agentario/agents/*",
+									"@agentario/core/*",
+									"@agentario/shared/*",
 									"**/llms/src/**",
 									"**/agents/src/**",
 									"**/core/src/**",

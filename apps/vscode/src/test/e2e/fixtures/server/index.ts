@@ -1,7 +1,7 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
+﻿import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
 import type { Socket } from "node:net"
 import { v4 as uuidv4 } from "uuid"
-import type { BalanceResponse, OrganizationBalanceResponse, UserResponse } from "../../../../shared/ClineAccount"
+import type { BalanceResponse, OrganizationBalanceResponse, UserResponse } from "../../../../shared/AgentarioAccount"
 import {
 	E2E_MOCK_API_RESPONSES,
 	E2E_MOCK_CLINE_MODELS,

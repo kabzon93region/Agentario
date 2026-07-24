@@ -1,6 +1,6 @@
 import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
-import { resolveAgentConfigSearchPaths } from "@cline/shared/storage";
+import { resolveAgentConfigSearchPaths } from "@agentario/shared/storage";
 import YAML from "yaml";
 import { z } from "zod";
 

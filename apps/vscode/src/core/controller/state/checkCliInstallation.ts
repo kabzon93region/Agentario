@@ -1,4 +1,4 @@
-import { Boolean } from "@shared/proto/cline/common"
+﻿import { Boolean } from "@shared/proto/agentario/common"
 import { isClineCliInstalled } from "@/utils/cli-detector"
 import { Controller } from ".."
 

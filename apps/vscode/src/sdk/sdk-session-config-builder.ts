@@ -1,8 +1,21 @@
-import type { CoreSessionConfig } from "@cline/core"
-import { type AgentTool, createTool } from "@cline/shared"
+import type { CoreSessionConfig } from "@agentario/core"
+import { type AgentTool, createTool } from "@agentario/shared"
 import type { StateManager } from "@/core/storage/StateManager"
-import { buildSessionConfig, type SessionConfigInput } from "./cline-session-factory"
+import { buildSessionConfig, type SessionConfigInput } from "./agentario-session-factory"
 import { buildAgentHooks, type HookMessageEmitter } from "./hooks-adapter"
+import { createAgentModeTools } from "./agent-tools"
+
+/**
+ * The full model request captured from the beforeModel hook — this is the
+ * exact context (system prompt, messages, tools) that would be sent to the LLM.
+ */
+export interface CapturedModelContext {
+	systemPrompt: string
+	// biome-ignore lint/suspicious/noExplicitAny: AgentMessage[] from SDK runtime
+	messages: readonly any[]
+	// biome-ignore lint/suspicious/noExplicitAny: AgentToolDefinition[] from SDK runtime
+	tools: readonly any[]
+}
 
 export interface SdkSessionConfigBuilderOptions {
 	stateManager: StateManager
@@ -10,6 +23,12 @@ export interface SdkSessionConfigBuilderOptions {
 	onSwitchToActMode: () => void
 	shouldStopAfterModeSwitch?: () => boolean
 	onConsecutiveMistakeLimitReached?: CoreSessionConfig["onConsecutiveMistakeLimitReached"]
+	/**
+	 * When this returns a non-undefined callback, the NEXT beforeModel invocation
+	 * will capture the full model request, invoke the callback with it, and abort
+	 * the turn (stop: true) so the model is never called.
+	 */
+	consumeContextCapture?: () => ((data: CapturedModelContext) => void) | undefined
 }
 
 export class SdkSessionConfigBuilder {
@@ -17,6 +36,21 @@ export class SdkSessionConfigBuilder {
 
 	async build(input: SessionConfigInput): Promise<Awaited<ReturnType<typeof buildSessionConfig>>> {
 		const config = await buildSessionConfig(input)
+
+		// Wire statusCallback for auto-compaction progress messages
+		if (config.compaction) {
+			const emitHook = this.options.emitHookMessage
+			config.compaction.statusCallback = (message: string) => {
+				emitHook({
+					ts: Date.now(),
+					type: "say",
+					say: "info",
+					text: message,
+					partial: false,
+				})
+			}
+		}
+
 		if (this.options.onConsecutiveMistakeLimitReached) {
 			config.onConsecutiveMistakeLimitReached = this.options.onConsecutiveMistakeLimitReached
 		}
@@ -25,6 +59,19 @@ export class SdkSessionConfigBuilder {
 		config.hooks = {
 			...baseHooks,
 			beforeModel: async (ctx) => {
+				// Check for context capture FIRST — before any other logic.
+				// When capture is requested, grab the full model request and
+				// abort the turn so the model is never called.
+				const captureHandler = this.options.consumeContextCapture?.()
+				if (captureHandler) {
+					captureHandler({
+						systemPrompt: ctx.request.systemPrompt ?? "",
+						messages: ctx.request.messages,
+						tools: ctx.request.tools,
+					})
+					return { stop: true }
+				}
+
 				const baseControl = await baseHooks.beforeModel?.(ctx)
 				if (this.options.shouldStopAfterModeSwitch?.()) {
 					return {
@@ -39,6 +86,12 @@ export class SdkSessionConfigBuilder {
 			// Match the CLI interactive runtime: plan-mode sessions expose a
 			// switch_to_act_mode tool in addition to the read-only planning tools.
 			config.extraTools = [...(config.extraTools ?? []), this.createSwitchToActModeTool()]
+		} else if (input.mode === "agent") {
+			// Agent mode: remove plan-only switch tool, add agent-specific tools
+			config.extraTools = [
+				...(config.extraTools?.filter((tool) => tool.name !== "switch_to_act_mode") ?? []),
+				...createAgentModeTools(input.cwd),
+			]
 		} else {
 			// The switch tool is plan-only in the CLI and should disappear after
 			// rebuilding the session in act mode.

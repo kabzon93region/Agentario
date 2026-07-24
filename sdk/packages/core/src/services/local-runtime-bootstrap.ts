@@ -9,8 +9,8 @@ import type {
 	ToolApprovalRequest,
 	ToolApprovalResult,
 	WorkspaceInfo,
-} from "@cline/shared";
-import { hasRuntimeConfigExtension } from "@cline/shared";
+} from "@agentario/shared";
+import { hasRuntimeConfigExtension } from "@agentario/shared";
 import { decodeJwtPayload } from "../auth/utils";
 import {
 	resolveAndLoadAgentPlugins,

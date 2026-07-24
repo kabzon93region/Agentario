@@ -1,4 +1,4 @@
-import { Empty, StringRequest } from "@shared/proto/cline/common"
+﻿import { Empty, StringRequest } from "@shared/proto/agentario/common"
 import type { Controller } from ".."
 
 /**
@@ -10,7 +10,9 @@ import type { Controller } from ".."
  * `/compact` as a command, so the old behavior produced an improvised fake
  * summary without actually compacting the context (CLINE-2503).
  */
-export async function condense(controller: Controller, _request: StringRequest): Promise<Empty> {
-	await controller.compactTask()
+export async function condense(controller: Controller, request: StringRequest): Promise<Empty> {
+	// Agentario: поддержка двух режимов суммаризации
+	const mode = request.value === "compact-full" ? "full" : "context"
+	await controller.compactTask(mode)
 	return Empty.create()
 }

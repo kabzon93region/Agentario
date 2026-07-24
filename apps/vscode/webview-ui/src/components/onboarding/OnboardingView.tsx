@@ -1,8 +1,8 @@
-import { buildModelInfoNameMap, type ModelInfo, openAiModelInfoSafeDefaults, resolveClinePassModelInfo } from "@shared/api"
-import type { OnboardingModel, OnboardingModelGroup, OpenRouterModelInfo } from "@shared/proto/index.cline"
+﻿import { buildModelInfoNameMap, type ModelInfo, openAiModelInfoSafeDefaults, resolveClinePassModelInfo } from "@shared/api"
+import type { OnboardingModel, OnboardingModelGroup, OpenRouterModelInfo } from "@shared/proto/index.agentario"
 import { AlertCircleIcon, CircleCheckIcon, CircleIcon, ListIcon, LoaderCircleIcon, ZapIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import ClineLogoWhite from "@/assets/ClineLogoWhite"
+import AgentarioLogoWhite from "@/assets/AgentarioLogoWhite"
 import { t } from "@/i18n"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ import { AccountServiceClient, StateServiceClient } from "@/services/grpc-client
 import ApiConfigurationSection from "../settings/sections/ApiConfigurationSection"
 import { useApiConfigurationHandlers } from "../settings/utils/useApiConfigurationHandlers"
 import WelcomeView from "../welcome/WelcomeView"
-import { setPendingClinePassSubscribe } from "./clinePassSubscribe"
+import { setPendingClinePassSubscribe } from "./AgentarioPassSubscribe"
 import {
 	CLINEPASS_GROUP,
 	getCapabilities,
@@ -341,7 +341,7 @@ const OnboardingStepContent = ({
 const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: OnboardingModelGroup }) => {
 	const { handleFieldsChange } = useApiConfigurationHandlers()
 	const { openRouterModels, hideSettings, hideAccount, setShowWelcome } = useExtensionState()
-	const isClinePassEnabled = useHasFeatureFlag(CLINE_PASS_FEATURE_FLAG)
+	const isAgentarioPassEnabled = useHasFeatureFlag(CLINE_PASS_FEATURE_FLAG)
 	const { models: clineModels } = useProviderModels("cline")
 	const { commitSelection } = useProviderConfig("cline")
 	const loginAttemptIdRef = useRef(0)
@@ -357,10 +357,10 @@ const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: Onboard
 
 	const models = useMemo(() => getClineUIOnboardingGroups(onboardingModels), [onboardingModels])
 	// Gate on models too, so a fallback/empty response can't route flagged users into the dead-end empty step.
-	const showClinePass = isClinePassEnabled && models.clinePass.length > 0
+	const showClinePass = isAgentarioPassEnabled && models.clinePass.length > 0
 	const userTypeSelections = useMemo(() => getUserTypeSelections(showClinePass), [showClinePass])
-	// ClinePass model IDs (e.g. "cline-pass/glm-5.1") aren't keyed in openRouterModels,
-	// so resolve their info via the slug-based lookup used by ClinePassProvider.
+	// ClinePass model IDs (e.g. "agentario-pass/glm-5.1") aren't keyed in openRouterModels,
+	// so resolve their info via the slug-based lookup used by AgentarioPassProvider.
 	const openRouterModelsByName = useMemo(() => buildModelInfoNameMap(openRouterModels), [openRouterModels])
 	const onboardingModelById = useMemo(() => {
 		return new Map(onboardingModels.models.map((model) => [model.id, model]))
@@ -371,7 +371,7 @@ const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: Onboard
 		setSearchTerm("")
 		const groupKey = userType === NEW_USER_TYPE.CLINE_PASS ? "clinePass" : userType === NEW_USER_TYPE.POWER ? "power" : "free"
 		// ClinePass must stay within its curated list (never fall back to a free/OpenRouter model
-		// under the cline-pass provider). Free/Frontier fall back to free if their group is empty.
+		// under the agentario-pass provider). Free/Frontier fall back to free if their group is empty.
 		const modelGroup = userType === NEW_USER_TYPE.CLINE_PASS ? models[groupKey][0] : (models[groupKey][0] ?? models.free[0])
 		const userGroupInitModel = modelGroup?.models[0]
 		setSelectedModelId(userGroupInitModel?.id ?? "")
@@ -430,18 +430,18 @@ const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: Onboard
 	const finishOnboarding = useCallback(
 		async (updateModelId: boolean, step: number) => {
 			const modelSelected = (updateModelId && selectedModelId) || undefined
-			// Guard: never save a non-ClinePass model id under the cline-pass provider.
-			const isClinePassModel = selectedModelId.startsWith("cline-pass/")
+			// Guard: never save a non-ClinePass model id under the agentario-pass provider.
+			const isClinePassModel = selectedModelId.startsWith("agentario-pass/")
 			if (modelSelected) {
 				if (userType === NEW_USER_TYPE.CLINE_PASS && isClinePassModel) {
 					const clinePassModelInfo = resolveClinePassModelInfo(selectedModelId, openRouterModelsByName)
 					await handleFieldsChange({
-						planModeClinePassModelId: selectedModelId,
-						actModeClinePassModelId: selectedModelId,
-						planModeClinePassModelInfo: clinePassModelInfo,
-						actModeClinePassModelInfo: clinePassModelInfo,
-						planModeApiProvider: "cline-pass",
-						actModeApiProvider: "cline-pass",
+						planModeAgentarioPassModelId: selectedModelId,
+						actModeAgentarioPassModelId: selectedModelId,
+						planModeAgentarioPassModelInfo: clinePassModelInfo,
+						actModeAgentarioPassModelInfo: clinePassModelInfo,
+						planModeApiProvider: "agentario-pass",
+						actModeApiProvider: "agentario-pass",
 					})
 				} else if (userType !== NEW_USER_TYPE.CLINE_PASS) {
 					const selectedModelInfo = clineModels[selectedModelId] ??
@@ -466,13 +466,13 @@ const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: Onboard
 					await handleFieldsChange({
 						planModeClineModelId: selectedModelId,
 						actModeClineModelId: selectedModelId,
-						planModeClineModelInfo: selectedModelInfo,
-						actModeClineModelInfo: selectedModelInfo,
+						planModeAgentarioModelInfo: selectedModelInfo,
+						actModeAgentarioModelInfo: selectedModelInfo,
 						planModeApiProvider: "cline",
 						actModeApiProvider: "cline",
 					})
 				} else {
-					// ClinePass selected but the id isn't a cline-pass/ model: skip the write
+					// ClinePass selected but the id isn't a agentario-pass/ model: skip the write
 					// (avoids a bad provider config) and log so the no-op is observable.
 					console.error(`Skipped ClinePass provider setup: unexpected model id "${selectedModelId}"`)
 				}
@@ -601,7 +601,7 @@ const OnboardingViewContent = ({ onboardingModels }: { onboardingModels: Onboard
 	return (
 		<div className="fixed inset-0 p-0 flex flex-col w-full">
 			<div className="h-full px-5 xs:mx-10 overflow-auto flex flex-col gap-4 items-center justify-center">
-				<ClineLogoWhite className="size-16 flex-shrink-0" />
+				<AgentarioLogoWhite className="size-16 flex-shrink-0" />
 				<h2 className="text-lg font-semibold p-0 flex-shrink-0">{stepDisplayInfo.title}</h2>
 				{stepNumber === 2 && (
 					<div className="flex w-full max-w-lg flex-col gap-6 my-4 items-center ">

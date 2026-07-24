@@ -6,13 +6,13 @@ import type { Environment } from "../config"
 import { AutoApprovalSettings } from "./AutoApprovalSettings"
 import { ApiConfiguration } from "./api"
 import { BrowserSettings } from "./BrowserSettings"
-import { ClineFeatureSetting } from "./ClineFeatureSetting"
-import { BannerCardData } from "./cline/banner"
-import { ClineRulesToggles } from "./cline-rules"
+import { AgentarioFeatureSetting } from "./AgentarioFeatureSetting"
+import { BannerCardData } from "./agentario/banner"
+import { AgentarioRulesToggles } from "./agentario-rules"
 import { HistoryItem } from "./HistoryItem"
 import { McpDisplayMode } from "./McpDisplayMode"
-import { ClineMessageModelInfo } from "./messages"
-import { OnboardingModelGroup } from "./proto/cline/state"
+import { AgentarioMessageModelInfo } from "./messages"
+import { OnboardingModelGroup } from "./proto/agentario/state"
 import { Mode } from "./storage/types"
 import { TelemetrySetting } from "./TelemetrySetting"
 import { UserInfo } from "./UserInfo"
@@ -34,7 +34,7 @@ export type Platform = "aix" | "darwin" | "freebsd" | "linux" | "openbsd" | "sun
 
 export const DEFAULT_PLATFORM = "unknown"
 
-export const COMMAND_CANCEL_TOKEN = "__cline_command_cancel__"
+export const COMMAND_CANCEL_TOKEN = "__agentario_command_cancel__"
 export interface ExtensionState {
 	isNewUser: boolean
 	welcomeViewCompleted: boolean
@@ -45,7 +45,7 @@ export interface ExtensionState {
 	remoteBrowserHost?: string
 	preferredLanguage?: string
 	mode: Mode
-	clineMessages: ClineMessage[]
+	agentarioMessages: AgentarioMessage[]
 	checkpointRestoreInput?: {
 		text: string
 		images?: string[]
@@ -54,7 +54,7 @@ export interface ExtensionState {
 	}
 	/**
 	 * The single authoritative UI mode for the current turn, owned by the extension. The webview
-	 * renders the footer/buttons/thinking indicator from this, NOT from the tail of clineMessages.
+	 * renders the footer/buttons/thinking indicator from this, NOT from the tail of agentarioMessages.
 	 * Optional for classic/legacy (absent => webview falls back to legacy tail heuristics).
 	 */
 	turnState?: TurnState
@@ -71,7 +71,7 @@ export interface ExtensionState {
 	 */
 	stateVersion?: number
 	/**
-	 * Conversation/replica fence for this snapshot (see ClineMessage.epoch). A snapshot with a
+	 * Conversation/replica fence for this snapshot (see AgentarioMessage.epoch). A snapshot with a
 	 * newer epoch replaces the webview transcript; an older one is dropped; an equal one merges.
 	 * Optional for classic/legacy.
 	 */
@@ -97,21 +97,33 @@ export interface ExtensionState {
 	userInfo?: UserInfo
 	version: string
 	distinctId: string
-	globalClineRulesToggles: ClineRulesToggles
-	localClineRulesToggles: ClineRulesToggles
-	localWorkflowToggles: ClineRulesToggles
-	globalWorkflowToggles: ClineRulesToggles
-	localCursorRulesToggles: ClineRulesToggles
-	localWindsurfRulesToggles: ClineRulesToggles
-	remoteRulesToggles?: ClineRulesToggles
-	remoteWorkflowToggles?: ClineRulesToggles
-	localAgentsRulesToggles: ClineRulesToggles
+	globalAgentarioRulesToggles: AgentarioRulesToggles
+	localAgentarioRulesToggles: AgentarioRulesToggles
+	localWorkflowToggles: AgentarioRulesToggles
+	globalWorkflowToggles: AgentarioRulesToggles
+	localCursorRulesToggles: AgentarioRulesToggles
+	localWindsurfRulesToggles: AgentarioRulesToggles
+	remoteRulesToggles?: AgentarioRulesToggles
+	remoteWorkflowToggles?: AgentarioRulesToggles
+	localAgentsRulesToggles: AgentarioRulesToggles
 	mcpResponsesCollapsed?: boolean
 	yoloModeToggled?: boolean
 	useAutoCondense?: boolean
 	compactionStrategy?: "basic" | "agentic"
-	compactionSummarizerProviderId?: string
-	compactionSummarizerModelId?: string
+	compactionProviderId?: string
+	compactionModelId?: string
+	compactionBaseUrl?: string
+	compactionApiKey?: string
+	compactionChunkSize?: number
+	compactionDoubleSummarization?: boolean
+	/** Agentario: reserve tokens for model output — auto-condense trigger threshold */
+	compactionReserveTokens?: number
+	/** Agentario: max input tokens override for compaction trigger (0 = auto-detect) */
+	compactionMaxInputTokens?: number
+	compactionPromptTemplateBefore?: string
+	compactionPromptTemplateAfter?: string
+	/** Agentario: post-processing tag mappings (JSON) */
+	compactionPostProcessTags?: string
 	modelProfilePresets?: import("./model-profile-presets").ModelProfilePreset[]
 	activeModelProfilePresetId?: string
 	codebaseIndexMode?: "local" | "local-ai" | "remote-ai"
@@ -119,14 +131,14 @@ export interface ExtensionState {
 	codebaseIndexBaseUrl?: string
 	codebaseIndexEmbeddingModelId?: string
 	subagentsEnabled?: boolean
-	worktreesEnabled?: ClineFeatureSetting
+	worktreesEnabled?: AgentarioFeatureSetting
 	customPrompt?: string
 	favoritedModelIds: string[]
 	// NEW: Add workspace information
 	workspaceRoots: WorkspaceRoot[]
 	primaryRootIndex: number
 	isMultiRootWorkspace: boolean
-	multiRootSetting: ClineFeatureSetting
+	multiRootSetting: AgentarioFeatureSetting
 	lastDismissedInfoBannerVersion: number
 	lastDismissedModelBannerVersion: number
 	lastDismissedCliBannerVersion: number
@@ -141,11 +153,24 @@ export interface ExtensionState {
 	banners?: BannerCardData[]
 	welcomeBanners?: BannerCardData[]
 	openAiCodexIsAuthenticated?: boolean
+	/** Agentario: chat UI theme - "default" or "cursor" (compact Cursor-style) */
+	chatTheme?: "default" | "cursor"
+	// Agentario: Context Protection — Smart Chunked Navigation (Tier 1)
+	smartChunkingEnabled?: boolean
+	showFileOutline?: boolean
+	maxOutlineEntries?: number
+	// Agentario: Context Protection — Tool Result Truncation (Tier 2)
+	smartTruncationEnabled?: boolean
+	smartTruncationThreshold?: number
+	smartTruncationHead?: number
+	smartTruncationTail?: number
+	// Agentario: Context Protection — AST Navigator (Tier 3)
+	astNavigatorEnabled?: boolean
 }
 
 /**
  * The authoritative UI mode for the current agent turn, owned by the extension. The webview reads
- * this instead of inferring mode from the tail of clineMessages.
+ * this instead of inferring mode from the tail of agentarioMessages.
  */
 export type TurnPhase =
 	| "idle" // no active turn; input enabled, no buttons
@@ -158,7 +183,7 @@ export type TurnPhase =
 
 export interface TurnState {
 	phase: TurnPhase
-	/** ts of the ClineMessage this phase is "about" (e.g. the pending approval/ask). */
+	/** ts of the AgentarioMessage this phase is "about" (e.g. the pending approval/ask). */
 	anchorTs?: number
 	/** Monotonic; the webview keeps the highest-seq TurnState and ignores older ones. */
 	seq: number
@@ -171,11 +196,11 @@ export interface QueuedPrompt {
 	attachmentCount: number
 }
 
-export interface ClineMessage {
+export interface AgentarioMessage {
 	ts: number
 	type: "ask" | "say"
-	ask?: ClineAsk
-	say?: ClineSay
+	ask?: AgentarioAsk
+	say?: AgentarioSay
 	text?: string
 	reasoning?: string
 	images?: string[]
@@ -199,12 +224,12 @@ export interface ClineMessage {
 	isOperationOutsideWorkspace?: boolean
 	conversationHistoryIndex?: number
 	conversationHistoryDeletedRange?: [number, number] // for when conversation history is truncated for API requests
-	modelInfo?: ClineMessageModelInfo
+	modelInfo?: AgentarioMessageModelInfo
 	/** Wall-clock time when the message was created (ms since epoch). */
 	createdAtMs?: number
 }
 
-export type ClineAsk =
+export type AgentarioAsk =
 	| "followup"
 	| "plan_mode_respond"
 	| "act_mode_respond"
@@ -224,7 +249,7 @@ export type ClineAsk =
 	| "report_bug"
 	| "use_subagents"
 
-export type ClineSay =
+export type AgentarioSay =
 	| "task"
 	| "error"
 	| "error_retry"
@@ -263,7 +288,7 @@ export type ClineSay =
 	| "subagent_usage"
 	| "conditional_rules_applied"
 
-export interface ClineSayTool {
+export interface AgentarioSayTool {
 	tool:
 		| "editedExistingFile"
 		| "newFileCreated"
@@ -294,7 +319,7 @@ export interface ClineSayTool {
 const browserActions = ["launch", "click", "type", "scroll_down", "scroll_up", "close"] as const
 export type BrowserAction = (typeof browserActions)[number]
 
-export interface ClineSayBrowserAction {
+export interface AgentarioSayBrowserAction {
 	action: BrowserAction
 	coordinate?: string
 	text?: string
@@ -318,7 +343,7 @@ export interface SubagentStatusItem {
 	error?: string
 }
 
-export interface ClineSaySubagentStatus {
+export interface AgentarioSaySubagentStatus {
 	status: "running" | "completed" | "failed"
 	total: number
 	completed: number
@@ -340,7 +365,7 @@ export type BrowserActionResult = {
 	currentMousePosition?: string
 }
 
-export interface ClineAskUseMcpServer {
+export interface AgentarioAskUseMcpServer {
 	serverName: string
 	type: "use_mcp_tool" | "access_mcp_resource"
 	toolName?: string
@@ -348,30 +373,30 @@ export interface ClineAskUseMcpServer {
 	uri?: string
 }
 
-export interface ClineAskUseSubagents {
+export interface AgentarioAskUseSubagents {
 	prompts: string[]
 }
 
-export interface ClinePlanModeResponse {
+export interface AgentarioPlanModeResponse {
 	response: string
 	options?: string[]
 	selected?: string
 }
 
-export interface ClineAskQuestion {
+export interface AgentarioAskQuestion {
 	question: string
 	options?: string[]
 	selected?: string
 }
 
-export interface ClineApiReqInfo {
+export interface AgentarioApiReqInfo {
 	request?: string
 	tokensIn?: number
 	tokensOut?: number
 	cacheWrites?: number
 	cacheReads?: number
 	cost?: number
-	cancelReason?: ClineApiReqCancelReason
+	cancelReason?: AgentarioApiReqCancelReason
 	streamingFailedMessage?: string
 	retryStatus?: {
 		attempt: number
@@ -386,7 +411,7 @@ export interface ClineApiReqInfo {
 	/** Output tokens per second during generation (matches LM Studio eval speed). */
 	tokensPerSecond?: number
 	/** Estimated context budget breakdown (system / rules / tools / chat). */
-	contextBudget?: import("@cline/shared").ContextBudgetBreakdown
+	contextBudget?: import("@agentario/shared").ContextBudgetBreakdown
 }
 
 export interface ClineSubagentUsageInfo {
@@ -398,6 +423,6 @@ export interface ClineSubagentUsageInfo {
 	cost: number
 }
 
-type ClineApiReqCancelReason = "streaming_failed" | "user_cancelled" | "retries_exhausted"
+type AgentarioApiReqCancelReason = "streaming_failed" | "user_cancelled" | "retries_exhausted"
 
 export const COMPLETION_RESULT_CHANGES_FLAG = "HAS_CHANGES"

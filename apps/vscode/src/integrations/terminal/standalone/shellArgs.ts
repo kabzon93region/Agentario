@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Shell argument construction for the standalone terminal.
  *
  * Extracted into a pure module so the quoting/flag logic is unit-testable
  * without spawning a process. Mirrors the shape of the canonical helper in
- * `@cline/shared` (sdk/packages/shared/src/parse/shell.ts).
+ * `@agentario/shared` (sdk/packages/shared/src/parse/shell.ts).
  */
 
 /**

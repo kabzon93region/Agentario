@@ -1,4 +1,4 @@
-import "opentui-spinner/react";
+﻿import "opentui-spinner/react";
 import type { ScrollBoxRenderable } from "@opentui/core";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
@@ -9,7 +9,7 @@ import {
 import {
 	ClineModelPicker,
 	type ClineModelPickerEntry,
-} from "../../components/model-selector/cline-model-picker";
+} from "../../components/model-selector/agentario-model-picker";
 import {
 	type SearchableItem,
 	SearchableList,
@@ -40,7 +40,7 @@ function useDefaultFg(): string | undefined {
 }
 
 function getClinePassSubscriptionOptionId(index: number): string {
-	return `cline-pass-subscription-option-${index}`;
+	return `agentario-pass-subscription-option-${index}`;
 }
 
 interface OnboardingFrameProps {
@@ -231,7 +231,7 @@ export function OnboardingDeviceCodeScreen(props: {
 import type {
 	ProviderConfigFieldKey,
 	ProviderConfigFieldRequirement,
-} from "@cline/core";
+} from "@agentario/core";
 
 const DEFAULT_FIELD_LABELS: Partial<Record<ProviderConfigFieldKey, string>> = {
 	apiKey: "API key",
@@ -469,10 +469,10 @@ export function OnboardingClineModelScreen(props: {
 			</text>
 
 			<ClineModelPicker
-				entries={props.clineEntries}
-				selected={props.clineModelSelected}
+				entries={props.agentarioEntries}
+				selected={props.agentarioModelSelected}
 				loading={props.recommendedLoading}
-				knownModels={props.clineKnownModels}
+				knownModels={props.agentarioKnownModels}
 			/>
 
 			<text fg="gray" paddingX={1}>

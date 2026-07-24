@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync } from "node:fs";
+﻿import { mkdirSync, mkdtempSync } from "node:fs";
 import { arch, platform, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,7 +6,7 @@ import { runDashboardCommand, waitForProcessShutdown } from "./dashboard";
 
 const ENV_KEYS = [
 	"WORKSPACE_ROOT",
-	"CLINE_DIR",
+	"AGENTARIO_DIR",
 	"CLINE_SANDBOX",
 	"CLINE_SANDBOX_DATA_DIR",
 	"CLINE_DATA_DIR",
@@ -59,12 +59,12 @@ describe("runDashboardCommand", () => {
 			| undefined;
 		const webviewDistDir = mkdtempSync(join(tmpdir(), "cline-webview-dist-"));
 		mkdirSync(webviewDistDir, { recursive: true });
-		process.env.CLINE_HUB_WEBVIEW_DIST_DIR = webviewDistDir;
+		process.env.agentario_HUB_WEBVIEW_DIST_DIR = webviewDistDir;
 
 		const exitCode = await runDashboardCommand({
 			configDir: "/tmp/cline-config",
 			cwd: "sdk",
-			dataDir: ".cline-dashboard-data",
+			dataDir: ".agentario-dashboard-data",
 			host: "127.0.0.1",
 			port: "9090",
 			publicUrl: "http://127.0.0.1:9090",
@@ -76,14 +76,14 @@ describe("runDashboardCommand", () => {
 			startServer: async () => {
 				observedEnv = {
 					workspaceRoot: process.env.WORKSPACE_ROOT,
-					clineDir: process.env.CLINE_DIR,
-					clineDataDir: process.env.CLINE_DATA_DIR,
-					providerSettingsPath: process.env.CLINE_PROVIDER_SETTINGS_PATH,
+					clineDir: process.env.AGENTARIO_DIR,
+					clineDataDir: process.env.agentario_DATA_DIR,
+					providerSettingsPath: process.env.agentario_PROVIDER_SETTINGS_PATH,
 					host: process.env.HOST,
-					port: process.env.CLINE_HUB_DASHBOARD_PORT,
+					port: process.env.agentario_HUB_DASHBOARD_PORT,
 					publicUrl: process.env.PUBLIC_URL,
 					roomSecret: process.env.ROOM_SECRET,
-					webviewDistDir: process.env.CLINE_HUB_WEBVIEW_DIST_DIR,
+					webviewDistDir: process.env.agentario_HUB_WEBVIEW_DIST_DIR,
 				};
 				return {
 					listenUrl: "http://127.0.0.1:9090/",
@@ -105,9 +105,9 @@ describe("runDashboardCommand", () => {
 		expect(observedEnv).toEqual({
 			workspaceRoot: resolve("sdk"),
 			clineDir: "/tmp/cline-config",
-			clineDataDir: resolve("sdk", ".cline-dashboard-data"),
+			clineDataDir: resolve("sdk", ".agentario-dashboard-data"),
 			providerSettingsPath: join(
-				resolve("sdk", ".cline-dashboard-data"),
+				resolve("sdk", ".agentario-dashboard-data"),
 				"settings",
 				"providers.json",
 			),
@@ -123,7 +123,7 @@ describe("runDashboardCommand", () => {
 		expect(output.join("\n")).toContain("ws://127.0.0.1:25463/hub");
 		expect(errors).toEqual([]);
 		expect(process.env.WORKSPACE_ROOT).toBe(originalEnv.WORKSPACE_ROOT);
-		expect(process.env.CLINE_HUB_WEBVIEW_DIST_DIR).toBe(webviewDistDir);
+		expect(process.env.agentario_HUB_WEBVIEW_DIST_DIR).toBe(webviewDistDir);
 	});
 
 	it("honors --no-open behavior", async () => {
@@ -165,8 +165,8 @@ describe("runDashboardCommand", () => {
 		);
 		mkdirSync(join(wrapperPath, ".."), { recursive: true });
 		mkdirSync(webviewDistDir, { recursive: true });
-		process.env.CLINE_WRAPPER_PATH = wrapperPath;
-		delete process.env.CLINE_HUB_WEBVIEW_DIST_DIR;
+		process.env.agentario_WRAPPER_PATH = wrapperPath;
+		delete process.env.agentario_HUB_WEBVIEW_DIST_DIR;
 		let observedWebviewDistDir: string | undefined;
 
 		const exitCode = await runDashboardCommand({
@@ -176,7 +176,7 @@ describe("runDashboardCommand", () => {
 				writeErr: () => {},
 			},
 			startServer: async () => {
-				observedWebviewDistDir = process.env.CLINE_HUB_WEBVIEW_DIST_DIR;
+				observedWebviewDistDir = process.env.agentario_HUB_WEBVIEW_DIST_DIR;
 				return {
 					listenUrl: "http://127.0.0.1:8787/",
 					publicUrl: "http://127.0.0.1:8787",

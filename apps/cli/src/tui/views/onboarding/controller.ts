@@ -1,4 +1,4 @@
-import {
+﻿import {
 	captureProviderConfigured,
 	getLocalProviderModels,
 	getProviderConfigFields,
@@ -8,14 +8,14 @@ import {
 	refreshProviderModelsFromSource,
 	resolveProviderConfig,
 	saveLocalProviderSettings,
-} from "@cline/core";
-import { isClineProvider } from "@cline/shared";
+} from "@agentario/core";
+import { isClineProvider } from "@agentario/shared";
 import open from "open";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	getCliSubscriptionUrl,
 	getIndividualPlanFeatures,
-} from "../../../utils/cline-pass-errors";
+} from "../../../utils/agentario-pass-errors";
 import {
 	type CodexCliStatus,
 	checkCodexCliInstalled,
@@ -28,12 +28,12 @@ import { getCliTelemetryService } from "../../../utils/telemetry";
 import {
 	loadCurrentUserPlanFromProviderSettings,
 	loadIndividualSubscriptionPlansFromProviderSettings,
-} from "../../cline-account";
+} from "../../agentario-account";
 import {
 	buildClineModelEntries,
 	type ClineModelPickerEntry,
 	useClineRecommendedModels,
-} from "../../components/model-selector/cline-model-picker";
+} from "../../components/model-selector/agentario-model-picker";
 import {
 	type SearchableItem,
 	useSearchableList,
@@ -90,7 +90,7 @@ export function useOnboardingController(props: OnboardingControllerProps) {
 		() =>
 			getMainMenuOptions({
 				isClinePassEnabled:
-					getCliFeatureFlagsService().getBooleanFlagEnabled("ext-cline-pass"),
+					getCliFeatureFlagsService().getBooleanFlagEnabled("ext-agentario-pass"),
 			}),
 		[],
 	);
@@ -189,7 +189,7 @@ export function useOnboardingController(props: OnboardingControllerProps) {
 
 	const createCustomModelItem = useCallback(
 		(_search: string, filteredItems: SearchableItem[]) => {
-			if (activeProviderId === "cline-pass") {
+			if (activeProviderId === "agentario-pass") {
 				return undefined;
 			}
 			if (filteredItems.some((item) => item.key === CUSTOM_MODEL_ID_ACTION)) {
@@ -369,8 +369,8 @@ export function useOnboardingController(props: OnboardingControllerProps) {
 	);
 
 	const transitionToClinePassSubscription = useCallback(() => {
-		setActiveProviderId("cline-pass");
-		const provider = providers.find((p) => p.id === "cline-pass");
+		setActiveProviderId("agentario-pass");
+		const provider = providers.find((p) => p.id === "agentario-pass");
 		setActiveProviderName(provider?.name ?? "ClinePass");
 		setModelsDefaultId(provider?.defaultModelId ?? "");
 		setClinePassSubscriptionSelected(0);
@@ -380,7 +380,7 @@ export function useOnboardingController(props: OnboardingControllerProps) {
 
 	const handleAuthComplete = useCallback(
 		(providerId: OnboardingOAuthProviderId) => {
-			if (providerId === "cline-pass") {
+			if (providerId === "agentario-pass") {
 				transitionToClinePassSubscription();
 				return;
 			}
@@ -453,7 +453,7 @@ export function useOnboardingController(props: OnboardingControllerProps) {
 	);
 
 	const continueFromClinePassSubscription = useCallback(() => {
-		transitionToModelPicker("cline-pass");
+		transitionToModelPicker("agentario-pass");
 	}, [transitionToModelPicker]);
 
 	const openClinePassSubscriptionPage = useCallback(() => {
@@ -476,7 +476,7 @@ export function useOnboardingController(props: OnboardingControllerProps) {
 			step === "cline_pass_subscription" &&
 			clinePassSubscriptionStatus === "subscribed"
 		) {
-			transitionToModelPicker("cline-pass");
+			transitionToModelPicker("agentario-pass");
 		}
 	}, [step, clinePassSubscriptionStatus, transitionToModelPicker]);
 

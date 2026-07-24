@@ -1,4 +1,4 @@
-import { Controller } from "@/core/controller"
+﻿import { Controller } from "@/core/controller"
 import { GrpcRecorderBuilder } from "@/core/controller/grpc-recorder/grpc-recorder.builder"
 import { GrpcPostRecordHook } from "@/core/controller/grpc-recorder/types"
 import { getLatestState } from "@/core/controller/state/getLatestState"
@@ -18,7 +18,7 @@ export function testHooks(controller: Controller): GrpcPostRecordHook[] {
 			// Record synthetic "getLatestState" request
 			GrpcRecorderBuilder.getRecorder(controller).recordRequest(
 				{
-					service: "cline.StateService",
+					service: "agentario.StateService",
 					method: "getLatestState",
 					message: {},
 					request_id: requestId,

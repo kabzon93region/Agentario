@@ -1,7 +1,7 @@
-import { mentionRegex, mentionRegexGlobal } from "@shared/context-mentions"
-import { StringRequest } from "@shared/proto/cline/common"
-import { FileSearchRequest, FileSearchType, RelativePathsRequest } from "@shared/proto/cline/file"
-import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/cline/state"
+﻿import { mentionRegex, mentionRegexGlobal } from "@shared/context-mentions"
+import { StringRequest } from "@shared/proto/agentario/common"
+import { FileSearchRequest, FileSearchType, RelativePathsRequest } from "@shared/proto/agentario/file"
+import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/agentario/state"
 import { type SlashCommand } from "@shared/slashCommands"
 import { Mode } from "@shared/storage/types"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
@@ -42,7 +42,7 @@ import {
 	slashCommandRegexGlobal,
 	validateSlashCommand,
 } from "@/utils/slash-commands"
-import ClineRulesToggleModal from "../cline-rules/ClineRulesToggleModal"
+import AgentarioRulesToggleModal from "../agentario-rules/AgentarioRulesToggleModal"
 import { ModelPresetPickerModal } from "./ModelPresetPickerModal"
 import ServersToggleModal from "./ServersToggleModal"
 
@@ -98,6 +98,9 @@ interface GitCommit {
 
 const PLAN_MODE_COLOR = "var(--vscode-activityWarningBadge-background)"
 const ACT_MODE_COLOR = "var(--vscode-focusBorder)"
+const AGENT_MODE_COLOR = "#9173FF"
+
+const MODE_LABELS = ["Plan", "Act", "Agent"] as const
 
 const SwitchContainer = styled.div<{ disabled: boolean }>`
 	display: flex;
@@ -115,14 +118,14 @@ const SwitchContainer = styled.div<{ disabled: boolean }>`
 `
 
 const Slider = styled.div.withConfig({
-	shouldForwardProp: (prop) => !["isAct", "isPlan"].includes(prop),
-})<{ isAct: boolean; isPlan?: boolean }>`
+	shouldForwardProp: (prop) => !["modeIndex", "modeColor"].includes(prop),
+})<{ modeIndex: number; modeColor: string }>`
 	position: absolute;
 	height: 100%;
-	width: 50%;
-	background-color: ${(props) => (props.isPlan ? PLAN_MODE_COLOR : ACT_MODE_COLOR)};
+	width: 33.333%;
+	background-color: ${(props) => props.modeColor};
 	transition: transform 0.2s ease;
-	transform: translateX(${(props) => (props.isAct ? "100%" : "0%")});
+	transform: translateX(${(props) => `${props.modeIndex * 100}%`});
 `
 
 const ButtonGroup = styled.div`
@@ -1027,7 +1030,10 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const onModeToggle = useCallback(() => {
 			void (async () => {
-				const convertedProtoMode = mode === "plan" ? PlanActMode.ACT : PlanActMode.PLAN
+				// Cycle: plan -> act -> agent -> plan
+				const nextMode = mode === "plan" ? "act" : mode === "act" ? "agent" : "plan"
+				const modeMap = { plan: PlanActMode.PLAN, act: PlanActMode.ACT, agent: PlanActMode.AGENT }
+				const convertedProtoMode = modeMap[nextMode as keyof typeof modeMap]
 				const submittedText = inputValue
 				const submittedImages = selectedImages
 				const submittedFiles = selectedFiles
@@ -1523,7 +1529,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 								isDraggingOver && !showUnsupportedFileError // Only show drag outline if not showing error
 									? "2px dashed var(--vscode-focusBorder)"
 									: isTextAreaFocused
-										? `1px solid ${mode === "plan" ? PLAN_MODE_COLOR : "var(--vscode-focusBorder)"}`
+										? `1px solid ${mode === "plan" ? PLAN_MODE_COLOR : mode === "agent" ? AGENT_MODE_COLOR : "var(--vscode-focusBorder)"}`
 										: "none",
 							outlineOffset: isDraggingOver && !showUnsupportedFileError ? "1px" : "0px", // Add offset for drag-over outline
 						}}
@@ -1622,7 +1628,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 							<ServersToggleModal />
 
-							<ClineRulesToggleModal />
+							<AgentarioRulesToggleModal />
 						</ButtonGroup>
 					</div>
 					<div className="flex items-center gap-1 shrink-0 ml-2">
@@ -1645,23 +1651,23 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							className="text-xs px-2 flex flex-col gap-1"
 							hidden={shownTooltipMode === null}
 							side="top">
-							{`In ${shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Cline will ${shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
+							{`In ${shownTooltipMode === "agent" ? "Agent" : shownTooltipMode === "act" ? "Act" : "Plan"}  mode, Cline will ${shownTooltipMode === "agent" ? "autonomously plan, execute, and verify" : shownTooltipMode === "act" ? "complete the task immediately" : "gather information to architect a plan"}`}
 							<p className="text-description/80 text-xs mb-0">
 								Toggle w/ <kbd className="text-muted-foreground mx-1">{togglePlanActKeys}</kbd>
 							</p>
 						</TooltipContent>
 						<TooltipTrigger>
 							<SwitchContainer data-testid="mode-switch" disabled={false} onClick={onModeToggle}>
-								<Slider isAct={mode === "act"} isPlan={mode === "plan"} />
-								{["Plan", "Act"].map((m) => (
+								<Slider modeIndex={MODE_LABELS.findIndex((m) => m.toLowerCase() === mode)} modeColor={mode === "plan" ? PLAN_MODE_COLOR : mode === "agent" ? AGENT_MODE_COLOR : ACT_MODE_COLOR} />
+								{MODE_LABELS.map((m) => (
 									<div
 										aria-checked={mode === m.toLowerCase()}
 										className={cn(
-											"pt-0.5 pb-px px-2 z-10 text-xs w-1/2 text-center bg-transparent",
+											"pt-0.5 pb-px px-2 z-10 text-xs w-1/3 text-center bg-transparent",
 											mode === m.toLowerCase() ? "text-white" : "text-input-foreground",
 										)}
 										onMouseLeave={() => setShownTooltipMode(null)}
-										onMouseOver={() => setShownTooltipMode(m.toLowerCase() === "plan" ? "plan" : "act")}
+										onMouseOver={() => setShownTooltipMode(m.toLowerCase() as "plan" | "act" | "agent")}
 										role="switch">
 										{m}
 									</div>

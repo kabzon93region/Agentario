@@ -1,7 +1,7 @@
-import {
-	ClineAskUseSubagents,
-	ClineMessage,
-	ClineSaySubagentStatus,
+﻿import {
+	AgentarioAskUseSubagents,
+	AgentarioMessage,
+	AgentarioSaySubagentStatus,
 	SubagentExecutionStatus,
 	SubagentStatusItem,
 } from "@shared/ExtensionMessage"
@@ -19,9 +19,9 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import MarkdownBlock from "../common/MarkdownBlock"
 
 interface SubagentStatusRowProps {
-	message: ClineMessage
+	message: AgentarioMessage
 	isLast: boolean
-	lastModifiedMessage?: ClineMessage
+	lastModifiedMessage?: AgentarioMessage
 }
 
 type DisplayStatus = SubagentExecutionStatus | "cancelled"
@@ -72,14 +72,14 @@ const formatCost = (value: number | undefined): string => {
 	}).format(normalized)
 }
 
-function parseSubagentRowData(message: ClineMessage): SubagentRowData | null {
+function parseSubagentRowData(message: AgentarioMessage): SubagentRowData | null {
 	if (!message.text) {
 		return null
 	}
 
 	try {
 		if (message.ask === "use_subagents" || message.say === "use_subagents") {
-			const parsed = JSON.parse(message.text) as ClineAskUseSubagents
+			const parsed = JSON.parse(message.text) as AgentarioAskUseSubagents
 			if (!Array.isArray(parsed.prompts)) {
 				return null
 			}
@@ -105,7 +105,7 @@ function parseSubagentRowData(message: ClineMessage): SubagentRowData | null {
 			}
 		}
 
-		const parsed = JSON.parse(message.text) as ClineSaySubagentStatus
+		const parsed = JSON.parse(message.text) as AgentarioSaySubagentStatus
 		if (!Array.isArray(parsed.items)) {
 			return null
 		}

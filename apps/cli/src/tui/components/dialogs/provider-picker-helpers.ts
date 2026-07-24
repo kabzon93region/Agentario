@@ -1,6 +1,6 @@
-const CLINE_PASS_SUBSCRIPTION_PATH = "/dashboard/subscription";
+﻿const CLINE_PASS_SUBSCRIPTION_PATH = "/dashboard/subscription";
 const CLINE_USAGE_BILLING_PATH = "/dashboard/account";
-const DEFAULT_APP_BASE_URL = "https://app.cline.bot";
+const DEFAULT_APP_BASE_URL = "https://app.agentario.bot";
 
 export function buildClinePassSubscriptionPageUrl(
 	appBaseUrl: string | undefined,

@@ -15,4 +15,10 @@ export type HistoryItem = {
 	isFavorited?: boolean
 
 	modelId?: string
+
+	/** Последний расчёт бюджета контекста (system/rules/tools/chat). Сохраняется для отображения структурной полоски в истории. */
+	lastContextBudget?: import("@shared/getApiMetrics").ContextBudgetBreakdown
+
+	/** Цвет плашки таска (hex без #, например "3b82f6"). Пользователь задаёт через ПКМ. */
+	taskColor?: string
 }

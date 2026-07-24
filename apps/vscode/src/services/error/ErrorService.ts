@@ -1,5 +1,5 @@
-import { Logger } from "@/shared/services/Logger"
-import { ClineError } from "./ClineError"
+﻿import { Logger } from "@/shared/services/Logger"
+import { AgentarioError } from "./AgentarioError"
 import { ErrorProviderFactory } from "./ErrorProviderFactory"
 import { IErrorProvider } from "./providers/IErrorProvider"
 
@@ -40,11 +40,11 @@ export class ErrorService {
 		this.provider = provider
 	}
 
-	captureException(error: Error | ClineError, properties?: Record<string, unknown>) {
+	captureException(error: Error | AgentarioError, properties?: Record<string, unknown>) {
 		return this.provider.captureException(error, properties)
 	}
 
-	public logException(error: Error | ClineError, properties?: Record<string, unknown>): void {
+	public logException(error: Error | AgentarioError, properties?: Record<string, unknown>): void {
 		this.provider.logException(error, properties)
 		Logger.error("[ErrorService] Logging exception", JSON.stringify(error))
 	}
@@ -57,8 +57,8 @@ export class ErrorService {
 		this.provider.logMessage(message, level, properties)
 	}
 
-	public toClineError(rawError: unknown, modelId?: string, providerId?: string): ClineError {
-		const transformed = ClineError.transform(rawError, modelId, providerId)
+	public toAgentarioError(rawError: unknown, modelId?: string, providerId?: string): AgentarioError {
+		const transformed = AgentarioError.transform(rawError, modelId, providerId)
 		this.logException(transformed, { modelId, providerId })
 		return transformed
 	}

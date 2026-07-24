@@ -1,4 +1,4 @@
-import {
+﻿import {
 	closeSync,
 	existsSync,
 	mkdirSync,
@@ -7,9 +7,9 @@ import {
 	truncateSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import type { BasicLogger, RuntimeLoggerConfig } from "@cline/core";
-import { resolveClineDataDir } from "@cline/core";
-import { registerDisposable } from "@cline/shared";
+import type { BasicLogger, RuntimeLoggerConfig } from "@agentario/core";
+import { resolveClineDataDir } from "@agentario/core";
+import { registerDisposable } from "@agentario/shared";
 import pino, {
 	type DestinationStream,
 	type LevelWithSilent,
@@ -65,18 +65,18 @@ function normalizeRuntimeConfig(input: {
 		"logs",
 		`${getCliBuildInfo().name}.log`,
 	);
-	const enabledEnv = process.env.CLINE_LOG_ENABLED?.trim();
+	const enabledEnv = process.env.agentario_LOG_ENABLED?.trim();
 	const enabled =
 		base?.enabled ??
 		!(enabledEnv === "0" || enabledEnv?.toLowerCase() === "false");
-	const level = normalizeLogLevel(base?.level ?? process.env.CLINE_LOG_LEVEL);
+	const level = normalizeLogLevel(base?.level ?? process.env.agentario_LOG_LEVEL);
 	const destination =
 		base?.destination?.trim() ||
-		process.env.CLINE_LOG_PATH?.trim() ||
+		process.env.agentario_LOG_PATH?.trim() ||
 		defaultDestination;
 	const name =
 		base?.name?.trim() ||
-		process.env.CLINE_LOG_NAME?.trim() ||
+		process.env.agentario_LOG_NAME?.trim() ||
 		`${getCliBuildInfo().name}.${input.runtime}`;
 	const bindings = base?.bindings ?? {};
 

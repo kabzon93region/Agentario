@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package agentario;
+
+import "agentario/common.proto";
+
+option go_package = "github.com/agentario/grpc-go/cline";
+option java_multiple_files = true;
+option java_package = "bot.agentario.proto";
+
+// SlashService provides methods for managing slash commands
+service SlashService {
+  // Sends button click message
+  rpc reportBug(StringRequest) returns (Empty);
+  rpc condense(StringRequest) returns (Empty);
+
+  // Agentario: post-processing for compaction
+  rpc openCompactionDebugFile(StringRequest) returns (String);
+  rpc applyCompactionPostProcessing(StringRequest) returns (Empty);
+  rpc exportContextText(EmptyRequest) returns (String);
+
+  // Get available slash commands for autocomplete (used by CLI)
+  rpc getAvailableSlashCommands(EmptyRequest) returns (SlashCommandsResponse);
+}
+
+// Slash command definition for autocomplete
+message SlashCommandInfo {
+  string name = 1; // Command name without slash, e.g., "newtask", "smol"
+  string description = 2; // Human-readable description
+  string section = 3; // "default", "custom", or "cli"
+  bool cli_compatible = 4; // false for VS Code-only commands
+}
+
+// Response containing all available slash commands
+message SlashCommandsResponse {
+  repeated SlashCommandInfo commands = 1;
+}

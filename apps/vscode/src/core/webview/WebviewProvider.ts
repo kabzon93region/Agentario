@@ -1,9 +1,9 @@
-import path from "node:path"
+﻿import path from "node:path"
 import { Controller } from "@core/controller/index"
 import axios from "axios"
 import { readFile } from "fs/promises"
 import { HostProvider } from "@/hosts/host-provider"
-import { ClineExtensionContext } from "@/shared/cline"
+import { AgentarioExtensionContext } from "@/shared/cline"
 import { ShowMessageType } from "@/shared/proto/host/window"
 import { Logger } from "@/shared/services/Logger"
 import { getNonce } from "./getNonce"
@@ -12,7 +12,7 @@ export abstract class WebviewProvider {
 	private static instance: WebviewProvider | null = null
 	controller: Controller
 
-	constructor(readonly context: ClineExtensionContext) {
+	constructor(readonly context: AgentarioExtensionContext) {
 		WebviewProvider.instance = this
 
 		// Create controller with cache service
@@ -117,7 +117,7 @@ export abstract class WebviewProvider {
 				<noscript>You need to enable JavaScript to run this app.</noscript>
 				<div id="root"></div>
 				<script type="module" nonce="${nonce}" src="${scriptUrl}"></script>
-				<script src="http://localhost:8097"></script> 
+				${process.env.IS_DEV ? '<script src="http://localhost:8097"></script>' : ""}
 			</body>
 		</html>
 		`

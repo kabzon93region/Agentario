@@ -25,10 +25,10 @@
 		]
 	},
 	"peerDependencies": {
-		"@cline/core": "*"
+		"@agentario/core": "*"
 	},
 	"peerDependenciesMeta": {
-		"@cline/core": {
+		"@agentario/core": {
 			"optional": true
 		}
 	},

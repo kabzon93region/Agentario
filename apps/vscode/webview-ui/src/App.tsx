@@ -1,4 +1,4 @@
-import type { Boolean, EmptyRequest } from "@shared/proto/cline/common"
+﻿import type { Boolean, EmptyRequest } from "@shared/proto/agentario/common"
 import { useCallback, useEffect } from "react"
 import AccountView from "./components/account/AccountView"
 import ChatView from "./components/chat/ChatView"
@@ -6,13 +6,13 @@ import HistoryView from "./components/history/HistoryView"
 import IndexingView from "./components/indexing/IndexingView"
 import MarketplaceView from "./components/marketplace/MarketplaceView"
 import McpView from "./components/mcp/configuration/McpConfigurationView"
-import { openClinePassSubscriptionIfPending } from "./components/onboarding/clinePassSubscribe"
+import { openClinePassSubscriptionIfPending } from "./components/onboarding/AgentarioPassSubscribe"
 import OnboardingView from "./components/onboarding/OnboardingView"
 import AgentarioStandaloneOnboarding from "./components/onboarding/AgentarioStandaloneOnboarding"
 import SettingsView from "./components/settings/SettingsView"
 import WorktreesView from "./components/worktrees/WorktreesView"
 import { Environment } from "@shared/config-types"
-import { useClineAuth } from "./context/ClineAuthContext"
+import { useClineAuth } from "./context/AgentarioAuthContext"
 import { useExtensionState } from "./context/ExtensionStateContext"
 import { Providers } from "./Providers"
 import { UiServiceClient } from "./services/grpc-client"
@@ -44,6 +44,7 @@ const AppContent = () => {
 		closeMarketplaceView,
 		hideAnnouncement,
 		environment,
+		chatTheme,
 	} = useExtensionState()
 
 	const { clineUser, organizations, activeOrganization } = useClineAuth()
@@ -84,7 +85,7 @@ const AppContent = () => {
 	}
 
 	return (
-		<div className="flex h-screen w-full flex-col">
+		<div className={`flex h-screen w-full flex-col${chatTheme === "cursor" ? " theme-cursor" : ""}`}>
 			{showSettings && <SettingsView onDone={hideSettings} targetSection={settingsTargetSection} />}
 			{showHistory && <HistoryView onDone={hideHistory} />}
 			{showMarketplace && <MarketplaceView initialType={mcpTab ? "mcp" : undefined} onDone={closeMarketplaceView} />}

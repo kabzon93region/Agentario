@@ -1,4 +1,4 @@
-import { Command, CommanderError, Option } from "commander";
+﻿import { Command, CommanderError, Option } from "commander";
 import { version } from "../../package.json";
 import {
 	CLI_COMPACTION_MODE_OPTION_DESCRIPTION,
@@ -66,19 +66,19 @@ export function addRootOptions(cmd: Command): Command {
 			)
 			.option(
 				"--config <path>",
-				"Configuration directory (default: ~/.cline/data/settings)",
+				"Configuration directory (default: ~/.agentario/data/settings)",
 			)
 			.option(
 				"--data-dir <path>",
-				"Use isolated local state at this directory path (default: ~/.cline)",
+				"Use isolated local state at this directory path (default: ~/.agentario)",
 			)
 			.option(
 				"--hooks-dir <path>",
-				"Directory path to additional hooks for runtime hook injection (default: ~/.cline/hooks)",
+				"Directory path to additional hooks for runtime hook injection (default: ~/.agentario/hooks)",
 			)
 			.option(
 				"--worktree",
-				"Auto-create a detached git worktree under ~/.cline/worktrees/ and run the task there",
+				"Auto-create a detached git worktree under ~/.agentario/worktrees/ and run the task there",
 			)
 			.option("--update", "Check for updates and install if available")
 			.option("--kanban", "Run the kanban app")

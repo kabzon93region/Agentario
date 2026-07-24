@@ -1,8 +1,8 @@
-import { execFileSync } from "node:child_process";
+﻿import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { MessageWithMetadata } from "@cline/llms";
+import type { MessageWithMetadata } from "@agentario/llms";
 import type {
 	AgentConfig,
 	AgentEvent,
@@ -10,8 +10,8 @@ import type {
 	AgentResult,
 	AgentRuntimeEvent,
 	BasicLogger,
-} from "@cline/shared";
-import { setClineDir, setHomeDir } from "@cline/shared/storage";
+} from "@agentario/shared";
+import { setClineDir, setHomeDir } from "@agentario/shared/storage";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TelemetryService } from "../../services/telemetry/TelemetryService";
 import type { SessionManifest } from "../../session/models/session-manifest";
@@ -264,8 +264,8 @@ describe("LocalRuntimeHost", () => {
 			}),
 		);
 
-		// `session.started` is emitted from `ClineCore.start` (see
-		// `ClineCore.test.ts`), not from `LocalRuntimeHost`, so that the
+		// `session.started` is emitted from `AgentarioCore.start` (see
+		// `AgentarioCore.test.ts`), not from `LocalRuntimeHost`, so that the
 		// signal fires for every backend. We assert that it is NOT emitted
 		// here and only transport-scoped events remain.
 		expect(adapter.emit).not.toHaveBeenCalledWith(
@@ -342,8 +342,8 @@ describe("LocalRuntimeHost", () => {
 			normalizeStartInput({
 				config: createConfig({
 					sessionId,
-					providerId: "cline-pass",
-					modelId: "cline-pass/glm-5.1",
+					providerId: "agentario-pass",
+					modelId: "agentario-pass/glm-5.1",
 					apiKey: undefined,
 				}),
 				prompt: "hello",
@@ -351,11 +351,11 @@ describe("LocalRuntimeHost", () => {
 		);
 
 		expect(oauthTokenManager.resolveProviderApiKey).toHaveBeenCalledWith({
-			providerId: "cline-pass",
+			providerId: "agentario-pass",
 		});
 		expect(createAgent).toHaveBeenCalledWith(
 			expect.objectContaining({
-				providerId: "cline-pass",
+				providerId: "agentario-pass",
 				apiKey: "workos:resolved-token",
 			}),
 		);

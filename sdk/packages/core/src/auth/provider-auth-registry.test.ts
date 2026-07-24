@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	formatProviderOAuthApiKey,
 	getPersistedProviderApiKey,
@@ -9,13 +9,13 @@ import {
 	resolveProviderApiKeyFromSettings,
 } from "./provider-auth-registry";
 
-const { loginClineOAuth } = vi.hoisted(() => ({
-	loginClineOAuth: vi.fn(),
+const { loginAgentarioCloudOAuth } = vi.hoisted(() => ({
+	loginAgentarioCloudOAuth: vi.fn(),
 }));
 
 vi.mock("./cline", () => ({
 	getValidClineCredentials: vi.fn(),
-	loginClineOAuth,
+	loginAgentarioCloudOAuth,
 }));
 
 vi.mock("./oca", () => ({
@@ -35,7 +35,7 @@ describe("provider auth registry", () => {
 
 	it("returns handlers for managed OAuth providers only", () => {
 		expect(getProviderAuthHandler("cline")?.providerId).toBe("cline");
-		expect(getProviderAuthHandler("cline-pass")?.providerId).toBe("cline-pass");
+		expect(getProviderAuthHandler("agentario-pass")?.providerId).toBe("agentario-pass");
 		expect(getProviderAuthHandler("oca")?.providerId).toBe("oca");
 		expect(getProviderAuthHandler("openai-codex")?.providerId).toBe(
 			"openai-codex",
@@ -46,7 +46,7 @@ describe("provider auth registry", () => {
 
 	it("returns storage provider IDs from handlers", () => {
 		expect(getProviderAuthStorageId("cline")).toBe("cline");
-		expect(getProviderAuthStorageId("cline-pass")).toBe("cline");
+		expect(getProviderAuthStorageId("agentario-pass")).toBe("cline");
 		expect(getProviderAuthStorageId("oca")).toBe("oca");
 		expect(getProviderAuthStorageId("openai-codex")).toBe("openai-codex");
 		expect(getProviderAuthStorageId("openai-codex-cli")).toBeUndefined();
@@ -56,14 +56,14 @@ describe("provider auth registry", () => {
 		expect(formatProviderOAuthApiKey("cline", { access: "abc" })).toBe(
 			"workos:abc",
 		);
-		expect(formatProviderOAuthApiKey("cline-pass", { access: "abc" })).toBe(
+		expect(formatProviderOAuthApiKey("agentario-pass", { access: "abc" })).toBe(
 			"workos:abc",
 		);
 		expect(formatProviderOAuthApiKey("cline", { access: "workos:abc" })).toBe(
 			"workos:abc",
 		);
 		expect(
-			getPersistedProviderApiKey("cline-pass", {
+			getPersistedProviderApiKey("agentario-pass", {
 				provider: "cline",
 				auth: { accessToken: "abc" },
 			}),
@@ -71,7 +71,7 @@ describe("provider auth registry", () => {
 	});
 
 	it("login/save for ClinePass stores credentials under Cline storage", async () => {
-		loginClineOAuth.mockResolvedValueOnce({
+		loginAgentarioCloudOAuth.mockResolvedValueOnce({
 			access: "new-access",
 			refresh: "new-refresh",
 			expires: 4_000_000_000_000,
@@ -89,7 +89,7 @@ describe("provider auth registry", () => {
 
 		const saved = await loginAndSaveProviderOAuthCredentials(
 			manager,
-			"cline-pass",
+			"agentario-pass",
 			{
 				callbacks: {
 					onAuth: vi.fn(),
@@ -122,14 +122,14 @@ describe("provider auth registry", () => {
 		});
 		const manager = { getProviderSettings } as never;
 
-		expect(resolveProviderApiKeyFromSettings(manager, "cline-pass")).toBe(
+		expect(resolveProviderApiKeyFromSettings(manager, "agentario-pass")).toBe(
 			"workos:abc",
 		);
 		expect(getProviderSettings).toHaveBeenCalledWith("cline");
 	});
 
 	it("login/save stores credentials under handler storageProviderId", async () => {
-		loginClineOAuth.mockResolvedValueOnce({
+		loginAgentarioCloudOAuth.mockResolvedValueOnce({
 			access: "new-access",
 			refresh: "new-refresh",
 			expires: 4_000_000_000_000,

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+﻿import { execFileSync } from "node:child_process";
 import {
 	access,
 	mkdir,
@@ -9,7 +9,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { setClineDir } from "@cline/shared/storage";
+import { setAgentarioDir } from "@agentario/shared/storage";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTaskWorktree, getTaskWorktreesHomePath } from "./worktree";
 
@@ -38,12 +38,12 @@ describe("createTaskWorktree", () => {
 
 	beforeEach(async () => {
 		sandboxRoot = await mkdtemp(path.join(tmpdir(), "cline-sdk-worktree-"));
-		clineDir = path.join(sandboxRoot, ".cline");
+		clineDir = path.join(sandboxRoot, ".agentario");
 		repoPath = path.join(sandboxRoot, "myrepo");
 		nonRepoPath = path.join(sandboxRoot, "not-a-repo");
-		originalClineDir = process.env.CLINE_DIR;
-		process.env.CLINE_DIR = clineDir;
-		setClineDir(clineDir);
+		originalClineDir = process.env.AGENTARIO_DIR;
+		process.env.AGENTARIO_DIR = clineDir;
+		setAgentarioDir(clineDir);
 
 		await writeFile(path.join(sandboxRoot, ".keep"), "");
 		await rm(repoPath, { recursive: true, force: true });
@@ -68,19 +68,19 @@ describe("createTaskWorktree", () => {
 
 	afterEach(async () => {
 		if (originalClineDir === undefined) {
-			delete process.env.CLINE_DIR;
+			delete process.env.AGENTARIO_DIR;
 		} else {
-			process.env.CLINE_DIR = originalClineDir;
+			process.env.AGENTARIO_DIR = originalClineDir;
 		}
-		setClineDir(originalClineDir ?? path.join("~", ".cline"));
+		setAgentarioDir(originalClineDir ?? path.join("~", ".agentario"));
 		await rm(sandboxRoot, { recursive: true, force: true });
 	});
 
-	it("places worktrees under ~/.cline/worktrees", () => {
+	it("places worktrees under ~/.agentario/worktrees", () => {
 		expect(getTaskWorktreesHomePath()).toBe(path.join(clineDir, "worktrees"));
 	});
 
-	it("creates a detached worktree at ~/.cline/worktrees/<taskId>/<repoName>", async () => {
+	it("creates a detached worktree at ~/.agentario/worktrees/<taskId>/<repoName>", async () => {
 		const result = await createTaskWorktree({
 			cwd: repoPath,
 			taskId: "my-task",

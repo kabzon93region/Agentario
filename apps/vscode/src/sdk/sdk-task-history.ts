@@ -1,18 +1,20 @@
 import path from "node:path"
-import type { ClineCoreListHistoryOptions, SessionHistoryRecord } from "@cline/core"
-import type { Message as SdkMessage } from "@cline/llms"
-import { type ContentBlock, formatDisplayUserInput, type MessageWithMetadata } from "@cline/shared"
-import type { ClineMessage } from "@shared/ExtensionMessage"
+import type { AgentarioCoreListHistoryOptions, SessionHistoryRecord } from "@agentario/core"
+import type { Message as SdkMessage } from "@agentario/llms"
+import { type ContentBlock, formatDisplayUserInput, type MessageWithMetadata } from "@agentario/shared"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import type { HistoryItem } from "@shared/HistoryItem"
 import getFolderSize from "get-folder-size"
 import type { McpHub } from "@/services/mcp/McpHub"
 import type { TelemetryService } from "@/services/telemetry/TelemetryService"
 import { Logger } from "@/shared/services/Logger"
-import { buildSessionConfig } from "./cline-session-factory"
+import { buildSessionConfig } from "./agentario-session-factory"
 import { sanitizeInitialMessagesForSessionStart } from "./initial-message-sanitizer"
 import { deleteLegacyTask, readApiConversationHistory, readTaskHistory } from "./legacy-state-reader"
 import type { MessageIdMinter } from "./message-id-minter"
-import { sdkMessagesToClineMessages } from "./message-translator"
+import { sdkMessagesToagentarioMessages } from "./message-translator"
+import { loadDisplayMessages } from "@core/storage/disk"
+import { filterCompactionInfoMessages } from "./sdk-compaction-coordinator"
 import type { SdkSessionLifecycle } from "./sdk-session-lifecycle"
 import type { VscodeSessionHost } from "./vscode-session-host"
 
@@ -22,6 +24,8 @@ export interface TaskUsage {
 	totalCost?: number
 	cacheReads?: number
 	cacheWrites?: number
+	/** Последний расчёт бюджета контекста (опционально). */
+	contextBudget?: HistoryItem["lastContextBudget"]
 }
 
 export interface SdkTaskHistoryOptions {
@@ -40,7 +44,7 @@ export interface SdkTaskHistoryOptions {
 	telemetry?: TelemetryService
 }
 
-type SdkTaskHistoryListOptions = ClineCoreListHistoryOptions & {
+type SdkTaskHistoryListOptions = AgentarioCoreListHistoryOptions & {
 	offset?: number
 }
 
@@ -82,6 +86,10 @@ export function historyItemToSessionMetadata(item: HistoryItem, fallbackModelId?
 		cacheWrites: item.cacheWrites ?? 0,
 		cacheReads: item.cacheReads ?? 0,
 		modelId: item.modelId ?? fallbackModelId ?? "",
+		// Сохраняем последний context budget как JSON строку для персистентности
+		...(item.lastContextBudget ? { lastContextBudget: JSON.stringify(item.lastContextBudget) } : {}),
+		// Сохраняем цвет плашки таска
+		...(item.taskColor ? { taskColor: item.taskColor } : {}),
 	}
 }
 
@@ -228,8 +236,33 @@ function legacyApiHistoryToSdkMessages(apiHistory: unknown[], historyItem: Histo
 	return sanitizeInitialMessagesForSessionStart(messages) as MessageWithMetadata[]
 }
 
+function metadataContextBudget(metadata: SessionHistoryRecord["metadata"] | undefined): HistoryItem["lastContextBudget"] {
+	const value = metadataString(metadata, "lastContextBudget")
+	if (!value) {
+		return undefined
+	}
+	try {
+		const parsed = JSON.parse(value)
+		if (
+			parsed &&
+			typeof parsed === "object" &&
+			typeof parsed.contextWindow === "number" &&
+			typeof parsed.totalEstimated === "number" &&
+			parsed.categories &&
+			typeof parsed.categories.system === "number"
+		) {
+			return parsed
+		}
+	} catch {
+		// Игнорируем ошибки парсинга
+	}
+	return undefined
+}
+
 export function sessionHistoryRecordToHistoryItem(item: SessionHistoryRecord): HistoryItem {
 	const metadata = item.metadata
+	const taskColor = metadataString(metadata, "taskColor")
+	Logger.log(`[sessionHistoryRecordToHistoryItem] taskColor=${taskColor || "(none)"} session=${item.sessionId}`)
 	return {
 		id: item.sessionId,
 		ts: dateStringToTimestamp(item.updatedAt ?? item.endedAt ?? item.startedAt),
@@ -243,6 +276,8 @@ export function sessionHistoryRecordToHistoryItem(item: SessionHistoryRecord): H
 		isFavorited: metadataBoolean(metadata, "isFavorited") ?? metadataBoolean(metadata, "is_favorited") ?? false,
 		modelId: item.model || metadataString(metadata, "modelId") || "",
 		cwdOnTaskInitialization: item.cwd ?? item.workspaceRoot,
+		lastContextBudget: metadataContextBudget(metadata),
+		taskColor: taskColor || undefined,
 	}
 }
 
@@ -414,7 +449,7 @@ export class SdkTaskHistory {
 			return result
 		}
 
-		const hostOptions: ClineCoreListHistoryOptions = { ...options }
+		const hostOptions: AgentarioCoreListHistoryOptions = { ...options }
 		delete (hostOptions as { offset?: number }).offset
 
 		const sdkHistory = await this.withHistoryHost((host) =>
@@ -461,14 +496,25 @@ export class SdkTaskHistory {
 		return result
 	}
 
-	async getClineMessages(taskId: string): Promise<ClineMessage[]> {
+	async getagentarioMessages(taskId: string): Promise<AgentarioMessage[]> {
 		await this.migrateLegacyTaskIfNeeded(taskId)
+
+		// Agentario: try loading display messages first (full history, preserved after compaction)
+		// Фильтруем info-сообщения (прогресс суммаризации) — они не должны отображаться при повторном открытии
+		const rawDisplayMessages = await loadDisplayMessages(taskId).catch(() => undefined)
+		if (rawDisplayMessages && rawDisplayMessages.length > 0) {
+			const displayMessages = filterCompactionInfoMessages(rawDisplayMessages as AgentarioMessage[])
+			Logger.log(`[SdkTaskHistory] Loaded ${displayMessages.length} display messages for task: ${taskId}`)
+			return displayMessages
+		}
+
+		// Fallback to SDK messages (context messages, may be compacted)
 		const sdkMessages = await this.withHistoryHost((host) => host.readMessages(taskId) as Promise<SdkMessage[]>)
-		const clineMessages = sdkMessagesToClineMessages(
+		const agentarioMessages = sdkMessagesToagentarioMessages(
 			sanitizeSdkUserMessagesForDisplay(sdkMessages),
 			this.options.getMinter?.(),
 		)
-		return clineMessages
+		return agentarioMessages
 	}
 
 	private async migrateLegacyTaskIfNeeded(taskId: string): Promise<boolean> {
@@ -579,6 +625,7 @@ export class SdkTaskHistory {
 	}
 
 	private async updateSession(sessionId: string, item: HistoryItem): Promise<void> {
+		Logger.log(`[updateSession] sessionId=${sessionId}, taskColor=${item.taskColor ?? "(none)"}, isFavorited=${item.isFavorited}`)
 		await this.withHistoryHost(async (host) => {
 			const existing = await host.get(sessionId)
 			const metadata: Record<string, unknown> = {
@@ -695,6 +742,32 @@ export class SdkTaskHistory {
 		historyItem.totalCost = (historyItem.totalCost || 0) + (usage.totalCost ?? 0)
 		historyItem.ts = Date.now()
 
+		// Сохраняем последний context budget для отображения структурной полоски в истории
+		if (usage.contextBudget) {
+			historyItem.lastContextBudget = usage.contextBudget
+		}
+
+		await this.updateTaskHistoryItem(historyItem)
+	}
+
+	/**
+	 * Сохраняет последний расчёт бюджета контекста для отображения структурной полоски
+	 * при открытии задачи из истории.
+	 */
+	async updateTaskContextBudget(
+		taskId: string | undefined,
+		contextBudget: HistoryItem["lastContextBudget"],
+	): Promise<void> {
+		if (!taskId || !contextBudget) {
+			return
+		}
+
+		const historyItem = await this.findHistoryItem(taskId)
+		if (!historyItem) {
+			return
+		}
+
+		historyItem.lastContextBudget = contextBudget
 		await this.updateTaskHistoryItem(historyItem)
 	}
 

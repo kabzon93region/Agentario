@@ -1,6 +1,6 @@
-import type { CoreSessionEvent } from "@cline/core"
-import type { AgentEvent } from "@cline/shared"
-import type { ClineAskUseMcpServer } from "@shared/ExtensionMessage"
+﻿import type { CoreSessionEvent } from "@agentario/core"
+import type { AgentEvent } from "@agentario/shared"
+import type { AgentarioAskUseMcpServer } from "@shared/ExtensionMessage"
 import { describe, expect, it } from "vitest"
 import {
 	extractToolOutputText,
@@ -498,8 +498,8 @@ describe("translateSessionEvent — agent_event content_start", () => {
 		expect(result.messages).toHaveLength(1)
 		expect(result.messages[0].say).toBe("tool")
 		expect(result.messages[0].partial).toBe(true)
-		// sdkToolToClineSayTool converts "read_files" → "readFile" and
-		// the text is JSON.stringify(ClineSayTool)
+		// sdkToolToAgentarioSayTool converts "read_files" → "readFile" and
+		// the text is JSON.stringify(AgentarioSayTool)
 		expect(result.messages[0].text).toContain("readFile")
 		expect(result.messages[0].text).toContain("/src/index.ts")
 	})
@@ -590,7 +590,7 @@ describe("translateSessionEvent — agent_event content_end", () => {
 
 		const result = translateSessionEvent(event, state)
 		expect(result.messages).toHaveLength(1)
-		// Tool content_end produces a ClineSayTool JSON with the tool name
+		// Tool content_end produces a AgentarioSayTool JSON with the tool name
 		expect(result.messages[0].say).toBe("tool")
 		expect(result.messages[0].text).toContain("readFile")
 		expect(result.messages[0].partial).toBe(false)
@@ -985,7 +985,7 @@ describe("translateSessionEvent — agent_event error", () => {
 		expect(result.turnComplete).toBe(true)
 	})
 
-	it("reshapes insufficient_credits error into ClineError-compatible format", () => {
+	it("reshapes insufficient_credits error into AgentarioError-compatible format", () => {
 		const state = new MessageTranslatorState()
 		const errorJson = JSON.stringify({
 			code: "insufficient_credits",
@@ -1006,7 +1006,7 @@ describe("translateSessionEvent — agent_event error", () => {
 		const result = translateSessionEvent(event, state)
 		expect(result.messages).toHaveLength(2)
 
-		// The api_req_failed text should be structured JSON that ClineError.parse() can handle
+		// The api_req_failed text should be structured JSON that AgentarioError.parse() can handle
 		const failedText = result.messages[1].text!
 		const parsed = JSON.parse(failedText)
 		expect(parsed.code).toBe("insufficient_credits")
@@ -1040,7 +1040,7 @@ describe("translateSessionEvent — agent_event error", () => {
 		expect(parsed.details.current_balance).toBe(0)
 	})
 
-	it("reshapes SPEND_LIMIT_EXCEEDED error into ClineError-compatible format", () => {
+	it("reshapes SPEND_LIMIT_EXCEEDED error into AgentarioError-compatible format", () => {
 		const state = new MessageTranslatorState()
 		const errorJson = JSON.stringify({
 			code: "SPEND_LIMIT_EXCEEDED",
@@ -1073,7 +1073,7 @@ describe("translateSessionEvent — agent_event error", () => {
 		expect(parsed.details.limit_usd).toBe(20.0)
 	})
 
-	it("reshapes plain-text insufficient credits error into ClineError-compatible format", () => {
+	it("reshapes plain-text insufficient credits error into AgentarioError-compatible format", () => {
 		const state = new MessageTranslatorState()
 		// The SDK often extracts human-readable text from the API response,
 		// losing the structured JSON. This tests that plain-text balance errors
@@ -1102,7 +1102,7 @@ describe("translateSessionEvent — agent_event error", () => {
 		expect(parsed.details.message).toContain("Insufficient balance")
 	})
 
-	it("reshapes plain-text 'Not enough credits' error into ClineError-compatible format", () => {
+	it("reshapes plain-text 'Not enough credits' error into AgentarioError-compatible format", () => {
 		const state = new MessageTranslatorState()
 		const event: CoreSessionEvent = {
 			type: "agent_event",
@@ -1125,7 +1125,7 @@ describe("translateSessionEvent — agent_event error", () => {
 		expect(parsed.details.current_balance).toBe(0)
 	})
 
-	it("reshapes plain-text spend limit error into ClineError-compatible format", () => {
+	it("reshapes plain-text spend limit error into AgentarioError-compatible format", () => {
 		const state = new MessageTranslatorState()
 		const event: CoreSessionEvent = {
 			type: "agent_event",
@@ -2253,7 +2253,7 @@ describe("translateSessionEvent — run_commands bare array/string input (ENG-18
 // S6-40: skills tool renders skill name (SDK input: { skill: "name" })
 // ---------------------------------------------------------------------------
 
-describe("sdkToolToClineSayTool — fetch_web_content and skills (S6-39, S6-40)", () => {
+describe("sdkToolToAgentarioSayTool — fetch_web_content and skills (S6-39, S6-40)", () => {
 	it("S6-39: fetch_web_content extracts URL from SDK requests array", () => {
 		const state = new MessageTranslatorState()
 		const event: CoreSessionEvent = {
@@ -2445,7 +2445,7 @@ describe("sdkToolToClineSayTool — fetch_web_content and skills (S6-39, S6-40)"
 // S6-47: search_codebase renders query and path correctly
 // ---------------------------------------------------------------------------
 
-describe("sdkToolToClineSayTool — search_codebase (S6-47)", () => {
+describe("sdkToolToAgentarioSayTool — search_codebase (S6-47)", () => {
 	it("S6-47: search_codebase with { queries: ['TODO', 'FIXME'] } extracts regex", () => {
 		const state = new MessageTranslatorState()
 		const event: CoreSessionEvent = {
@@ -2656,7 +2656,7 @@ describe("sdkToolToClineSayTool — search_codebase (S6-47)", () => {
 // S6-48: Editor diff rendering — search/replace format for old_text+new_text
 // ---------------------------------------------------------------------------
 
-describe("sdkToolToClineSayTool — editor diff rendering (S6-48)", () => {
+describe("sdkToolToAgentarioSayTool — editor diff rendering (S6-48)", () => {
 	it("S6-48: editor with old_text and new_text builds search/replace diff in content", () => {
 		const state = new MessageTranslatorState()
 		const event: CoreSessionEvent = {
@@ -2757,7 +2757,7 @@ describe("sdkToolToClineSayTool — editor diff rendering (S6-48)", () => {
 	// S6-48: apply_patch tool — content populated from SDK input field
 	// ---------------------------------------------------------------------------
 
-	describe("sdkToolToClineSayTool — apply_patch content (S6-48)", () => {
+	describe("sdkToolToAgentarioSayTool — apply_patch content (S6-48)", () => {
 		it("S6-48: apply_patch with SDK { input: '...' } populates both content and diff", () => {
 			const state = new MessageTranslatorState()
 			const patchContent = "*** Begin Patch\n*** Update File: src/file.ts\n@@\n-old\n+new\n*** End Patch"
@@ -2832,7 +2832,7 @@ describe("sdkToolToClineSayTool — editor diff rendering (S6-48)", () => {
 // ---------------------------------------------------------------------------
 
 describe("MCP tool rendering (serverName__toolName convention)", () => {
-	it("content_start for MCP tool emits say='use_mcp_server' with ClineAskUseMcpServer payload", () => {
+	it("content_start for MCP tool emits say='use_mcp_server' with AgentarioAskUseMcpServer payload", () => {
 		const state = new MessageTranslatorState()
 		const event: CoreSessionEvent = {
 			type: "agent_event",
@@ -2853,7 +2853,7 @@ describe("MCP tool rendering (serverName__toolName convention)", () => {
 		expect(msg.type).toBe("say")
 		expect(msg.say).toBe("use_mcp_server")
 		expect(msg.partial).toBe(true)
-		const payload = JSON.parse(msg.text!) as ClineAskUseMcpServer
+		const payload = JSON.parse(msg.text!) as AgentarioAskUseMcpServer
 		expect(payload.type).toBe("use_mcp_tool")
 		expect(payload.serverName).toBe("notion")
 		expect(payload.toolName).toBe("notion-get-users")
@@ -2960,7 +2960,7 @@ describe("MCP tool rendering (serverName__toolName convention)", () => {
 			},
 			state,
 		)
-		const payload = JSON.parse(result.messages[0].text!) as ClineAskUseMcpServer
+		const payload = JSON.parse(result.messages[0].text!) as AgentarioAskUseMcpServer
 		expect(payload.serverName).toBe("notion")
 		expect(payload.toolName).toBe("list-databases")
 		expect(payload.arguments).toBeUndefined()

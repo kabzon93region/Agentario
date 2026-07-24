@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 
 import * as grpc from "@grpc/grpc-js"
 import * as protoLoader from "@grpc/proto-loader"
@@ -15,7 +15,7 @@ function addTypeNameToFqn(name, fqn) {
 	}
 	typeNameToFQN.set(name, fqn)
 }
-// Get the fully qualified name for a proto type, e.g. getFqn('StringRequest') returns 'cline.StringRequest'
+// Get the fully qualified name for a proto type, e.g. getFqn('StringRequest') returns 'agentario.StringRequest'
 export function getFqn(name) {
 	if (!typeNameToFQN.has(name)) {
 		throw Error(`No FQN for ${name}`)
@@ -48,11 +48,11 @@ export async function loadServicesFromProtoDescriptor() {
 		}
 	}
 	const protobusServices = {}
-	for (const [name, def] of Object.entries(proto.cline)) {
+	for (const [name, def] of Object.entries(proto.agentario)) {
 		if (def && "service" in def) {
 			protobusServices[name] = def
 		} else {
-			addTypeNameToFqn(name, `proto.cline.${name}`)
+			addTypeNameToFqn(name, `proto.agentario.${name}`)
 		}
 	}
 	return { protobusServices, hostServices }

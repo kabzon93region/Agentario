@@ -1,5 +1,5 @@
 {
-	"name": "@cline/menubar",
+	"name": "@agentario/menubar",
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
@@ -12,8 +12,8 @@
 		"clean": "rm -rf node_modules dist src-tauri/target"
 	},
 	"dependencies": {
-		"@cline/core": "workspace:*",
-		"@cline/shared": "workspace:*"
+		"@agentario/core": "workspace:*",
+		"@agentario/shared": "workspace:*"
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^2.0.0",

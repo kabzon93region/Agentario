@@ -1,4 +1,4 @@
-import path from "node:path"
+﻿import path from "node:path"
 import { defineConfig } from "vitest/config"
 
 // Vitest config for the VSCode extension's SDK-adapter and model-catalog
@@ -53,8 +53,8 @@ export default defineConfig({
 			"@hosts": path.resolve(__dirname, "src/hosts"),
 			"@integrations": path.resolve(__dirname, "src/integrations"),
 			"@services": path.resolve(__dirname, "src/services"),
-			"@shared/proto/cline/common": path.resolve(__dirname, "src/shared/proto/cline/common.ts"),
-			"@shared/proto/cline/models": path.resolve(__dirname, "src/shared/proto/cline/models.ts"),
+			"@shared/proto/agentario/common": path.resolve(__dirname, "src/shared/proto/agentario/common.ts"),
+			"@shared/proto/agentario/models": path.resolve(__dirname, "src/shared/proto/agentario/models.ts"),
 			"@shared/proto": path.resolve(__dirname, "src/shared/proto"),
 			"@shared": path.resolve(__dirname, "src/shared"),
 			"@utils": path.resolve(__dirname, "src/utils"),

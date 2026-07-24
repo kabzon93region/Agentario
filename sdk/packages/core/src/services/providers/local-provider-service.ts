@@ -1,4 +1,4 @@
-import * as LlmsModels from "@cline/llms";
+﻿import * as LlmsModels from "@agentario/llms";
 import type {
 	AddProviderActionRequest,
 	ITelemetryService,
@@ -8,7 +8,7 @@ import type {
 	ProviderListItem,
 	ProviderModel,
 	SaveProviderSettingsActionRequest,
-} from "@cline/shared";
+} from "@agentario/shared";
 import { createOAuthClientCallbacks } from "../../auth/client";
 import {
 	getProviderAuthHandler,
@@ -39,10 +39,10 @@ import {
 
 export { ensureCustomProvidersLoaded } from "./local-provider-registry";
 
-const CLINE_PASS_PROVIDER_ID = "cline-pass";
+const CLINE_PASS_PROVIDER_ID = "agentario-pass";
 
 export interface ListLocalProvidersOptions {
-	isClinePassEnabled?: boolean;
+	isAgentarioPassEnabled?: boolean;
 }
 
 export interface UpdateLocalProviderRequest {
@@ -719,7 +719,7 @@ export async function listLocalProviders(
 		);
 	});
 	let providers = providerEntries.map((entry) => entry.provider);
-	if (options.isClinePassEnabled !== true) {
+	if (options.isAgentarioPassEnabled !== true) {
 		providers = providers.filter(
 			(provider) => provider.id !== CLINE_PASS_PROVIDER_ID,
 		);

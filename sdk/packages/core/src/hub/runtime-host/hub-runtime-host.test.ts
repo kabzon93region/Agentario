@@ -1,4 +1,4 @@
-import type { AgentToolContext, HubEventEnvelope } from "@cline/shared";
+import type { AgentToolContext, HubEventEnvelope } from "@agentario/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SessionSource } from "../../types/common";
 

@@ -1,4 +1,4 @@
-import { PostHog } from "posthog-node"
+﻿import { PostHog } from "posthog-node"
 import { StateManager } from "@/core/storage/StateManager"
 import { HostProvider } from "@/hosts/host-provider"
 import { getDistinctId } from "@/services/logging/distinctId"
@@ -9,7 +9,7 @@ import { Logger } from "@/shared/services/Logger"
 import * as pkg from "../../../../package.json"
 import type { PostHogClientValidConfig } from "../../../shared/services/config/posthog-config"
 import { getErrorLevelFromString } from ".."
-import { ClineError } from "../ClineError"
+import { AgentarioError } from "../AgentarioError"
 import type { ErrorSettings, IErrorProvider } from "./IErrorProvider"
 
 const isDev = process.env.IS_DEV === "true"
@@ -65,7 +65,7 @@ export class PostHogErrorProvider implements IErrorProvider {
 		return this
 	}
 
-	captureException(error: Error | ClineError, properties?: Record<string, unknown>): Promise<void> {
+	captureException(error: Error | AgentarioError, properties?: Record<string, unknown>): Promise<void> {
 		if (!this.isEnabled() || this.errorSettings.level === "off") {
 			return Promise.resolve()
 		}
@@ -80,7 +80,7 @@ export class PostHogErrorProvider implements IErrorProvider {
 		return this.client.captureExceptionImmediate(error, this.distinctId, errorDetails)
 	}
 
-	public logException(error: Error | ClineError, properties: Record<string, unknown> = {}): void {
+	public logException(error: Error | AgentarioError, properties: Record<string, unknown> = {}): void {
 		if (!this.isEnabled() || this.errorSettings.level === "off") {
 			return
 		}
@@ -94,7 +94,7 @@ export class PostHogErrorProvider implements IErrorProvider {
 			...properties,
 		}
 
-		if (error instanceof ClineError) {
+		if (error instanceof AgentarioError) {
 			Object.assign(errorDetails, {
 				modelId: error.modelId,
 				providerId: error.providerId,

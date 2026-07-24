@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+﻿import { spawn } from "node:child_process";
 import {
 	closeSync,
 	existsSync,
@@ -8,9 +8,9 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import type { HubSessionClient, HubSessionRow } from "@cline/core";
-import { ensureParentDir, resolveClineDataDir } from "@cline/core";
-import { withResolvedClineBuildEnv } from "@cline/shared";
+import type { HubSessionClient, HubSessionRow } from "@agentario/core";
+import { ensureParentDir, resolveClineDataDir } from "@agentario/core";
+import { withResolvedClineBuildEnv } from "@agentario/shared";
 import { createCliLoggerAdapter } from "../logging/adapter";
 import { logSpawnedProcess } from "../logging/process";
 import { resolveCliLaunchSpec } from "../utils/internal-launch";

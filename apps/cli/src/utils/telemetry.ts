@@ -1,4 +1,4 @@
-import {
+﻿import {
 	type BasicLogger,
 	captureExtensionActivated,
 	createClineTelemetryServiceConfig,
@@ -7,7 +7,7 @@ import {
 	identifyAccount,
 	registerDisposable,
 	TelemetryLoggerSink,
-} from "@cline/core";
+} from "@agentario/core";
 import { getCliBuildInfo } from "./common";
 import { identifyFeatureFlagsAccount } from "./feature-flags";
 import {

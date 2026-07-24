@@ -1,6 +1,6 @@
-import { HostProvider } from "@hosts/host-provider"
+﻿import { HostProvider } from "@hosts/host-provider"
 import type { BrowserSettings } from "@shared/BrowserSettings"
-import { ApiFormat, apiFormatToJSON } from "@shared/proto/cline/models"
+import { ApiFormat, apiFormatToJSON } from "@shared/proto/agentario/models"
 import { ShowMessageType } from "@shared/proto/host/window"
 import type { TaskFeedbackType } from "@shared/WebviewMessage"
 import * as os from "os"
@@ -66,8 +66,8 @@ export enum TerminalHangStage {
 
 export type TelemetryMetadata = {
 	/**
-	 * The extension or cline-core version. JetBrains and CLI have different
-	 * versioning than the VSCode Extension, but on those platforms this will be the _cline-core version_
+	 * The extension or agentario-core version. JetBrains and CLI have different
+	 * versioning than the VSCode Extension, but on those platforms this will be the _agentario-core version_
 	 * which uses the same as the versioning as the VSCode extension.
 	 */
 	extension_version: string
@@ -136,79 +136,79 @@ export class TelemetryService {
 	private taskErrorCounts = new Map<string, number>()
 	public static readonly METRICS = {
 		TASK: {
-			TURNS_TOTAL: "cline.turns.total",
-			TURNS_PER_TASK: "cline.turns.per_task",
-			TOKENS_INPUT_TOTAL: "cline.tokens.input.total",
-			TOKENS_INPUT_PER_RESPONSE: "cline.tokens.input.per_response",
-			TOKENS_OUTPUT_TOTAL: "cline.tokens.output.total",
-			TOKENS_OUTPUT_PER_RESPONSE: "cline.tokens.output.per_response",
-			COST_TOTAL: "cline.cost.total",
-			COST_PER_EVENT: "cline.cost.per_event",
+			TURNS_TOTAL: "agentario.turns.total",
+			TURNS_PER_TASK: "agentario.turns.per_task",
+			TOKENS_INPUT_TOTAL: "agentario.tokens.input.total",
+			TOKENS_INPUT_PER_RESPONSE: "agentario.tokens.input.per_response",
+			TOKENS_OUTPUT_TOTAL: "agentario.tokens.output.total",
+			TOKENS_OUTPUT_PER_RESPONSE: "agentario.tokens.output.per_response",
+			COST_TOTAL: "agentario.cost.total",
+			COST_PER_EVENT: "agentario.cost.per_event",
 		},
 		CACHE: {
-			WRITE_TOTAL: "cline.cache.write.tokens.total",
-			WRITE_PER_EVENT: "cline.cache.write.tokens.per_event",
-			READ_TOTAL: "cline.cache.read.tokens.total",
-			READ_PER_EVENT: "cline.cache.read.tokens.per_event",
-			HITS_TOTAL: "cline.cache.hits.total",
+			WRITE_TOTAL: "agentario.cache.write.tokens.total",
+			WRITE_PER_EVENT: "agentario.cache.write.tokens.per_event",
+			READ_TOTAL: "agentario.cache.read.tokens.total",
+			READ_PER_EVENT: "agentario.cache.read.tokens.per_event",
+			HITS_TOTAL: "agentario.cache.hits.total",
 		},
 		TOOLS: {
-			CALLS_TOTAL: "cline.tool.calls.total",
-			CALLS_PER_TASK: "cline.tool.calls.per_task",
+			CALLS_TOTAL: "agentario.tool.calls.total",
+			CALLS_PER_TASK: "agentario.tool.calls.per_task",
 		},
 		ERRORS: {
-			TOTAL: "cline.errors.total",
-			PER_TASK: "cline.errors.per_task",
+			TOTAL: "agentario.errors.total",
+			PER_TASK: "agentario.errors.per_task",
 		},
 		API: {
-			TTFT_SECONDS: "cline.api.ttft.seconds",
-			DURATION_SECONDS: "cline.api.duration.seconds",
-			THROUGHPUT_TOKENS_PER_SECOND: "cline.api.throughput.tokens_per_second",
+			TTFT_SECONDS: "agentario.api.ttft.seconds",
+			DURATION_SECONDS: "agentario.api.duration.seconds",
+			THROUGHPUT_TOKENS_PER_SECOND: "agentario.api.throughput.tokens_per_second",
 		},
 		HOOKS: {
-			EXECUTIONS_TOTAL: "cline.hooks.executions.total",
-			DURATION_SECONDS: "cline.hooks.duration.seconds",
-			FAILURES_TOTAL: "cline.hooks.failures.total",
-			CANCELLATIONS_TOTAL: "cline.hooks.cancellations.total",
-			CONTEXT_MODIFICATIONS_TOTAL: "cline.hooks.context_modifications.total",
-			CACHE_ACCESSES_TOTAL: "cline.hooks.cache.accesses.total",
+			EXECUTIONS_TOTAL: "agentario.hooks.executions.total",
+			DURATION_SECONDS: "agentario.hooks.duration.seconds",
+			FAILURES_TOTAL: "agentario.hooks.failures.total",
+			CANCELLATIONS_TOTAL: "agentario.hooks.cancellations.total",
+			CONTEXT_MODIFICATIONS_TOTAL: "agentario.hooks.context_modifications.total",
+			CACHE_ACCESSES_TOTAL: "agentario.hooks.cache.accesses.total",
 		},
 		AI_OUTPUT: {
-			ACCEPTED_LINES_ADDED: "cline.ai_output.accepted.lines_added.total",
-			ACCEPTED_LINES_DELETED: "cline.ai_output.accepted.lines_deleted.total",
-			ACCEPTED_LINES_CHANGED: "cline.ai_output.accepted.lines_changed.total",
-			ACCEPTED_FILES_CREATED: "cline.ai_output.accepted.files_created.total",
-			ACCEPTED_FILES_DELETED: "cline.ai_output.accepted.files_deleted.total",
-			ACCEPTED_FILES_MOVED: "cline.ai_output.accepted.files_moved.total",
-			REJECTED_LINES_ADDED: "cline.ai_output.rejected.lines_added.total",
-			REJECTED_LINES_DELETED: "cline.ai_output.rejected.lines_deleted.total",
-			REJECTED_LINES_CHANGED: "cline.ai_output.rejected.lines_changed.total",
-			REJECTED_FILES_CREATED: "cline.ai_output.rejected.files_created.total",
-			REJECTED_FILES_DELETED: "cline.ai_output.rejected.files_deleted.total",
-			REJECTED_FILES_MOVED: "cline.ai_output.rejected.files_moved.total",
+			ACCEPTED_LINES_ADDED: "agentario.ai_output.accepted.lines_added.total",
+			ACCEPTED_LINES_DELETED: "agentario.ai_output.accepted.lines_deleted.total",
+			ACCEPTED_LINES_CHANGED: "agentario.ai_output.accepted.lines_changed.total",
+			ACCEPTED_FILES_CREATED: "agentario.ai_output.accepted.files_created.total",
+			ACCEPTED_FILES_DELETED: "agentario.ai_output.accepted.files_deleted.total",
+			ACCEPTED_FILES_MOVED: "agentario.ai_output.accepted.files_moved.total",
+			REJECTED_LINES_ADDED: "agentario.ai_output.rejected.lines_added.total",
+			REJECTED_LINES_DELETED: "agentario.ai_output.rejected.lines_deleted.total",
+			REJECTED_LINES_CHANGED: "agentario.ai_output.rejected.lines_changed.total",
+			REJECTED_FILES_CREATED: "agentario.ai_output.rejected.files_created.total",
+			REJECTED_FILES_DELETED: "agentario.ai_output.rejected.files_deleted.total",
+			REJECTED_FILES_MOVED: "agentario.ai_output.rejected.files_moved.total",
 		},
 		GRPC: {
-			RESPONSE_SIZE_BYTES: "cline.grpc.response.size_bytes",
+			RESPONSE_SIZE_BYTES: "agentario.grpc.response.size_bytes",
 		},
 		MIGRATION: {
 			// Fires whenever Cline checks an old pre-SDK task and decides whether/how to migrate it.
-			LEGACY_TASK_ATTEMPTS_TOTAL: "cline.migration.legacy_task.attempts.total",
+			LEGACY_TASK_ATTEMPTS_TOTAL: "agentario.migration.legacy_task.attempts.total",
 			// Fires when the user opens an old task and Cline successfully copies it into SDK session storage.
-			LEGACY_TASK_SUCCESS_TOTAL: "cline.migration.legacy_task.success.total",
+			LEGACY_TASK_SUCCESS_TOTAL: "agentario.migration.legacy_task.success.total",
 			// Fires when Cline tried to migrate an old task but failed while building or writing the SDK session.
-			LEGACY_TASK_FAILURES_TOTAL: "cline.migration.legacy_task.failures.total",
+			LEGACY_TASK_FAILURES_TOTAL: "agentario.migration.legacy_task.failures.total",
 			// Fires when no migration happens because it is unnecessary or impossible, e.g. already migrated or missing old messages.
-			LEGACY_TASK_SKIPPED_TOTAL: "cline.migration.legacy_task.skipped.total",
+			LEGACY_TASK_SKIPPED_TOTAL: "agentario.migration.legacy_task.skipped.total",
 			// Fires for every migration decision; measures how long the check/migration took.
-			LEGACY_TASK_DURATION_SECONDS: "cline.migration.legacy_task.duration.seconds",
+			LEGACY_TASK_DURATION_SECONDS: "agentario.migration.legacy_task.duration.seconds",
 			// Fires when Cline finds old conversation messages; records how many old messages were found.
-			LEGACY_TASK_LEGACY_MESSAGES_COUNT: "cline.migration.legacy_task.legacy_messages.count",
+			LEGACY_TASK_LEGACY_MESSAGES_COUNT: "agentario.migration.legacy_task.legacy_messages.count",
 			// Fires after conversion; records how many messages made it into SDK-compatible form.
-			LEGACY_TASK_CONVERTED_MESSAGES_COUNT: "cline.migration.legacy_task.converted_messages.count",
+			LEGACY_TASK_CONVERTED_MESSAGES_COUNT: "agentario.migration.legacy_task.converted_messages.count",
 			// Fires when history is listed; counts old pre-SDK tasks still waiting to be migrated.
-			LEGACY_TASK_PENDING_COUNT: "cline.migration.legacy_task.pending.count",
+			LEGACY_TASK_PENDING_COUNT: "agentario.migration.legacy_task.pending.count",
 			// Fires when history is listed; counts old tasks that already made it safely into SDK session storage.
-			LEGACY_TASK_MIGRATED_COUNT: "cline.migration.legacy_task.migrated.count",
+			LEGACY_TASK_MIGRATED_COUNT: "agentario.migration.legacy_task.migrated.count",
 		},
 	}
 	// Event constants for tracking user interactions and system events
@@ -1776,11 +1776,11 @@ export class TelemetryService {
 		})
 
 		const isMultiRoot = rootCount > 1
-		this.recordGauge("cline.workspace.active_roots", rootCount, {
+		this.recordGauge("agentario.workspace.active_roots", rootCount, {
 			is_multi_root: isMultiRoot,
 		})
 		// Retire the previous series to avoid leaking gauge entries when the flag flips.
-		this.recordGauge("cline.workspace.active_roots", null, {
+		this.recordGauge("agentario.workspace.active_roots", null, {
 			is_multi_root: !isMultiRoot,
 		})
 	}

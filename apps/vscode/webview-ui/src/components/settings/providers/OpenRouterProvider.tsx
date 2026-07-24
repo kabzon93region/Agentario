@@ -1,4 +1,4 @@
-import { EmptyRequest } from "@shared/proto/cline/common"
+﻿import { EmptyRequest } from "@shared/proto/agentario/common"
 import { Mode } from "@shared/storage/types"
 import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useEffect, useState } from "react"

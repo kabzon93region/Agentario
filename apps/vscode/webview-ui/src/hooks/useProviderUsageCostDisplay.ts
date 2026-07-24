@@ -1,9 +1,9 @@
-import { useMemo } from "react"
+﻿import { useMemo } from "react"
 import { useProviderListings } from "./useProviderListings"
 
 /**
  * Surfaces the SDK's `usageCostDisplay` decision for a single provider
- * id. The decision originates in the `@cline/llms` SDK (see
+ * id. The decision originates in the `@agentario/llms` SDK (see
  * `resolveProviderUsageCostDisplay` in
  * `apps/vscode/src/sdk/model-catalog/catalog.ts`) and is propagated
  * through the `ProviderListing.usage_cost_display` gRPC field.

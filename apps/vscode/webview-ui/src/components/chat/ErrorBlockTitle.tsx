@@ -1,5 +1,5 @@
-import React from "react"
-import { ClineError, ClineErrorType } from "../../../../src/services/error/ClineError"
+﻿import React from "react"
+import { AgentarioError, AgentarioErrorType } from "../../../../src/services/error/AgentarioError"
 import { ProgressIndicator } from "./ChatRow"
 
 interface ErrorBlockTitleProps {
@@ -57,12 +57,12 @@ export const ErrorBlockTitle = ({
 			details.classNames.push("text-(--vscode-foreground)")
 		} else if (apiRequestFailedMessage) {
 			// Handle failed request
-			const clineError = ClineError.parse(apiRequestFailedMessage)
-			const titleText = clineError?.isErrorType(ClineErrorType.Entitlement)
-				? "ClinePass Required"
-				: clineError?.isErrorType(ClineErrorType.Balance)
+			const parsedError = AgentarioError.parse(apiRequestFailedMessage)
+			const titleText = parsedError?.isErrorType(AgentarioErrorType.Entitlement)
+				? "AgentarioPass Required"
+				: parsedError?.isErrorType(AgentarioErrorType.Balance)
 					? "Credit Limit Reached"
-					: clineError?.isErrorType(ClineErrorType.SpendLimit)
+					: parsedError?.isErrorType(AgentarioErrorType.SpendLimit)
 						? "Spend Limit Reached"
 						: "API Request Failed"
 			details.title = titleText

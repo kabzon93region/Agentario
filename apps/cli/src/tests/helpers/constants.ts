@@ -1,4 +1,4 @@
-// ---------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------
 // Shared constants for all test files.
 //
 // tui-test workers run with a minimal PATH, so we resolve the binary
@@ -15,7 +15,7 @@ function resolveClineBin(): string {
 	}
 
 	throw new Error(
-		"Unable to resolve cline binary. Run bun -F @cline/cli build",
+		"Unable to resolve cline binary. Run bun -F @agentario/cli build",
 	);
 }
 
