@@ -108,13 +108,13 @@ function Invoke-External([string]$FilePath, [string[]]$Arguments) {
 }
 
 function Test-GhReleaseExists([string]$TagName, [string]$Repo) {
-	$prevNative = $PSNativeCommandUseErrorActionPreference
-	$PSNativeCommandUseErrorActionPreference = $false
+	# gh release view fails when release doesn't exist — suppress the error
+	# Note: $PSNativeCommandUseErrorActionPreference is PS7+ only; use try/catch for PS5 compat
 	try {
-		& gh release view $TagName --repo $Repo 2>$null | Out-Null
+		$null = & gh release view $TagName --repo $Repo 2>&1
 		return ($LASTEXITCODE -eq 0)
-	} finally {
-		$PSNativeCommandUseErrorActionPreference = $prevNative
+	} catch {
+		return $false
 	}
 }
 

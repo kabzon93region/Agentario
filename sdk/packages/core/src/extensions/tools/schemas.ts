@@ -62,23 +62,27 @@ export const ReadFilesInputSchema = z.object({
 });
 
 /**
- * Union schema for read_files tool input, allowing either a single string, an array of strings, or the full object schema
+ * Union schema for read_files tool input, allowing either a single string, an array of strings, or the full object schema.
+ * Agentario: uses z.preprocess to unwrap stringified JSON arrays/models mistakes in `files` field.
  */
-export const ReadFilesInputUnionSchema = z.union([
-	ReadFilesInputSchema,
-	ReadFileRequestSchema,
-	z.array(ReadFileRequestSchema),
-	z.array(z.string()),
-	z.string(),
-	z.object({ files: z.array(z.union([AbsolutePath, ReadFileRequestSchema])) }),
-	z.object({ files: ReadFileRequestSchema }),
-	z.object({ files: AbsolutePath }),
-	z.object({ file_paths: z.array(AbsolutePath) }),
-	z.object({ file_paths: z.string() }),
-	z.object({ paths: z.array(z.union([AbsolutePath, ReadFileRequestSchema])) }),
-	z.object({ paths: ReadFileRequestSchema }),
-	z.object({ paths: z.string() }),
-]);
+export const ReadFilesInputUnionSchema = z.preprocess(
+	preprocessReadFilesInput,
+	z.union([
+		ReadFilesInputSchema,
+		ReadFileRequestSchema,
+		z.array(ReadFileRequestSchema),
+		z.array(z.string()),
+		z.string(),
+		z.object({ files: z.array(z.union([AbsolutePath, ReadFileRequestSchema])) }),
+		z.object({ files: ReadFileRequestSchema }),
+		z.object({ files: AbsolutePath }),
+		z.object({ file_paths: z.array(AbsolutePath) }),
+		z.object({ file_paths: z.string() }),
+		z.object({ paths: z.array(z.union([AbsolutePath, ReadFileRequestSchema])) }),
+		z.object({ paths: ReadFileRequestSchema }),
+		z.object({ paths: z.string() }),
+	]),
+);
 
 /**
  * Schema for search_codebase tool input
@@ -131,6 +135,27 @@ function tryParseJsonArray(value: string): unknown | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+/**
+ * Agentario: Unwrap model mistakes for read_files — stringified JSON arrays in `files`.
+ * Models sometimes send `"files":"[{\"path\":\"...\"}]"` instead of a proper array.
+ */
+export function preprocessReadFilesInput(value: unknown): unknown {
+	if (typeof value === "string") {
+		return tryParseJsonArray(value) ?? value;
+	}
+	if (!value || typeof value !== "object") {
+		return value;
+	}
+	const record = value as Record<string, unknown>;
+	if (typeof record.files === "string") {
+		const parsed = tryParseJsonArray(record.files);
+		if (parsed !== undefined) {
+			return { ...record, files: parsed };
+		}
+	}
+	return value;
 }
 
 /**

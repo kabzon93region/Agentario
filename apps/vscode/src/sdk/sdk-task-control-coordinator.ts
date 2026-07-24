@@ -78,7 +78,9 @@ export class SdkTaskControlCoordinator {
 	async clearTask(): Promise<void> {
 		this.options.interactions.clearPending("Task cleared")
 
-		await this.options.sessions.endActiveSession("clearTask")
+		// Agentario: awaitStop=true чтобы дождаться завершения генерации модели
+		// перед очисткой UI. Без этого удаление чата не останавливало генерацию.
+		await this.options.sessions.endActiveSession("clearTask", { awaitStop: true })
 
 		const task = this.options.getTask()
 		if (task) {
@@ -110,7 +112,7 @@ export class SdkTaskControlCoordinator {
 				}
 			}
 
-			await this.options.sessions.endActiveSession("showTaskWithId")
+			await this.options.sessions.endActiveSession("showTaskWithId", { awaitStop: true })
 
 			const currentTask = this.options.getTask()
 			if (currentTask) {

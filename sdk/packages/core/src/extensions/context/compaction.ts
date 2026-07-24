@@ -432,8 +432,9 @@ export function createContextCompactionPrepareTurn(
 		}
 		// Agentario: минимальная полезная threshold — не компактировать если chat слишком мал.
 		// После первой компакции: pinned (~9k) + маленький chat (~400) = ~9.4k total.
-		// Если chat < 500 токенов — компакция бессмысленна (нечего сжимать), только тратит время.
-		const MIN_USEFUL_CHAT_TOKENS = 500;
+		// Если chat < 5% контекст-окна (min 500) — компакция бессмысленна.
+		// Адаптивный порог: для 32k → 1600, для 24.5k → 1225, для 200 → 500 (floor).
+		const MIN_USEFUL_CHAT_TOKENS = Math.max(500, Math.floor(maxInputTokens * 0.05));
 		if (mode === "auto" && chatTokens < MIN_USEFUL_CHAT_TOKENS) {
 			config.logger?.log?.(`Context compaction skipped: chat too small (${chatTokens} tokens < ${MIN_USEFUL_CHAT_TOKENS} minimum). Nothing useful to compact.`, { severity: "info" });
 			return undefined;
