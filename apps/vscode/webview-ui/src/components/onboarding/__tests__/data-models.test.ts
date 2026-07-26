@@ -85,7 +85,7 @@ describe("getRecommendedModelsData", () => {
 
 describe("onboarding display labels", () => {
 	it("renders the canonical ClinePass group as a user-facing product name", () => {
-		expect(getOnboardingGroupDisplayName(CLINEPASS_GROUP)).toBe("ClinePass")
+		expect(getOnboardingGroupDisplayName(CLINEPASS_GROUP)).toBe("AgentarioPass")
 		expect(getOnboardingGroupDisplayName("frontier")).toBe("frontier")
 	})
 })

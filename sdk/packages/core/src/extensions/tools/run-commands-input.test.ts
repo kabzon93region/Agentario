@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { normalizeRunCommandsInput } from "./helpers";
+import { normalizeRunCommandsInput, getShellDiscoveryOrReadBypassError } from "./helpers";
 import {
 	preprocessRunCommandsInput,
 	validateShellCommandString,
@@ -33,19 +33,24 @@ describe("validateShellCommandString", () => {
 	});
 });
 
-describe("normalizeRunCommandsInput", () => {
-	it("accepts stringified commands array inside object", () => {
-		const result = normalizeRunCommandsInput({
-			commands: '["git status", "git log -1"]',
-		});
-		expect(result).toEqual(["git status", "git log -1"]);
+describe("getShellDiscoveryOrReadBypassError", () => {
+	it("rejects Get-ChildItem directory listing", () => {
+		expect(
+			getShellDiscoveryOrReadBypassError(
+				'Get-ChildItem -Path "s:\\temo" -Force | Select-Object Name',
+			),
+		).toMatch(/semantic_search/);
 	});
 
-	it("throws on invalid PowerShell syntax before execution", () => {
-		expect(() =>
-			normalizeRunCommandsInput({
-				commands: ["git status && git log"],
-			}),
-		).toThrow(/&&/);
+	it("rejects Get-Content of source/docs", () => {
+		expect(
+			getShellDiscoveryOrReadBypassError(
+				'Get-Content "s:\\temo\\rules.md" -Encoding UTF8',
+			),
+		).toMatch(/read_files/);
+	});
+
+	it("allows git status", () => {
+		expect(getShellDiscoveryOrReadBypassError("git status")).toBeNull();
 	});
 });

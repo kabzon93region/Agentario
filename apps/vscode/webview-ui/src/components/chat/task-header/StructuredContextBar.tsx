@@ -29,21 +29,32 @@ export const StructuredContextBar = memo(function StructuredContextBar({
 	contextWindow,
 	className,
 }: StructuredContextBarProps) {
+	const fallbackPercent = contextWindow > 0 ? Math.min(100, (totalUsed / contextWindow) * 100) : 0
+
 	const segments = useMemo(() => {
 		if (!contextBudget || contextWindow <= 0) {
 			return []
 		}
 		const cats = contextBudget.categories
-		// Agentario: используем CATEGORY_ORDER для стабильного порядка (chat всегда последний)
-		return CATEGORY_ORDER.map((key) => ({
-			key,
-			value: (cats[key] as number) ?? 0,
-			widthPercent: Math.min(100, (((cats[key] as number) ?? 0) / contextWindow) * 100),
-			colorClass: SEGMENT_COLORS[key] ?? "bg-gray-500/50",
-		}))
-	}, [contextBudget, contextWindow])
-
-	const fallbackPercent = contextWindow > 0 ? Math.min(100, (totalUsed / contextWindow) * 100) : 0
+		const categorySum = CATEGORY_ORDER.reduce((sum, key) => sum + ((cats[key] as number) ?? 0), 0)
+		// Agentario: числа слева берутся из live totalUsed, а сегменты раньше
+		// считались только из contextBudget — полоска не двигалась. Масштабируем
+		// категории так, чтобы суммарная ширина следовала за totalUsed.
+		const fillTotal = totalUsed > 0 ? totalUsed : categorySum
+		if (categorySum <= 0 || fillTotal <= 0) {
+			return []
+		}
+		const scale = fillTotal / categorySum
+		return CATEGORY_ORDER.map((key) => {
+			const value = (cats[key] as number) ?? 0
+			return {
+				key,
+				value,
+				widthPercent: Math.min(100, ((value * scale) / contextWindow) * 100),
+				colorClass: SEGMENT_COLORS[key] ?? "bg-gray-500/50",
+			}
+		})
+	}, [contextBudget, contextWindow, totalUsed])
 
 	if (segments.length === 0) {
 		return (

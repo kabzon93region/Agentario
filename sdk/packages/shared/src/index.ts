@@ -251,8 +251,8 @@ export {
 	safeJsonParse,
 	safeJsonStringify,
 } from "./parse/json";
-export { type OmitUndefinedValues, omitUndefinedValues } from "./parse/object";
-export { getDefaultShell, getShellArgs } from "./parse/shell";
+export { type OmitUndefinedValues, isRecord, omitUndefinedValues } from "./parse/object";
+export { buildCdCommand, getDefaultShell, getShellArgs, quoteShellPath } from "./parse/shell";
 export {
 	maskSecret,
 	sanitizeFileName,
@@ -261,7 +261,12 @@ export {
 	truncateStr,
 } from "./parse/string";
 export { formatHumanReadableDate, formatUptime } from "./parse/time";
-export { normalizeEditorToolInput, normalizeToolInput } from "./parse/tool-input-normalize";
+export {
+	normalizeEditorToolInput,
+	normalizeToolInput,
+	sanitizeToolPath,
+	tryParseJsonArray,
+} from "./parse/tool-input-normalize";
 export { validateWithZod, zodToJsonSchema } from "./parse/zod";
 export type {
 	AgentarioSystemPromptOptions,

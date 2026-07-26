@@ -19,6 +19,12 @@ import type {
 } from "./provider-options-types";
 import { createEphemeralCacheControl } from "./utils";
 
+
+/** Only emit reasoning wire options when the model explicitly advertises reasoning. */
+function modelSupportsReasoningCapability(context: GatewayProviderContext): boolean {
+	return context.model.capabilities?.includes("reasoning") === true;
+}
+
 export function buildOpenAINativeProviderOptions(
 	request: GatewayStreamRequest,
 ): Record<string, unknown> {
@@ -35,6 +41,9 @@ function buildCompatibleThinkingOptions(options: {
 }): Record<string, unknown> {
 	const { request, context, suppressions } = options;
 	if (suppressions.genericThinking) {
+		return {};
+	}
+	if (!modelSupportsReasoningCapability(context)) {
 		return {};
 	}
 	if (request.reasoning?.enabled !== true) {
@@ -77,12 +86,14 @@ function buildCompatibleEffortOptions(options: {
 	usesAnthropicReasoningRoute: boolean;
 	suppressEffortOptions: boolean;
 	suppressions: ProviderOptionSuppression;
+	modelSupportsReasoning: boolean;
 	anthropicReasoningPolicyKind?: ReturnType<
 		typeof resolveAnthropicReasoningRequestPolicy
 	>["kind"];
 }): Record<string, unknown> {
 	const effort = options.reasoning?.effort;
 	if (
+		!options.modelSupportsReasoning ||
 		options.suppressions.genericEffort ||
 		!effort ||
 		options.reasoning?.enabled === false ||
@@ -131,7 +142,9 @@ export function buildCompatibleProviderOptions(options: {
 	const suppressCompatibleReasoningOptions =
 		!usesAnthropicReasoningRoute &&
 		(hasPromptCacheRoute || isQwen || isAnthropicCompatible);
-	const reasoning = buildAnthropicCompatibleReasoningOptions(request, context);
+	const reasoning = modelSupportsReasoningCapability(context)
+		? buildAnthropicCompatibleReasoningOptions(request, context)
+		: undefined;
 	const promptCache = hasPromptCacheRoute ? createEphemeralCacheControl() : {};
 
 	return {
@@ -142,6 +155,7 @@ export function buildCompatibleProviderOptions(options: {
 			usesAnthropicReasoningRoute,
 			suppressEffortOptions: suppressCompatibleReasoningOptions,
 			suppressions,
+			modelSupportsReasoning: modelSupportsReasoningCapability(context),
 			anthropicReasoningPolicyKind: anthropicReasoningPolicy.kind,
 		}),
 		...(reasoning ? { reasoning } : {}),

@@ -1,5 +1,6 @@
 ﻿import type { CoreSessionEvent } from "@agentario/core"
 import { refreshAgentarioRecommendedModels } from "@/core/controller/models/refreshAgentarioRecommendedModels"
+import { saveDisplayMessages } from "@core/storage/disk"
 import type { StateManager } from "@/core/storage/StateManager"
 import { AGENTARIO_RECOMMENDED_MODELS_FALLBACK } from "@/shared/agentario/recommended-models"
 import type { AgentarioApiReqInfo, TurnPhase } from "@/shared/ExtensionMessage"
@@ -12,6 +13,7 @@ import type { SdkModeCoordinator } from "./sdk-mode-coordinator"
 import type { SdkProviderChangeCoordinator } from "./sdk-provider-change-coordinator"
 import type { SdkSessionLifecycle } from "./sdk-session-lifecycle"
 import type { SdkTaskHistory } from "./sdk-task-history"
+import { filterCompactionInfoMessages } from "./sdk-compaction-coordinator"
 import type { TaskProxy } from "./task-proxy"
 
 function normalizeModelId(modelId: string): string {
@@ -115,6 +117,20 @@ export class SdkSessionEventCoordinator {
 					this.options.mode.applyPendingModeChange().catch((err) => {
 						Logger.error("[SdkController] applyPendingModeChange failed:", err)
 					})
+				}
+
+				// Agentario: сохраняем display messages на диск после завершения хода.
+				// Это критично для авто-компакции: без этого при переоткрытии задачи
+				// display messages не найдутся и fallback пойдёт на compacted SDK messages.
+				const task = this.options.getTask()
+				const taskId = task?.taskId
+				if (task?.messageStateHandler && taskId) {
+					const displayMessages = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
+					if (displayMessages.length > 0) {
+						saveDisplayMessages(taskId, displayMessages).catch((err) => {
+							Logger.error("[SdkController] Failed to save display messages after turn:", err)
+						})
+					}
 				}
 			}
 

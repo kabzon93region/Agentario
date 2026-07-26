@@ -85,7 +85,7 @@ describe("ErrorRow", () => {
 		const clineignoreMessage = { ...mockMessage, text: "/path/to/file.txt" }
 		render(<ErrorRow errorType="clineignore_error" message={clineignoreMessage} />)
 
-		expect(screen.getByText(/Cline tried to access/)).toBeInTheDocument()
+		expect(screen.getByText(/Agentario tried to access/)).toBeInTheDocument()
 		expect(screen.getByText("/path/to/file.txt")).toBeInTheDocument()
 	})
 
@@ -228,7 +228,7 @@ describe("ErrorRow", () => {
 			render(<ErrorRow apiRequestFailedMessage={rawMessage} errorType="error" message={mockMessage} />)
 
 			expect(screen.getByTestId("org-agentario-pass-restriction-error")).toBeInTheDocument()
-			expect(screen.getByText(/Organization accounts cannot use ClinePass subscriptions/)).toBeInTheDocument()
+			expect(screen.getByText(/Organization accounts cannot use AgentarioPass subscriptions/)).toBeInTheDocument()
 			expect(screen.queryByText(rawMessage)).not.toBeInTheDocument()
 
 			fireEvent.click(screen.getByText("Switch to personal account"))
@@ -273,7 +273,7 @@ describe("ErrorRow", () => {
 
 			expect(screen.queryByText("Authentication failed")).not.toBeInTheDocument()
 			expect(screen.getByText(/Whoops looks like you're logged out/)).toBeInTheDocument()
-			expect(screen.getByText("Sign in to Cline")).toBeInTheDocument()
+			expect(screen.getByText("Sign in to Agentario")).toBeInTheDocument()
 		})
 
 		it("renders PowerShell troubleshooting link when error mentions PowerShell", async () => {
@@ -298,7 +298,7 @@ describe("ErrorRow", () => {
 			expect(screen.getByText("troubleshooting guide")).toBeInTheDocument()
 			expect(screen.getByRole("link", { name: "troubleshooting guide" })).toHaveAttribute(
 				"href",
-				"https://github.com/cline/cline/wiki/TroubleShooting-%E2%80%90-%22PowerShell-is-not-recognized-as-an-internal-or-external-command%22",
+				"https://github.com/kabzon93region/Agentario/issues",
 			)
 		})
 

@@ -317,11 +317,20 @@ function getToolDisplayInfo(tool: AgentarioSayTool) {
 		case "readFile": {
 			const lineNote =
 				tool.readLineStart != null && tool.readLineEnd != null ? `lines ${tool.readLineStart}-${tool.readLineEnd}` : null
+			const cleaned = cleanPathPrefix(filePath)
+			if (!cleaned) {
+				return {
+					icon,
+					path: "",
+					label: "read",
+					displayText: "⚠ read без path (битый tool input)",
+				}
+			}
 			return {
 				icon,
 				path: filePath,
 				label: "read",
-				displayText: lineNote ? `${cleanPathPrefix(filePath)} · ${lineNote}` : undefined,
+				displayText: lineNote ? `${cleaned} · ${lineNote}` : undefined,
 			}
 		}
 		case "listFilesTopLevel":
@@ -346,6 +355,11 @@ function getToolDisplayInfo(tool: AgentarioSayTool) {
  * Format search regex for display - simplify complex patterns
  */
 function formatSearchDisplay(regex: string, path: string, filePattern?: string): string {
+	const semanticMatch = regex.match(/^semantic:\s*(.*)$/i)
+	if (semanticMatch) {
+		const topic = semanticMatch[1]?.trim() || "(empty query)"
+		return `semantic “${topic}”`
+	}
 	// Split by | and clean up regex syntax
 	const terms = regex
 		.split("|")

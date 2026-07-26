@@ -150,7 +150,7 @@ export function splitCoreSessionConfig(config: CoreSessionConfig): {
 	if (checkpoint?.createCheckpoint) {
 		localConfigOverrides.checkpoint = checkpoint;
 	}
-	if (compaction?.compact) {
+	if (compaction?.compact || compaction?.reserveTokensResolver || compaction?.maxInputTokensResolver) {
 		localConfigOverrides.compaction = compaction;
 	}
 

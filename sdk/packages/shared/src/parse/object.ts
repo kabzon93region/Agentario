@@ -22,3 +22,10 @@ export function omitUndefinedValues<T extends Record<string, unknown>>(
 		Object.entries(value).filter(([, entry]) => entry !== undefined),
 	) as OmitUndefinedValues<T>;
 }
+
+/**
+ * Type guard: value is a plain object (not null, not array).
+ */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}

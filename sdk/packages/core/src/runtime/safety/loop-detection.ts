@@ -1,26 +1,19 @@
 /**
  * Repeated tool-call loop detection.
  *
- * @see PLAN.md §3.1 — helpers moved from `packages/agents/src/context/loop-detection.ts`.
- * @see PLAN.md §3.2.3 — public surface of `LoopDetectionTracker`.
- *
- * The pure helpers (`createLoopDetectionState`, `resetLoopDetectionState`,
- * `toolCallSignature`, `checkRepeatedToolCall`) are ported verbatim. The
- * `LoopDetectionTracker` class is a thin wrapper that owns a
- * `LoopDetectionState` and exposes the `inspect()` / `reset()` surface that
- * `SessionRuntime` installs as a `beforeTool` hook per §3.2.3.
+ * Detects:
+ * 1. Consecutive identical tool calls (same name + same input)
+ * 2. Alternating A↔B loops (e.g. read_files ↔ search_codebase with same intent)
  */
 
 import type { LoopDetectionConfig } from "@agentario/shared";
-
-// =============================================================================
-// Pure helpers (verbatim port)
-// =============================================================================
 
 export interface LoopDetectionState {
 	lastToolName: string;
 	lastToolSignature: string;
 	consecutiveIdenticalCount: number;
+	/** Recent call keys as `name|signature` for oscillating-loop detection. */
+	recentKeys: string[];
 }
 
 export function createLoopDetectionState(): LoopDetectionState {
@@ -28,6 +21,7 @@ export function createLoopDetectionState(): LoopDetectionState {
 		lastToolName: "",
 		lastToolSignature: "",
 		consecutiveIdenticalCount: 0,
+		recentKeys: [],
 	};
 }
 
@@ -35,6 +29,7 @@ export function resetLoopDetectionState(state: LoopDetectionState): void {
 	state.lastToolName = "";
 	state.lastToolSignature = "";
 	state.consecutiveIdenticalCount = 0;
+	state.recentKeys = [];
 }
 
 function sortKeys(value: unknown): unknown {
@@ -61,6 +56,44 @@ export function toolCallSignature(input: unknown): string {
 export interface LoopCheckResult {
 	softWarning: boolean;
 	hardEscalation: boolean;
+	reason?: "identical" | "oscillating";
+}
+
+/** How many A↔B pairs before soft/hard (pair = 2 calls). Soft at 2 pairs (4 calls), hard at 3 pairs (6). */
+const OSCILLATING_SOFT_PAIRS = 2;
+const OSCILLATING_HARD_PAIRS = 3;
+const RECENT_KEYS_MAX = 8;
+
+/**
+ * Detect ABAB… oscillation: last 2*n keys alternate between two distinct keys.
+ */
+export function detectOscillatingLoop(recentKeys: string[]): {
+	softWarning: boolean;
+	hardEscalation: boolean;
+} {
+	if (recentKeys.length < OSCILLATING_SOFT_PAIRS * 2) {
+		return { softWarning: false, hardEscalation: false };
+	}
+	const a = recentKeys[recentKeys.length - 2];
+	const b = recentKeys[recentKeys.length - 1];
+	if (!a || !b || a === b) {
+		return { softWarning: false, hardEscalation: false };
+	}
+	let pairs = 0;
+	// ABAB… ending with A,B: count consecutive trailing (A,B) pairs.
+	for (let i = recentKeys.length - 1; i >= 1; i -= 2) {
+		const even = recentKeys[i - 1];
+		const odd = recentKeys[i];
+		if (even === a && odd === b) {
+			pairs += 1;
+		} else {
+			break;
+		}
+	}
+	return {
+		softWarning: pairs === OSCILLATING_SOFT_PAIRS,
+		hardEscalation: pairs >= OSCILLATING_HARD_PAIRS,
+	};
 }
 
 export function checkRepeatedToolCall(
@@ -69,10 +102,13 @@ export function checkRepeatedToolCall(
 	signature: string,
 	config: LoopDetectionConfig,
 ): LoopCheckResult {
-	if (
-		toolName === state.lastToolName &&
-		signature === state.lastToolSignature
-	) {
+	const key = `${toolName}|${signature}`;
+	state.recentKeys.push(key);
+	if (state.recentKeys.length > RECENT_KEYS_MAX) {
+		state.recentKeys.shift();
+	}
+
+	if (toolName === state.lastToolName && signature === state.lastToolSignature) {
 		state.consecutiveIdenticalCount++;
 	} else {
 		state.consecutiveIdenticalCount = 1;
@@ -80,48 +116,42 @@ export function checkRepeatedToolCall(
 	state.lastToolName = toolName;
 	state.lastToolSignature = signature;
 
-	return {
-		softWarning: state.consecutiveIdenticalCount === config.softThreshold,
-		hardEscalation: state.consecutiveIdenticalCount >= config.hardThreshold,
-	};
+	const identicalSoft = state.consecutiveIdenticalCount === config.softThreshold;
+	const identicalHard = state.consecutiveIdenticalCount >= config.hardThreshold;
+	const oscillating = detectOscillatingLoop(state.recentKeys);
+
+	if (identicalHard || oscillating.hardEscalation) {
+		return {
+			softWarning: false,
+			hardEscalation: true,
+			reason: identicalHard ? "identical" : "oscillating",
+		};
+	}
+	if (identicalSoft || oscillating.softWarning) {
+		return {
+			softWarning: true,
+			hardEscalation: false,
+			reason: identicalSoft ? "identical" : "oscillating",
+		};
+	}
+	return { softWarning: false, hardEscalation: false };
 }
 
-// =============================================================================
-// Class wrapper (new — per PLAN.md §3.2.3)
-// =============================================================================
-
-/**
- * Verdict returned by {@link LoopDetectionTracker.inspect}.
- *
- * - `"ok"`   — no repeated call detected.
- * - `"soft"` — soft-warning threshold reached; SessionRuntime may surface a
- *              recovery notice but should not block the call.
- * - `"hard"` — hard-escalation threshold reached; SessionRuntime should
- *              stop the run with the provided `message`.
- */
 export interface LoopDetectionVerdict {
 	kind: "ok" | "soft" | "hard";
 	message?: string;
 }
 
-/** Minimal call shape the tracker needs; matches `AgentToolCallPart` subset. */
 export interface LoopDetectionCall {
 	name: string;
 	input: unknown;
 }
 
 const DEFAULT_CONFIG: LoopDetectionConfig = {
-	softThreshold: 3,
-	hardThreshold: 5,
+	softThreshold: 2,
+	hardThreshold: 3,
 };
 
-/**
- * Per-session repeated-tool-call detector.
- *
- * `SessionRuntime` owns the instance and installs a `beforeTool` hook
- * (see `AgentRuntimeHooks.beforeTool`) that calls `inspect()` to decide
- * whether to return `{ skip, stop, reason }`.
- */
 export class LoopDetectionTracker {
 	private readonly config: LoopDetectionConfig;
 	private readonly state: LoopDetectionState = createLoopDetectionState();
@@ -134,24 +164,50 @@ export class LoopDetectionTracker {
 	}
 
 	inspect(call: LoopDetectionCall): LoopDetectionVerdict {
-		const signature = toolCallSignature(call.input);
+		// For semantic_search, fingerprint on normalized query so limit/wrapper noise does not reset the streak.
+		let signatureSource: unknown = call.input;
+		if (
+			call.name === "semantic_search" &&
+			call.input &&
+			typeof call.input === "object" &&
+			"query" in (call.input as Record<string, unknown>)
+		) {
+			const q = (call.input as { query?: unknown }).query;
+			signatureSource =
+				typeof q === "string" ? q.trim().toLowerCase() : call.input;
+		}
+		const signature = toolCallSignature(signatureSource);
+		// Completion + search: identical re-calls are especially harmful.
+		const isCompletionTool =
+			call.name === "attempt_completion" || call.name === "submit_and_exit";
+		const isSearchTool =
+			call.name === "semantic_search" || call.name === "search_codebase";
+		const config =
+			isCompletionTool || isSearchTool
+				? {
+						softThreshold: Math.min(2, this.config.softThreshold),
+						hardThreshold: Math.min(2, this.config.hardThreshold),
+					}
+				: this.config;
 		const result = checkRepeatedToolCall(
 			this.state,
 			call.name,
 			signature,
-			this.config,
+			config,
 		);
 		if (result.hardEscalation) {
-			return {
-				kind: "hard",
-				message: `Detected ${this.state.consecutiveIdenticalCount} consecutive identical calls to \`${call.name}\`; stopping to avoid a loop.`,
-			};
+			const msg =
+				result.reason === "oscillating"
+					? `Detected alternating tool-call loop involving \`${call.name}\`; stopping to avoid a loop. Use a different approach (e.g. semantic_search once, then read_files once). Docs may be missing — read root source and attempt_completion.`
+					: `Detected ${this.state.consecutiveIdenticalCount} consecutive identical calls to \`${call.name}\`; stopping to avoid a loop. Change approach: read_files on known paths or attempt_completion (docs may not exist).`;
+			return { kind: "hard", message: msg };
 		}
 		if (result.softWarning) {
-			return {
-				kind: "soft",
-				message: `Detected ${this.state.consecutiveIdenticalCount} consecutive identical calls to \`${call.name}\`; consider trying a different approach.`,
-			};
+			const msg =
+				result.reason === "oscillating"
+					? `Detected alternating tool calls (e.g. read ↔ search). Stop repeating: use semantic_search once, then read_files with start_line/end_line. Do NOT pass "file:1-EOF" to search_codebase.`
+					: `Detected ${this.state.consecutiveIdenticalCount} consecutive identical calls to \`${call.name}\`; try a different approach (new query, read_files, or attempt_completion).`;
+			return { kind: "soft", message: msg };
 		}
 		return { kind: "ok" };
 	}

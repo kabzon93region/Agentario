@@ -28,7 +28,7 @@ describe("EntitlementError", () => {
 
 	it("shows friendly copy with the backend detail as muted support text", () => {
 		render(<EntitlementError message="Error 403: the user is not subscribed to required model plan" />)
-		expect(screen.getByText("This model requires a ClinePass subscription.")).toBeInTheDocument()
+		expect(screen.getByText("This model requires an AgentarioPass subscription.")).toBeInTheDocument()
 		expect(screen.getByText("Error 403: the user is not subscribed to required model plan")).toBeInTheDocument()
 	})
 

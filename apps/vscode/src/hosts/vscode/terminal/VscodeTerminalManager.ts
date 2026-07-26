@@ -11,6 +11,12 @@ import { Logger } from "@/shared/services/Logger"
 import { mergePromise, VscodeTerminalProcess } from "./VscodeTerminalProcess"
 import { TerminalInfo, TerminalRegistry } from "./VscodeTerminalRegistry"
 
+/** Escape cwd for shell cd command to prevent quote/injection breakout. */
+function buildCdCommand(cwd: string): string {
+	return `cd "${cwd.replace(/"/g, '\\"')}"`
+}
+
+
 const CWD_COMMAND_TIMEOUT_MS = 5000
 const CWD_STATE_TIMEOUT_MS = 1000
 
@@ -185,7 +191,7 @@ export class VscodeTerminalManager implements ITerminalManager {
 	// reporting completion through the execution stream. Timeout this setup step so
 	// the user's actual command is still sent instead of leaving the chat stuck.
 	private async runCwdChangeCommand(terminalInfo: TerminalInfo, cwd: string): Promise<boolean> {
-		const command = `cd "${cwd}"`
+		const command = buildCdCommand(cwd)
 		const shellIntegration = terminalInfo.terminal.shellIntegration
 
 		if (!shellIntegration?.executeCommand) {

@@ -6,6 +6,7 @@ import { runBasicCompaction } from "./basic-compaction";
 import { createContextCompactionPrepareTurn, resolveAdaptivePreserveRecentTokens } from "./compaction";
 import {
 	createTokenEstimator,
+	findCutIndex,
 	resolveSummarizerConfig,
 	serializeMessage,
 	TOOL_RESULT_CHAR_LIMIT,
@@ -2122,5 +2123,21 @@ describe("resolveAdaptivePreserveRecentTokens", () => {
 				triggerTokens: 7_000,
 			}),
 		).toBe(2_048);
+	});
+});
+
+describe("findCutIndex Agentario cutIndex=0 guard", () => {
+	it("falls back to lastTurnStartIndex instead of returning 0", () => {
+		const estimate = () => 500;
+		const messages = [
+			{ role: "user" as const, content: "first task" },
+			{ role: "assistant" as const, content: "old work" },
+			{ role: "user" as const, content: "follow-up question" },
+			{ role: "assistant" as const, content: "tool call pending" },
+		];
+		// Huge preserve budget would walk candidate to 0 and snap to cut=0 before the fix.
+		const cut = findCutIndex(messages, 50_000, estimate);
+		expect(cut).toBe(2);
+		expect(cut).toBeGreaterThan(0);
 	});
 });

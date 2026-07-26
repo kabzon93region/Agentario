@@ -1,4 +1,5 @@
 import { jsonrepair } from "jsonrepair";
+import { isRecord } from "./object";
 
 const BARE_OBJECT_RE = /^\{\s*"([A-Za-z0-9_.$-]+)"\s*:\s*([\s\S]+?)\s*\}$/;
 /**
@@ -83,10 +84,6 @@ export function safeJsonParse<T>(raw: string): T | undefined {
 	} catch {
 		return undefined;
 	}
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function schemaTypes(schema: Record<string, unknown>): string[] {

@@ -18,7 +18,6 @@ const SKIP_SAY = new Set([
 	"shell_integration_warning",
 	"shell_integration_warning_with_suggestion",
 	"load_mcp_documentation",
-	"info",
 	"checkpoint_created",
 	"hook",
 ])
@@ -43,81 +42,22 @@ function parseTool(text: string | undefined): AgentarioSayTool {
 	}
 }
 
-function toolGroupSummary(tools: AgentarioSayTool[]): string {
-	const counts = { read: 0, list: 0, search: 0, def: 0 }
-	for (const tool of tools) {
-		switch (tool.tool) {
-			case "readFile":
-				counts.read++
-				break
-			case "listFilesTopLevel":
-			case "listFilesRecursive":
-				counts.list++
-				break
-			case "searchFiles":
-				counts.search++
-				break
-			case "listCodeDefinitionNames":
-				counts.def++
-				break
-		}
+function formatTs(ts: number | undefined): string {
+	if (!ts || !Number.isFinite(ts) || ts <= 0) {
+		return ""
 	}
-	const parts: string[] = []
-	if (counts.read > 0) {
-		parts.push(`${counts.read} file${counts.read > 1 ? "s" : ""}`)
+	try {
+		return new Date(ts).toISOString()
+	} catch {
+		return ""
 	}
-	if (counts.list > 0) {
-		parts.push(`${counts.list} folder${counts.list > 1 ? "s" : ""}`)
-	}
-	if (counts.def > 0) {
-		parts.push(`${counts.def} definition${counts.def > 1 ? "s" : ""}`)
-	}
-	if (counts.search > 0) {
-		parts.push(`${counts.search} search${counts.search > 1 ? "es" : ""}`)
-	}
-	if (parts.length === 0) {
-		return "Agentario updated context"
-	}
-	const action = counts.read > 0 || counts.list > 0 ? " read " : " "
-	return `Agentario${action}${parts.join(", ")}`
 }
 
-function completedLowStakesTools(messages: AgentarioMessage[]): AgentarioSayTool[] {
-	const result: AgentarioSayTool[] = []
-	for (const message of messages) {
-		if (message.say === "reasoning") {
-			continue
-		}
-		if (!isLowStakesTool(message)) {
-			continue
-		}
-		const parsed = parseTool(message.text)
-		const previous = result.at(-1)
-		if (
-			parsed.tool === "readFile" &&
-			parsed.path &&
-			message.say === "tool" &&
-			previous?.tool === "readFile" &&
-			previous.path === parsed.path
-		) {
-			result[result.length - 1] = parsed
-			continue
-		}
-		if (message.say === "tool") {
-			result.push(parsed)
-		}
-	}
-	return result
-}
-
-function appendBlock(lines: string[], heading: string, body: string, statsLine?: string): void {
-	lines.push(`${heading}:`)
+function appendBlock(lines: string[], heading: string, body: string, ts?: number): void {
+	const when = formatTs(ts)
+	lines.push(when ? `${heading} (${when}):` : `${heading}:`)
 	if (body.trim()) {
 		lines.push(body.trimEnd())
-	}
-	if (statsLine) {
-		lines.push("")
-		lines.push(statsLine)
 	}
 	lines.push("")
 	lines.push("=======================")
@@ -140,18 +80,18 @@ function formatCommandBlock(message: AgentarioMessage): string {
 	return lines.join("\n").trimEnd()
 }
 
-function formatHighStakesTool(message: AgentarioMessage): string | undefined {
+function formatToolLine(message: AgentarioMessage): string {
 	const tool = parseTool(message.text)
 	if (!tool.tool) {
-		return message.text
-	}
-	if (tool.tool === "attempt_completion") {
-		return undefined
+		return message.text ?? ""
 	}
 	const label = message.type === "ask" ? "Agentario wants to use tool" : "Agentario used tool"
 	const parts = [label, tool.tool]
 	if (tool.path) {
 		parts.push(tool.path)
+	}
+	if (tool.regex) {
+		parts.push(tool.regex)
 	}
 	if (tool.content?.trim()) {
 		parts.push("", tool.content.trim())
@@ -164,6 +104,10 @@ export interface ExportChatMarkdownOptions {
 	exportedAt?: Date
 }
 
+/**
+ * Export chat in chronological message order (by `ts`).
+ * Low-stakes tools are listed individually so nothing “jumps” to the end.
+ */
 export function exportChatToMarkdown(messages: AgentarioMessage[], options: ExportChatMarkdownOptions = {}): string {
 	const lines: string[] = []
 	const exportedAt = options.exportedAt ?? new Date()
@@ -173,82 +117,62 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 	}
 	lines.push(`Exported: ${exportedAt.toISOString()}`, "", "---", "")
 
-	let pendingTools: AgentarioMessage[] = []
+	const ordered = [...messages].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))
 
-	const flushToolGroup = () => {
-		if (pendingTools.length === 0) {
-			return
-		}
-		const tools = completedLowStakesTools(pendingTools)
-		if (tools.length === 0) {
-			pendingTools = []
-			return
-		}
-		lines.push(`${toolGroupSummary(tools)}:`, "")
-		for (const tool of tools) {
-			if (tool.path) {
-				lines.push(tool.path)
-			}
-		}
-		lines.push("")
-		pendingTools = []
-	}
-
-	for (const message of messages) {
+	for (const message of ordered) {
 		if (message.partial) {
 			continue
 		}
-
-		if (isLowStakesTool(message)) {
-			pendingTools.push(message)
-			continue
-		}
-
-		flushToolGroup()
 
 		if (message.type === "say" && message.say && SKIP_SAY.has(message.say)) {
 			continue
 		}
 
+		if (message.type === "say" && message.say === "info") {
+			const text = (message.text ?? "").trim()
+			if (text) {
+				appendBlock(lines, "System", text, message.ts)
+			}
+			continue
+		}
+
 		if (message.type === "say" && (message.say === "user_feedback" || message.say === "task")) {
-			appendBlock(lines, "User", message.text ?? "")
+			appendBlock(lines, "User", message.text ?? "", message.ts)
 			continue
 		}
 
 		if (message.type === "say" && message.say === "reasoning") {
 			if (message.text?.trim()) {
-				appendBlock(lines, "Thinking", message.text)
+				appendBlock(lines, "Thinking", message.text, message.ts)
 			}
 			continue
 		}
 
 		if (message.type === "say" && (message.say === "text" || message.say === "completion_result")) {
-			appendBlock(lines, "Agent", message.text ?? "")
+			appendBlock(lines, "Agent", message.text ?? "", message.ts)
 			continue
 		}
 
 		if (message.type === "say" && message.say === "command") {
-			appendBlock(lines, "Agent", formatCommandBlock(message))
+			appendBlock(lines, "Agent", formatCommandBlock(message), message.ts)
 			continue
 		}
 
 		if (message.type === "say" && message.say === "tool") {
-			const body = formatHighStakesTool(message)
-			if (body) {
-				appendBlock(lines, "Agent", body)
+			if (parseTool(message.text).tool === "attempt_completion") {
+				continue
 			}
+			appendBlock(lines, "Tool", formatToolLine(message), message.ts)
 			continue
 		}
 
-		if (message.type === "ask" && message.ask === "tool" && !isLowStakesTool(message)) {
-			const body = formatHighStakesTool(message)
-			if (body) {
-				appendBlock(lines, "Agent", body)
+		if (message.type === "ask" && message.ask === "tool") {
+			if (parseTool(message.text).tool === "attempt_completion") {
+				continue
 			}
+			appendBlock(lines, "Tool", formatToolLine(message), message.ts)
 		}
 	}
-
-	flushToolGroup()
 
 	while (lines.length > 0 && lines[lines.length - 1] === "") {
 		lines.pop()
@@ -260,4 +184,9 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 /** Stats footer for export (optional extension). */
 export function exportStatsFooter(info: Parameters<typeof formatMessageStatsLine>[0]): string | undefined {
 	return formatMessageStatsLine(info)
+}
+
+// Keep helper exported for tests that may still reference grouping.
+export function __testOnly_isLowStakesTool(message: AgentarioMessage): boolean {
+	return isLowStakesTool(message)
 }

@@ -9,7 +9,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 </p>
 
 <p align="center">
-<strong>Версия расширения: 0.13.11</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+<strong>Версия расширения: 0.14.30</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
 </p>
 
 <div align="center">
@@ -20,7 +20,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 <td align="center"><a href="https://github.com/kabzon93region/Agentario"><strong>GitHub</strong></a></td>
 <td align="center"><a href="CHANGELOG.md"><strong>Changelog</strong></a></td>
 <td align="center"><a href="VERSIONING.md"><strong>Версии</strong></a></td>
-<td align="center"><a href="https://docs.cline.bot" target="_blank"><strong>Docs (upstream)</strong></a></td>
+<td align="center"><a href="https://github.com/kabzon93region/Agentario#readme" target="_blank"><strong>Docs</strong></a></td>
 </tr>
 </tbody>
 </table>
@@ -29,7 +29,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 
 ## Быстрый старт (VS Code)
 
-1. Соберите или скачайте VSIX: `release/agentario-0.13.11.vsix` (сборка: `build.cmd` на Windows).
+1. Соберите или скачайте VSIX: `release/agentario-0.14.30.vsix` (сборка: `build.cmd` на Windows).
 2. VS Code → Extensions → `...` → **Install from VSIX**.
 3. Провайдер **LM Studio** или **Ollama** — см. [настройку LM Studio](#lm-studio-локальная-модель) ниже.
 4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright, trueline (правка файлов).
@@ -119,7 +119,7 @@ Playwright MCP (опционально):
 <table>
 <tbody>
 <td align="center">
-<a href="https://docs.cline.bot" target="_blank"><strong>Upstream docs</strong></a>
+<a href="https://github.com/kabzon93region/Agentario#readme" target="_blank"><strong>Docs</strong></a>
 </td>
 <td align="center">
 <a href="https://github.com/cline/cline" target="_blank"><strong>Cline</strong></a>

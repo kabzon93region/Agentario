@@ -10,7 +10,7 @@ import { convertProtoToAgentarioMessage } from "@shared/proto-conversions/agenta
 import { convertProtoMcpServersToMcpServers } from "@shared/proto-conversions/mcp/mcp-server-conversion"
 import { fromProtobufModels } from "@shared/proto-conversions/models/typeConversion"
 import type React from "react"
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import {
 	type ModelInfo,
 	openRouterDefaultModelId,
@@ -181,112 +181,76 @@ export const ExtensionStateContextProvider: React.FC<{
 	const hideIndexing = useCallback(() => setShowIndexing(false), [setShowIndexing])
 	const hideAnnouncement = useCallback(() => setShowAnnouncement(false), [setShowAnnouncement])
 
-	// Navigation functions
+	// Navigation: close all secondary views, then open the target.
+	const closeAllSecondaryViews = useCallback(() => {
+		closeMarketplaceView()
+		setShowSettings(false)
+		closeMcpView()
+		setShowHistory(false)
+		setShowAccount(false)
+		setShowWorktrees(false)
+		setShowIndexing(false)
+	}, [closeMarketplaceView, closeMcpView])
+
 	const navigateToMcp = useCallback(
 		(tab?: McpViewTab) => {
-			setShowSettings(false)
-			setShowHistory(false)
-			setShowAccount(false)
-			setShowWorktrees(false)
-			setShowIndexing(false)
-			closeMcpView()
+			closeAllSecondaryViews()
 			if (tab) {
 				setMcpTab(tab)
 			}
 			setShowMarketplace(true)
 		},
-		[closeMcpView, setMcpTab, setShowSettings, setShowHistory, setShowAccount, setShowWorktrees, setShowIndexing],
+		[closeAllSecondaryViews, setMcpTab],
 	)
 
 	const navigateToMarketplace = useCallback(() => {
-		setShowSettings(false)
-		closeMcpView()
-		setShowHistory(false)
-		setShowAccount(false)
-		setShowWorktrees(false)
-		setShowIndexing(false)
+		closeAllSecondaryViews()
 		setShowMarketplace(true)
-	}, [closeMcpView, setShowIndexing])
+	}, [closeAllSecondaryViews])
 
 	const navigateToSettings = useCallback(
 		(targetSection?: string) => {
-			closeMarketplaceView()
-			setShowHistory(false)
-			closeMcpView()
-			setShowAccount(false)
-			setShowWorktrees(false)
-			setShowIndexing(false)
+			closeAllSecondaryViews()
 			setSettingsTargetSection(targetSection)
 			setSettingsInitialModelTab(undefined)
 			setShowSettings(true)
 		},
-		[closeMarketplaceView, closeMcpView, setShowIndexing],
+		[closeAllSecondaryViews],
 	)
 
 	const navigateToSettingsModelPicker = useCallback(
 		(opts: { targetSection?: string; initialModelTab?: "recommended" | "free" }) => {
-			closeMarketplaceView()
-			setShowHistory(false)
-			closeMcpView()
-			setShowAccount(false)
-			setShowWorktrees(false)
-			setShowIndexing(false)
+			closeAllSecondaryViews()
 			setSettingsTargetSection(opts.targetSection)
 			setSettingsInitialModelTab(opts.initialModelTab)
 			setShowSettings(true)
 		},
-		[closeMarketplaceView, closeMcpView, setShowIndexing],
+		[closeAllSecondaryViews],
 	)
 
 	const navigateToHistory = useCallback(() => {
-		closeMarketplaceView()
-		setShowSettings(false)
-		closeMcpView()
-		setShowAccount(false)
-		setShowWorktrees(false)
-		setShowIndexing(false)
+		closeAllSecondaryViews()
 		setShowHistory(true)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowAccount, setShowWorktrees, setShowIndexing, setShowHistory])
+	}, [closeAllSecondaryViews])
 
 	const navigateToAccount = useCallback(() => {
-		closeMarketplaceView()
-		setShowSettings(false)
-		closeMcpView()
-		setShowHistory(false)
-		setShowWorktrees(false)
-		setShowIndexing(false)
+		closeAllSecondaryViews()
 		setShowAccount(true)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowWorktrees, setShowIndexing, setShowAccount])
+	}, [closeAllSecondaryViews])
 
 	const navigateToWorktrees = useCallback(() => {
-		closeMarketplaceView()
-		setShowSettings(false)
-		closeMcpView()
-		setShowHistory(false)
-		setShowAccount(false)
-		setShowIndexing(false)
+		closeAllSecondaryViews()
 		setShowWorktrees(true)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowIndexing, setShowWorktrees])
+	}, [closeAllSecondaryViews])
 
 	const navigateToIndexing = useCallback(() => {
-		closeMarketplaceView()
-		setShowSettings(false)
-		closeMcpView()
-		setShowHistory(false)
-		setShowAccount(false)
-		setShowWorktrees(false)
+		closeAllSecondaryViews()
 		setShowIndexing(true)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowWorktrees, setShowIndexing])
+	}, [closeAllSecondaryViews])
 
 	const navigateToChat = useCallback(() => {
-		closeMarketplaceView()
-		setShowSettings(false)
-		closeMcpView()
-		setShowHistory(false)
-		setShowAccount(false)
-		setShowWorktrees(false)
-		setShowIndexing(false)
-	}, [closeMarketplaceView, setShowSettings, closeMcpView, setShowHistory, setShowAccount, setShowWorktrees, setShowIndexing])
+		closeAllSecondaryViews()
+	}, [closeAllSecondaryViews])
 
 	const [state, setState] = useState<ExtensionState>({
 		version: "",
@@ -565,10 +529,8 @@ export const ExtensionStateContextProvider: React.FC<{
 						})
 					} catch (error) {
 						console.error("Error parsing state JSON:", error)
-						console.log("[DEBUG] ERR getting state", error)
 					}
 				}
-				console.log('[DEBUG] ended "got subscribed state"')
 			},
 			onError: (error: any) => {
 				console.error("Error in state subscription:", error)
@@ -583,7 +545,6 @@ export const ExtensionStateContextProvider: React.FC<{
 			{},
 			{
 				onResponse: () => {
-					console.log("[DEBUG] Received mcpButtonClicked event from gRPC stream")
 					navigateToMarketplace()
 				},
 				onError: (error: any) => {
@@ -597,7 +558,6 @@ export const ExtensionStateContextProvider: React.FC<{
 
 		indexingButtonUnsubscribeRef.current = UiServiceClient.subscribeToIndexingButtonClicked(EmptyRequest.create({}), {
 			onResponse: () => {
-				console.log("[DEBUG] Received indexingButtonClicked event from gRPC stream")
 				navigateToIndexing()
 			},
 			onError: (error: any) => {
@@ -610,7 +570,6 @@ export const ExtensionStateContextProvider: React.FC<{
 
 		marketplaceButtonUnsubscribeRef.current = UiServiceClient.subscribeToMarketplaceButtonClicked(EmptyRequest.create({}), {
 			onResponse: () => {
-				console.log("[DEBUG] Received marketplaceButtonClicked event from gRPC stream")
 				navigateToMarketplace()
 			},
 			onError: (error: any) => {
@@ -627,7 +586,6 @@ export const ExtensionStateContextProvider: React.FC<{
 			{
 				onResponse: () => {
 					// When history button is clicked, navigate to history view
-					console.log("[DEBUG] Received history button clicked event from gRPC stream")
 					navigateToHistory()
 				},
 				onError: (error: any) => {
@@ -645,7 +603,6 @@ export const ExtensionStateContextProvider: React.FC<{
 			{
 				onResponse: () => {
 					// When chat button is clicked, navigate to chat
-					console.log("[DEBUG] Received chat button clicked event from gRPC stream")
 					navigateToChat()
 				},
 				onError: (error: any) => {
@@ -658,7 +615,6 @@ export const ExtensionStateContextProvider: React.FC<{
 		// Subscribe to MCP servers updates
 		mcpServersSubscriptionRef.current = McpServiceClient.subscribeToMcpServers(EmptyRequest.create(), {
 			onResponse: (response: any) => {
-				console.log("[DEBUG] Received MCP servers update from gRPC stream")
 				if (response.mcpServers) {
 					setMcpServers(convertProtoMcpServersToMcpServers(response.mcpServers))
 				}
@@ -734,7 +690,6 @@ export const ExtensionStateContextProvider: React.FC<{
 				console.error("Error in partialMessage subscription:", error)
 			},
 			onComplete: () => {
-				console.log("[DEBUG] partialMessage subscription completed")
 			},
 		})
 
@@ -772,7 +727,6 @@ export const ExtensionStateContextProvider: React.FC<{
 		// Initialize webview using gRPC
 		UiServiceClient.initializeWebview(EmptyRequest.create({}))
 			.then(() => {
-				console.log("[DEBUG] Webview initialization completed via gRPC")
 			})
 			.catch((error) => {
 				console.error("Failed to initialize webview via gRPC:", error)
@@ -782,7 +736,6 @@ export const ExtensionStateContextProvider: React.FC<{
 		accountButtonClickedSubscriptionRef.current = UiServiceClient.subscribeToAccountButtonClicked(EmptyRequest.create(), {
 			onResponse: () => {
 				// When account button is clicked, navigate to account view
-				console.log("[DEBUG] Received account button clicked event from gRPC stream")
 				navigateToAccount()
 			},
 			onError: (error: any) => {
@@ -957,7 +910,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		refreshLiteLlmModels,
 	])
 
-	const contextValue: ExtensionStateContextType = {
+	const contextValue: ExtensionStateContextType = useMemo(() => ({
 		...state,
 		didHydrateState,
 		showWelcome,
@@ -1100,7 +1053,76 @@ export const ExtensionStateContextProvider: React.FC<{
 		setUserInfo: (userInfo?: UserInfo) => setState((prevState) => ({ ...prevState, userInfo })),
 		expandTaskHeader,
 		setExpandTaskHeader,
-	}
+}), [
+		state,
+		didHydrateState,
+		showWelcome,
+		onboardingModels,
+		openRouterModels,
+		vercelAiGatewayModels,
+		hicapModels,
+		liteLlmModels,
+		openAiModels,
+		requestyModels,
+		groqModelsState,
+		basetenModelsState,
+		huggingFaceModels,
+		providerModelsByProvider,
+		latestModelRequestIdByProvider,
+		mcpServers,
+		totalTasksSize,
+		availableTerminalProfiles,
+		showMarketplace,
+		showMcp,
+		mcpTab,
+		showSettings,
+		settingsTargetSection,
+		settingsInitialModelTab,
+		showHistory,
+		showAccount,
+		showWorktrees,
+		showIndexing,
+		showAnnouncement,
+		navigateToMarketplace,
+		navigateToMcp,
+		navigateToSettings,
+		navigateToSettingsModelPicker,
+		navigateToHistory,
+		navigateToAccount,
+		navigateToWorktrees,
+		navigateToIndexing,
+		navigateToChat,
+		hideSettings,
+		hideHistory,
+		hideAccount,
+		hideWorktrees,
+		hideIndexing,
+		hideAnnouncement,
+		closeMarketplaceView,
+		closeMcpView,
+		setShowAnnouncement,
+		setShowWelcome,
+		setOnboardingModels,
+		startProviderModelsRequest,
+		applyProviderModelsResponse,
+		setMcpServers,
+		setRequestyModels,
+		setGroqModels,
+		setBasetenModels,
+		setHuggingFaceModels,
+		setShowMarketplace,
+		setShowMcp,
+		closeMcpView,
+		setMcpTab,
+		setTotalTasksSize,
+		refreshOpenRouterModels,
+		refreshVercelAiGatewayModels,
+		refreshHicapModels,
+		refreshLiteLlmModels,
+		onRelinquishControl,
+		expandTaskHeader,
+		setExpandTaskHeader,
+	])
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>
 }

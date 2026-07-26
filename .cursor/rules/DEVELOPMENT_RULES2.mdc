@@ -138,6 +138,68 @@ Requirements: `gh auth login`, Git remote `origin` → `kabzon93region/Agentario
 
 ---
 
+## 8. MCP Server Profiles
+
+> **BEFORE starting ANY task, determine and load the appropriate MCP profile.**
+
+Профили MCP серверов управляются через `house-mcp-manager` (CLI из `Z:\MCP\house-mcp-manager\`).
+Профили хранятся в `Z:\MCP\profiles\agentario-*.json`.
+
+### Profile Selection Logic
+
+```
+Задача поступает
+  ├─ Простой код, вопросы, документация? → agentario-minimal
+  ├─ Разработка Agentario (UI, SDK, proto, build)? → agentario-dev
+  ├─ Сложная multi-system задача + browser + GitHub? → agentario-full
+  └─ Неясно? → спросить или начать с minimal
+```
+
+### Profile Commands
+
+```bash
+# Загрузить профиль (ПЕРЕД началом работы)
+house-mcp-manager profile load agentario-minimal   # context7, memory, sequential-thinking
+house-mcp-manager profile load agentario-dev        # + charlotte, playwright, trueline, github
+house-mcp-manager profile load agentario-full       # все серверы
+
+# Проверить текущий статус
+house-mcp-manager status
+```
+
+### When to Switch Profiles
+
+| Тип задачи | Профиль | Почему |
+|------------|---------|--------|
+| Вопросы, простые правки, документация | agentario-minimal | Экономия токенов (~9K) |
+| Разработка расширения (UI, SDK, proto, build) | agentario-dev | Нужен playwright, trueline, github |
+| Сложная задача с browser automation + GitHub PR | agentario-full | Всё включено |
+
+### Always Active (use proactively)
+
+| MCP | Когда использовать |
+|-----|-------------------|
+| **context7** | ВСЕГДА при ссылке на библиотеку, фреймворк, API. Запрашивай документацию перед ответом. |
+| **memory** | Сохраняй важные решения по архитектуре, повторяющийся контекст. |
+| **sequential-thinking** | Сложные multi-step задачи, архитектурные решения, цепочки отладки. |
+
+### On-Demand (activate when task matches)
+
+| MCP | Триггер | Примеры |
+|-----|---------|---------|
+| **charlotte** | Веб-исследование, поиск информации | "Найди документацию по protobuf.js", "Как работает VS Code extension host?" |
+| **playwright** | Browser automation, тестирование UI | "Проверь как выглядит webview", "Тестируй settings UI" |
+| **trueline** | Навигация по коду, поиск по описанию | "Где обрабатывается compaction?", "Найди функцию updateSettings" |
+| **github** | PR, issues, releases | "Создай PR", "Проверь comments на PR", "Создай release" |
+
+### Important Notes
+
+- После переключения профиля может потребоваться **перезапуск Cursor**
+- Если пользователь говорит "не перезапускай" — продолжай с текущим профилем
+- Всегда информируй пользователя какой профиль загружен и почему
+
+---
+
 ## References
 
 - [CHANGELOG.md](../../CHANGELOG.md)

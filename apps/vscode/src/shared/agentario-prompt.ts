@@ -1,4 +1,4 @@
-﻿import * as fs from "node:fs/promises"
+import * as fs from "node:fs/promises"
 import * as path from "node:path"
 import { HostProvider } from "@/hosts/host-provider"
 import { Logger } from "@/shared/services/Logger"
@@ -50,7 +50,36 @@ export const AGENTARIO_PLAN_MODE_INSTRUCTIONS_RU = `# Режим Plan
 
 После явного одобрения плана пользователем вызовите \`switch_to_act_mode\` для перехода в Act.`
 
-export const AGENTARIO_LOCAL_TOOLS_HINT = `# Tools (обязательно)
+export const AGENTARIO_LOCAL_TOOLS_HINT = `# Tools (local / LM Studio) — КРИТИЧНО
 
-Модель должна вызывать инструменты через API function calling, а не описывать действия текстом.
-Если endpoint поддерживает tools — каждый шаг задачи выполняйте через tool calls.`
+Вы и есть Agentario: ВЫ читаете файлы и отвечаете пользователю.
+Tools — это обычные API (поиск по индексу, чтение диска), а НЕ другие модели и НЕ «субагенты».
+Не делегируйте задание tool'у. Не передавайте текст задания пользователя в аргументы tool.
+
+Правила вызовов:
+- РОВНО ОДИН tool call за ответ (только через function calling API).
+- semantic_search.query — КОРОТКАЯ тема (2–8 слов), напр. "README documentation", "CHANGELOG history", "development rules", "project architecture".
+- ЗАПРЕЩЕНО класть в query/path фразы пользователя: «ознакомься…», «проанализируй…», «прочитай…» и любые полные предложения-задания.
+- search_codebase — только regex/символ (имя функции, import), не NL-предложение.
+- read_files — только реальный путь файла из результата search (path + start_line/end_line). Никогда path = текст вопроса.
+- Workflow обзора: semantic_search("README documentation") → read_files(конкретный путь) → semantic_search("CHANGELOG") → read_files → … → attempt_completion с ФАКТАМИ из файлов.
+- Не вызывайте attempt_completion после одного пустого/битого read. Сначала 2–5 успешных чтений с путями.
+- attempt_completion.result — факты из прочитанного; не копируйте задание; command не передавайте если не нужен.
+- После успешного attempt_completion задачу не повторяйте.
+- Запрещены шаблонные ответы без цитат/путей («проект на стадии разработки…»).
+- Индекс semantic_search покрывает всю cwd, включая вложенные vendor (llama-cpp-src и т.п.). Для обзора текущего проекта сначала читайте файлы в КОРНЕ рабочей папки (rules.md, README), не первые hits из вложенных репозиториев.`
+
+/** Strip parallel-tool guidance that breaks LM Studio peg-native parsing on small models. */
+export function applyLocalModelToolDiscipline(systemPrompt: string): string {
+	const withoutParallel = systemPrompt
+		.replace(
+			/- You can call multiple tools in a single response\.[^\n]*/g,
+			"- Emit exactly ONE tool call per response. Wait for the result before the next tool.",
+		)
+		.replace(/- Good parallelism examples:[^\n]*/g, "- Do not parallelize tools on local models.")
+	const trimmed = withoutParallel.trim()
+	if (trimmed.includes("# Tools (local / LM Studio)")) {
+		return trimmed
+	}
+	return `${trimmed}\n\n${AGENTARIO_LOCAL_TOOLS_HINT}`.trim()
+}

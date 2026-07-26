@@ -53,7 +53,7 @@ export class AgentarioAccountService {
 		// IMPORTANT: Prefixed with 'workos:' so backend can route verification to WorkOS provider
 		const clineAccountAuthToken = await this._authService.getAuthToken()
 		if (!clineAccountAuthToken) {
-			throw new Error("No Cline account auth token found")
+			throw new Error("No Agentario account auth token found")
 		}
 		const requestConfig: AxiosRequestConfig = {
 			...config,

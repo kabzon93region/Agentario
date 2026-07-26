@@ -172,16 +172,41 @@ export function createTokenEstimator(): EstimateMessageTokens {
 		if (typeof cached === "number") {
 			return cached;
 		}
-		// Agentario: считаем только контент сообщения, а не все поля (role, metadata, и т.д.)
+		// Agentario: считаем токены по ТОМУ ЖЕ формату что и serializeMessage(),
+		// а не по raw JSON. Иначе chunk sizing расходится с реальным текстом.
+		const roleLabel = message.role === "user" ? "User" : "Bot";
 		let contentLength = 0;
 		if (typeof message.content === "string") {
-			contentLength = message.content.length;
+			contentLength = `[${roleLabel}]: `.length + message.content.length;
 		} else if (Array.isArray(message.content)) {
 			for (const block of message.content) {
-				if (block.type === "text") {
-					contentLength += block.text.length;
-				} else if (block.type === "tool_use" || block.type === "tool_result") {
-					contentLength += JSON.stringify(block).length;
+				switch (block.type) {
+					case "text":
+						contentLength += `[${roleLabel}]: `.length + block.text.length;
+						break;
+					case "thinking":
+						// serializeMessage: [Bot thinking]: truncateText(thinking, 2000)
+						contentLength += "[Bot thinking]: ".length + Math.min(block.thinking.length, 2_000);
+						break;
+					case "redacted_thinking":
+						contentLength += "[Bot thinking]: [redacted]".length;
+						break;
+					case "tool_use":
+						// serializeMessage: [Bot tool calls]: name(key=val, ...)
+						contentLength += "[Bot tool calls]: ".length + block.name.length + formatToolInput(block.input).length;
+						break;
+					case "tool_result":
+						// serializeMessage: [Tool result]: flattenToolResultContent(content)
+						// flattenToolResultContent → truncateToolResultContentForCompaction → TOOL_RESULT_CHAR_LIMIT=2000
+						contentLength += "[Tool result]: ".length + estimateToolResultSerializedLength(block.content);
+						break;
+					case "file":
+						// serializeMessage: [User/Bot file path]: truncateText(content, 2000)
+						contentLength += `[${roleLabel} file ${block.path}]: `.length + Math.min(block.content.length, FILE_CONTENT_CHAR_LIMIT);
+						break;
+					case "image":
+						contentLength += `[${roleLabel} image]: `.length + (block.mediaType?.length ?? 5);
+						break;
 				}
 			}
 		}
@@ -189,6 +214,39 @@ export function createTokenEstimator(): EstimateMessageTokens {
 		cache.set(ref, value);
 		return value;
 	};
+}
+
+/**
+ * Оценивает длину сериализованного tool_result после flattenToolResultContent().
+ * Учитывает лимиты truncateToolResultContentForCompaction().
+ */
+function estimateToolResultSerializedLength(content: unknown): number {
+	if (typeof content === "string") {
+		return Math.min(content.length, TOOL_RESULT_CHAR_LIMIT);
+	}
+	if (Array.isArray(content)) {
+		let total = 0;
+		for (const block of content) {
+			if (block && typeof block === "object") {
+				const b = block as Record<string, unknown>;
+				if (b.type === "text" && typeof b.text === "string") {
+					total += Math.min(b.text.length, TOOL_RESULT_CHAR_LIMIT);
+				} else if (b.type === "file" && typeof b.content === "string") {
+					total += `<file path="${b.path ?? ""}">\n`.length
+						+ Math.min(b.content.length, FILE_CONTENT_CHAR_LIMIT)
+						+ "\n</file>".length;
+				} else if (b.type === "image") {
+					total += `[image:${(b as { mediaType?: string }).mediaType ?? ""}]`.length;
+				}
+			}
+		}
+		return total;
+	}
+	// Fallback: если content не строка и не массив, оцениваем как строку
+	if (content != null) {
+		return Math.min(String(content).length, TOOL_RESULT_CHAR_LIMIT);
+	}
+	return 0;
 }
 
 export function isCompactionSummaryMessage(
@@ -308,7 +366,7 @@ export function findCutIndex(
 		return messages.length;
 	}
 	if (lastTurnStartIndex === 0) {
-		// Agentario: если единственный turn start - это первое сообщение, суммаризируем все кроме него
+		// Единственный user-turn в начале: суммируем весь хвост (всё сообщение).
 		return messages.length > 1 ? messages.length : 0;
 	}
 
@@ -322,19 +380,20 @@ export function findCutIndex(
 		}
 	}
 
+	// preserveRecent «съел» весь диалог — режем перед текущим user-turn.
 	if (candidate <= 0) {
-		return 0;
+		return lastTurnStartIndex;
 	}
 
 	// Snap to a turn-start boundary so the cut never splits a
 	// tool_use/tool_result pair (or any other intra-turn block).
-	// Everything before the cut gets summarized; everything from
-	// the cut forward is preserved. Both halves of any pair must
-	// land on the same side or the provider will see an orphaned
-	// tool_result (or tool_use) and reject the request.
 	let cut = Math.min(candidate, lastTurnStartIndex);
 	while (cut > 0 && !isTurnStartMessage(messages[cut])) {
 		cut -= 1;
+	}
+	// cut=0 → messages.slice(0,0) пусто → «cutIndex=0 некорректен» и пустой fallback.
+	if (cut <= 0) {
+		return lastTurnStartIndex;
 	}
 	return cut;
 }

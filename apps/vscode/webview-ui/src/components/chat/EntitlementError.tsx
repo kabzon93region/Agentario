@@ -12,7 +12,7 @@ interface EntitlementErrorProps {
 // Relative (no leading slash) so it appends to path-prefixed app URLs (e.g. self-hosted/proxy) instead of resetting to origin.
 const CLINE_PASS_SUBSCRIBE_PATH = "dashboard/subscription"
 
-const HEADLINE = "This model requires a ClinePass subscription."
+const HEADLINE = "This model requires an AgentarioPass subscription."
 
 function buildSubscribeUrl(appBaseUrl?: string): string | undefined {
 	if (!appBaseUrl) {
@@ -39,7 +39,7 @@ const EntitlementError: React.FC<EntitlementErrorProps> = ({ message }) => {
 			<div className="mb-3">
 				<div className="text-error mb-2">{HEADLINE}</div>
 				<div className="text-(--vscode-descriptionForeground) text-xs">
-					Subscribe to ClinePass to use this model, then retry your request.
+					Subscribe to AgentarioPass to use this model, then retry your request.
 				</div>
 				{backendDetail && (
 					<div className="text-(--vscode-descriptionForeground) text-xs mt-1 opacity-80 wrap-anywhere">
@@ -51,7 +51,7 @@ const EntitlementError: React.FC<EntitlementErrorProps> = ({ message }) => {
 			{subscribeUrl && (
 				<VSCodeButtonLink className="w-full mb-2" href={subscribeUrl}>
 					<span className="codicon codicon-rocket mr-[6px] text-[14px]" />
-					Get ClinePass
+					Get AgentarioPass
 				</VSCodeButtonLink>
 			)}
 

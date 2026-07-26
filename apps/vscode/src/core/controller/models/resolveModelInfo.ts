@@ -1,4 +1,4 @@
-﻿import type { ModelInfo } from "@shared/api"
+﻿import type { ApiConfiguration, ModelInfo } from "@shared/api"
 import type { ProviderModelsResult } from "@/sdk/model-catalog/contracts"
 import { providerAllowsCustomModelIds } from "@/sdk/model-catalog/custom-model-ids"
 import { applyHostModelInfoOverrides } from "@/sdk/model-catalog/host-overrides"
@@ -9,6 +9,44 @@ import {
 	type ProviderCatalogController,
 	parseProviderIdRequest,
 } from "./providerCatalogShared"
+
+/**
+ * Agentario: запросить live context window из LM Studio API.
+ * Кэширует результат на 30 секунд, чтобы не перегружать API при частых вызовах
+ * resolveModelInfo от webview.
+ */
+let lmStudioLiveCache: { value: number; timestamp: number } | undefined
+const LM_STUDIO_LIVE_CACHE_TTL_MS = 30_000
+
+async function fetchLmStudioContextWindowLive(
+	apiConfiguration?: Pick<ApiConfiguration, "lmStudioBaseUrl">,
+): Promise<number | undefined> {
+	if (lmStudioLiveCache && Date.now() - lmStudioLiveCache.timestamp < LM_STUDIO_LIVE_CACHE_TTL_MS) {
+		return lmStudioLiveCache.value
+	}
+	const baseUrl = apiConfiguration?.lmStudioBaseUrl?.trim() || "http://127.0.0.1:1234"
+	// Agentario: /api/v0/models (native) содержит loaded_context_length, /v1/models (OpenAI) — нет.
+	const url = `${baseUrl.replace(/\/+$/, "")}/api/v0/models`
+	try {
+		const controller = new AbortController()
+		const timeout = setTimeout(() => controller.abort(), 3000)
+		const response = await fetch(url, { signal: controller.signal })
+		clearTimeout(timeout)
+		if (!response.ok) return undefined
+		const data = await response.json() as { data?: Array<{ id: string; loaded_context_length?: number; max_context_length?: number; state?: string }> }
+		const models = data.data
+		if (!Array.isArray(models) || models.length === 0) return undefined
+		const loaded = models.find((m) => m.state === "loaded" && m.loaded_context_length && m.loaded_context_length > 0)
+		const value = loaded?.loaded_context_length ?? models.find((m) => m.loaded_context_length && m.loaded_context_length > 0)?.loaded_context_length ?? models.find((m) => m.max_context_length && m.max_context_length > 0)?.max_context_length
+		if (typeof value === "number" && value > 0) {
+			lmStudioLiveCache = { value, timestamp: Date.now() }
+			return value
+		}
+		return undefined
+	} catch {
+		return undefined
+	}
+}
 
 /**
  * Resolve a single (provider, model) pair for the webview's status /
@@ -49,6 +87,13 @@ export async function resolveModelInfo(
 		? controller.stateManager.getApiConfiguration?.()
 		: undefined
 
+	// Agentario: для LM Studio запрашиваем live context window из API,
+	// чтобы UI показывал реальное значение, а не stale из globalState/preset.
+	let liveContextWindow: number | undefined
+	if (providerId === "lmstudio") {
+		liveContextWindow = await fetchLmStudioContextWindowLive(apiConfiguration)
+	}
+
 	const finalize = (
 		modelId: string,
 		modelInfo: ModelInfo,
@@ -57,7 +102,7 @@ export async function resolveModelInfo(
 		ResolveModelInfoResponse.create({
 			providerId,
 			modelId,
-			modelInfo: toProtobufModelInfo(applyHostModelInfoOverrides(providerId, modelId, modelInfo, apiConfiguration)),
+			modelInfo: toProtobufModelInfo(applyHostModelInfoOverrides(providerId, modelId, modelInfo, apiConfiguration, liveContextWindow)),
 			source,
 		})
 
@@ -91,7 +136,7 @@ export async function resolveModelInfo(
 	}
 
 	// Cache miss. Await a real resolve so the caller doesn't have to
-	// retry or race a warmer. The catalog dedup'\''s in-flight requests
+	// retry or race a warmer. The catalog dedup's in-flight requests
 	// and caches the result, so the per-fingerprint cost is paid once.
 	const resolved = await catalog.resolveModels(providerId).catch(() => undefined)
 	if (resolved?.ok) {

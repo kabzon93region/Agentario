@@ -30,11 +30,29 @@ import {
 
 const DEFAULT_CHUNK_SIZE = 16000;
 
-// Agentario: директория для отладочных файлов суммаризации
-const DEBUG_DIR = join(homedir(), "Documents", "agentario-compaction-debug");
+// Agentario: dump summarizer request/response under Documents for debugging.
+// Set AGENTARIO_COMPACTION_DEBUG=0 to disable.
+const COMPACTION_DEBUG_ENABLED =
+	typeof process === "undefined" ||
+	(process.env.AGENTARIO_COMPACTION_DEBUG !== "0" &&
+		process.env.AGENTARIO_COMPACTION_DEBUG !== "false");
 
-// Agentario: функция для записи отладочного текста в файл
+function resolveCompactionDebugDir(): string {
+	if (!COMPACTION_DEBUG_ENABLED) {
+		return "";
+	}
+	// Prefer Y:\Documents when present (user debug path), else ~/Documents.
+	return process.platform === "win32"
+		? "Y:\\Documents\\agentario-compaction-debug"
+		: join(homedir(), "Documents", "agentario-compaction-debug");
+}
+
+const DEBUG_DIR = resolveCompactionDebugDir();
+
 async function writeDebugFile(phase: string, chunkIndex: number | undefined, request: string, response: string): Promise<void> {
+	if (!DEBUG_DIR) {
+		return;
+	}
 	try {
 		await mkdir(DEBUG_DIR, { recursive: true });
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -43,14 +61,15 @@ async function writeDebugFile(phase: string, chunkIndex: number | undefined, req
 		const filepath = join(DEBUG_DIR, filename);
 		const content = `=== ЗАПРОС К МОДЕЛИ ===\n\n${request}\n\n\n=== ОТВЕТ МОДЕЛИ ===\n\n${response}`;
 		await writeFile(filepath, content, 'utf-8');
-		console.log(`[CompactionDebug] Wrote debug: ${filepath}`);
-	} catch (err) {
-		console.error(`[CompactionDebug] Failed to write debug file: ${err}`);
+	} catch {
+		// debug-only — ignore write failures
 	}
 }
 
-// Agentario: сохранение запроса в отдельный файл (до отправки модели)
 async function writeRequestFile(phase: string, chunkIndex: number | undefined, request: string): Promise<string> {
+	if (!DEBUG_DIR) {
+		return "";
+	}
 	try {
 		await mkdir(DEBUG_DIR, { recursive: true });
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -58,16 +77,16 @@ async function writeRequestFile(phase: string, chunkIndex: number | undefined, r
 		const filename = `REQUEST_${phase}${chunkSuffix}_${timestamp}.txt`;
 		const filepath = join(DEBUG_DIR, filename);
 		await writeFile(filepath, request, 'utf-8');
-		console.log(`[CompactionDebug] Wrote request: ${filepath}`);
 		return filepath;
 	} catch (err) {
-		console.error(`[CompactionDebug] Failed to write request file: ${err}`);
 		return `error: ${err}`;
 	}
 }
 
-// Agentario: сохранение всех чанков ответа в файл
 async function writeRawResponseFile(phase: string, chunkIndex: number | undefined, rawChunks: string[], textResult: string): Promise<void> {
+	if (!DEBUG_DIR) {
+		return;
+	}
 	try {
 		await mkdir(DEBUG_DIR, { recursive: true });
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -76,9 +95,8 @@ async function writeRawResponseFile(phase: string, chunkIndex: number | undefine
 		const filepath = join(DEBUG_DIR, filename);
 		const content = `=== RAW CHUNKS (${rawChunks.length}) ===\n\n${rawChunks.join('\n---\n')}\n\n\n=== ASSEMBLED TEXT (${textResult.length} chars) ===\n\n${textResult}`;
 		await writeFile(filepath, content, 'utf-8');
-		console.log(`[CompactionDebug] Wrote response: ${filepath}`);
-	} catch (err) {
-		console.error(`[CompactionDebug] Failed to write response file: ${err}`);
+	} catch {
+		// debug-only — ignore write failures
 	}
 }
 
@@ -286,7 +304,6 @@ export async function runAgenticCompaction(options: {
 	preserveRecentTokens: number;
 	estimateMessageTokens: EstimateMessageTokens;
 	chunkSize?: number;
-	doubleSummarization?: boolean;
 	/** Agentario: custom prompt template parts for summarization */
 	promptTemplateBefore?: string;
 	promptTemplateAfter?: string;
@@ -423,7 +440,6 @@ export async function runAgenticCompaction(options: {
 			totalMessages: newMessagesToFold.length,
 			chunks: chunks.length,
 			chunkSizeTokens: chunkSize,
-			doubleSummarization: options.doubleSummarization,
 		});
 		// Agentario: логируем размеры чанков
 		for (let i = 0; i < chunks.length; i++) {
@@ -575,7 +591,6 @@ export async function runAgenticCompaction(options: {
 		tokensBefore,
 		tokensAfter,
 		chunked: useChunked,
-		doubleSummarization: options.doubleSummarization,
 		maxInputTokens: options.context.maxInputTokens,
 	});
 	// Agentario: проверяем что результат не пустой

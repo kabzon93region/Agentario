@@ -61,6 +61,8 @@ import { RequestStartRow } from "./RequestStartRow"
 import SearchResultsDisplay from "./SearchResultsDisplay"
 import SubagentStatusRow from "./SubagentStatusRow"
 import { ThinkingRow } from "./ThinkingRow"
+import { WaitingStatusRow } from "./WaitingStatusRow"
+import { isWaitingStatusMessage } from "./waiting-row"
 import UserMessage from "./UserMessage"
 import MessageBubbleHeader from "./MessageBubbleHeader"
 import MessageStatsFooter from "./MessageStatsFooter"
@@ -309,12 +311,12 @@ export const ChatRowContent = memo(
 				case "mistake_limit_reached":
 					return [
 						<CircleXIcon className="text-error size-2" />,
-						<span className="text-error font-bold">Cline is having trouble...</span>,
+						<span className="text-error font-bold">Agentario is having trouble...</span>,
 					]
 				case "command":
 					return [
 						<TerminalIcon className="text-foreground size-2" />,
-						<span className="font-bold text-foreground">Cline wants to execute this command:</span>,
+						<span className="font-bold text-foreground">Agentario wants to execute this command:</span>,
 					]
 				case "use_mcp_server":
 					const mcpServerUse = JSON.parse(message.text || "{}") as AgentarioAskUseMcpServer
@@ -325,7 +327,7 @@ export const ChatRowContent = memo(
 							<span className="codicon codicon-server text-foreground mb-[-1.5px]" />
 						),
 						<span className="ph-no-capture font-bold text-foreground break-words">
-							Cline wants to {mcpServerUse.type === "use_mcp_tool" ? "use a tool" : "access a resource"} on the{" "}
+							Agentario wants to {mcpServerUse.type === "use_mcp_tool" ? "use a tool" : "access a resource"} on the{" "}
 							<code className="break-all">{mcpServerUse.serverName}</code> MCP server:
 						</span>,
 					]
@@ -341,7 +343,7 @@ export const ChatRowContent = memo(
 				case "followup":
 					return [
 						<span className="codicon codicon-question text-foreground mb-[-1.5px]" />,
-						<span className="font-bold text-foreground">Cline has a question:</span>,
+						<span className="font-bold text-foreground">Agentario has a question:</span>,
 					]
 				default:
 					return [null, null]
@@ -419,8 +421,8 @@ export const ChatRowContent = memo(
 					const content = tool?.content || ""
 					const isApplyingPatch = content?.startsWith("%%bash") && !content.endsWith("*** End Patch\nEOF")
 					const editToolTitle = isApplyingPatch
-						? "Cline is creating patches to edit this file:"
-						: "Cline wants to edit this file:"
+						? "Agentario is creating patches to edit this file:"
+						: "Agentario wants to edit this file:"
 					return (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
@@ -454,7 +456,7 @@ export const ChatRowContent = memo(
 								<SquareMinusIcon className="size-2" />
 								{tool.operationIsLocatedInWorkspace === false &&
 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
-								<span style={{ fontWeight: "bold" }}>Cline wants to delete this file:</span>
+								<span style={{ fontWeight: "bold" }}>Agentario wants to delete this file:</span>
 							</div>
 							<CodeAccordian
 								// isLoading={message.partial}
@@ -472,7 +474,7 @@ export const ChatRowContent = memo(
 								<FilePlus2Icon className="size-2" />
 								{tool.operationIsLocatedInWorkspace === false &&
 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
-								<span className="font-bold">Cline wants to create a new file:</span>
+								<span className="font-bold">Agentario wants to create a new file:</span>
 							</div>
 							{backgroundEditEnabled && tool.path && tool.content ? (
 								<DiffEditRow patch={tool.content} path={tool.path} startLineNumbers={tool.startLineNumbers} />
@@ -495,7 +497,7 @@ export const ChatRowContent = memo(
 								{isImage ? <ImageUpIcon className="size-2" /> : <FileCode2Icon className="size-2" />}
 								{tool.operationIsLocatedInWorkspace === false &&
 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
-								<span className="font-bold">Cline wants to read this file:</span>
+								<span className="font-bold">Agentario wants to read this file:</span>
 							</div>
 							<div className="bg-code rounded-sm overflow-hidden border border-editor-group-border">
 								<div
@@ -535,8 +537,8 @@ export const ChatRowContent = memo(
 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
 								<span style={{ fontWeight: "bold" }}>
 									{message.type === "ask"
-										? "Cline wants to view the top level files in this directory:"
-										: "Cline viewed the top level files in this directory:"}
+										? "Agentario wants to view the top level files in this directory:"
+										: "Agentario viewed the top level files in this directory:"}
 								</span>
 							</div>
 							<CodeAccordian
@@ -557,8 +559,8 @@ export const ChatRowContent = memo(
 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
 								<span style={{ fontWeight: "bold" }}>
 									{message.type === "ask"
-										? "Cline wants to recursively view all files in this directory:"
-										: "Cline recursively viewed all files in this directory:"}
+										? "Agentario wants to recursively view all files in this directory:"
+										: "Agentario recursively viewed all files in this directory:"}
 								</span>
 							</div>
 							<CodeAccordian
@@ -579,8 +581,8 @@ export const ChatRowContent = memo(
 									toolIcon("sign-out", "yellow", -90, "This file is outside of your workspace")}
 								<span style={{ fontWeight: "bold" }}>
 									{message.type === "ask"
-										? "Cline wants to view source code definition names used in this directory:"
-										: "Cline viewed source code definition names used in this directory:"}
+										? "Agentario wants to view source code definition names used in this directory:"
+										: "Agentario viewed source code definition names used in this directory:"}
 								</span>
 							</div>
 							<CodeAccordian
@@ -599,7 +601,7 @@ export const ChatRowContent = memo(
 								{tool.operationIsLocatedInWorkspace === false &&
 									toolIcon("sign-out", "yellow", -90, "This is outside of your workspace")}
 								<span className="font-bold">
-									Cline wants to search this directory for <code className="break-all">{tool.regex}</code>:
+									Agentario wants to search this directory for <code className="break-all">{tool.regex}</code>:
 								</span>
 							</div>
 							<SearchResultsDisplay
@@ -616,7 +618,7 @@ export const ChatRowContent = memo(
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<FoldVerticalIcon className="size-2" />
-								<span className="font-bold">Cline is condensing the conversation:</span>
+								<span className="font-bold">Agentario is condensing the conversation:</span>
 							</div>
 							<div className="bg-code overflow-hidden border border-editor-group-border rounded-[3px]">
 								<div
@@ -661,8 +663,8 @@ export const ChatRowContent = memo(
 									toolIcon("sign-out", "yellow", -90, "This URL is external")}
 								<span className="font-bold">
 									{message.type === "ask"
-										? "Cline wants to fetch content from this URL:"
-										: "Cline fetched content from this URL:"}
+										? "Agentario wants to fetch content from this URL:"
+										: "Agentario fetched content from this URL:"}
 								</span>
 							</div>
 							<div
@@ -690,8 +692,8 @@ export const ChatRowContent = memo(
 									toolIcon("sign-out", "yellow", -90, "This search is external")}
 								<span className="font-bold">
 									{message.type === "ask"
-										? "Cline wants to search the web for:"
-										: "Cline searched the web for:"}
+										? "Agentario wants to search the web for:"
+										: "Agentario searched the web for:"}
 								</span>
 							</div>
 							<div className="bg-code border border-editor-group-border overflow-hidden rounded-xs select-text py-[9px] px-2.5">
@@ -706,15 +708,32 @@ export const ChatRowContent = memo(
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<LightbulbIcon className="size-2" />
-								<span className="font-bold">Cline loaded the skill:</span>
+								<span className="font-bold">Agentario loaded the skill:</span>
 							</div>
 							<div className="bg-code border border-editor-group-border overflow-hidden rounded-xs py-[9px] px-2.5">
 								<span className="ph-no-capture font-medium">{tool.path}</span>
 							</div>
 						</div>
 					)
-				default:
-					return <InvisibleSpacer />
+				default: {
+					// Collapsed diagnostic for unknown/legacy tools (e.g. persisted semantic_search).
+					const toolName = String(tool.tool || "?")
+					const summary = `[tool · ${toolName}${tool.path ? ` · ${tool.path}` : ""}${tool.regex ? ` · ${tool.regex}` : ""}]`
+					return (
+						<details className="group/diag ml-1 text-[11px] leading-tight text-description/80 font-mono select-text">
+							<summary className="cursor-pointer list-none flex items-center gap-1 min-h-0 py-0.5 opacity-80 hover:opacity-100 [&::-webkit-details-marker]:hidden">
+								<span
+									className="codicon codicon-chevron-right text-[10px] shrink-0 transition-transform group-open/diag:rotate-90"
+									aria-hidden
+								/>
+								<span className="break-all">{summary}</span>
+							</summary>
+							<pre className="mt-1 ml-3 whitespace-pre-wrap opacity-70 max-h-32 overflow-auto break-all">
+								{(message.text || "").slice(0, 800)}
+							</pre>
+						</details>
+					)
+				}
 			}
 		}
 
@@ -862,6 +881,16 @@ export const ChatRowContent = memo(
 							</div>
 						)
 					case "text": {
+						const textRaw = message.text ?? ""
+						const textVisible = !!textRaw.replace(/[\u0000-\u001F\u200B-\u200D\uFEFF]/g, "").trim()
+						if (!textVisible && (message.images?.length ?? 0) === 0) {
+							return (
+								<div className="ml-1 text-[12px] leading-tight text-description/80 font-mono select-text break-all">
+									[say=text · empty · partial={String(message.partial === true)} · ts={message.ts} ·
+									len={textRaw.length}]
+								</div>
+							)
+						}
 						return (
 							<div>
 								<MessageBubbleHeader message={message} />
@@ -888,22 +917,38 @@ export const ChatRowContent = memo(
 						)
 					}
 					case "reasoning": {
+						// Ephemeral wait row (MessagesArea) — one status line, not persisted history.
+						if (isWaitingStatusMessage(message.ts) || message.text === "__agentario_waiting_status__") {
+							return <WaitingStatusRow />
+						}
 						const isReasoningStreaming = message.partial === true
-						const hasReasoningText = !!message.text?.trim()
-						// Show feature tips throughout the entire thinking/reasoning phase
+						const rawText = message.text ?? ""
+						const hasReasoningText = !!rawText.replace(/[\u0000-\u001F\u200B-\u200D\uFEFF]/g, "").trim()
+						// Diagnostic: show empty reasoning instead of hiding (was the squashed artifact source).
+						if (!hasReasoningText) {
+							return (
+								<div className="ml-1 text-[12px] leading-tight text-description/80 font-mono select-text break-all">
+									[say=reasoning · empty · partial={String(isReasoningStreaming)} · ts={message.ts} ·
+									len={rawText.length}]
+								</div>
+							)
+						}
 						const showFeatureTip = isReasoningStreaming
 						return (
 							<div>
-								<MessageBubbleHeader message={message} roleOverride="Thinking" />
 								<ThinkingRow
 									isExpanded={(isReasoningStreaming && hasReasoningText) || isExpanded}
 									isStreaming={isReasoningStreaming}
 									isVisible={true}
 									onToggle={isReasoningStreaming ? undefined : handleToggle}
-									reasoningContent={message.text}
+									reasoningContent={message.text ?? ""}
 									showChevron={!isReasoningStreaming || hasReasoningText}
 									showTitle={true}
-									title={isReasoningStreaming ? (message.text?.trim() ? `Thinking... ${message.text.trim().split(/\s+/).slice(-5).join(" ")}` : "Thinking...") : "Thinking"}
+									title={
+										isReasoningStreaming
+											? `Размышление… ${(message.text ?? "").trim().split(/\s+/).slice(-5).join(" ")}`
+											: "Размышление"
+									}
 								/>
 								{isReasoningStreaming && showFeatureTips !== false && <FeatureTip />}
 								{!isReasoningStreaming && <MessageStatsFooter stats={messageApiStats} />}
@@ -972,13 +1017,13 @@ export const ChatRowContent = memo(
 									<span className="font-medium text-foreground">Shell Integration Unavailable</span>
 								</div>
 								<div className="text-foreground opacity-80">
-									Cline may have trouble viewing the command's output. Please update VSCode (
+									Agentario may have trouble viewing the command's output. Please update VSCode (
 									<code>CMD/CTRL + Shift + P</code> → "Update") and make sure you're using a supported shell:
 									zsh, bash, fish, or PowerShell (<code>CMD/CTRL + Shift + P</code> → "Terminal: Select Default
 									Profile").
 									<a
 										className="px-1"
-										href="https://github.com/cline/cline/wiki/Troubleshooting-%E2%80%90-Shell-Integration-Unavailable">
+										href="https://github.com/kabzon93region/Agentario/issues">
 										Still having trouble?
 									</a>
 								</div>
@@ -1219,7 +1264,7 @@ export const ChatRowContent = memo(
 							<div>
 								<div className={HEADER_CLASSNAMES}>
 									<FilePlus2Icon className="size-2" />
-									<span className="text-foreground font-bold">Cline wants to start a new task:</span>
+									<span className="text-foreground font-bold">Agentario wants to start a new task:</span>
 								</div>
 								<NewTaskPreview context={message.text || ""} />
 							</div>
@@ -1229,7 +1274,7 @@ export const ChatRowContent = memo(
 							<div>
 								<div className={HEADER_CLASSNAMES}>
 									<FilePlus2Icon className="size-2" />
-									<span className="text-foreground font-bold">Cline wants to condense your conversation:</span>
+									<span className="text-foreground font-bold">Agentario wants to condense your conversation:</span>
 								</div>
 								<NewTaskPreview context={message.text || ""} />
 							</div>
@@ -1239,7 +1284,7 @@ export const ChatRowContent = memo(
 							<div>
 								<div className={HEADER_CLASSNAMES}>
 									<FilePlus2Icon className="size-2" />
-									<span className="text-foreground font-bold">Cline wants to create a Github issue:</span>
+									<span className="text-foreground font-bold">Agentario wants to create a Github issue:</span>
 								</div>
 								<ReportBugPreview data={message.text || ""} />
 							</div>

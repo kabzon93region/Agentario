@@ -208,6 +208,71 @@ function injectHeaderStickySession(
 	return [input, { ...init, headers }];
 }
 
+
+const LOCAL_TOOL_STABLE_PROVIDERS = new Set(["lmstudio", "ollama"]);
+
+function isLocalToolStableProvider(providerId: string): boolean {
+	return LOCAL_TOOL_STABLE_PROVIDERS.has(providerId);
+}
+
+function simplifyLocalToolDescription(description: string | undefined): string | undefined {
+	if (!description) return description;
+	let text = description
+		.replace(/\s*When several[^.]*\./gi, "")
+		.replace(/\s*call this tool in the same response[^.]*\./gi, "")
+		.replace(/\s*in the same response as other independent tool calls\.?/gi, "")
+		.replace(/\s*emit multiple[^.]*\./gi, "")
+		.replace(/\s{2,}/g, " ")
+		.trim();
+	if (text.length > 320) {
+		text = `${text.slice(0, 317)}...`;
+	}
+	return text;
+}
+
+/**
+ * LM Studio / llama.cpp peg-native often fails when the model emits parallel tool calls.
+ * Force OpenAI-compatible `parallel_tool_calls: false` on the wire for local providers.
+ */
+function wrapFetchForLocalToolStability(
+	baseFetch: typeof fetch | undefined,
+	providerId: string,
+): typeof fetch | undefined {
+	if (!isLocalToolStableProvider(providerId)) {
+		return baseFetch;
+	}
+	const delegate = baseFetch ?? globalThis.fetch;
+	if (!delegate) {
+		return baseFetch;
+	}
+	const stableFetch = (async (input, init) => {
+		if (!init?.body || typeof init.body !== "string") {
+			return delegate(input, init);
+		}
+		try {
+			const body = JSON.parse(init.body) as Record<string, unknown>;
+			if (Array.isArray(body.tools) && body.tools.length > 0) {
+				body.parallel_tool_calls = false;
+				return delegate(input, { ...init, body: JSON.stringify(body) });
+			}
+		} catch {
+			// keep original body
+		}
+		return delegate(input, init);
+	}) as typeof fetch;
+	const delegateWithPreconnect = delegate as typeof fetch & {
+		preconnect?: (...args: unknown[]) => unknown;
+	};
+	if (typeof delegateWithPreconnect.preconnect === "function") {
+		(
+			stableFetch as typeof fetch & {
+				preconnect?: (...args: unknown[]) => unknown;
+			}
+		).preconnect = delegateWithPreconnect.preconnect.bind(delegate);
+	}
+	return stableFetch;
+}
+
 function wrapFetchForStickySession(
 	baseFetch: typeof fetch | undefined,
 	request: GatewayStreamRequest,
@@ -375,11 +440,14 @@ function toAiSdkTools(
 		return undefined;
 	}
 
+	const simplifyDescriptions = isLocalToolStableProvider(request.providerId);
 	return Object.fromEntries(
 		request.tools.map((definition) => [
 			definition.name,
 			{
-				description: definition.description,
+				description: simplifyDescriptions
+					? simplifyLocalToolDescription(definition.description)
+					: definition.description,
 				inputSchema: jsonSchema(
 					normalizeAiSdkToolInputSchema(definition.inputSchema),
 					{
@@ -1136,7 +1204,10 @@ function createAiSdkProvider(kind: ProviderModuleKind): GatewayProviderFactory {
 					{
 						...config,
 						fetch: wrapFetchForStickySession(
-							wrapFetchForProviderRequestCapture(config.fetch, request),
+							wrapFetchForLocalToolStability(
+								wrapFetchForProviderRequestCapture(config.fetch, request),
+								request.providerId,
+							),
 							request,
 							context,
 						),

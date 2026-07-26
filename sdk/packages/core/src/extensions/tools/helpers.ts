@@ -137,6 +137,31 @@ export function formatRunCommandQuery(
 	return `${command.command} ${renderedArgs.join(" ")}`;
 }
 
+/** Reject shell listing / file-read shortcuts — use index tools + read_files instead. */
+export function getShellDiscoveryOrReadBypassError(
+	command: string | StructuredCommandInput,
+): string | null {
+	const text = formatRunCommandQuery(command);
+	if (/\b(Get-ChildItem|gci|\bls\b|\bdir\b|\btree\b|Find-ChildItem)\b/i.test(text)) {
+		return (
+			"Do not list directories via shell (Get-ChildItem/ls/dir). " +
+			"The workspace index is already available: use semantic_search or search_codebase, then read_files. " +
+			"Do not re-index via shell."
+		);
+	}
+	if (
+		/\b(Get-Content|\bgc\b|\bcat\b|\btype\b|\bhead\b|\btail\b)\b/i.test(text) &&
+		/\.(md|markdown|txt|py|ts|tsx|js|jsx|json|yml|yaml|toml|cfg|ini|log|cs|cpp|h|rs|go)\b/i.test(
+			text,
+		)
+	) {
+		return (
+			"Do not read source/docs via shell (Get-Content/cat/type). Use read_files(path, start_line, end_line)."
+		);
+	}
+	return null;
+}
+
 /**
  * Max characters of the executed command echoed back in the tool result's
  * `query` field. The full command already exists in the assistant tool-call

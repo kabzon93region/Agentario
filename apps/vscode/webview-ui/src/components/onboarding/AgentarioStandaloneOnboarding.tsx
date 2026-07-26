@@ -37,7 +37,7 @@ const AgentarioStandaloneOnboarding = memo(() => {
 					<AgentarioLogoWhite className="size-16" />
 				</div>
 				<p>
-					Agentario работает автономно: локальные модели через LM Studio или Ollama. Интернет и аккаунт Cline не
+					Agentario работает автономно: локальные модели через LM Studio или Ollama. Интернет и облачный аккаунт не
 					нужны.
 				</p>
 				<p className="text-(--vscode-descriptionForeground)">

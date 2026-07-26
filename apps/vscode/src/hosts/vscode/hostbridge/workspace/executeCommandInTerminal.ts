@@ -14,8 +14,9 @@ export async function executeCommandInTerminal(
 		// Create terminal with fixed options
 		const terminalOptions: vscode.TerminalOptions = {
 			name: "Agentario",
-			iconPath: new vscode.ThemeIcon("cline-icon"),
+			iconPath: new vscode.ThemeIcon("rocket"),
 			env: {
+				AGENTARIO_ACTIVE: "true",
 				CLINE_ACTIVE: "true",
 			},
 		}

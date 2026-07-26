@@ -23,6 +23,11 @@ import {
 	estimateTokens,
 } from "./compaction-shared";
 
+// Agentario: cooldown для авто-компакции — предотвращает двойную компакцию.
+// После завершения компакции следующая авто-компакция не будет запускаться в течение COOLDOWN_MS.
+let lastCompactionCompletedAt = 0;
+const COMPACTION_COOLDOWN_MS = 60_000; // 60 секунд
+
 export interface ContextPipelinePrepareTurnInput {
 	agentId: string;
 	conversationId: string;
@@ -91,10 +96,14 @@ function resolveMaxInputTokens(input: {
 	modelMaxTokens?: number;
 	providerMaxInputTokens?: number;
 }): number {
-	const candidates: number[] = [];
+	// Agentario: если configMaxInputTokens задан (из резолвера или явной настройки),
+	// он является авторитетным источником — не ограничиваем его stale model.info.
+	// Ранее Math.min(resolver=32768, model.info=20000) давал 20000, хотя реальный
+	// контекст модели уже был 32к.
 	if (isPositiveFiniteNumber(input.configMaxInputTokens)) {
-		candidates.push(input.configMaxInputTokens);
+		return input.configMaxInputTokens;
 	}
+	const candidates: number[] = [];
 	if (isPositiveFiniteNumber(input.modelMaxInputTokens)) {
 		candidates.push(input.modelMaxInputTokens);
 	}
@@ -148,7 +157,6 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 			}),
 			estimateMessageTokens,
 			chunkSize: compaction?.chunkSize,
-			doubleSummarization: compaction?.doubleSummarization,
 			promptTemplateBefore: compaction?.promptTemplateBefore,
 			promptTemplateAfter: compaction?.promptTemplateAfter,
 			logger,
@@ -199,6 +207,9 @@ async function runBuiltinStrategyWithFallback(
 			"Agentic compaction returned no result; falling back to basic",
 			{ severity: "warn" },
 		);
+		options.statusCallback?.(
+			"Agentic суммаризация не удалась — fallback на basic (без чанков LLM)",
+		);
 	} catch (error) {
 		options.logger?.error?.(
 			"Agentic compaction failed; falling back to basic",
@@ -210,21 +221,27 @@ async function runBuiltinStrategyWithFallback(
 				{ severity: "warn" },
 			);
 		}
+		options.statusCallback?.(
+			"Agentic суммаризация упала с ошибкой — fallback на basic",
+		);
 	}
 
 	const basicResult = BUILTIN_COMPACTION_STRATEGIES.basic(options);
 	return basicResult instanceof Promise ? await basicResult : basicResult;
 }
 
-function resolveTriggerState(input: {
+async function resolveTriggerState(input: {
 	inputTokens: number;
 	maxInputTokens: number;
 	config: CoreCompactionConfig;
-}): { shouldCompact: boolean; triggerTokens: number; thresholdRatio: number } {
+}): Promise<{ shouldCompact: boolean; triggerTokens: number; thresholdRatio: number }> {
 	// Agentario: prefer dynamic resolver over static value — reads from settings on every check
-	const reserveTokensValue = typeof input.config.reserveTokensResolver === "function"
+	const reserveTokensRaw = typeof input.config.reserveTokensResolver === "function"
 		? input.config.reserveTokensResolver()
 		: input.config.reserveTokens;
+	const reserveTokensValue = reserveTokensRaw instanceof Promise
+		? await reserveTokensRaw
+		: reserveTokensRaw;
 
 	if (typeof reserveTokensValue === "number") {
 		const reserveTokens = Math.max(0, reserveTokensValue);
@@ -323,6 +340,58 @@ function resolveBasicTargetTokens(input: {
  * do not emit compaction telemetry. If we want coverage there too, the
  * plugin/hook pipelines must be instrumented separately.
  */
+
+function estimatePrepareTurnTokens(
+	context: ContextPipelinePrepareTurnInput,
+	estimateMessageTokens: EstimateMessageTokens,
+): {
+	chatTokens: number;
+	toolResultTokens: number;
+	systemPromptTokens: number;
+	toolTokens: number;
+	estimatedInputTokens: number;
+} {
+	const chatTokens = context.apiMessages.reduce(
+		(total: number, message) => total + estimateMessageTokens(message),
+		0,
+	);
+	let toolResultTokens = 0;
+	try {
+		toolResultTokens = context.apiMessages
+			.filter((m: { role?: string }) => m.role === "tool")
+			.reduce((sum: number, m: { content?: unknown }) => {
+				const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "");
+				return sum + estimateTokens(content.length);
+			}, 0);
+	} catch {
+		/* diagnostic only */
+	}
+	const systemPromptTokens = context.systemPrompt ? estimateTokens(context.systemPrompt.length) : 0;
+	const toolChars =
+		(context.tools as Array<{ name?: string; description?: string; inputSchema?: unknown }>)?.reduce(
+			(sum: number, t) => {
+				const nameLen = t.name?.length || 0;
+				const descLen = t.description?.length || 0;
+				let schemaLen = 0;
+				try {
+					schemaLen = t.inputSchema ? JSON.stringify(t.inputSchema).length : 0;
+				} catch {
+					/* ignore */
+				}
+				return sum + nameLen + descLen + schemaLen;
+			},
+			0,
+		) || 0;
+	const toolTokens = estimateTokens(toolChars);
+	return {
+		chatTokens,
+		toolResultTokens,
+		systemPromptTokens,
+		toolTokens,
+		estimatedInputTokens: chatTokens + systemPromptTokens + toolTokens,
+	};
+}
+
 export function createContextCompactionPrepareTurn(
 	config: Pick<
 		CoreSessionConfig,
@@ -359,55 +428,64 @@ export function createContextCompactionPrepareTurn(
 		: strategy;
 
 	return async (context) => {
-		// Agentario: считаем токены сообщений (chat) по символам
-		const chatTokens = context.apiMessages.reduce(
-			(total: number, message) => total + estimateMessageTokens(message),
-			0,
-		);
-		// Agentario: диагностическое логирование — сколько токенов занимают tool results
-		let toolResultTokens = 0;
-		try {
-			toolResultTokens = context.apiMessages
-				.filter((m: { role?: string }) => m.role === "tool")
-				.reduce((sum: number, m: { content?: unknown }) => {
-					const content = typeof m.content === "string" ? m.content : JSON.stringify(m.content ?? "");
-					return sum + estimateTokens(content.length);
-				}, 0);
-		} catch { /* diagnostic only — ignore malformed messages */ }
+		const {
+			chatTokens,
+			toolResultTokens,
+			systemPromptTokens,
+			toolTokens,
+			estimatedInputTokens,
+		} = estimatePrepareTurnTokens(context, estimateMessageTokens);
 		if (toolResultTokens > 0 && chatTokens > 0) {
 			config.logger?.log?.(`Context compaction diagnostics: toolResults=${toolResultTokens} tokens (${Math.round(toolResultTokens / chatTokens * 100)}% of chat)`, { severity: "info" });
 		}
-		// Считаем токены системного промпта и инструментов
-		const systemPromptTokens = context.systemPrompt ? estimateTokens(context.systemPrompt.length) : 0;
-		const toolChars = (context.tools as Array<{ name?: string; description?: string; inputSchema?: unknown }>)?.reduce((sum: number, t) => {
-			const nameLen = t.name?.length || 0;
-			const descLen = t.description?.length || 0;
-			let schemaLen = 0;
-			try { schemaLen = t.inputSchema ? JSON.stringify(t.inputSchema).length : 0; } catch { /* ignore */ }
-			return sum + nameLen + descLen + schemaLen;
-		}, 0) || 0;
-		const toolTokens = estimateTokens(toolChars);
-		// Оценка по символам (fallback)
-		const estimatedInputTokens = chatTokens + systemPromptTokens + toolTokens;
-		// Agentario: используем МАКСИМУМ из model-reported и estimate.
-		// lastInputTokens — из предыдущего API-запроса, не включает НОВЫЕ tool results, добавленные после.
-		// estimatedInputTokens — оценка по символам, включает tool results.
-		// Берём max, чтобы не занизить размер контекста (пропуск компакции).
-		const inputTokens = Math.max(
-			(typeof context.lastInputTokens === "number" && Number.isFinite(context.lastInputTokens) && context.lastInputTokens > 0) ? context.lastInputTokens : 0,
-			estimatedInputTokens,
-		);
-		// Agentario: вызываем maxInputTokensResolver если есть (динамическое значение из настроек)
-		const resolvedMaxInputTokens = typeof userCompaction?.maxInputTokensResolver === "function"
+		// Agentario: вычисляем maxInputTokens заранее для проверки lastInputTokens.
+		const resolvedMaxInputTokensRawEarly = typeof userCompaction?.maxInputTokensResolver === "function"
 			? userCompaction.maxInputTokensResolver()
 			: undefined;
-		const maxInputTokens = resolveMaxInputTokens({
-			configMaxInputTokens: resolvedMaxInputTokens ?? userCompaction?.maxInputTokens,
+		const resolvedMaxInputTokensEarly = resolvedMaxInputTokensRawEarly instanceof Promise
+			? await resolvedMaxInputTokensRawEarly
+			: resolvedMaxInputTokensRawEarly;
+		const maxInputTokensEarly = resolveMaxInputTokens({
+			configMaxInputTokens: resolvedMaxInputTokensEarly ?? userCompaction?.maxInputTokens,
 			modelMaxInputTokens: context.model.info?.maxInputTokens,
 			contextWindow: context.model.info?.contextWindow,
 			modelMaxTokens: context.model.info?.maxTokens,
 			providerMaxInputTokens: providerConfig.maxInputTokens,
 		});
+		// Agentario: используем МАКСИМУМ из model-reported и estimate.
+		// lastInputTokens — из предыдущего API-запроса, не включает НОВЫЕ tool results, добавленные после.
+		// estimatedInputTokens — оценка по символам, включает tool results.
+		// Берём max, чтобы не занизить размер контекста (пропуск компакции).
+		//
+		// ВАЖНО: некоторые провайдеры (LM Studio, Ollama) сообщают usage.prompt_tokens = allocated
+		// context window (32k), а не реальные использованные токены. Если lastInputTokens >= 95%
+		// maxInputTokens — считаем что это "allocated context", а не реальные токены.
+		// В этом случае используем estimatedInputTokens.
+		const rawLastInputTokens = (typeof context.lastInputTokens === "number" && Number.isFinite(context.lastInputTokens) && context.lastInputTokens > 0) ? context.lastInputTokens : 0;
+		// LM Studio sometimes reports allocated window (~32k) or host may pass run-cumulative
+		// sums. Distrust values near the window OR far above the char-estimate of this turn.
+		const isNearWindow = maxInputTokensEarly > 0 && rawLastInputTokens >= maxInputTokensEarly * 0.95;
+		const isFarAboveEstimate =
+			estimatedInputTokens > 0 &&
+			rawLastInputTokens > Math.max(estimatedInputTokens * 1.35, estimatedInputTokens + 3_000);
+		const reliableLastInputTokens =
+			isNearWindow || isFarAboveEstimate ? 0 : rawLastInputTokens;
+		if (rawLastInputTokens > 0 && reliableLastInputTokens === 0) {
+			config.logger?.log?.(
+				`Context compaction: lastInputTokens=${rawLastInputTokens} unreliable (nearWindow=${isNearWindow}, farAboveEstimate=${isFarAboveEstimate}, estimated=${estimatedInputTokens}). Using estimatedInputTokens.`,
+				{ severity: "info" },
+			);
+		}
+		// Prefer reliable per-request usage; allow modest estimate growth for new tool results.
+		const inputTokens =
+			reliableLastInputTokens > 0
+				? Math.max(
+						reliableLastInputTokens,
+						Math.min(estimatedInputTokens, Math.floor(reliableLastInputTokens * 1.25)),
+					)
+				: estimatedInputTokens;
+		// Используем уже вычисленный maxInputTokensEarly (без дублирования вызова resolver).
+		const maxInputTokens = maxInputTokensEarly;
 		// Agentario: cap inputTokens на maxInputTokens.
 		// lastInputTokens может быть от суммаризатора (30k+) и превышать реальный контекст.
 		// Модель не может обработать больше токенов чем контекст-окно.
@@ -416,7 +494,7 @@ export function createContextCompactionPrepareTurn(
 			config.logger?.log?.(`Context compaction: capped inputTokens from ${inputTokens} to ${cappedInputTokens} (maxInputTokens=${maxInputTokens})`, { severity: "info" });
 		}
 		config.logger?.log?.(`Context compaction: mode=${mode}, strategy=${strategy}, inputTokens=${cappedInputTokens}, estimatedInputTokens=${estimatedInputTokens}, lastInputTokens=${context.lastInputTokens ?? "n/a"}, maxInputTokens=${maxInputTokens}, chat=${chatTokens}, sys=${systemPromptTokens}, tools=${toolTokens}, messages=${context.messages.length}`, { severity: "info" });
-		const triggerState = resolveTriggerState({
+		const triggerState = await resolveTriggerState({
 			inputTokens: cappedInputTokens,
 			maxInputTokens,
 			config: {
@@ -430,6 +508,14 @@ export function createContextCompactionPrepareTurn(
 		if (mode === "auto" && !triggerState.shouldCompact) {
 			return undefined;
 		}
+		// Agentario: cooldown — не запускаем авто-компакцию если предыдущая завершилась менее 60с назад.
+		if (mode === "auto" && lastCompactionCompletedAt > 0) {
+			const elapsed = Date.now() - lastCompactionCompletedAt
+			if (elapsed < COMPACTION_COOLDOWN_MS) {
+				config.logger?.log?.(`Context compaction skipped: cooldown active (${Math.round((COMPACTION_COOLDOWN_MS - elapsed) / 1000)}s remaining). Last compaction was ${Math.round(elapsed / 1000)}s ago.`, { severity: "info" });
+				return undefined;
+			}
+		}
 		// Agentario: минимальная полезная threshold — не компактировать если chat слишком мал.
 		// После первой компакции: pinned (~9k) + маленький chat (~400) = ~9.4k total.
 		// Если chat < 5% контекст-окна (min 500) — компакция бессмысленна.
@@ -437,6 +523,16 @@ export function createContextCompactionPrepareTurn(
 		const MIN_USEFUL_CHAT_TOKENS = Math.max(500, Math.floor(maxInputTokens * 0.05));
 		if (mode === "auto" && chatTokens < MIN_USEFUL_CHAT_TOKENS) {
 			config.logger?.log?.(`Context compaction skipped: chat too small (${chatTokens} tokens < ${MIN_USEFUL_CHAT_TOKENS} minimum). Nothing useful to compact.`, { severity: "info" });
+			return undefined;
+		}
+		// Pinned system/tools/MCP dominate small windows; don't compact when chat is still
+		// a small slice of the window (MCP schemas aren't in the summarizer payload anyway).
+		const MIN_CHAT_SHARE = Math.max(MIN_USEFUL_CHAT_TOKENS, Math.floor(maxInputTokens * 0.12));
+		if (mode === "auto" && chatTokens < MIN_CHAT_SHARE) {
+			config.logger?.log?.(
+				`Context compaction skipped: chat=${chatTokens} < ${MIN_CHAT_SHARE} (12% window). Pinned tools/MCP aren't folded by summarizer.`,
+				{ severity: "info" },
+			);
 			return undefined;
 		}
 		const targetState =
@@ -474,8 +570,8 @@ export function createContextCompactionPrepareTurn(
 	const statusReason =
 		mode === "manual" ? "manual_compaction" : "auto_compaction";
 	// Agentario: эмитим статистику контекста ПЕРЕД "auto-compacting"
-	// Для отображения используем estimatedInputTokens (реальная оценка), а не cappedInputTokens
-	const displayInputTokens = estimatedInputTokens;
+	// displayInputTokens = cappedInputTokens (estimate если lastInputTokens подозрительно высок, иначе max(model, estimate))
+	const displayInputTokens = cappedInputTokens;
 	const contextPercent = maxInputTokens > 0 ? Math.round((displayInputTokens / maxInputTokens) * 100) : 0;
 	const statsMessage = `📊 Контекст: ${displayInputTokens.toLocaleString()} / ${maxInputTokens.toLocaleString()} токенов (${contextPercent}%)`;
 	context.emitStatusNotice?.(statsMessage, {
@@ -598,6 +694,11 @@ export function createContextCompactionPrepareTurn(
 				modelId: config.modelId,
 				...telemetryIdentity,
 			});
+		}
+
+		// Agentario: обновляем timestamp cooldown после успешной компакции
+		if (result) {
+			lastCompactionCompletedAt = Date.now();
 		}
 
 		return result;

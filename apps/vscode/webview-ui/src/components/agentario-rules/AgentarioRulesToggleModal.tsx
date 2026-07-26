@@ -561,7 +561,7 @@ const AgentarioRulesToggleModal: React.FC = () => {
 										{isWindows ? t("customize.hooksWindowsExist") : t("customize.hooksUnixToggle")}{" "}
 										<VSCodeLink
 											className="text-xs"
-											href="https://docs.cline.bot/features/hooks"
+											href="https://github.com/kabzon93region/Agentario"
 											style={{ display: "inline", fontSize: "inherit" }}>
 											Docs
 										</VSCodeLink>

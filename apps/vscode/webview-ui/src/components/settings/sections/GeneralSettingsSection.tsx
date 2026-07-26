@@ -47,14 +47,14 @@ const GeneralSettingsSection = ({ renderSectionHeader }: GeneralSettingsSectionP
 						{t("general.telemetryHintBefore")}{" "}
 						<VSCodeLink
 							className="text-inherit"
-							href="https://docs.cline.bot/more-info/telemetry"
+							href="https://github.com/kabzon93region/Agentario"
 							style={{ fontSize: "inherit", textDecoration: "underline" }}>
 							{t("general.telemetryOverview")}
 						</VSCodeLink>{" "}
 						{t("general.and")}{" "}
 						<VSCodeLink
 							className="text-inherit"
-							href="https://cline.bot/privacy"
+							href="https://github.com/kabzon93region/Agentario"
 							style={{ fontSize: "inherit", textDecoration: "underline" }}>
 							{t("general.privacyPolicy")}
 						</VSCodeLink>{" "}

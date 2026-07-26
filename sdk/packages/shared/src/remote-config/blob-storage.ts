@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import { isRecord } from "../parse/object";
 import { basename } from "node:path";
 import { AwsClient } from "aws4fetch";
 import type {
@@ -323,10 +324,6 @@ export function createRemoteConfigBlobStorageAdapter(
 		return createAzureAdapter(settings);
 	}
 	return undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function readRemoteConfigSessionBlobUploadMetadata(

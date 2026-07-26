@@ -351,6 +351,12 @@ export class SessionRuntime {
 		inputTokens: 0,
 		outputTokens: 0,
 	};
+	/**
+	 * Per-iteration input tokens from the last usage-updated event (delta),
+	 * NOT the run-cumulative sum. Compaction must use this — cumulative sums
+	 * falsely trigger auto-compact (e.g. 26k sum vs ~10k last request).
+	 */
+	private lastIterationInputTokens = 0;
 	/** Tool-start timestamps for `ToolCallRecord.durationMs`. */
 	private toolStartedAt = new Map<string, Date>();
 	/** Tool-call input snapshot for `ToolCallRecord.input`. */
@@ -735,6 +741,7 @@ export class SessionRuntime {
 		this.eventAdapter.reset();
 		this.currentRunToolCalls = [];
 		this.currentRunUsage = { inputTokens: 0, outputTokens: 0 };
+		this.lastIterationInputTokens = 0;
 		this.toolStartedAt.clear();
 		this.toolInputs.clear();
 		this.currentTurnSuccessfulTools = 0;
@@ -995,9 +1002,9 @@ export class SessionRuntime {
 							info: modelInfo,
 						},
 						emitStatusNotice: context.emitStatusNotice,
-						// Agentario: передаём реальные inputTokens от модели
-						lastInputTokens: this.currentRunUsage.inputTokens > 0
-							? this.currentRunUsage.inputTokens
+						// Per-request tokens for compaction (NOT run-cumulative usage).
+						lastInputTokens: this.lastIterationInputTokens > 0
+							? this.lastIterationInputTokens
 							: undefined,
 					})
 				: undefined;
@@ -1165,8 +1172,12 @@ export class SessionRuntime {
 				break;
 			}
 			case "usage-updated": {
+				const prevInput = this.currentRunUsage.inputTokens;
+				const nextInput = event.usage.inputTokens;
+				// usage-updated carries run-cumulative totals; compaction needs the delta.
+				this.lastIterationInputTokens = Math.max(0, nextInput - prevInput);
 				this.currentRunUsage = {
-					inputTokens: event.usage.inputTokens,
+					inputTokens: nextInput,
 					outputTokens: event.usage.outputTokens,
 					cacheReadTokens:
 						event.usage.cacheReadTokens > 0

@@ -8,10 +8,7 @@ import { cn } from "@/lib/utils"
 import type { ChatState, MessageHandlers, ScrollBehavior } from "../../types/chatTypes"
 import { isToolGroup } from "../../utils/messageUtils"
 import { createMessageRenderer } from "../messages/MessageRenderer"
-
-// Sentinel ts for the synthetic "Thinking..." placeholder row. Not a real message; ignored when
-// deriving scroll triggers from the tail of the rendered list.
-const WAITING_ROW_TS = Number.MIN_SAFE_INTEGER
+import { WAITING_ROW_TS } from "@/components/chat/waiting-row"
 
 interface MessagesAreaProps {
 	task: AgentarioMessage
@@ -77,8 +74,8 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 		return Array.isArray(lastRow) ? lastRow.at(-1) : lastRow
 	}, [lastVisibleRow])
 
-	// Show "Thinking..." until real content starts streaming.
-	// This is the sole early loading indicator - RequestStartRow does NOT duplicate it.
+	// Show ephemeral wait status until real content starts streaming.
+	// UI-only (WAITING_ROW_TS) — never persisted to chat history.
 	// Covers: pre-api_req_started (backend processing) AND post-api_req_started (waiting for model).
 	// Hides once reasoning, tools, text, or any other content message appears.
 	const isWaitingForResponse = useMemo(() => {
@@ -95,14 +92,19 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 			if (turnState.phase !== "streaming") {
 				return false
 			}
-			// phase === streaming: show Thinking until a visible content row is streaming.
+			// phase === streaming: show wait status until content starts.
+			// Tool groups already communicate progress — do not stack Thinking on top.
+			if (lastVisibleRow && isToolGroup(lastVisibleRow)) {
+				return false
+			}
 			if (groupedMessages.length === 0 || !lastVisibleMessage) {
 				return true
 			}
-			if (lastVisibleRow && isToolGroup(lastVisibleRow)) {
-				return true
+			if (lastVisibleMessage.partial === true) {
+				return false
 			}
-			return lastVisibleMessage.partial !== true
+			// Waiting for next model chunk after a completed row (e.g. finished tool ask).
+			return true
 		}
 
 		// LEGACY PATH (no TurnState — classic/older state): infer from the message tail.
@@ -138,9 +140,9 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 			return true
 		}
 
-		// Always show when the last rendered row is a toolgroup.
+		// Tool group already shows progress — do not stack wait status on top.
 		if (lastVisibleRow && isToolGroup(lastVisibleRow)) {
-			return true
+			return false
 		}
 
 		// User-requested behavior:
@@ -190,7 +192,8 @@ export const MessagesArea: React.FC<MessagesAreaProps> = ({
 			type: "say",
 			say: "reasoning",
 			partial: true,
-			text: "",
+			// Marker text for ChatRow; not shown as model thoughts.
+			text: "__agentario_waiting_status__",
 		}
 		return [...groupedMessages, waitingRow]
 	}, [groupedMessages, showThinkingLoaderRow])

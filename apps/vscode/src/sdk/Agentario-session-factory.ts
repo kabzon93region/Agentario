@@ -29,6 +29,7 @@ import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
 import { resolveAgentToolTimeoutMs } from "@/shared/agent-tool-timeout"
 import {
 	AGENTARIO_LOCAL_TOOLS_HINT,
+	applyLocalModelToolDiscipline,
 	AGENTARIO_PLAN_MODE_INSTRUCTIONS_RU,
 	loadAgentarioSystemPromptOverlay,
 } from "@/shared/agentario-prompt"
@@ -84,10 +85,10 @@ const AGENT_MODE_INSTRUCTIONS = `# Agent Mode (Autonomous)
 Fully autonomous agent. Plan → execute → verify — no confirmation needed per step.
 
 ## Rules
-- Gather only needed context (no fixed checklist). Prefer read_file over run_command for file contents.
+- Gather only needed context (no fixed checklist). Prefer read_files / semantic_search over run_commands for file discovery and contents.
 - MCP memory (@modelcontextprotocol/server-memory) is SHARED across projects — verify against actual files, don't write project facts there.
-- **Anti-loop:** if same error twice → STOP, change approach. Never repeat failed tool call.
-- **Windows:** never \`&&\` (use \`;\`), use PowerShell cmdlets (Get-ChildItem, Select-String), not Linux commands.
+- **Anti-loop:** if same error twice → STOP, change approach. Never repeat failed tool call or the same semantic_search query.
+- **Windows:** never \`&&\` (use \`;\`), use PowerShell for git/build/test only — never Get-ChildItem/ls/dir or Get-Content for project discovery/reads.
 
 ## Protocol
 1. Analyze → 2. Decompose into steps → 3. Assess risks → 4. Execute → 5. Verify → 6. Summarize
@@ -537,6 +538,39 @@ export function resolveVertexProviderConfig(config: ApiConfiguration): Pick<Prov
 	}
 }
 
+/**
+ * Agentario: запросить live context window из LM Studio API (/v1/models).
+ * Возвращает loaded_context_length текущей модели или undefined если API недоступно.
+ * Используется при создании сессии, чтобы не зависеть от stale persisted lmStudioMaxTokens.
+ */
+async function fetchLmStudioContextWindow(apiConfig: ApiConfiguration): Promise<number | undefined> {
+	const baseUrl = apiConfig.lmStudioBaseUrl?.trim() || "http://127.0.0.1:1234"
+	// Agentario: используем /api/v0/models вместо /v1/models —
+	// OpenAI-compatible endpoint не содержит loaded_context_length/max_context_length,
+	// а native LM Studio API содержит.
+	const url = `${baseUrl.replace(/\/+$/, "")}/api/v0/models`
+	try {
+		const controller = new AbortController()
+		const timeout = setTimeout(() => controller.abort(), 3000)
+		const response = await fetch(url, { signal: controller.signal })
+		clearTimeout(timeout)
+		if (!response.ok) return undefined
+		const data = await response.json() as { data?: Array<{ id: string; loaded_context_length?: number; max_context_length?: number; state?: string }> }
+		const models = data.data
+		if (!Array.isArray(models) || models.length === 0) return undefined
+		// Prefer loaded model's context window
+		const loaded = models.find((m) => m.state === "loaded" && m.loaded_context_length && m.loaded_context_length > 0)
+		if (loaded?.loaded_context_length) return loaded.loaded_context_length
+		// Fallback to any model with context info
+		const withContext = models.find((m) => m.loaded_context_length && m.loaded_context_length > 0)
+		if (withContext?.loaded_context_length) return withContext.loaded_context_length
+		const first = models.find((m) => m.max_context_length && m.max_context_length > 0)
+		return first?.max_context_length
+	} catch {
+		return undefined
+	}
+}
+
 export function resolveBaseUrl(providerId: string, config: ApiConfiguration): string | undefined {
 	const baseUrlMap: Record<string, keyof ApiConfiguration> = {
 		anthropic: "anthropicBaseUrl",
@@ -753,6 +787,10 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	if (mode === "agent") {
 		systemPrompt = systemPrompt ? `${systemPrompt}\n\n${AGENT_MODE_INSTRUCTIONS}` : AGENT_MODE_INSTRUCTIONS
 	}
+	if (LOCAL_ONLY_MODEL_PROVIDERS.has(providerId) || LOCAL_ONLY_MODEL_PROVIDERS.has(toSdkProviderId(providerId))) {
+		systemPrompt = applyLocalModelToolDiscipline(systemPrompt)
+		Logger.log("[SessionFactory] Applied local model tool discipline (single tool call per turn)")
+	}
 
 	const stateManager = StateManager.get()
 	const globalUseAutoCondense = stateManager.getGlobalSettingsKey("useAutoCondense") ?? true
@@ -768,10 +806,19 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	// ApiConfiguration — это то же значение, что UI показывает в настройках
 	// провайдера и в полоске контекста чата. Передаём в компакцию напрямую,
 	// чтобы обойти проблему с host-overrides (применяется только в UI).
+	// Для LM Studio: сначала пробуем получить live значение из API,
+	// затем fallback на persisted lmStudioMaxTokens.
 	let providerContextWindow: number | undefined
-	if (providerId === "lmstudio" && apiConfig?.lmStudioMaxTokens) {
-		const parsed = Number.parseInt(String(apiConfig.lmStudioMaxTokens).trim(), 10)
-		if (Number.isFinite(parsed) && parsed > 0) providerContextWindow = parsed
+	if (providerId === "lmstudio") {
+		providerContextWindow = await fetchLmStudioContextWindow(apiConfig)
+		if (providerContextWindow && providerContextWindow > 0) {
+			// Persist the live value so the resolver and UI read the current context window
+			stateManager.setGlobalState("lmStudioMaxTokens", String(providerContextWindow))
+		}
+		if (!providerContextWindow && apiConfig?.lmStudioMaxTokens) {
+			const parsed = Number.parseInt(String(apiConfig.lmStudioMaxTokens).trim(), 10)
+			if (Number.isFinite(parsed) && parsed > 0) providerContextWindow = parsed
+		}
 	} else if (providerId === "ollama" && apiConfig?.ollamaApiOptionsCtxNum) {
 		const parsed = Number.parseInt(String(apiConfig.ollamaApiOptionsCtxNum).trim(), 10)
 		if (Number.isFinite(parsed) && parsed > 0) providerContextWindow = parsed
@@ -821,6 +868,18 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		;(providerConfig as Record<string, unknown>).knownModels = knownModels
 	}
 
+	const modelAdvertisesReasoning = Boolean(
+		knownModels?.[modelId]?.capabilities?.includes("reasoning"),
+	)
+	const effectiveReasoningConfig = modelAdvertisesReasoning
+		? reasoningConfig
+		: { thinking: false as const }
+	if (!modelAdvertisesReasoning && (reasoningConfig.thinking || reasoningConfig.reasoningEffort)) {
+		Logger.log(
+			`[SessionFactory] Stripping reasoning for model without reasoning capability: ${providerId}/${modelId}`,
+		)
+	}
+
 	const config: CoreSessionConfig = {
 		providerId: sdkProviderId,
 		modelId,
@@ -840,11 +899,15 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		...(compactionConfig ? { compaction: compactionConfig } : {}),
 		disableMcpSettingsTools: true,
 		mode: mode === "plan" ? "plan" : "act",
-		...reasoningConfig,
+		...effectiveReasoningConfig,
 		...(maxTokensPerTurn !== undefined ? { maxTokensPerTurn } : {}),
 		bashTimeoutMs: toolTimeoutMs,
 		searchTimeoutMs: toolTimeoutMs,
 		maxIterations: undefined,
+		execution: {
+			// Local models often alternate two tools with the same intent; detect early.
+			loopDetection: { softThreshold: 2, hardThreshold: 3 },
+		},
 		logger: sdkLogger,
 		extensionContext: {
 			user: distinctId ? { distinctId } : undefined,

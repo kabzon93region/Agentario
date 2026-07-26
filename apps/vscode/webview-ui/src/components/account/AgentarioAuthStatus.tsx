@@ -45,7 +45,7 @@ export const AgentarioAuthStatus = ({ message }: AgentarioAuthStatusProps) => {
 			{authCode ? (
 				<div className="mt-2 flex items-center gap-2">
 					<div className="font-mono text-2xl font-semibold tracking-wider">{authCode}</div>
-					<Button aria-label="Copy Cline sign-in code" onClick={handleCopy} size="sm" variant="secondary">
+					<Button aria-label="Copy Agentario sign-in code" onClick={handleCopy} size="sm" variant="secondary">
 						{didCopy ? "Copied" : "Copy"}
 					</Button>
 				</div>

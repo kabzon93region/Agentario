@@ -28,18 +28,17 @@ function applyDynamicProviderContextWindow(
 	providerId: ProviderId,
 	modelInfo: ModelInfo,
 	apiConfiguration?: Pick<ApiConfiguration, "lmStudioMaxTokens" | "ollamaApiOptionsCtxNum">,
+	liveContextWindow?: number,
 ): ModelInfo {
-	if (!apiConfiguration) {
-		return modelInfo
-	}
 	if (providerId === "lmstudio") {
-		const contextWindow = parsePositiveInt(apiConfiguration.lmStudioMaxTokens)
+		// Prefer live value from API, fallback to persisted lmStudioMaxTokens
+		const contextWindow = liveContextWindow ?? parsePositiveInt(apiConfiguration?.lmStudioMaxTokens)
 		if (contextWindow) {
 			return { ...modelInfo, contextWindow }
 		}
 	}
 	if (providerId === "ollama") {
-		const contextWindow = parsePositiveInt(apiConfiguration.ollamaApiOptionsCtxNum)
+		const contextWindow = parsePositiveInt(apiConfiguration?.ollamaApiOptionsCtxNum)
 		if (contextWindow) {
 			return { ...modelInfo, contextWindow }
 		}
@@ -52,10 +51,11 @@ export function applyHostModelInfoOverrides(
 	modelId: string,
 	modelInfo: ModelInfo,
 	apiConfiguration?: Pick<ApiConfiguration, "lmStudioMaxTokens" | "ollamaApiOptionsCtxNum">,
+	liveContextWindow?: number,
 ): ModelInfo {
 	let result = modelInfo
 	if (providerId === "vertex" && vertexModelSupportsGlobalEndpoint(providerId, modelId)) {
 		result = { ...result, supportsGlobalEndpoint: true }
 	}
-	return applyDynamicProviderContextWindow(providerId, result, apiConfiguration)
+	return applyDynamicProviderContextWindow(providerId, result, apiConfiguration, liveContextWindow)
 }

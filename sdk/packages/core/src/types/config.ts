@@ -92,11 +92,11 @@ export interface CoreCompactionConfig {
 	thresholdRatio?: number;
 	reserveTokens?: number;
 	/** Agentario: dynamic resolver — called on every compaction check to get the current reserveTokens value from settings. */
-	reserveTokensResolver?: () => number;
+	reserveTokensResolver?: () => number | Promise<number>;
 	preserveRecentTokens?: number;
 	maxInputTokens?: number;
 	/** Agentario: dynamic resolver — called on every compaction check to get the current maxInputTokens value from settings. */
-	maxInputTokensResolver?: () => number | undefined;
+	maxInputTokensResolver?: () => number | undefined | Promise<number | undefined>;
 	summarizer?: CoreCompactionSummarizerConfig;
 	/** Chunk size in tokens for map-reduce summarization (0 = unlimited/single pass). */
 	chunkSize?: number;

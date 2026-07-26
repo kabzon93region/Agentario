@@ -66,7 +66,16 @@ function createAttemptCompletionTool(options: { cwd?: string } = {}): AgentTool 
 		name: "attempt_completion",
 		description:
 			"Once you've completed the user's task, use this tool to present the result to the user. " +
-			"The user may provide feedback if they are not satisfied, which you can use to make improvements and try again.",
+			"result must summarize what you actually did or found — NEVER paste the user's request back. " +
+			"Do NOT call this after reading only one file when the task asks to review docs/history/rules — explore first. " +
+			"Omit command unless you need to run a showcase shell command (do not send null).",
+		// Must complete the run: without this the UI shows "Task Completed" while the agent
+		// keeps looping (SYSTEM still demands submit_and_exit) and small models re-call this tool.
+		lifecycle: {
+			completesRun: true,
+		},
+		retryable: false,
+		maxRetries: 0,
 		inputSchema: {
 			type: "object",
 			properties: {

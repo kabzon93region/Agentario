@@ -83,4 +83,28 @@ describe("model tool routing", () => {
 		expect(config.enableApplyPatch).toBe(true);
 		expect(config.enableEditor).toBe(false);
 	});
+
+	it("trims optional tools for LM Studio", () => {
+		const config = resolveToolRoutingConfig(
+			"lmstudio",
+			"some-large-model-70b",
+			"act",
+			DEFAULT_MODEL_TOOL_ROUTING_RULES,
+		);
+		expect(config.enableWebFetch).toBe(false);
+		expect(config.enableSkills).toBe(false);
+		expect(config.enableAskQuestion).toBe(false);
+		expect(config.enableSemanticSearch).toBeUndefined();
+	});
+
+	it("disables semantic_search for small local models", () => {
+		const config = resolveToolRoutingConfig(
+			"lmstudio",
+			"llama-3.2-8b-instruct",
+			"act",
+			DEFAULT_MODEL_TOOL_ROUTING_RULES,
+		);
+		expect(config.enableSemanticSearch).toBeUndefined();
+		expect(config.enableWebFetch).toBe(false);
+	});
 });

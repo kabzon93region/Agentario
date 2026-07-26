@@ -12,21 +12,38 @@ import { BannerService } from "@/services/banner/BannerService"
 import { featureFlagsService } from "@/services/feature-flags"
 import { getDistinctId } from "@/services/logging/distinctId"
 import { getLatestAnnouncementId } from "@/utils/announcements"
+import type { StateManager } from "@/core/storage/StateManager"
 import { getAgentarioOnboardingModels } from "../models/getAgentarioOnboardingModels"
 
 /**
- * Builds the ExtensionState object to push to the webview.
- * Extracted from the classic Controller.getStateToPostToWebview().
+ * Minimal controller surface needed to build ExtensionState for the webview.
  */
-export async function getStateToPostToWebview(controller: {
-	task?: any
-	stateManager: any
-	mcpHub?: any
+export type StatePostController = {
+	task?: {
+		taskId?: string
+		messageStateHandler?: {
+			getagentarioMessages?: () => unknown[]
+			getClineMessages?: () => unknown[]
+		}
+		api?: {
+			getModel?: () => { id?: string; info?: { contextWindow?: number } }
+		}
+	}
+	stateManager: StateManager
+	mcpHub?: { getServers?: () => unknown[] }
 	backgroundCommandRunning?: boolean
 	backgroundCommandTaskId?: string
-	workspaceManager?: any
+	workspaceManager?: {
+		getRoots?: () => unknown[]
+		getPrimaryIndex?: () => number
+	}
 	checkpointRestoreInput?: ExtensionState["checkpointRestoreInput"]
-}): Promise<ExtensionState> {
+}
+
+/**
+ * Builds the ExtensionState object to push to the webview.
+ */
+export async function getStateToPostToWebview(controller: StatePostController): Promise<ExtensionState> {
 	const stateManager = controller.stateManager
 
 	// Get API configuration from cache for immediate access
@@ -87,6 +104,16 @@ export async function getStateToPostToWebview(controller: {
 	const dismissedBanners = stateManager.getGlobalStateKey("dismissedBanners")
 	const showFeatureTips = stateManager.getGlobalSettingsKey("showFeatureTips")
 
+	// Agentario: Context Protection — Tier 1/2/3
+	const smartChunkingEnabled = stateManager.getGlobalSettingsKey("smartChunkingEnabled")
+	const showFileOutline = stateManager.getGlobalSettingsKey("showFileOutline")
+	const maxOutlineEntries = stateManager.getGlobalSettingsKey("maxOutlineEntries")
+	const smartTruncationEnabled = stateManager.getGlobalSettingsKey("smartTruncationEnabled")
+	const smartTruncationThreshold = stateManager.getGlobalSettingsKey("smartTruncationThreshold")
+	const smartTruncationHead = stateManager.getGlobalSettingsKey("smartTruncationHead")
+	const smartTruncationTail = stateManager.getGlobalSettingsKey("smartTruncationTail")
+	const astNavigatorEnabled = stateManager.getGlobalSettingsKey("astNavigatorEnabled")
+
 	const localAgentarioRulesToggles = stateManager.getWorkspaceStateKey("localAgentarioRulesToggles")
 	const localWindsurfRulesToggles = stateManager.getWorkspaceStateKey("localWindsurfRulesToggles")
 	const localCursorRulesToggles = stateManager.getWorkspaceStateKey("localCursorRulesToggles")
@@ -94,13 +121,13 @@ export async function getStateToPostToWebview(controller: {
 	const workflowToggles = stateManager.getWorkspaceStateKey("workflowToggles")
 
 	const currentTaskItem = controller.task?.taskId
-		? (taskHistory || []).find((item: any) => item.id === controller.task?.taskId)
+		? (taskHistory || []).find((item: { id?: string; ts?: number; [key: string]: unknown }) => item.id === controller.task?.taskId)
 		: undefined
 	const agentarioMessages = [...(controller.task?.messageStateHandler?.getagentarioMessages?.() || [])]
 	const checkpointRestoreInput = controller.checkpointRestoreInput
 
 	const processedTaskHistory = (taskHistory || [])
-		.filter((item: any) => item.ts && item.task)
+		.filter((item: { id?: string; ts?: number; [key: string]: unknown }) => item.ts && item.task)
 		.sort((a: any, b: any) => b.ts - a.ts)
 		.slice(0, 100)
 
@@ -209,6 +236,14 @@ export async function getStateToPostToWebview(controller: {
 		backgroundEditEnabled: stateManager.getGlobalSettingsKey("backgroundEditEnabled"),
 		optOutOfRemoteConfig: stateManager.getGlobalSettingsKey("optOutOfRemoteConfig"),
 		showFeatureTips,
+		smartChunkingEnabled,
+		showFileOutline,
+		maxOutlineEntries,
+		smartTruncationEnabled,
+		smartTruncationThreshold,
+		smartTruncationHead,
+		smartTruncationTail,
+		astNavigatorEnabled,
 		banners,
 		welcomeBanners,
 		openAiCodexIsAuthenticated,

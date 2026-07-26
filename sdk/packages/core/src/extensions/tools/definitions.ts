@@ -26,6 +26,7 @@ import {
 	formatRunCommandQueryPreview,
 	getEditorSizeError,
 	getReadFileRangeError,
+	getShellDiscoveryOrReadBypassError,
 	normalizeRunCommandsInput,
 	TimeoutError,
 	withTimeout,
@@ -40,6 +41,7 @@ import {
 	EditFileInputSchema,
 	type FetchWebContentInput,
 	FetchWebContentInputSchema,
+	FetchWebContentInputUnionSchema,
 	type ReadFileRequest,
 	type ReadFilesInput,
 	ReadFilesInputSchema,
@@ -48,6 +50,7 @@ import {
 	type SearchCodebaseInput,
 	SearchCodebaseInputSchema,
 	SearchCodebaseUnionInputSchema,
+	SemanticSearchInputSchema,
 	type SkillsInput,
 	type StructuredCommandInput,
 	SkillsInputSchema,
@@ -189,6 +192,15 @@ async function executeShellCommands(
 		commands.map(async (command): Promise<ToolOperationResult> => {
 			const startedAt = Date.now();
 			const query = formatRunCommandQueryPreview(command);
+			const bypassError = getShellDiscoveryOrReadBypassError(command);
+			if (bypassError) {
+				return {
+					query,
+					result: "",
+					error: bypassError,
+					success: false,
+				};
+			}
 			try {
 				const output = await withTimeout(
 					executor(command, cwd, context),
@@ -247,7 +259,8 @@ export function createReadFilesTool(
 	return createTool<ReadFilesInput, ToolOperationResult[]>({
 		name: "read_files",
 		description:
-			"Read file content. IMPORTANT: Always use start_line/end_line to read only needed lines. " +
+			"Read file content. To open a known file use this tool — never search_codebase with \"path:1-EOF\". " +
+			"IMPORTANT: Always use start_line/end_line to read only needed lines. " +
 			"For large files (>500 lines), read in chunks of 200 lines. Use semantic_search first to find relevant lines. " +
 			"When you already know multiple files you need, read them together in one call, and call this tool in the same response as other independent tool calls. " +
 			`Each read returns at most ${MAX_READ_LINES} lines / ~${Math.round(MAX_READ_OUTPUT_CHARS / 1024)}k characters; longer files report their total line count, page through them with start_line/end_line. ` +
@@ -291,6 +304,18 @@ export function createReadFilesTool(
 
 			return Promise.all(
 				requests.map(async (request): Promise<ToolOperationResult> => {
+					const pathText = typeof request.path === "string" ? request.path : "";
+					if (looksLikeUserTaskAsPath(pathText)) {
+						return {
+							query: formatReadFileQuery(request),
+							result: "",
+							error:
+								"Invalid read_files path: expected a real filesystem path from search results, " +
+								"not the user's question/task text. First call semantic_search with a short topic, then read_files on a returned path.",
+							success: false,
+						};
+					}
+
 					const rangeError = getReadFileRangeError(request);
 					if (rangeError) {
 						return {
@@ -327,6 +352,68 @@ export function createReadFilesTool(
 	});
 }
 
+/** Natural-language sentences are for semantic_search, not regex search_codebase. */
+function isNaturalLanguageSearchQuery(query: string): boolean {
+	const q = query.trim();
+	if (q.length < 16) return false;
+	if (/\s/.test(q) && /[а-яёa-z]{4,}/i.test(q) && !/[\\^$*+?()[\]{}|]/.test(q)) {
+		return true;
+	}
+	return false;
+}
+
+const NATURAL_LANGUAGE_SEARCH_ERROR =
+	"search_codebase expects a regex/symbol pattern (e.g. function name, import path), not a natural-language sentence. " +
+	"Use semantic_search for meaning-based discovery, then read_files on the returned paths.";
+
+function isFileRangePseudoQuery(query: string): boolean {
+	const q = query.trim();
+	if (/\S+:\d+-(?:EOF|\d+)\b/i.test(q)) return true;
+	if (/^[\w./\\-]+:\d+-EOF(\s*,\s*[\w./\\-]+:\d+-EOF)*$/i.test(q)) return true;
+	return false;
+}
+
+const FILE_RANGE_QUERY_ERROR =
+	'Invalid search query. Strings like "file.md:1-EOF" are NOT search patterns. ' +
+	"Use read_files with path and start_line/end_line to read a file. " +
+	"Use semantic_search with natural language, or search_codebase with a real regex (symbol/import name).";
+
+/** User pasted their task into search as if the tool were another model/agent. */
+function isUserTaskPseudoQuery(query: string): boolean {
+	const q = query.trim();
+	if (!q) return true;
+	// Imperative / task-style openings (RU + EN)
+	if (
+		/^(ознакомься|ознакомьтесь|проанализируй|проанализируйте|прочитай|прочитайте|изучи|изучите|посмотри|посмотрите|разбери|разберите|исправь|сделай|проверь|найди всё|расскажи|опиши)\b/i.test(
+			q,
+		)
+	) {
+		return true;
+	}
+	if (/^(please\s+)?(review|analyze|read|look at|familiarize|explore|check|fix)\b/i.test(q)) {
+		return true;
+	}
+	// Full user request pasted: long sentence without looking like a code topic
+	if (q.length > 90 && /\s/.test(q) && /[.?!]/.test(q)) {
+		return true;
+	}
+	return false;
+}
+
+const USER_TASK_QUERY_ERROR =
+	"Invalid semantic_search query: do NOT paste the user's task/question into query. " +
+	'Tools are APIs, not other models. Use a short topic (2–8 words), e.g. "README documentation", "CHANGELOG history", "development rules". ' +
+	"Then call read_files on the returned file paths.";
+
+function looksLikeUserTaskAsPath(filePath: string): boolean {
+	const p = filePath.trim();
+	if (!p) return true;
+	if (isUserTaskPseudoQuery(p)) return true;
+	// Sentence-like "path" with spaces and no path separators
+	if (p.length > 80 && /\s/.test(p) && !/[\\/]/.test(p)) return true;
+	return false;
+}
+
 /**
  * Create the search_codebase tool
  *
@@ -343,6 +430,8 @@ export function createSearchTool(
 		name: "search_codebase",
 		description:
 			"Perform regex pattern searches across the codebase. " +
+			"Do NOT pass file ranges or read-style queries (e.g. \"rules.md:1-EOF\", \"path:1-100\") — those belong in read_files. " +
+			"Prefer semantic_search for discovery, then read_files on matched paths. " +
 			"Supports multiple parallel searches. When several search patterns could be useful and do not depend on each other, run them together in one call, and call this tool in the same response as other independent tool calls. " +
 			"Use for finding code patterns, function definitions, class names, imports, etc. " +
 			`Output beyond ~${Math.round(MAX_SEARCH_OUTPUT_CHARS / 1000)}k characters per query is middle-truncated; narrow patterns beat broad ones.`,
@@ -363,6 +452,12 @@ export function createSearchTool(
 
 			return Promise.all(
 				queries.map(async (query): Promise<ToolOperationResult> => {
+					if (typeof query === "string" && isFileRangePseudoQuery(query)) {
+						return { query, result: "", error: FILE_RANGE_QUERY_ERROR, success: false };
+					}
+					if (typeof query === "string" && isNaturalLanguageSearchQuery(query)) {
+						return { query, result: "", error: NATURAL_LANGUAGE_SEARCH_ERROR, success: false };
+					}
 					try {
 						const results = await withTimeout(
 							executor(query, cwd, context),
@@ -390,7 +485,8 @@ export function createSearchTool(
 }
 
 const RUN_COMMANDS_SHARED_INSTRUCTIONS =
-	"Use for git, builds, tests, and other shell operations — not for reading or writing source files. " +
+	"Use for git, builds, tests, and other shell operations — not for reading, writing, or listing source files. " +
+	"FORBIDDEN: Get-ChildItem/ls/dir/tree (use semantic_search/search_codebase) and Get-Content/cat/type on source/docs (use read_files). " +
 	"Commands must be non-interactive. Commands that require follow-up input like pagers should be skipped or used with supported flags/env (e.g. git --no-pager, --non-interactive) to bypass the interaction steps. " +
 	"Input must be a JSON object with a commands array of strings or { command, args } objects — never a stringified JSON array. ";
 
@@ -469,7 +565,7 @@ export function createWebFetchTool(
 		maxRetries: 2,
 		execute: async (input, context) => {
 			// Validate input with Zod schema
-			const validatedInput = validateWithZod(FetchWebContentInputSchema, input);
+			const validatedInput = validateWithZod(FetchWebContentInputUnionSchema, input);
 
 			return Promise.all(
 				validatedInput.requests.map(
@@ -773,52 +869,63 @@ export function createSubmitAndExitTool(
 // =============================================================================
 
 const SEMANTIC_SEARCH_DESCRIPTION =
-	"Search codebase using semantic similarity via embeddings. ALWAYS use this BEFORE reading files " +
-	"to find relevant code fragments. Returns matching code chunks with file paths and similarity scores. " +
-	"Unlike search_codebase (regex), this finds code by MEANING — " +
-	"use it when you need to find conceptually related code, understand how something works, " +
-	"or locate files related to a topic without knowing exact keywords. " +
-	"Returns ranked results with file paths, relevance scores, and matching code chunks. " +
-	"Best for: finding implementations of concepts, understanding architecture, " +
-	"locating relevant code for a feature, or when regex search fails to find what you need. " +
-	"Workflow: semantic_search → read_files(found lines ±50) → editor(fixes)."
+	"Search the already-built workspace index by meaning (embeddings). Do not list dirs via shell and do not try to rebuild the index. " +
+	"YOU are the agent — this tool is a search API, not another model. " +
+	'query must be a SHORT topic (2–8 words), e.g. "README documentation", "CHANGELOG", "project rules". ' +
+	"Prefer project docs as *.md at the workspace ROOT; vendor/nested repos are lower priority. " +
+	"If no useful .md docs exist, search/read source code instead and finish — do not loop the same query. " +
+	"NEVER paste the user's task/question into query (no «ознакомься…», «проанализируй…»). " +
+	"Returns ranked file paths + snippets. Then call read_files on those paths. " +
+	'Never use file ranges like "file:1-EOF".';
+
+const REPEATED_SEMANTIC_QUERY_ERROR =
+	"Repeated the same semantic_search query. Do NOT retry it. " +
+	"Next: read_files on a concrete path you already have (prefer root *.md, else root source), " +
+	"or attempt_completion summarizing what you know. Docs may be missing — then use code.";
 
 function createSemanticSearchTool(
 	executor: SemanticSearchExecutor,
 ): AgentTool {
+	let lastNormalizedQuery = "";
+	let identicalQueryStreak = 0;
+
 	return createTool({
 		name: "semantic_search",
 		description: SEMANTIC_SEARCH_DESCRIPTION,
-		inputSchema: {
-			type: "object",
-			properties: {
-				query: {
-					type: "string",
-					description: "Natural language description of what to find (e.g. 'how does context compaction work', 'authentication logic', 'error handling for API calls')",
-				},
-				limit: {
-					type: "number",
-					description: "Maximum number of results to return (default: 10, max: 20)",
-					default: 10,
-				},
-			},
-			required: ["query"],
-		},
+		inputSchema: zodToJsonSchema(SemanticSearchInputSchema),
 		execute: async (input: unknown) => {
-			const { query, limit = 10 } = input as { query: string; limit?: number }
-			if (!query?.trim()) {
-				return { query: "", result: "Error: query is empty", success: false }
+			const { query, limit = 10 } = validateWithZod(SemanticSearchInputSchema, input);
+			if (isFileRangePseudoQuery(query)) {
+				return { query, result: "", error: FILE_RANGE_QUERY_ERROR, success: false };
 			}
-			const clampedLimit = Math.min(Math.max(1, limit), 20)
+			if (isUserTaskPseudoQuery(query)) {
+				return { query, result: "", error: USER_TASK_QUERY_ERROR, success: false };
+			}
+			const normalized = query.trim().toLowerCase();
+			if (normalized === lastNormalizedQuery) {
+				identicalQueryStreak += 1;
+			} else {
+				lastNormalizedQuery = normalized;
+				identicalQueryStreak = 1;
+			}
+			if (identicalQueryStreak >= 2) {
+				return {
+					query,
+					result: "",
+					error: REPEATED_SEMANTIC_QUERY_ERROR,
+					success: false,
+				};
+			}
+			const clampedLimit = Math.min(Math.max(1, limit), 20);
 			try {
-				const result = await executor(query.trim(), clampedLimit)
-				return { query, result, success: true }
+				const result = await executor(query.trim(), clampedLimit);
+				return { query, result, success: true };
 			} catch (error) {
-				const msg = error instanceof Error ? error.message : String(error)
-				return { query, result: "", error: `Semantic search failed: ${msg}`, success: false }
+				const msg = error instanceof Error ? error.message : String(error);
+				return { query, result: "", error: `Semantic search failed: ${msg}`, success: false };
 			}
 		},
-	})
+	});
 }
 
 // =============================================================================

@@ -368,7 +368,7 @@ export class Controller {
 						{ type: "status", payload: { sessionId, status: "error" } },
 					)
 				}
-				this.postStateToWebview().catch(() => {})
+				this.postStateToWebview().catch((err) => { Logger.error("[SdkController] Failed to post state to webview:", err) })
 			},
 		})
 		this.taskHistory = new SdkTaskHistory({
@@ -723,7 +723,7 @@ export class Controller {
 		this.userInstructionService = undefined
 		this.userInstructionServiceRoot = undefined
 		if (userInstructionServicePromise) {
-			await userInstructionServicePromise.then((service) => service.stop()).catch(() => {})
+			await userInstructionServicePromise.then((service) => service.stop()).catch((err) => { Logger.error("[SdkController] Failed to stop user instruction service:", err) })
 		}
 	}
 
@@ -773,7 +773,7 @@ export class Controller {
 		// Workspace root changed: stop the previous watcher once it settles.
 		const previous = this.userInstructionService
 		if (previous) {
-			previous.then((service) => service.stop()).catch(() => {})
+			previous.then((service) => service.stop()).catch((err) => { Logger.error("[SdkController] Failed to stop previous instruction service:", err) })
 		}
 		this.userInstructionServiceRoot = workspaceRoot
 		this.userInstructionService = (async () => {
@@ -999,7 +999,7 @@ export class Controller {
 			},
 		})
 
-		this.postStateToWebview().catch(() => {})
+		this.postStateToWebview().catch((err) => { Logger.error("[SdkController] Failed to post state to webview:", err) })
 	}
 
 	/**
@@ -1064,7 +1064,7 @@ export class Controller {
 			},
 		})
 
-		this.postStateToWebview().catch(() => {})
+		this.postStateToWebview().catch((err) => { Logger.error("[SdkController] Failed to post state to webview:", err) })
 	}
 
 	// ---- Task lifecycle ----

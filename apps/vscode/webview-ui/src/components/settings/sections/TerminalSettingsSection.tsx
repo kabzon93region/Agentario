@@ -163,7 +163,7 @@ const TerminalSettingsSection: React.FC<TerminalSettingsSectionProps> = ({ rende
 								<strong>{t("terminal.troubleshootingTitle")}</strong> {t("terminal.troubleshootingBefore")}{" "}
 								<a
 									className="text-(--vscode-textLink-foreground) underline hover:no-underline"
-									href="https://docs.cline.bot/troubleshooting/terminal-quick-fixes"
+									href="https://github.com/kabzon93region/Agentario/issues"
 									rel="noopener noreferrer"
 									target="_blank">
 									{t("terminal.quickFixes")}
@@ -171,7 +171,7 @@ const TerminalSettingsSection: React.FC<TerminalSettingsSectionProps> = ({ rende
 								{t("terminal.or")}{" "}
 								<a
 									className="text-(--vscode-textLink-foreground) underline hover:no-underline"
-									href="https://docs.cline.bot/troubleshooting/terminal-integration-guide"
+									href="https://github.com/kabzon93region/Agentario/issues"
 									rel="noopener noreferrer"
 									target="_blank">
 									{t("terminal.fullGuide")}

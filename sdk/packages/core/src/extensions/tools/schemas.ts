@@ -5,7 +5,7 @@
  * and are used for both validation and JSON Schema generation.
  */
 
-import { normalizeEditorToolInput } from "@agentario/shared";
+import { normalizeEditorToolInput, tryParseJsonArray as tryParseJsonArrayShared } from "@agentario/shared";
 import { z } from "zod";
 
 export const INPUT_ARG_CHAR_LIMIT = 6000;
@@ -103,6 +103,22 @@ export const SearchCodebaseUnionInputSchema = z.union([
 	z.object({ queries: z.string() }),
 ]);
 
+export const SemanticSearchInputSchema = z.object({
+	query: z
+		.string()
+		.min(1)
+		.describe(
+			"Natural language description of what to find (e.g. 'how does context compaction work')",
+		),
+	limit: z
+		.number()
+		.int()
+		.min(1)
+		.max(20)
+		.optional()
+		.describe("Maximum number of results to return (default: 10, max: 20)"),
+});
+
 const CommandInputSchema = z
 	.string()
 	.describe(
@@ -127,7 +143,10 @@ export const StructuredCommandEntrySchema = z.union([
 
 function tryParseJsonArray(value: string): unknown | undefined {
 	const trimmed = value.trim();
-	if (!trimmed.startsWith("[") && !trimmed.startsWith("{")) {
+	if (trimmed.startsWith("[")) {
+		return tryParseJsonArrayShared(trimmed);
+	}
+	if (!trimmed.startsWith("{")) {
 		return undefined;
 	}
 	try {
@@ -270,6 +289,39 @@ export const FetchWebContentInputSchema = z.object({
 });
 
 /**
+ * Agentario: Unwrap model mistakes for fetch_web_content — stringified JSON arrays in `requests`.
+ * Models sometimes send `"requests":"[{\"url\":\"...\",\"prompt\":\"...\"}]"` instead of a proper array.
+ */
+export function preprocessFetchWebContentInput(value: unknown): unknown {
+	if (typeof value === "string") {
+		return tryParseJsonArray(value) ?? value;
+	}
+	if (!value || typeof value !== "object") {
+		return value;
+	}
+	const record = value as Record<string, unknown>;
+	if (typeof record.requests === "string") {
+		const parsed = tryParseJsonArray(record.requests);
+		if (parsed !== undefined) {
+			return { ...record, requests: parsed };
+		}
+	}
+	// Wrap a single request object in an array
+	if (record.requests && typeof record.requests === "object" && !Array.isArray(record.requests)) {
+		return { ...record, requests: [record.requests] };
+	}
+	return value;
+}
+
+/**
+ * Union schema for fetch_web_content tool input with z.preprocess to handle stringified JSON.
+ */
+export const FetchWebContentInputUnionSchema = z.preprocess(
+	preprocessFetchWebContentInput,
+	FetchWebContentInputSchema,
+);
+
+/**
  * Schema for editor tool input
  */
 const EditFileInputBaseSchema = z.object({
@@ -389,6 +441,8 @@ export type ReadFilesInput = z.infer<typeof ReadFilesInputSchema>;
  * Input for the search_codebase tool
  */
 export type SearchCodebaseInput = z.infer<typeof SearchCodebaseInputSchema>;
+
+export type SemanticSearchInput = z.infer<typeof SemanticSearchInputSchema>;
 
 /**
  * Input for the run_commands tool

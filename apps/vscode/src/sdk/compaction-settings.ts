@@ -3,6 +3,37 @@ import type { StateManager } from "@/core/storage/StateManager"
 import { Logger } from "@/shared/services/Logger"
 import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
 
+/**
+ * Agentario: запросить live context window из LM Studio native API (/api/v0/models).
+ * Возвращает loaded_context_length текущей модели или undefined если API недоступно.
+ * Используется в maxInputTokensResolver для получения актуального значения
+ * без перезапуска сессии.
+ */
+async function fetchLmStudioContextWindowLive(stateManager: StateManager): Promise<number | undefined> {
+	const apiConfig = stateManager.getApiConfiguration()
+	const baseUrl = apiConfig?.lmStudioBaseUrl?.trim() || "http://127.0.0.1:1234"
+	// Agentario: /api/v0/models (native) содержит loaded_context_length, /v1/models (OpenAI) — нет.
+	const url = `${baseUrl.replace(/\/+$/, "")}/api/v0/models`
+	try {
+		const controller = new AbortController()
+		const timeout = setTimeout(() => controller.abort(), 3000)
+		const response = await fetch(url, { signal: controller.signal })
+		clearTimeout(timeout)
+		if (!response.ok) return undefined
+		const data = await response.json() as { data?: Array<{ id: string; loaded_context_length?: number; max_context_length?: number; state?: string }> }
+		const models = data.data
+		if (!Array.isArray(models) || models.length === 0) return undefined
+		const loaded = models.find((m) => m.state === "loaded" && m.loaded_context_length && m.loaded_context_length > 0)
+		if (loaded?.loaded_context_length) return loaded.loaded_context_length
+		const withContext = models.find((m) => m.loaded_context_length && m.loaded_context_length > 0)
+		if (withContext?.loaded_context_length) return withContext.loaded_context_length
+		const first = models.find((m) => m.max_context_length && m.max_context_length > 0)
+		return first?.max_context_length
+	} catch {
+		return undefined
+	}
+}
+
 export type CompactionStrategySetting = "basic" | "agentic"
 
 export function getCompactionStrategySetting(stateManager: StateManager): CompactionStrategySetting {
@@ -31,12 +62,13 @@ export function resolveCompactionSummarizerConfig(
 }
 
 /**
- * Адаптивный reserveTokens: 25% от контекст-окна, clamp [4096, 16384].
- * Для маленьких контекстов (20k) — 5k, для больших (128k) — 16k.
+ * Адаптивный reserveTokens: 15% от контекст-окна, clamp [4096, 16384].
+ * Для 32k → ~4.9k reserve → триггер ~85% (раньше 25%/75% срабатывало слишком рано
+ * на завышенной char-оценке относительно реального usage от LM Studio).
  */
 function computeAdaptiveReserveTokens(contextWindow?: number): number {
 	const ctx = contextWindow ?? 32000
-	return Math.min(16384, Math.max(4096, Math.floor(ctx * 0.25)))
+	return Math.min(16384, Math.max(4096, Math.floor(ctx * 0.15)))
 }
 
 /**
@@ -98,13 +130,35 @@ export function buildCompactionConfig(
 				? providerContextWindow
 				: undefined
 
-	// Agentario: адаптивный reserveTokens — по умолчанию 25% от контекст-окна, clamp [4096, 16384].
-	// Ранее был фиксированный 16384, что составляло 50% контекста 32k и вызывало
-	// слишком частую компакцию. Теперь маленькие контексты (20k) триггерятся на 75%,
-	// большие (128k) — на 87.5%.
+	// Agentario: адаптивный reserveTokens — 15% от контекст-окна, clamp [4096, 16384].
+	// Ранее 25% давал триггер ~75% и ложные срабатывания на завышенной estimate.
 	const defaultReserve = computeAdaptiveReserveTokens(providerContextWindow)
 
 	Logger.log(`[CompactionSettings] build: provider=${activeProviderId}, providerContextWindow=${providerContextWindow ?? "undefined"}, explicitMaxInputTokens=${explicitMaxInputTokens ?? "undefined"}, effectiveMaxInputTokens=${effectiveMaxInputTokens ?? "undefined"}, defaultReserve=${defaultReserve}`)
+
+
+/** Shared fallback chain: explicit settings -> provider window -> LM Studio live API. */
+async function resolveDynamicContextWindow(
+	stateManager: StateManager,
+	activeProviderId: string | undefined,
+	providerContextWindow: number | undefined,
+): Promise<number | undefined> {
+	const dynamicWindow = readProviderContextWindow(stateManager, activeProviderId)
+	if (typeof dynamicWindow === "number" && dynamicWindow > 0) {
+		return dynamicWindow
+	}
+	if (activeProviderId === "lmstudio" || activeProviderId === "openai-compatible") {
+		const liveWindow = await fetchLmStudioContextWindowLive(stateManager)
+		if (typeof liveWindow === "number" && liveWindow > 0) {
+			stateManager.setGlobalState("lmStudioMaxTokens", String(liveWindow))
+			Logger.log(`[CompactionSettings] live LM Studio context window=${liveWindow}`)
+			return liveWindow
+		}
+	}
+	return typeof providerContextWindow === "number" && providerContextWindow > 0
+		? providerContextWindow
+		: undefined
+}
 
 	return {
 		enabled: true,
@@ -113,26 +167,23 @@ export function buildCompactionConfig(
 		...(typeof chunkSize === "number" ? { chunkSize } : {}),
 		...(typeof doubleSummarization === "boolean" ? { doubleSummarization } : {}),
 		...(typeof effectiveMaxInputTokens === "number" ? { maxInputTokens: effectiveMaxInputTokens } : {}),
-		// Agentario: динамический резолвер контекст-окна.
+		// Agentario: динамический резолвер контекст-окна (async).
 		// Вызывается на каждой проверке компакции. Читает актуальное значение
-		// из настроек провайдера, чтобы реагировать на перезагрузку модели
-		// в LM Studio/Ollama без перезапуска сессии.
-		maxInputTokensResolver: () => {
+		// из настроек провайдера. Для LM Studio: если значение отсутствует
+		// или выглядит подозрительно — запрашивает live из API и сохраняет.
+		maxInputTokensResolver: async () => {
 			const explicit = stateManager.getGlobalSettingsKey("compactionMaxInputTokens")
 			if (typeof explicit === "number" && explicit > 0) return explicit
-			const dynamicWindow = readProviderContextWindow(stateManager, activeProviderId)
-			if (typeof dynamicWindow === "number" && dynamicWindow > 0) return dynamicWindow
-			return providerContextWindow
+			return resolveDynamicContextWindow(stateManager, activeProviderId, providerContextWindow)
 		},
-		// Agentario: динамический резолвер reserveTokens.
+		// Agentario: динамический резолвер reserveTokens (async).
 		// Если пользователь задал явное значение — используем его.
 		// Иначе — адаптивный (25% от контекст-окна, clamp [4096, 16384]).
-		reserveTokensResolver: () => {
+		reserveTokensResolver: async () => {
 			const explicit = stateManager.getGlobalSettingsKey("compactionReserveTokens")
 			if (typeof explicit === "number" && explicit > 0) return explicit
-			// Читаем актуальный контекст-окно для адаптивного расчёта
-			const dynamicWindow = readProviderContextWindow(stateManager, activeProviderId)
-			return computeAdaptiveReserveTokens(dynamicWindow ?? providerContextWindow)
+			const window = await resolveDynamicContextWindow(stateManager, activeProviderId, providerContextWindow)
+			return computeAdaptiveReserveTokens(window)
 		},
 		...(promptTemplateBefore ? { promptTemplateBefore } : {}),
 		...(promptTemplateAfter ? { promptTemplateAfter } : {}),

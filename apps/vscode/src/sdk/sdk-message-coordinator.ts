@@ -122,7 +122,7 @@ export class SdkMessageCoordinator {
 
 	emitHookMessage(message: AgentarioMessage): void {
 		this.appendMessages([message])
-		pushMessageToWebview(message).catch(() => {})
+		pushMessageToWebview(message).catch((err) => { Logger.error("[SdkMessageCoordinator] Failed to push message to webview:", err) })
 	}
 
 	/**

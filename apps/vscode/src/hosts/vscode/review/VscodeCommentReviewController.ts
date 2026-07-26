@@ -25,7 +25,7 @@ export class VscodeCommentReviewController extends CommentReviewController imple
 	constructor() {
 		super()
 		// Create the comment controller
-		this.commentController = vscode.comments.createCommentController("cline-ai-review", "Cline AI Review")
+		this.commentController = vscode.comments.createCommentController("cline-ai-review", "Agentario AI Review")
 	}
 
 	/**

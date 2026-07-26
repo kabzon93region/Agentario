@@ -350,7 +350,7 @@ export class AuthService {
 					this._authenticated = false
 					clearClineCredentials()
 					setImmediate(() => {
-						this.sendAuthStatusUpdate().catch(() => {})
+						this.sendAuthStatusUpdate().catch((err) => { console.error("[AuthService] Failed to send auth status update:", err) })
 					})
 					return undefined
 				}

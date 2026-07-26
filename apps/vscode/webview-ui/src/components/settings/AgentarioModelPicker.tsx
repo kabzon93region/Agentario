@@ -598,7 +598,7 @@ const AgentarioModelPicker: React.FC<AgentarioModelPickerProps> = ({ isPopup, cu
 						marginTop: 0,
 						color: "var(--vscode-descriptionForeground)",
 					}}>
-					The extension automatically fetches the latest Cline model list. If you're unsure which model to choose,
+					The extension automatically fetches the latest Agentario model list. If you're unsure which model to choose,
 					compare available models by context window, pricing, and capabilities.
 				</p>
 			)}

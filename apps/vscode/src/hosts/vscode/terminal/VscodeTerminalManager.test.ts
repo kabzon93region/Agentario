@@ -63,6 +63,6 @@ describe("VscodeTerminalManager", () => {
 		assert.equal(terminalInfo.pendingCwdChange, undefined)
 		assert.equal(terminalInfo.cwdResolved, undefined)
 		assert.equal(getAllTerminalsStub.called, true)
-		assert.equal(executeCommandStub.calledOnceWith(`cd "${targetCwd}"`), true)
+		assert.equal(executeCommandStub.calledOnceWith(`cd "${targetCwd.replace(/"/g, '\\"')}"`), true)
 	})
 })

@@ -32,7 +32,7 @@ export const Default = () => (
 			<Alert isDismissible={false} title="Non Dismissible" variant="default">
 				<AlertDescription>This alert cannot be dismissed.</AlertDescription>
 			</Alert>
-			<Alert icon={<AgentarioLogoWhite className="size-2" />} title="Brand" variant="cline">
+			<Alert icon={<AgentarioLogoWhite className="size-2" />} title="Brand" variant="agentario">
 				<AlertDescription>
 					<p className="my-1">How can I help you?</p>
 					<ul className="list-inside list-disc text-sm">

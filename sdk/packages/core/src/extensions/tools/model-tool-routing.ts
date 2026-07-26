@@ -61,6 +61,36 @@ const TOOL_NAME_TO_FLAG: Record<
 
 export const DEFAULT_MODEL_TOOL_ROUTING_RULES: ToolRoutingRule[] = [
 	{
+		name: "local-providers-trim-optional-tools",
+		mode: "any",
+		providerIdIncludes: ["lmstudio", "ollama"],
+		disableTools: ["fetch_web_content", "skills", "ask_question"],
+	},
+	{
+		name: "local-small-model-stable-tools",
+		mode: "any",
+		providerIdIncludes: ["lmstudio", "ollama"],
+		modelIdIncludes: [
+			"llama-3.2",
+			"llama3.2",
+			"llama-3.1-8",
+			"llama3.1:8",
+			"-8b",
+			"-7b",
+			"-3b",
+			"-2b",
+			"-1b",
+			"phi-3",
+			"phi3",
+			"gemma-2-2",
+			"tinyllama",
+			"qwen2.5-3",
+			"qwen2.5-7",
+		],
+		// Keep indexing tools (semantic_search + search_codebase). Drop only optional noise.
+		disableTools: ["fetch_web_content", "skills", "ask_question"],
+	},
+	{
 		name: "openai-native-use-apply-patch",
 		mode: "act",
 		providerIdIncludes: ["openai-native"],

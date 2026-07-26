@@ -1,4 +1,5 @@
 import type { OpenTelemetryClientConfig } from "../services/telemetry";
+import { isRecord } from "../parse/object";
 import type {
 	RemoteConfigBundle,
 	RemoteConfigSyncContext,
@@ -31,10 +32,6 @@ export function resolveOpenTelemetryConfigFromRemoteConfig(
 		logBatchTimeout: remoteConfig.openTelemetryLogBatchTimeout,
 		logMaxQueueSize: remoteConfig.openTelemetryLogMaxQueueSize,
 	};
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readString(

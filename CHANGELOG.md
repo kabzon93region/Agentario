@@ -2,6 +2,148 @@
 
 Схема версий: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
 
+## [0.14.30] — 2026-07-26
+
+### Changed
+- **Полный ребрендинг Cline → Agentario** (UI, marketplace README, About/ссылки, терминалы, MCP client name, walkthrough, ошибки).
+- Ассеты: убраны `cline-bot.*` / `sleepy-cline.svg`; иконки `icon.svg`/`icon.png`/`agentario-icon.*`/`robot_panel_*` на новом логотипе.
+- `package.json`: author Agentario, keyword `agentario`, `AgentarioWalkthrough`, `$(rocket)` вместо `cline-icon`, context `agentario.isGeneratingCommit`.
+- ClinePass → AgentarioPass в пользовательских строках; CSS variant `--color-agentario`.
+
+### Notes
+- Extension ID `claude-dev` и view IDs `claude-dev-*` сохранены для совместимости установки.
+- Provider id `cline` в настройках сохранён (state/migration).
+
+## [0.14.29] — 2026-07-26
+
+### Changed
+- Новый логотип Agentario: `assets/icons/icon.svg` / `icon.png` (из `new_icon.svg`); activity bar и marketplace icon обновлены.
+
+## [0.14.28] — 2026-07-26
+
+### Fixed
+- **Листинг через терминал**: `Get-ChildItem`/`ls`/`dir` и `Get-Content`/`cat` по исходникам/docs блокируются в `run_commands` с подсказкой использовать индекс (`semantic_search`/`search_codebase`) и `read_files`.
+- **Зацикливание semantic_search**: повтор того же query отклоняется сразу; loop-detection для search ужесточён (hard на 2-м одинаковом вызове).
+- Промпт: документация по умолчанию — `*.md`; если docs нет — читать код и завершать; не «переиндексировать» через shell.
+
+## [0.14.27] — 2026-07-26
+
+### Fixed
+- **Ложный триггер автокомпакции**: в `prepareTurn` уходила **сумма** `inputTokens` за весь run (26k), а не токены последнего запроса (~10k). Теперь передаётся delta итерации; значения сильно выше estimate отбрасываются.
+- Не компактировать, пока `chat` < 12% окна (pinned system/tools/MCP не суммаризируются и не должны давить на триггер).
+- Дампы чанков суммаризации снова пишутся в `Y:\Documents\agentario-compaction-debug` (отключить: `AGENTARIO_COMPACTION_DEBUG=0`).
+- Markdown-экспорт чата: хронологический порядок по `ts`, tools по отдельности, system/compaction info сохраняется.
+
+### Changed
+- Подсказка local models: при semantic_search сначала корневые файлы cwd, не первые hits из вложенного llama.cpp/vendor.
+
+## [0.14.26] — 2026-07-26
+
+### Fixed
+- **Автокомпакция cutIndex=0**: после snap к границе turn больше не возвращается 0 (пустое `slice` → «cutIndex=0 некорректен» и мгновенный basic без чанков). Режем перед текущим user-turn.
+- **Ложный ранний триггер**: для порога берём usage модели (+до 25% estimate), а не `max(usage, завышенная char-оценка)`; reserve снижен 25%→15% (триггер ~85% на 32k).
+- При падении agentic в UI явно пишется fallback на basic.
+
+## [0.14.25] — 2026-07-26
+
+### Changed
+- Диагностика неизвестных tool (напр. legacy `semantic_search` в истории): свёрнутая раскрывашка по умолчанию, шрифт на шаг меньше.
+
+## [0.14.24] — 2026-07-26
+
+### Fixed
+- **Пустые артефакты после api_req**: `semantic_search` не был в UI-маппинге и рендерился как `InvisibleSpacer` + `pt-2.5` (сплюснутая строка). Теперь показывается как search (`semantic: …`); неизвестные tool больше не прячутся в spacer.
+- Снова скрыты шумовые `api_req_started` (iteration/budget/usage) — они засоряли ленту в диагностике 0.14.23.
+
+## [0.14.23] — 2026-07-26
+
+### Changed
+- **Диагностика ленты**: больше не скрываем пустые reasoning/text/tool и `api_req_started` — вместо «сплюснутых» артефактов видны метки `[say=…]`. Пустой read показывает `⚠ read без path`.
+- **Промпт агента**: явно — вы и есть агент; tools это API, не другие модели. В `semantic_search` нельзя вставлять текст задания пользователя.
+
+### Fixed
+- **semantic_search / read_files**: отклоняются query/path вида «ознакомься…» / «проанализируй…» (модель слала задание в tool как будто это субагент).
+- Обновлены `agentario-system-prompt.md` и local tools hint под корректный workflow (короткая тема → путь → факты).
+
+## [0.14.22] — 2026-07-26
+
+### Fixed
+- **Зацикливание Task Completed**: `attempt_completion` теперь завершает run (`lifecycle.completesRun`). Раньше UI показывал «Task Completed», а агент продолжал цикл и требовал `submit_and_exit` — малые модели снова вызывали completion с тем же текстом.
+- **Повтор completion**: идентичные `attempt_completion` / `submit_and_exit` жёстко стопаются со 2-го раза.
+- **Пустая строка после ожидания**: пустой partial reasoning больше не остаётся в ленте с `pt-2.5`/шевроном (сплюснутый артефакт).
+
+### Changed
+- Подсказки для local models: не завершать после одного файла на заданиях «ознакомься/проанализируй»; без шаблонных ответов без фактов.
+
+## [0.14.21] — 2026-07-26
+
+### Fixed
+- **Thinking / пустые строки**: ожидание модели — одна ephemeral-строка «Ожидание ответа модели… Nс» (не пишется в историю); убраны дубли Thinking+Thinking… и сплюснутый ряд с шевроном после ответа.
+- **attempt_completion + command:null**: null/пустой command удаляется до валидации (локальные модели больше не валят completion).
+- **Эхо задания**: усилены инструкции для local models и описание attempt_completion — не копировать текст запроса пользователя в result/файлы.
+
+## [0.14.20] — 2026-07-26
+
+### Fixed
+- **Контекст 266k на окне 32k**: для полоски и tok/s снова берутся per-request deltas (`inputTokens`/`outputTokens`), а не session-сумма `totalInputTokens` (сумма всех итераций агента).
+- **Пустые Thinking-строки**: завершённый reasoning без текста не рендерится и фильтруется из ленты.
+- **Индексация**: `semantic_search` снова доступен малым local-моделям; `search_codebase` отклоняет NL-фразы с подсказкой использовать semantic_search (иначе модель галлюцинировала `home/user/project/docs/...`).
+
+## [0.14.19] — 2026-07-26
+
+### Fixed
+- **read_files / search_codebase validation**: stringified arrays с `end_line:EOF` и Windows-путями (`\\t`/`\\r` → TAB/CR) нормализуются до выполнения; `search_codebase.queries` тоже.
+- **Пустые строки в ленте**: фильтр ZWSP/control chars и tool-сообщений без пути.
+- **Полоска контекста**: ширина сегментов следует за live `totalUsed`, а не только за устаревшим contextBudget.
+
+## [0.14.18] — 2026-07-26
+
+### Fixed
+- **LM Studio peg-native 500**: для local models принудительно `parallel_tool_calls: false`, в промпте — ровно один tool call за ход (параллельные вызовы ломали peg-parser у Llama 8B).
+- **Малые local-модели**: для llama-3.2-8b и аналогов отключаются `semantic_search` / skills / web / ask_question; остаются read/search/bash/editor. Индексация через `search_codebase`.
+- **Сообщение об ошибке**: вместо сырого `peg-native format` — понятное объяснение и что делать.
+
+### Changed
+- LM Studio / Ollama: укороченные описания тулов на wire; убраны инструкции про parallel tools из system prompt.
+
+## [0.14.17] — 2026-07-26
+
+### Fixed
+- **Reasoning без поддержки модели**: для LM Studio / openai-compatible больше не отправляется `reasoning.effort` (например `medium`), если у модели нет capability `reasoning`. Убирает WARN LM Studio и лишний KV для Llama Instruct.
+- **Зацикливание tool calls**: детект чередования A↔B (read_files ↔ search_codebase); soft=2 / hard=3 в VS Code. Раньше счётчик сбрасывался при смене имени тула.
+- **Псевдо-запросы `file:1-EOF`**: `search_codebase` / `semantic_search` отклоняют такие строки с подсказкой использовать `read_files`.
+
+### Changed
+- Системный промпт: явный запрет `path:1-EOF` и цикл read↔search; описания тулов уточнены под индексацию.
+
+## [0.14.16] — 2026-07-26
+
+### Fixed
+- **Безопасность компакции**: debug-дампы запросов/ответов модели в `~/Documents/agentario-compaction-debug/` пишутся только при `AGENTARIO_COMPACTION_DEBUG=1`.
+- **Shell injection в cd**: `buildCdCommand()` экранирует кавычки в пути перед `cd` в terminal managers.
+- **semantic_search**: добавлен в `ALL_DEFAULT_TOOL_NAMES`; валидация входа через Zod (`SemanticSearchInputSchema`).
+- **Полоска контекста / silent catches**: логирование ошибок вместо пустых `.catch(() => {})` в SdkController и message coordinator.
+
+### Changed
+- **ExtensionStateContext**: `contextValue` обёрнут в `useMemo`; навигация унифицирована через `closeAllSecondaryViews`; удалены DEBUG console.log.
+- **isRecord**: вынесен в `shared/parse/object.ts` (убраны дубликаты).
+- **compaction**: извлечён `estimatePrepareTurnTokens`; удалён мёртвый параметр `doubleSummarization` из agentic compaction; дедупликация resolvers контекст-окна.
+- **Брендинг**: строки "Cline" → "Agentario" в ChatRow.
+
+## [0.14.15] — 2026-07-26
+
+### Fixed
+- **Некорректный размер чанков суммаризации**: `createTokenEstimator()` считал токены по `JSON.stringify(block).length` для tool_use и tool_result блоков, а `serializeMessage()` обрезал tool output до 2000 символов. Расхождение до 12.5x. Исправлено: estimator теперь считает по ТОМУ ЖЕ формату что и `serializeMessage()`.
+- **Полоска контекста не обновлялась**: `normalizeUsageEvent()` читал DELTA `inputTokens` вместо кумулятивного `totalInputTokens`. Исправлено.
+
+## [0.14.14] — 2026-07-26
+
+### Fixed
+- **PowerShell escape-символы в путях**: добавлена `sanitizePowerShellCommand()` в `shell.ts`.
+
+### Changed
+- **System prompt: инструкции по индексации**: запрет на `Get-ChildItem -Recurse`, использование `semantic_search` и `search_codebase`.
+
 ## [0.14.2] — 2026-07-24
 
 ### Fixed

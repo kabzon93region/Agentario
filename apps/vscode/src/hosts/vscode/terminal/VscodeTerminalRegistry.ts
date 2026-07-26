@@ -24,8 +24,9 @@ export class TerminalRegistry {
 		const terminalOptions: vscode.TerminalOptions = {
 			cwd,
 			name: "Agentario",
-			iconPath: new vscode.ThemeIcon("cline-icon"),
+			iconPath: new vscode.ThemeIcon("rocket"),
 			env: {
+				AGENTARIO_ACTIVE: "true",
 				CLINE_ACTIVE: "true",
 				// Override $SHELL to match the selected shell profile so that
 				// child processes (make, npm scripts, etc.) that read $SHELL

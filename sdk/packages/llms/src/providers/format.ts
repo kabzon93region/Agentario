@@ -1,4 +1,17 @@
+function normalizeProviderErrorMessage(message: string): string {
+	if (/peg-native|does not match the expected/i.test(message)) {
+		return (
+			"LM Studio: модель сломала формат tool call (peg-native). " +
+			"Agentario ограничивает параллельные вызовы для local models — повторите запрос. " +
+			"Для llama-3.2-8b надёжнее quant Q4_K_M+ и один tool за ход."
+		);
+	}
+	return message;
+}
+
 export function extractErrorMessage(error: unknown): string {
+	const raw = ((): string => {
+
 	// Generic SDK wrappers carry no signal of their own — when present we prefer
 	// the underlying cause/detail (e.g. AI SDK's AI_NoOutputGeneratedError).
 	const GENERIC_WRAPPER_MESSAGES = new Set([
@@ -124,4 +137,7 @@ export function extractErrorMessage(error: unknown): string {
 	}
 
 	return String(error);
+
+	})();
+	return normalizeProviderErrorMessage(raw);
 }

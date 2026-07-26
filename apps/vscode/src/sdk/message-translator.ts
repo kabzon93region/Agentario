@@ -28,7 +28,7 @@
 import type { CoreSessionEvent } from "@agentario/core"
 import type { Message as SdkMessage } from "@agentario/llms"
 import type { AgentEvent, ContextBudgetBreakdown } from "@agentario/shared"
-import { CONTEXT_BUDGET_NOTICE_KIND } from "@agentario/shared"
+import { CONTEXT_BUDGET_NOTICE_KIND, normalizeToolInput } from "@agentario/shared"
 import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
 import type {
 	AgentarioApiReqInfo,
@@ -149,22 +149,43 @@ function normalizeUsageEvent(usageEvent: {
 	cacheWriteTokens?: number
 	cost?: number
 	totalCost?: number
+	/** Кумулятивные totals из RuntimeEventAdapter */
+	totalInputTokens?: number
+	totalOutputTokens?: number
+	totalCacheReadTokens?: number
+	totalCacheWriteTokens?: number
 }): NormalizedUsage {
-	const inputTokens = usageEvent.inputTokens ?? 0
-	const cacheReads = usageEvent.cacheReadTokens ?? 0
-	const cacheWrites = usageEvent.cacheWriteTokens ?? 0
+	// Agentario: for context-window UI and tok/s use PER-REQUEST deltas.
+	// RuntimeEventAdapter sets inputTokens/outputTokens = delta since last update
+	// (≈ size of this model call). totalInputTokens is the SESSION SUM across
+	// iterations — using it made the bar show 200k+ on a 32k window.
+	const inputTokens =
+		usageEvent.inputTokens && usageEvent.inputTokens > 0
+			? usageEvent.inputTokens
+			: (usageEvent.totalInputTokens ?? 0)
+	const outputTokens =
+		usageEvent.outputTokens && usageEvent.outputTokens > 0
+			? usageEvent.outputTokens
+			: (usageEvent.totalOutputTokens ?? 0)
+	const cacheReads =
+		usageEvent.cacheReadTokens && usageEvent.cacheReadTokens > 0
+			? usageEvent.cacheReadTokens
+			: (usageEvent.totalCacheReadTokens ?? 0)
+	const cacheWrites =
+		usageEvent.cacheWriteTokens && usageEvent.cacheWriteTokens > 0
+			? usageEvent.cacheWriteTokens
+			: (usageEvent.totalCacheWriteTokens ?? 0)
 
-	// SDK provider usage reports inputTokens as the full request size, with
-	// cache reads/writes included. Classic Cline/webview metrics expect
-	// tokensIn, cacheReads, and cacheWrites to be disjoint buckets.
+	// SDK provider usage reports input as the full request size, with
+	// cache reads/writes included. Classic metrics expect disjoint buckets.
 	const uncachedInputTokens = Math.max(0, inputTokens - cacheReads - cacheWrites)
 
 	return {
 		tokensIn: uncachedInputTokens,
-		tokensOut: usageEvent.outputTokens ?? 0,
+		tokensOut: outputTokens,
 		cacheWrites,
 		cacheReads,
-		totalCost: usageEvent.cost ?? usageEvent.totalCost ?? 0,
+		totalCost: usageEvent.totalCost ?? usageEvent.cost ?? 0,
 	}
 }
 
@@ -725,6 +746,21 @@ function sdkToolToAgentarioSayTool(toolName: string, input?: unknown): Agentario
 			}
 		}
 
+		case "semantic_search": {
+			// Must map to a ChatRow/ToolGroup-known tool. Raw "semantic_search" fell through to
+			// InvisibleSpacer + pt-2.5 → the squashed empty artifact after each api_req cost=0.
+			const query =
+				getStringField(parsedInput, "query") ??
+				getStringField(parsedInput, "q") ??
+				(typeof input === "string" ? input : "") ??
+				""
+			return {
+				tool: "searchFiles",
+				regex: query ? `semantic: ${query}` : "semantic_search",
+				path: "",
+			}
+		}
+
 		case "fetch_web_content":
 		case "web_fetch": {
 			// fetch_web_content carries { requests: [{ url, prompt }] };
@@ -826,13 +862,15 @@ function getCompletionResultText(input: unknown): string {
 /** Extract file paths from a read_files/read_file input */
 function extractFilePaths(input: Record<string, unknown> | undefined): string[] {
 	if (!input) return []
-	const files = input.files
+	const normalized = normalizeToolInput("read_files", input) as Record<string, unknown>
+	const files = normalized.files
 	if (Array.isArray(files) && files.length > 0) {
 		const paths = files
 			.map((f) => {
-				if (typeof f === "string") return f
+				if (typeof f === "string") return f.replace(/[\u0000-\u001F]+/g, "").trim()
 				if (typeof f === "object" && f !== null) {
-					return ((f as Record<string, unknown>).path as string) ?? ""
+					const path = String(((f as Record<string, unknown>).path as string) ?? "")
+					return path.replace(/[\u0000-\u001F]+/g, "").trim()
 				}
 				return ""
 			})
@@ -842,8 +880,9 @@ function extractFilePaths(input: Record<string, unknown> | undefined): string[] 
 		}
 	}
 	const singlePath =
-		(input.path as string) ?? (input.file_path as string) ?? (input.filePath as string) ?? (input.filename as string) ?? ""
-	return singlePath ? [singlePath] : []
+		(normalized.path as string) ?? (normalized.file_path as string) ?? (normalized.filePath as string) ?? (normalized.filename as string) ?? ""
+	const cleaned = String(singlePath).replace(/[\u0000-\u001F]+/g, "").trim()
+	return cleaned ? [cleaned] : []
 }
 
 /** Extract the first file path from a read_files input */

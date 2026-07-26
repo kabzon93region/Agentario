@@ -12,6 +12,12 @@
  * - Provides summary for environment details
  */
 
+/** Escape cwd for shell cd command to prevent quote/injection breakout. */
+function buildCdCommand(cwd: string): string {
+	return `cd "${cwd.replace(/"/g, '\\"')}"`
+}
+
+
 import { AgentarioTempManager } from "@services/temp"
 import * as fs from "fs"
 import { Logger } from "@/shared/services/Logger"
@@ -164,7 +170,7 @@ export class StandaloneTerminalManager implements ITerminalManager {
 			const availableTerminal = terminals.find((t) => !t.busy)
 			if (availableTerminal) {
 				// Change directory
-				await this.runCommand(availableTerminal, `cd "${cwd}"`)
+				await this.runCommand(availableTerminal, buildCdCommand(cwd))
 				;(availableTerminal.terminal as any)._cwd = cwd
 				if (availableTerminal.terminal.shellIntegration?.cwd) {
 					availableTerminal.terminal.shellIntegration.cwd.fsPath = cwd
@@ -177,7 +183,7 @@ export class StandaloneTerminalManager implements ITerminalManager {
 		// Create new terminal
 		const newTerminalInfo = this.registry.createTerminal({
 			cwd: cwd,
-			name: `Cline Terminal ${this.registry.size + 1}`,
+			name: `Agentario Terminal ${this.registry.size + 1}`,
 		})
 		this.terminalIds.add(newTerminalInfo.id)
 		return newTerminalInfo

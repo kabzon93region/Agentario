@@ -145,11 +145,10 @@ export function filterVisibleMessages(messages: AgentarioMessage[]): AgentarioMe
 			case "task_progress": // task progress messages are displayed in TaskHeader, not in main chat
 			case "checkpoint_created": // checkpoint restore is exposed from user-message edit controls
 				return false
-			// NOTE: reasoning passes through to be included in tool groups
 			case "api_req_started": {
-				// api_req_started rows only render visible content for errors/cancels.
-				// Reasoning has its own standalone ChatRows. Everything else renders
-				// as invisible padding. Filter out unless there's an error.
+				// Bookkeeping only (iteration_start / contextBudget / usage). Show when error/cancel.
+				// Diagnostic 0.14.23 proved these flood the feed; empty artifacts were unknown tools
+				// (semantic_search → InvisibleSpacer), not api_req rows.
 				try {
 					const info = JSON.parse(message.text || "{}")
 					if (info.cancelReason || info.streamingFailedMessage) {
@@ -160,12 +159,6 @@ export function filterVisibleMessages(messages: AgentarioMessage[]): AgentarioMe
 				}
 				return false
 			}
-			case "text":
-				// Sometimes cline returns an empty text message, we don't want to render these. (We also use a say text for user messages, so in case they just sent images we still render that)
-				if ((message.text ?? "") === "" && (message.images?.length ?? 0) === 0) {
-					return false
-				}
-				break
 			case "mcp_server_request_started":
 				return false
 			case "use_subagents":

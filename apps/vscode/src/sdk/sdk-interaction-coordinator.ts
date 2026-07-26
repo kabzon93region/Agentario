@@ -61,7 +61,7 @@ export class SdkInteractionCoordinator {
 			ts: this.nextMessageTs(),
 			type: "ask",
 			ask: "mistake_limit_reached",
-			text: `Cline ran into repeated tool errors (${context.consecutiveMistakes}/${context.maxConsecutiveMistakes}).\n\nLatest: ${latest}`,
+			text: `Agentario ran into repeated tool errors (${context.consecutiveMistakes}/${context.maxConsecutiveMistakes}).\n\nLatest: ${latest}`,
 			partial: false,
 		}
 

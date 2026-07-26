@@ -62,7 +62,7 @@ export function getClineUIOnboardingGroups(groupedModels: OnboardingModelGroup):
 
 export function getOnboardingGroupDisplayName(group: string): string {
 	if (group === CLINEPASS_GROUP) {
-		return "ClinePass"
+		return "AgentarioPass"
 	}
 	return group
 }

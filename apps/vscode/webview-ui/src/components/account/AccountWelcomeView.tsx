@@ -33,8 +33,8 @@ export const AccountWelcomeView = () => {
 			<AgentarioAuthStatus message={authStatusMessage} />
 
 			<p className="text-(--vscode-descriptionForeground) text-xs text-center m-0">
-				By continuing, you agree to the <VSCodeLink href="https://cline.bot/tos">Terms of Service</VSCodeLink> and{" "}
-				<VSCodeLink href="https://cline.bot/privacy">Privacy Policy.</VSCodeLink>
+				By continuing, you agree to the <VSCodeLink href="https://github.com/kabzon93region/Agentario">Terms of Service</VSCodeLink> and{" "}
+				<VSCodeLink href="https://github.com/kabzon93region/Agentario">Privacy Policy.</VSCodeLink>
 			</p>
 		</div>
 	)

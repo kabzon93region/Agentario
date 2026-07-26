@@ -367,6 +367,34 @@ export async function updateSettings(controller: Controller, request: UpdateSett
 			controller.stateManager.setGlobalState("showFeatureTips", request.showFeatureTips)
 		}
 
+		// Agentario: Context Protection — Tier 1: Smart Chunked Navigation
+		if (request.smartChunkingEnabled !== undefined) {
+			controller.stateManager.setGlobalState("smartChunkingEnabled", request.smartChunkingEnabled)
+		}
+		if (request.showFileOutline !== undefined) {
+			controller.stateManager.setGlobalState("showFileOutline", request.showFileOutline)
+		}
+		if (request.maxOutlineEntries !== undefined) {
+			controller.stateManager.setGlobalState("maxOutlineEntries", request.maxOutlineEntries)
+		}
+		// Agentario: Context Protection — Tier 2: Tool Result Truncation
+		if (request.smartTruncationEnabled !== undefined) {
+			controller.stateManager.setGlobalState("smartTruncationEnabled", request.smartTruncationEnabled)
+		}
+		if (request.smartTruncationThreshold !== undefined) {
+			controller.stateManager.setGlobalState("smartTruncationThreshold", request.smartTruncationThreshold)
+		}
+		if (request.smartTruncationHead !== undefined) {
+			controller.stateManager.setGlobalState("smartTruncationHead", request.smartTruncationHead)
+		}
+		if (request.smartTruncationTail !== undefined) {
+			controller.stateManager.setGlobalState("smartTruncationTail", request.smartTruncationTail)
+		}
+		// Agentario: Context Protection — Tier 3: AST Navigator
+		if (request.astNavigatorEnabled !== undefined) {
+			controller.stateManager.setGlobalState("astNavigatorEnabled", request.astNavigatorEnabled)
+		}
+
 		// Post updated state to webview — skip if preset was applied since
 		// applyModelProfilePreset already called postStateToWebview directly.
 		if (!presetApplied) {

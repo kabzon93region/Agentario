@@ -35,10 +35,7 @@ export async function deleteRuleFile(controller: Controller, request: RuleFileRe
 		throw new Error(result.message || "Failed to delete rule file")
 	}
 
-	// we refresh inside of the deleteRuleFileImpl(..) call
-	//await refreshAgentarioRulesToggles(controller.context, cwd)
-	//await refreshExternalRulesToggles(controller.context, cwd)
-	//await refreshWorkflowToggles(controller.context, cwd)
+	// Refresh is handled inside deleteRuleFileImpl
 	await controller.postStateToWebview()
 
 	const fileName = getWorkspaceBasename(request.rulePath, "Controller.deleteRuleFile")

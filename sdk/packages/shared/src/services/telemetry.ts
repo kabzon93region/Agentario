@@ -1,3 +1,4 @@
+import { isRecord } from "../parse/object";
 export type TelemetryPrimitive = string | number | boolean | null | undefined;
 
 export type TelemetryValue =
@@ -208,10 +209,6 @@ function truncateTelemetryString(value: string, limit: number): string {
 	return value.length > normalizedLimit
 		? value.substring(0, normalizedLimit)
 		: value;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null;
 }
 
 function stringValue(value: unknown): string | undefined {
