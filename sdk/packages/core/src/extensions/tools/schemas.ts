@@ -217,8 +217,8 @@ export function validateShellCommandString(
 	}
 
 	if (platform === "win32") {
-		if (/\s&&\s/.test(trimmed)) {
-			return "PowerShell 5.1 does not support '&&'. Pass independent commands as separate entries in the commands array.";
+		if (/&&/.test(trimmed)) {
+			return "PowerShell 5.1 does not support '&&'. Pass independent commands as separate entries in the commands array (use ';' only inside a single PowerShell script when needed).";
 		}
 
 		const doubleQuotes = trimmed.match(/"/g)?.length ?? 0;

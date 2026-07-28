@@ -7,17 +7,23 @@
 import { createTool, type AgentTool } from "@agentario/shared"
 
 const SEMANTIC_SEARCH_DESCRIPTION =
-	"Search the codebase using semantic similarity (embeddings). " +
-	"Unlike search_codebase (regex), this finds code by MEANING — " +
-	"use it when you need to find conceptually related code, understand how something works, " +
-	"or locate files related to a topic without knowing exact keywords. " +
-	"Returns ranked results with file paths, relevance scores, and matching code chunks. " +
-	"Best for: finding implementations of concepts, understanding architecture, " +
-	"locating relevant code for a feature, or when regex search fails to find what you need."
+	"Search the already-built workspace index by meaning (embeddings). Do not list dirs via shell. " +
+	"query must be a SHORT topic (2–8 words), e.g. 'README documentation', 'project rules', 'CHANGELOG'. " +
+	"For project overview prefer git status + root read_files first; semantic_search fills gaps — do not open with 2–3 README/CHANGELOG queries. Prefer ROOT files (rules.md, convert.py, README.md at cwd); vendor trees like llama-cpp-src are lower priority. " +
+	"If useful .md docs are missing at root, read root source and attempt_completion — do not loop the same query. " +
+	"NEVER paste the user's full task into query."
+
+const REPEATED_SEMANTIC_QUERY_ERROR =
+	"Repeated the same semantic_search query. Do NOT retry it. " +
+	"Next: read_files on a concrete ROOT path (rules.md, convert.py, *.md / *.py in cwd), " +
+	"or attempt_completion. Nested vendor docs (llama-cpp-src) are not the project overview."
 
 export function createSemanticSearchTool(
 	executor: (query: string, limit: number) => Promise<string>,
 ): AgentTool {
+	let lastNormalizedQuery = ""
+	let identicalQueryStreak = 0
+
 	return createTool({
 		name: "semantic_search",
 		description: SEMANTIC_SEARCH_DESCRIPTION,
@@ -26,7 +32,8 @@ export function createSemanticSearchTool(
 			properties: {
 				query: {
 					type: "string",
-					description: "Natural language description of what to find (e.g. 'how does context compaction work', 'authentication logic', 'error handling for API calls')",
+					description:
+						"Short topic (2–8 words), e.g. 'README documentation', 'project rules'. Not the user's full task.",
 				},
 				limit: {
 					type: "number",
@@ -40,6 +47,21 @@ export function createSemanticSearchTool(
 			const { query, limit = 10 } = input as { query: string; limit?: number }
 			if (!query?.trim()) {
 				return { query: "", result: "Error: query is empty", success: false }
+			}
+			const normalized = query.trim().toLowerCase()
+			if (normalized === lastNormalizedQuery) {
+				identicalQueryStreak += 1
+			} else {
+				lastNormalizedQuery = normalized
+				identicalQueryStreak = 1
+			}
+			if (identicalQueryStreak >= 2) {
+				return {
+					query,
+					result: "",
+					error: REPEATED_SEMANTIC_QUERY_ERROR,
+					success: false,
+				}
 			}
 			const clampedLimit = Math.min(Math.max(1, limit), 20)
 			try {

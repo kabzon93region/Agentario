@@ -70,6 +70,8 @@ import { RuntimeEventAdapter } from "./runtime-event-adapter";
 import {
 	CONTEXT_BUDGET_NOTICE_KIND,
 	estimateContextBudget,
+	scaleContextBudgetBreakdown,
+	updateContextBudgetProviderScale,
 } from "../../extensions/context/context-budget";
 import { DEFAULT_MAX_INPUT_TOKENS } from "../../extensions/context/compaction-shared";
 
@@ -357,6 +359,10 @@ export class SessionRuntime {
 	 * falsely trigger auto-compact (e.g. 26k sum vs ~10k last request).
 	 */
 	private lastIterationInputTokens = 0;
+	/** Unscaled context-budget total posted for the in-flight / last request. */
+	private pendingUnscaledContextBudgetTotal = 0;
+	/** EMA scale: provider tokensIn / char-estimate (aligns totalEstimated). */
+	private contextBudgetProviderScale = 1;
 	/** Tool-start timestamps for `ToolCallRecord.durationMs`. */
 	private toolStartedAt = new Map<string, Date>();
 	/** Tool-call input snapshot for `ToolCallRecord.input`. */
@@ -742,6 +748,8 @@ export class SessionRuntime {
 		this.currentRunToolCalls = [];
 		this.currentRunUsage = { inputTokens: 0, outputTokens: 0 };
 		this.lastIterationInputTokens = 0;
+		this.pendingUnscaledContextBudgetTotal = 0;
+		this.contextBudgetProviderScale = 1;
 		this.toolStartedAt.clear();
 		this.toolInputs.clear();
 		this.currentTurnSuccessfulTools = 0;
@@ -1016,13 +1024,18 @@ export class SessionRuntime {
 					modelInfo?.contextWindow ??
 					modelInfo?.maxInputTokens ??
 					DEFAULT_MAX_INPUT_TOKENS;
-				const breakdown = estimateContextBudget({
+				const unscaledBreakdown = estimateContextBudget({
 					contextWindow,
 					systemPromptBase: promptParts.base,
 					rules: promptParts.rules,
 					tools,
 					messages: finalMessagesWithMetadata,
 				});
+				this.pendingUnscaledContextBudgetTotal = unscaledBreakdown.totalEstimated;
+				const breakdown = scaleContextBudgetBreakdown(
+					unscaledBreakdown,
+					this.contextBudgetProviderScale,
+				);
 				context.emitStatusNotice?.(CONTEXT_BUDGET_NOTICE_KIND, {
 					kind: CONTEXT_BUDGET_NOTICE_KIND,
 					...breakdown,
@@ -1176,6 +1189,16 @@ export class SessionRuntime {
 				const nextInput = event.usage.inputTokens;
 				// usage-updated carries run-cumulative totals; compaction needs the delta.
 				this.lastIterationInputTokens = Math.max(0, nextInput - prevInput);
+				if (
+					this.lastIterationInputTokens > 0 &&
+					this.pendingUnscaledContextBudgetTotal > 0
+				) {
+					this.contextBudgetProviderScale = updateContextBudgetProviderScale(
+						this.contextBudgetProviderScale,
+						this.lastIterationInputTokens,
+						this.pendingUnscaledContextBudgetTotal,
+					);
+				}
 				this.currentRunUsage = {
 					inputTokens: nextInput,
 					outputTokens: event.usage.outputTokens,

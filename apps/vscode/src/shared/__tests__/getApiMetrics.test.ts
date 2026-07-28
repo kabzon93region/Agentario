@@ -1,7 +1,7 @@
-﻿import { describe, it } from "bun:test"
+import { describe, it } from "bun:test"
 import { strict as assert } from "node:assert"
 import type { AgentarioMessage } from "../ExtensionMessage"
-import { getApiMetrics, getLastApiReqTotalTokens, getLastContextBudget } from "../getApiMetrics"
+import { getApiMetrics, getContextWindowUsage, getLastApiReqTotalTokens, getLastContextBudget } from "../getApiMetrics"
 
 describe("getApiMetrics", () => {
 	it("includes subagent_usage in aggregate totals", () => {
@@ -123,6 +123,46 @@ describe("getLastApiReqTotalTokens", () => {
 		]
 
 		assert.equal(getLastApiReqTotalTokens(messages), 12_345)
+		assert.equal(getContextWindowUsage(messages).approximate, true)
+	})
+
+	it("keeps last measured usage when a newer estimate-only api_req starts", () => {
+		const messages: AgentarioMessage[] = [
+			{
+				ts: 1,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({
+					tokensIn: 22_570,
+					tokensOut: 112,
+					contextBudget: {
+						contextWindow: 65_536,
+						totalEstimated: 13_110,
+						pinnedEstimated: 10_106,
+						compressibleEstimated: 3_004,
+						categories: { system: 3_670, rules: 1_628, tools: 2_920, mcp: 1_888, skills: 0, chat: 3_004 },
+					},
+				}),
+			},
+			{
+				ts: 2,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({
+					contextBudget: {
+						contextWindow: 65_536,
+						totalEstimated: 13_212,
+						pinnedEstimated: 10_106,
+						compressibleEstimated: 3_106,
+						categories: { system: 3_670, rules: 1_628, tools: 2_920, mcp: 1_888, skills: 0, chat: 3_106 },
+					},
+				}),
+			},
+		]
+
+		const usage = getContextWindowUsage(messages)
+		assert.equal(usage.used, 22_570)
+		assert.equal(usage.approximate, false)
 	})
 })
 

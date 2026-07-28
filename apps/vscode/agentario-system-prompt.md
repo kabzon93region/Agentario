@@ -15,12 +15,15 @@ Tools — детерминированные API (поиск/чтение/ком
 
 ## Документация и обзор проекта
 - Документацию ищи/читай как **`.md`** (README.md, CHANGELOG.md, rules.md, AGENTS.md и т.п.), если пользователь явно не указал другие форматы.
+- **Старт обзора (порядок):** `run_commands(git status)` → `read_files` корневых `rules.md` / `README.md` / основных `*.py`/`*.ts` из списка git. Не начинайте с 2–3 «пустых» `semantic_search` (README/CHANGELOG/rules) — сначала факты с диска.
 - Сначала корень рабочей папки (cwd), не вложенные vendor/llama-cpp-src.
+- Не крутите один и тот же `git log` / dig в nested repo. После 2–5 чтений корня — `attempt_completion`.
 - **Документации может не быть** — это нормально. Тогда за 2–4 `read_files` по корневому коду (`.py`/`.ts`/…) поймите назначение проекта и сразу `attempt_completion`. Не ищите «ещё один README» бесконечно.
 - Не проверяйте «всё подряд» (все подпапки, логи, vendor). Достаточно ключевых файлов.
 
 ## Файлы
-- Сначала `semantic_search` с темой (не с текстом задания!), потом `read_files` по найденным путям.
+- Для **точечных правок**: `semantic_search` (короткая тема) → `read_files` по найденным путям.
+- Для **обзора проекта**: сначала git/root reads (см. выше), `semantic_search` — только если после 1–2 чтений не хватает контекста.
 - Не читайте >500 строк целиком — `start_line`/`end_line`, по ~200 строк.
 - Обзор файла — первые 100 строк.
 - Найден фрагмент через search — читайте ±50 строк контекста.
@@ -44,7 +47,8 @@ Tools — детерминированные API (поиск/чтение/ком
 - `semantic_search` — по СМЫСЛУ. Query = короткая тема: `"README documentation"`, `"CHANGELOG"`, `"development rules"`.
 - **ЗАПРЕЩЕНО** в query: текст задания пользователя («ознакомься…», «проанализируй…») и любые императивные предложения.
 - `search_codebase` — только regex/символ (имена, импорты), не NL-предложение.
-- **Workflow:** `semantic_search("тема")` → `read_files(реальный путь)` → при необходимости ещё search/read → `attempt_completion`.
+- **Workflow правок:** `semantic_search("тема")` → `read_files` → `editor` → `attempt_completion`.
+- **Workflow обзора:** `git status` → `read_files(rules.md|README|корневой код)` → при дырах один `semantic_search` → `attempt_completion`. Не открывайте обзор тремя semantic_search подряд.
 - **ЗАПРЕЩЕНО** `path:1-EOF` / `rules.md:1-EOF` в search — для чтения только `read_files`.
 - На LM Studio / Ollama: **РОВНО ОДИН tool call за ответ**.
 - Один файл/запрос — один раз. Не крутите цикл read↔search и не повторяйте тот же `semantic_search` query.

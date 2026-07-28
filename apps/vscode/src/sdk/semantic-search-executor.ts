@@ -59,15 +59,40 @@ export async function createSemanticSearchExecutor(
 			return `No semantic matches found for: "${query}" (${result.totalChunksSearched} chunks in ${result.indexedFiles} files searched)`
 		}
 
-		// Format results for the agent
+		const vendorPathRe =
+			/(^|[/\\])(llama-cpp-src|llama-tools|node_modules|\.git|vendor|third[_-]?party|dist|build|__pycache__)([/\\]|$)/i
+
+		const ranked = [...result.results]
+			.map((r) => {
+				const depth = r.file.split(/[/\\]/).filter(Boolean).length
+				let score = r.score
+				if (vendorPathRe.test(r.file)) {
+					score *= 0.35
+				}
+				// Prefer shallow / workspace-root files for overview queries.
+				if (depth <= 2) {
+					score *= 1.35
+				} else if (depth <= 3) {
+					score *= 1.1
+				}
+				return { ...r, score }
+			})
+			.sort((a, b) => b.score - a.score)
+
+		const rootHits = ranked.filter((r) => !vendorPathRe.test(r.file)).slice(0, Math.min(limit, ranked.length))
+		const chosen =
+			rootHits.length >= Math.min(3, limit)
+				? rootHits
+				: ranked.slice(0, limit)
+
 		const lines: string[] = [
 			`Semantic search results for: "${query}"`,
-			`Found ${result.results.length} matches in ${result.totalChunksSearched} chunks across ${result.indexedFiles} indexed files:\n`,
+			`Found ${chosen.length} matches (vendor/nested paths demoted; prefer cwd root files like rules.md / convert.py / README.md):\n`,
 		]
 
-		for (let i = 0; i < result.results.length; i++) {
-			const r = result.results[i]
-			lines.push(`--- Result ${i + 1} (score: ${r.score}) ---`)
+		for (let i = 0; i < chosen.length; i++) {
+			const r = chosen[i]
+			lines.push(`--- Result ${i + 1} (score: ${r.score.toFixed(4)}) ---`)
 			lines.push(`File: ${r.file}`)
 			lines.push(`Chunk:`)
 			lines.push(r.chunk)

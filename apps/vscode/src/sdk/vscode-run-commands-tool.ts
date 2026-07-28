@@ -56,6 +56,17 @@ function quoteShellArg(arg: string): string {
 
 export function formatCommandForTerminal(command: ShellCommand): string {
 	if (typeof command === "string") {
+		const trimmed = command.trim()
+		if (
+			(trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2) ||
+			(trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2)
+		) {
+			const q = trimmed[0]
+			const inner = trimmed.slice(1, -1)
+			if (!inner.includes(q)) {
+				return inner
+			}
+		}
 		return command
 	}
 	if (!("args" in command)) {

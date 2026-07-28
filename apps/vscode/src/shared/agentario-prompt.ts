@@ -62,12 +62,14 @@ Tools — это обычные API (поиск по индексу, чтени�
 - ЗАПРЕЩЕНО класть в query/path фразы пользователя: «ознакомься…», «проанализируй…», «прочитай…» и любые полные предложения-задания.
 - search_codebase — только regex/символ (имя функции, import), не NL-предложение.
 - read_files — только реальный путь файла из результата search (path + start_line/end_line). Никогда path = текст вопроса.
-- Workflow обзора: semantic_search("README documentation") → read_files(конкретный путь) → semantic_search("CHANGELOG") → read_files → … → attempt_completion с ФАКТАМИ из файлов.
+- Workflow обзора: git status → read_files(rules.md / README.md / корневой *.py|*.ts из git) → при необходимости ОДИН semantic_search → attempt_completion с ФАКТАМИ. ЗАПРЕЩЕНО открывать обзор 2–3 semantic_search подряд без чтения файлов.
 - Не вызывайте attempt_completion после одного пустого/битого read. Сначала 2–5 успешных чтений с путями.
 - attempt_completion.result — факты из прочитанного; не копируйте задание; command не передавайте если не нужен.
 - После успешного attempt_completion задачу не повторяйте.
 - Запрещены шаблонные ответы без цитат/путей («проект на стадии разработки…»).
-- Индекс semantic_search покрывает всю cwd, включая вложенные vendor (llama-cpp-src и т.п.). Для обзора текущего проекта сначала читайте файлы в КОРНЕ рабочей папки (rules.md, README), не первые hits из вложенных репозиториев.`
+- Индекс semantic_search покрывает cwd, включая vendor. Для обзора: СНАЧАЛА git status + read_files корневых rules.md / README.md / convert.py (и др. *.py/*.md в cwd), НЕ llama-cpp-src и НЕ серия пустых semantic_search.
+- ЗАПРЕЩЕНО крутить один и тот же git log / dig в nested repo. После 2–5 чтений корня — attempt_completion с фактами (даже если полного README нет).
+- Не используйте && в PowerShell; не повторяйте одну и ту же run_commands.`
 
 /** Strip parallel-tool guidance that breaks LM Studio peg-native parsing on small models. */
 export function applyLocalModelToolDiscipline(systemPrompt: string): string {

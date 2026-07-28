@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { normalizeRunCommandsInput, getShellDiscoveryOrReadBypassError } from "./helpers";
+import { normalizeRunCommandsInput, getShellDiscoveryOrReadBypassError, unwrapShellCommandString } from "./helpers";
 import {
 	preprocessRunCommandsInput,
 	validateShellCommandString,
@@ -21,6 +21,12 @@ describe("validateShellCommandString", () => {
 	it("rejects bash && chaining on Windows", () => {
 		expect(
 			validateShellCommandString("git status && git log", "win32"),
+		).toMatch(/&&/);
+	});
+
+	it("rejects && without surrounding spaces", () => {
+		expect(
+			validateShellCommandString("git log -20&&git branch", "win32"),
 		).toMatch(/&&/);
 	});
 
@@ -52,5 +58,11 @@ describe("getShellDiscoveryOrReadBypassError", () => {
 
 	it("allows git status", () => {
 		expect(getShellDiscoveryOrReadBypassError("git status")).toBeNull();
+	});
+});
+
+describe("unwrapShellCommandString", () => {
+	it("unwraps quoted git command", () => {
+		expect(unwrapShellCommandString("'git status'")).toBe("git status");
 	});
 });

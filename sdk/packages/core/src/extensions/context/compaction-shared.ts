@@ -164,8 +164,20 @@ export function isOverallPictureMessage(message: MessageWithMetadata): boolean {
 	return /^Общая картина[:\s]/i.test(text.trim());
 }
 
-export function createTokenEstimator(): EstimateMessageTokens {
+export type TokenEstimatorMode = "compaction" | "provider";
+
+/**
+ * Token estimator for messages.
+ * - `compaction` — caps tool_result/file/thinking like serializeMessage (2k) for summary sizing.
+ * - `provider` — counts content as already prepared for the API (MessageBuilder ~8k tool
+ *   results). Used by context-budget UI so totalEstimated tracks tokensIn, not the
+ *   compaction-truncated underestimate.
+ */
+export function createTokenEstimator(
+	mode: TokenEstimatorMode = "compaction",
+): EstimateMessageTokens {
 	const cache = new WeakMap<object, number>();
+	const forProvider = mode === "provider";
 	return (message) => {
 		const ref = message as unknown as object;
 		const cached = cache.get(ref);
@@ -185,27 +197,38 @@ export function createTokenEstimator(): EstimateMessageTokens {
 						contentLength += `[${roleLabel}]: `.length + block.text.length;
 						break;
 					case "thinking":
-						// serializeMessage: [Bot thinking]: truncateText(thinking, 2000)
-						contentLength += "[Bot thinking]: ".length + Math.min(block.thinking.length, 2_000);
+						contentLength +=
+							"[Bot thinking]: ".length +
+							(forProvider
+								? block.thinking.length
+								: Math.min(block.thinking.length, 2_000));
 						break;
 					case "redacted_thinking":
 						contentLength += "[Bot thinking]: [redacted]".length;
 						break;
 					case "tool_use":
-						// serializeMessage: [Bot tool calls]: name(key=val, ...)
-						contentLength += "[Bot tool calls]: ".length + block.name.length + formatToolInput(block.input).length;
+						contentLength +=
+							"[Bot tool calls]: ".length +
+							block.name.length +
+							formatToolInput(block.input).length;
 						break;
 					case "tool_result":
-						// serializeMessage: [Tool result]: flattenToolResultContent(content)
-						// flattenToolResultContent → truncateToolResultContentForCompaction → TOOL_RESULT_CHAR_LIMIT=2000
-						contentLength += "[Tool result]: ".length + estimateToolResultSerializedLength(block.content);
+						contentLength +=
+							"[Tool result]: ".length +
+							(forProvider
+								? estimateToolResultProviderLength(block.content)
+								: estimateToolResultSerializedLength(block.content));
 						break;
 					case "file":
-						// serializeMessage: [User/Bot file path]: truncateText(content, 2000)
-						contentLength += `[${roleLabel} file ${block.path}]: `.length + Math.min(block.content.length, FILE_CONTENT_CHAR_LIMIT);
+						contentLength +=
+							`[${roleLabel} file ${block.path}]: `.length +
+							(forProvider
+								? block.content.length
+								: Math.min(block.content.length, FILE_CONTENT_CHAR_LIMIT));
 						break;
 					case "image":
-						contentLength += `[${roleLabel} image]: `.length + (block.mediaType?.length ?? 5);
+						contentLength +=
+							`[${roleLabel} image]: `.length + (block.mediaType?.length ?? 5);
 						break;
 				}
 			}
@@ -221,8 +244,23 @@ export function createTokenEstimator(): EstimateMessageTokens {
  * Учитывает лимиты truncateToolResultContentForCompaction().
  */
 function estimateToolResultSerializedLength(content: unknown): number {
+	return estimateToolResultLength(content, {
+		textLimit: TOOL_RESULT_CHAR_LIMIT,
+		fileLimit: FILE_CONTENT_CHAR_LIMIT,
+	});
+}
+
+/** Full length of tool_result as present in API-prepared messages (no extra 2k cap). */
+function estimateToolResultProviderLength(content: unknown): number {
+	return estimateToolResultLength(content, { textLimit: Infinity, fileLimit: Infinity });
+}
+
+function estimateToolResultLength(
+	content: unknown,
+	limits: { textLimit: number; fileLimit: number },
+): number {
 	if (typeof content === "string") {
-		return Math.min(content.length, TOOL_RESULT_CHAR_LIMIT);
+		return Math.min(content.length, limits.textLimit);
 	}
 	if (Array.isArray(content)) {
 		let total = 0;
@@ -230,21 +268,28 @@ function estimateToolResultSerializedLength(content: unknown): number {
 			if (block && typeof block === "object") {
 				const b = block as Record<string, unknown>;
 				if (b.type === "text" && typeof b.text === "string") {
-					total += Math.min(b.text.length, TOOL_RESULT_CHAR_LIMIT);
+					total += Math.min(b.text.length, limits.textLimit);
 				} else if (b.type === "file" && typeof b.content === "string") {
-					total += `<file path="${b.path ?? ""}">\n`.length
-						+ Math.min(b.content.length, FILE_CONTENT_CHAR_LIMIT)
-						+ "\n</file>".length;
+					total +=
+						`<file path="${b.path ?? ""}">\n`.length +
+						Math.min(b.content.length, limits.fileLimit) +
+						"\n</file>".length;
 				} else if (b.type === "image") {
 					total += `[image:${(b as { mediaType?: string }).mediaType ?? ""}]`.length;
+				} else {
+					// Structured tool payloads (read_files / run_commands): count JSON size.
+					try {
+						total += Math.min(JSON.stringify(b).length, limits.textLimit);
+					} catch {
+						total += Math.min(String(b).length, limits.textLimit);
+					}
 				}
 			}
 		}
 		return total;
 	}
-	// Fallback: если content не строка и не массив, оцениваем как строку
 	if (content != null) {
-		return Math.min(String(content).length, TOOL_RESULT_CHAR_LIMIT);
+		return Math.min(String(content).length, limits.textLimit);
 	}
 	return 0;
 }

@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
 import { TaskColorRequest } from "@shared/proto/agentario/task"
 import { ChevronDownIcon, ChevronRightIcon, PaletteIcon } from "lucide-react"
@@ -30,6 +30,7 @@ interface TaskHeaderProps {
 	cacheReads?: number
 	totalCost: number
 	lastApiReqTotalTokens?: number
+	contextUsageApproximate?: boolean
 	contextBudget?: ContextBudgetBreakdown
 	onClose: () => void
 	onSendMessage?: (command: string, files: string[], images: string[]) => void
@@ -43,6 +44,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 	cacheReads,
 	totalCost,
 	lastApiReqTotalTokens,
+	contextUsageApproximate,
 	contextBudget,
 	onClose,
 	onSendMessage,
@@ -260,6 +262,7 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							cacheReads={cacheReads}
 							cacheWrites={cacheWrites}
 							contextBudget={contextBudget}
+							contextUsageApproximate={contextUsageApproximate}
 							contextWindow={selectedModelInfo?.contextWindow}
 							lastApiReqTotalTokens={lastApiReqTotalTokens}
 							onSendMessage={onSendMessage}

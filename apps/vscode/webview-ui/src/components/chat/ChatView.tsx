@@ -1,9 +1,9 @@
-﻿import { combineApiRequests } from "@shared/combineApiRequests"
+import { combineApiRequests } from "@shared/combineApiRequests"
 import { combineCommandSequences } from "@shared/combineCommandSequences"
 import { combineErrorRetryMessages } from "@shared/combineErrorRetryMessages"
 import { combineHookSequences } from "@shared/combineHookSequences"
 import type { AgentarioMessage } from "@shared/ExtensionMessage"
-import { getApiMetrics, getLastApiReqTotalTokens, getLastContextBudget } from "@shared/getApiMetrics"
+import { getApiMetrics, getContextWindowUsage, getLastContextBudget } from "@shared/getApiMetrics"
 import { BooleanRequest, StringRequest } from "@shared/proto/agentario/common"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { useMount } from "react-use"
@@ -140,7 +140,9 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 	// has to be after api_req_finished are all reduced into api_req_started messages
 	const apiMetrics = useMemo(() => getApiMetrics(modifiedMessages), [modifiedMessages])
 
-	const lastApiReqTotalTokens = useMemo(() => getLastApiReqTotalTokens(modifiedMessages) || undefined, [modifiedMessages])
+	const contextWindowUsage = useMemo(() => getContextWindowUsage(modifiedMessages), [modifiedMessages])
+	const lastApiReqTotalTokens = contextWindowUsage.used || undefined
+	const contextUsageApproximate = contextWindowUsage.approximate
 	// Fallback: если в сообщениях нет contextBudget, берём из history item (для старых чатов)
 	// Ищем во всех messages (не в modifiedMessages), потому что contextBudgetMsg может быть первым сообщением после compaction
 	const lastContextBudget = useMemo(() => {
@@ -399,6 +401,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 					<TaskSection
 						apiMetrics={apiMetrics}
 						contextBudget={lastContextBudget}
+						contextUsageApproximate={contextUsageApproximate}
 						lastApiReqTotalTokens={lastApiReqTotalTokens}
 						messageHandlers={messageHandlers}
 						selectedModelInfo={{

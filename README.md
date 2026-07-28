@@ -9,7 +9,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 </p>
 
 <p align="center">
-<strong>Версия расширения: 0.14.30</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+<strong>Версия расширения: 0.14.36</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
 </p>
 
 <div align="center">
@@ -29,7 +29,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 
 ## Быстрый старт (VS Code)
 
-1. Соберите или скачайте VSIX: `release/agentario-0.14.30.vsix` (сборка: `build.cmd` на Windows).
+1. Соберите или скачайте VSIX: `release/agentario-0.14.36.vsix` (сборка: `build.cmd` на Windows).
 2. VS Code → Extensions → `...` → **Install from VSIX**.
 3. Провайдер **LM Studio** или **Ollama** — см. [настройку LM Studio](#lm-studio-локальная-модель) ниже.
 4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright, trueline (правка файлов).
@@ -64,6 +64,17 @@ publish-release.cmd
 | **VS Code + Agentario** | Провайдер LM Studio, URL `http://<ip>:1234`, выбрать загруженную модель |
 
 MCP и индексация codebase работают на **ПК с VS Code**, не на машине с LM Studio.
+
+#### Генерация: thinking budget ≠ лимит ответа
+
+В LM Studio это **разные** настройки:
+
+| Параметр | Что ограничивает |
+|----------|------------------|
+| **Thinking / reasoning budget** | Только блок размышлений; после лимита модель закрывает thinking и пишет ответ |
+| **Max tokens / длина ответа** | Вся генерация (thinking + ответ + tool calls) |
+
+Если оба стоят на **512**, размышление может съесть почти весь бюджет — отчёт в чате оборвётся mid-sentence (`out: 512`). С **0.14.36** Agentario для LM Studio/Ollama шлёт `maxTokensPerTurn = 4096`. В UI LM Studio тоже снимите жёсткий потолок ответа (или поставьте ≥ 2–4k), если нужны длинные итоги.
 
 #### Индексация (embeddings)
 

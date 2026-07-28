@@ -220,6 +220,16 @@ function normalizeAttemptCompletionInput(input: unknown): unknown {
 	if (typeof record.command === "string" && record.command.trim() === "") {
 		delete record.command;
 	}
+	// Local models put the report in summary/text/content/message or call with {}.
+	if (typeof record.result !== "string" || record.result.trim() === "") {
+		for (const key of ["summary", "text", "content", "message", "answer", "report"] as const) {
+			const alt = record[key];
+			if (typeof alt === "string" && alt.trim().length > 0) {
+				record.result = alt;
+				break;
+			}
+		}
+	}
 	return record;
 }
 

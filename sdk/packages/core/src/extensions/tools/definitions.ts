@@ -23,6 +23,7 @@ import {
 import {
 	formatError,
 	formatReadFileQuery,
+	formatRunCommandQuery,
 	formatRunCommandQueryPreview,
 	getEditorSizeError,
 	getReadFileRangeError,
@@ -255,6 +256,7 @@ export function createReadFilesTool(
 	config: Pick<DefaultToolsConfig, "fileReadTimeoutMs"> = {},
 ): AgentTool<ReadFilesInput, ToolOperationResult[]> {
 	const timeoutMs = config.fileReadTimeoutMs ?? 10000;
+	const pathReadCounts = new Map<string, number>();
 
 	return createTool<ReadFilesInput, ToolOperationResult[]>({
 		name: "read_files",
@@ -262,6 +264,7 @@ export function createReadFilesTool(
 			"Read file content. To open a known file use this tool — never search_codebase with \"path:1-EOF\". " +
 			"IMPORTANT: Always use start_line/end_line to read only needed lines. " +
 			"For large files (>500 lines), read in chunks of 200 lines. Use semantic_search first to find relevant lines. " +
+			"Do NOT re-read the same path repeatedly — after 1–2 reads, synthesize and attempt_completion. " +
 			"When you already know multiple files you need, read them together in one call, and call this tool in the same response as other independent tool calls. " +
 			`Each read returns at most ${MAX_READ_LINES} lines / ~${Math.round(MAX_READ_OUTPUT_CHARS / 1024)}k characters; longer files report their total line count, page through them with start_line/end_line. ` +
 			"Binary files that are not image and large files are not supported. " +
@@ -324,6 +327,23 @@ export function createReadFilesTool(
 							error: `Invalid file range: ${rangeError}`,
 							success: false,
 						};
+					}
+
+					const normalizedPath = pathText.replace(/\\/g, "/").toLowerCase();
+					const prior = pathReadCounts.get(normalizedPath) ?? 0;
+					if (normalizedPath && prior >= 2) {
+						return {
+							query: formatReadFileQuery(request),
+							result: "",
+							error:
+								`Already read "${pathText}" ${prior} time(s). Do NOT re-read it. ` +
+								"Synthesize what you know and call attempt_completion. " +
+								"For another section of the same file, use a different start_line/end_line once; otherwise finish.",
+							success: false,
+						};
+					}
+					if (normalizedPath) {
+						pathReadCounts.set(normalizedPath, prior + 1);
 					}
 
 					try {
@@ -507,6 +527,9 @@ export function createShellTool(
 			: "configured_setting";
 	const cwd = config.cwd ?? process.cwd();
 	const isWindows = process.platform === "win32";
+	let lastCommandsKey = "";
+	let identicalCommandsStreak = 0;
+	let listingRejectStreak = 0;
 
 	return createTool<unknown, ToolOperationResult[]>({
 		name: "run_commands",
@@ -530,6 +553,43 @@ export function createShellTool(
 			const commands = coalesceAdjacentStringHeredocs(
 				normalizeRunCommandsInput(input),
 			);
+			const commandsKey = commands
+				.map((c) => formatRunCommandQuery(c).trim().toLowerCase())
+				.join("\n");
+			if (commandsKey === lastCommandsKey) {
+				identicalCommandsStreak += 1;
+			} else {
+				lastCommandsKey = commandsKey;
+				identicalCommandsStreak = 1;
+			}
+			if (identicalCommandsStreak >= 2) {
+				const err =
+					"Repeated the same run_commands. Do NOT retry identical shell/git commands. " +
+					"For project overview: read_files on cwd root (rules.md, convert.py, *.md/*.py), then attempt_completion. " +
+					"Do not dig into nested vendor repos (llama-cpp-src) for the main task summary.";
+				return commands.map((command) => ({
+					query: formatRunCommandQueryPreview(command),
+					result: "",
+					error: err,
+					success: false,
+				}));
+			}
+
+			const bypasses = commands.map((command) => getShellDiscoveryOrReadBypassError(command));
+			if (bypasses.some(Boolean)) {
+				listingRejectStreak += 1;
+				const finishHint =
+					listingRejectStreak >= 2
+						? " You already hit this block before — call attempt_completion with facts from files you already read."
+						: "";
+				return commands.map((command, i) => ({
+					query: formatRunCommandQueryPreview(command),
+					result: "",
+					error: (bypasses[i] ?? bypasses.find(Boolean) ?? "Shell command blocked.") + finishHint,
+					success: false,
+				}));
+			}
+			listingRejectStreak = 0;
 
 			return executeShellCommands(commands, {
 				executor,

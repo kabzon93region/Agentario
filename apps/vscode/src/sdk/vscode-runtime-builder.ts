@@ -66,6 +66,7 @@ function createAttemptCompletionTool(options: { cwd?: string } = {}): AgentTool 
 		name: "attempt_completion",
 		description:
 			"Once you've completed the user's task, use this tool to present the result to the user. " +
+			"REQUIRED: put the FULL final report in the result string (markdown ok). Never call with empty {} / missing result. " +
 			"result must summarize what you actually did or found — NEVER paste the user's request back. " +
 			"Do NOT call this after reading only one file when the task asks to review docs/history/rules — explore first. " +
 			"Omit command unless you need to run a showcase shell command (do not send null).",
@@ -90,12 +91,19 @@ function createAttemptCompletionTool(options: { cwd?: string } = {}): AgentTool 
 						"Do not use commands like echo or cat that merely print text.",
 				},
 			},
-			required: ["result"],
+			// result is validated in execute (clearer error than JSON Schema for empty {}).
 		},
 		execute: async (input: unknown, context: AgentToolContext) => {
 			const parsedInput = input && typeof input === "object" ? (input as Record<string, unknown>) : {}
-			const resultText = typeof parsedInput.result === "string" ? parsedInput.result : "Task completed."
+			const resultText = typeof parsedInput.result === "string" ? parsedInput.result.trim() : ""
 			const command = typeof parsedInput.command === "string" ? parsedInput.command.trim() : undefined
+
+			if (resultText.length < 20) {
+				throw new Error(
+					"attempt_completion requires a non-empty result (full report in the result field). " +
+						"Do not call with {}. Put the analysis text into result, then retry.",
+				)
+			}
 
 			if (!command) {
 				return resultText

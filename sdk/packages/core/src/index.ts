@@ -760,6 +760,8 @@ export { createContextCompactionPrepareTurn } from "./extensions/context/compact
 export {
 	CONTEXT_BUDGET_NOTICE_KIND,
 	estimateContextBudget,
+	scaleContextBudgetBreakdown,
+	updateContextBudgetProviderScale,
 	type ContextBudgetBreakdown,
 	type ContextBudgetRuleDetail,
 } from "./extensions/context/context-budget";

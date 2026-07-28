@@ -1,4 +1,4 @@
-﻿import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
+import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import debounce from "debounce"
@@ -22,6 +22,8 @@ interface ContextWindowInfoProps {
 interface ContextWindowProgressProps extends ContextWindowInfoProps {
 	useAutoCondense: boolean
 	lastApiReqTotalTokens?: number
+	/** True when lastApiReqTotalTokens is char-estimate only (no provider usage yet). */
+	contextUsageApproximate?: boolean
 	contextWindow?: number
 	contextBudget?: ContextBudgetBreakdown
 	onSendMessage?: (command: string, files: string[], images: string[]) => void
@@ -64,6 +66,7 @@ ConfirmationDialog.displayName = "ConfirmationDialog"
 const ContextWindow: React.FC<ContextWindowProgressProps> = ({
 	contextWindow = 0,
 	lastApiReqTotalTokens = 0,
+	contextUsageApproximate = false,
 	contextBudget,
 	useAutoCondense,
 	tokensIn,
@@ -104,17 +107,19 @@ const ContextWindow: React.FC<ContextWindowProgressProps> = ({
 		if (!contextWindow) {
 			return null
 		}
-		// Prefer actual token counts (from usage event after each model response)
-		// over the pre-request estimate (from context budget notice).
-		// This ensures the progress bar updates after EACH model response,
-		// not just before each iteration.
+		// Prefer last measured provider usage (see getContextWindowUsage).
+		// Do not fall back to a lower char-estimate mid-turn — that caused the
+		// progress number to jump up after thinking, then drop on the next tool.
 		const used = lastApiReqTotalTokens || contextBudget?.totalEstimated || 0
+		const approximate =
+			contextUsageApproximate || (!(lastApiReqTotalTokens > 0) && !!contextBudget?.totalEstimated)
 		return {
 			percentage: (used / contextWindow) * 100,
 			max: contextWindow,
 			used,
+			approximate,
 		}
-	}, [contextBudget?.totalEstimated, contextWindow, lastApiReqTotalTokens])
+	}, [contextBudget?.totalEstimated, contextUsageApproximate, contextWindow, lastApiReqTotalTokens])
 
 	if (!tokenData) {
 		return null
@@ -126,7 +131,7 @@ const ContextWindow: React.FC<ContextWindowProgressProps> = ({
 				<div className="flex items-center gap-1.5 flex-1 whitespace-nowrap">
 					<span className="cursor-pointer text-sm" title={t("contextWindow.usedTitle")}>
 						{formatTokenNumber(tokenData.used)}
-						{contextBudget ? " ≈" : ""}
+						{tokenData.approximate ? " ≈" : ""}
 					</span>
 					<Popover open={isOpened} onOpenChange={setIsOpened}>
 						<PopoverTrigger asChild>
@@ -147,6 +152,7 @@ const ContextWindow: React.FC<ContextWindowProgressProps> = ({
 								cacheReads={cacheReads}
 								cacheWrites={cacheWrites}
 								contextBudget={contextBudget}
+								contextUsageApproximate={tokenData.approximate}
 								contextWindow={tokenData.max}
 								percentage={tokenData.percentage}
 								tokensIn={tokensIn}

@@ -164,7 +164,7 @@ export class LoopDetectionTracker {
 	}
 
 	inspect(call: LoopDetectionCall): LoopDetectionVerdict {
-		// For semantic_search, fingerprint on normalized query so limit/wrapper noise does not reset the streak.
+		// Fingerprint: semantic query; shell commands text (ignore wrapper noise).
 		let signatureSource: unknown = call.input;
 		if (
 			call.name === "semantic_search" &&
@@ -175,15 +175,22 @@ export class LoopDetectionTracker {
 			const q = (call.input as { query?: unknown }).query;
 			signatureSource =
 				typeof q === "string" ? q.trim().toLowerCase() : call.input;
+		} else if (call.name === "run_commands" && call.input && typeof call.input === "object") {
+			const raw = call.input as { commands?: unknown; command?: unknown };
+			const cmds = raw.commands ?? raw.command;
+			signatureSource =
+				typeof cmds === "string"
+					? cmds.trim().toLowerCase()
+					: JSON.stringify(cmds ?? call.input).toLowerCase();
 		}
 		const signature = toolCallSignature(signatureSource);
-		// Completion + search: identical re-calls are especially harmful.
 		const isCompletionTool =
 			call.name === "attempt_completion" || call.name === "submit_and_exit";
 		const isSearchTool =
 			call.name === "semantic_search" || call.name === "search_codebase";
+		const isShellTool = call.name === "run_commands";
 		const config =
-			isCompletionTool || isSearchTool
+			isCompletionTool || isSearchTool || isShellTool
 				? {
 						softThreshold: Math.min(2, this.config.softThreshold),
 						hardThreshold: Math.min(2, this.config.hardThreshold),
@@ -199,7 +206,7 @@ export class LoopDetectionTracker {
 			const msg =
 				result.reason === "oscillating"
 					? `Detected alternating tool-call loop involving \`${call.name}\`; stopping to avoid a loop. Use a different approach (e.g. semantic_search once, then read_files once). Docs may be missing — read root source and attempt_completion.`
-					: `Detected ${this.state.consecutiveIdenticalCount} consecutive identical calls to \`${call.name}\`; stopping to avoid a loop. Change approach: read_files on known paths or attempt_completion (docs may not exist).`;
+					: `Detected ${this.state.consecutiveIdenticalCount} consecutive identical calls to \`${call.name}\`; stopping to avoid a loop. Change approach: read_files on known root paths or attempt_completion (do not repeat the same shell/git command).`;
 			return { kind: "hard", message: msg };
 		}
 		if (result.softWarning) {

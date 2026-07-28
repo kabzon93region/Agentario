@@ -1,4 +1,4 @@
-﻿import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
+import type { ContextBudgetBreakdown } from "@shared/getApiMetrics"
 import { AgentarioMessage } from "@shared/ExtensionMessage"
 import React from "react"
 import TaskHeader from "@/components/chat/task-header/TaskHeader"
@@ -14,6 +14,7 @@ interface TaskSectionProps {
 		totalCost: number
 	}
 	lastApiReqTotalTokens?: number
+	contextUsageApproximate?: boolean
 	contextBudget?: ContextBudgetBreakdown
 	selectedModelInfo: {
 		supportsPromptCache: boolean
@@ -30,6 +31,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 	task,
 	apiMetrics,
 	lastApiReqTotalTokens,
+	contextUsageApproximate,
 	contextBudget,
 	selectedModelInfo,
 	messageHandlers,
@@ -40,6 +42,7 @@ export const TaskSection: React.FC<TaskSectionProps> = ({
 			cacheWrites={apiMetrics.totalCacheWrites}
 			doesModelSupportPromptCache={selectedModelInfo.supportsPromptCache}
 			contextBudget={contextBudget}
+			contextUsageApproximate={contextUsageApproximate}
 			lastApiReqTotalTokens={lastApiReqTotalTokens}
 			onClose={messageHandlers.handleTaskCloseButtonClick}
 			onSendMessage={messageHandlers.handleSendMessage}

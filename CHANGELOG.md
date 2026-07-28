@@ -2,6 +2,46 @@
 
 Схема версий: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
 
+## [0.14.36] — 2026-07-29
+
+### Fixed
+- UI полоски контекста: разделены «В текущем запросе» (заполнение окна) и «Сумма за весь таск» (накопленные prompt/completion); ≈ только для оценки.
+- LM Studio/Ollama: явный `maxTokensPerTurn=4096` (иначе сервер часто режет ответ на 512 токенов — обрыв отчёта).
+- `attempt_completion`: маппинг summary/text→result; отказ на пустом `{}` с понятной ошибкой.
+
+### Docs
+- README: thinking budget ≠ max tokens в LM Studio; `release/notes/v0.14.36.md` для GitHub Release (накопительно с 0.14.33).
+
+## [0.14.35] — 2026-07-29
+
+### Fixed
+- `totalEstimated` / полоска контекста: оценка чата больше не режет tool_result до 2k (как compaction) — считает тело как у API (MessageBuilder); EMA-калибровка по `tokensIn` провайдера.
+- Промпт обзора: старт с `git status` + корневые `read_files`, а не с 2–3 пустых `semantic_search`.
+
+## [0.14.34] — 2026-07-29
+
+### Fixed
+- Полоска контекста на плашке таска: после ответа модели больше не прыгает вверх по `tokensIn`, а затем вниз на заниженный `contextBudget.totalEstimated` при старте следующего хода. Предпочитается последнее измеренное usage провайдера; `≈` показывается только для оценки до первого usage.
+
+## [0.14.33] — 2026-07-28
+
+### Fixed
+- Agent21: block re-reading same path after 2 read_files; unwrap quoted shell cmds; stronger listing reject hints; && blocked in bypass.
+
+## [0.14.32] — 2026-07-26
+
+### Fixed
+- **Агент20-лупы**: повтор одинаковых `run_commands` (например git log) отклоняется сразу; loop-detection для shell ужесточён (hard на 2-м).
+- `&&` в PowerShell блокируется и для structured command objects.
+- VS Code `semantic_search`: повтор query + demote vendor paths (`llama-cpp-src` и т.п.), приоритет корневых файлов cwd.
+- Промпт: обзор с корня (rules.md/convert.py), не nested vendor; быстрее `attempt_completion`.
+
+## [0.14.31] — 2026-07-26
+
+### Fixed
+- Экраны «Чем могу помочь?» / welcome / account: React-логотипы AgentarioLogo* заменены с робота Cline на mark Agentario.
+- Activity bar: монохромный icon.svg (#C5C5C5) для корректной отрисовки вкладки в IDE.
+
 ## [0.14.30] — 2026-07-26
 
 ### Changed

@@ -107,34 +107,70 @@ export function normalizeRunCommandsInput(
 	}
 
 	for (const command of commands) {
-		if (typeof command !== "string") {
-			continue;
-		}
-		const syntaxError = validateShellCommandString(command);
+		const text =
+			typeof command === "string"
+				? unwrapShellCommandString(command)
+				: formatRunCommandQuery(command);
+		const syntaxError = validateShellCommandString(text);
 		if (syntaxError) {
 			throw new Error(syntaxError);
 		}
 	}
 
-	return commands;
+	// Unwrap quoted command strings so PowerShell does not echo literals.
+	return commands.map((command) => {
+		if (typeof command === "string") {
+			return unwrapShellCommandString(command);
+		}
+		return {
+			...command,
+			command: unwrapShellCommandString(command.command),
+		};
+	});
 }
 
 export function formatRunCommandQuery(
 	command: string | StructuredCommandInput,
 ): string {
 	if (typeof command === "string") {
-		return command;
+		return unwrapShellCommandString(command);
 	}
 
 	const args = command.args ?? [];
+	const base = unwrapShellCommandString(command.command);
 	if (args.length === 0) {
-		return command.command;
+		return base;
 	}
 
 	const renderedArgs = args.map((arg) =>
 		/[\s"]/u.test(arg) ? JSON.stringify(arg) : arg,
 	);
-	return `${command.command} ${renderedArgs.join(" ")}`;
+	return `${base} ${renderedArgs.join(" ")}`;
+}
+
+/**
+ * Local models often wrap the whole command in quotes ('git status'), which
+ * PowerShell evaluates as a string literal instead of running the command.
+ */
+export function unwrapShellCommandString(command: string): string {
+	const trimmed = command.trim();
+	if (trimmed.length < 2) {
+		return command;
+	}
+	const q = trimmed[0];
+	if ((q === "'" || q === '"') && trimmed.endsWith(q)) {
+		const inner = trimmed.slice(1, -1).trim();
+		if (
+			inner.length > 0 &&
+			!inner.includes(q) &&
+			/^(git|gh|npm|bun|node|python|py|dotnet|cargo|go|make|cmake|cd|Get-|Set-|Remove-|New-|Test-|Write-|Select-|Where-|ForEach-|\$)/i.test(
+				inner,
+			)
+		) {
+			return inner;
+		}
+	}
+	return command;
 }
 
 /** Reject shell listing / file-read shortcuts — use index tools + read_files instead. */
@@ -142,11 +178,17 @@ export function getShellDiscoveryOrReadBypassError(
 	command: string | StructuredCommandInput,
 ): string | null {
 	const text = formatRunCommandQuery(command);
+	if (/&&/.test(text) && process.platform === "win32") {
+		return (
+			"PowerShell does not support '&&'. Pass each command separately in the commands array, " +
+			"or use ';' inside one PowerShell script. Do not retry the same shell command."
+		);
+	}
 	if (/\b(Get-ChildItem|gci|\bls\b|\bdir\b|\btree\b|Find-ChildItem)\b/i.test(text)) {
 		return (
 			"Do not list directories via shell (Get-ChildItem/ls/dir). " +
-			"The workspace index is already available: use semantic_search or search_codebase, then read_files. " +
-			"Do not re-index via shell."
+			"Use paths you already know (from git status / prior reads): e.g. rules.md, convert.py, *.py in cwd. " +
+			"Call read_files or attempt_completion — do NOT retry listing."
 		);
 	}
 	if (
@@ -156,7 +198,8 @@ export function getShellDiscoveryOrReadBypassError(
 		)
 	) {
 		return (
-			"Do not read source/docs via shell (Get-Content/cat/type). Use read_files(path, start_line, end_line)."
+			"Do not read source/docs via shell (Get-Content/cat/type). Use read_files(path, start_line, end_line). " +
+			"If you already read the file, call attempt_completion instead of retrying."
 		);
 	}
 	return null;

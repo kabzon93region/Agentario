@@ -1,4 +1,4 @@
-﻿import type { ContextBudgetBreakdown } from "@agentario/shared"
+import type { ContextBudgetBreakdown } from "@agentario/shared"
 import { AgentarioMessage } from "./ExtensionMessage"
 
 export type { ContextBudgetBreakdown }
@@ -74,48 +74,68 @@ export function getApiMetrics(messages: AgentarioMessage[]): ApiMetrics {
 	return result
 }
 
+export type ContextWindowUsage = {
+	/** Input tokens for the progress bar (measured or estimate). */
+	used: number
+	/** True when `used` comes from char-based contextBudget, not provider usage. */
+	approximate: boolean
+}
+
 /**
- * Gets the total INPUT token count from the last API request.
+ * Gets context-window usage for the task header progress bar.
  *
- * This is used for context window progress display - it shows how much of the
- * context window is used in the current/most recent request, not cumulative totals.
+ * Prefer the last **measured** provider input (`tokensIn` + cache) over a newer
+ * `contextBudget.totalEstimated`-only `api_req_started`. Otherwise the bar jumps
+ * up after each model reply, then drops when the next iteration posts an estimate
+ * before usage arrives (often ~2× lower for local models / RU text).
  *
- * Agentario: НЕ включаем tokensOut — это выходные токены модели, которые НЕ
- * занимают контекст. Контекст — это только input (tokensIn + cacheWrites + cacheReads).
- *
- * @param messages - An array of AgentarioMessage objects to process.
- * @returns The total INPUT tokens from the last api_req_started message, or 0 if none found.
+ * Agentario: НЕ включаем tokensOut — выходные токены не занимают контекст.
  */
-export function getLastApiReqTotalTokens(messages: AgentarioMessage[]): number {
+export function getContextWindowUsage(messages: AgentarioMessage[]): ContextWindowUsage {
+	let lastMeasured = 0
+	let lastEstimated = 0
+
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i]
 		if (msg.type === "say" && msg.say === "api_req_started" && msg.text) {
 			try {
 				const parsed = JSON.parse(msg.text) as {
 					tokensIn?: number
-					tokensOut?: number
 					cacheWrites?: number
 					cacheReads?: number
 					contextBudget?: ContextBudgetBreakdown
 				}
-				// Agentario: только INPUT токены (tokensIn + cache).
-				// tokensOut — это выходные токены, они не занимают контекст.
-				const total =
-					(parsed.tokensIn || 0) +
-					(parsed.cacheWrites || 0) +
-					(parsed.cacheReads || 0)
-				if (total > 0) {
-					return total
+				const measured =
+					(parsed.tokensIn || 0) + (parsed.cacheWrites || 0) + (parsed.cacheReads || 0)
+				if (measured > 0 && lastMeasured === 0) {
+					lastMeasured = measured
 				}
-				if (parsed.contextBudget?.totalEstimated) {
-					return parsed.contextBudget.totalEstimated
+				const estimated = parsed.contextBudget?.totalEstimated ?? 0
+				if (estimated > 0 && lastEstimated === 0) {
+					lastEstimated = estimated
+				}
+				if (lastMeasured > 0) {
+					// Measured wins even if a newer estimate-only message exists.
+					return { used: lastMeasured, approximate: false }
 				}
 			} catch {
 				// Ignore JSON parse errors, continue searching
 			}
 		}
 	}
-	return 0
+
+	if (lastEstimated > 0) {
+		return { used: lastEstimated, approximate: true }
+	}
+	return { used: 0, approximate: false }
+}
+
+/**
+ * Gets the total INPUT token count from the last API request (for progress bar).
+ * @see getContextWindowUsage
+ */
+export function getLastApiReqTotalTokens(messages: AgentarioMessage[]): number {
+	return getContextWindowUsage(messages).used
 }
 
 function isContextBudgetBreakdown(value: unknown): value is ContextBudgetBreakdown {

@@ -119,6 +119,16 @@ describe("normalizeToolInput", () => {
 		expect(normalizeToolInput("read_files", input)).toBe(input);
 	});
 
+	it("maps summary to result for attempt_completion", () => {
+		const result = normalizeToolInput("attempt_completion", {
+			summary: "Full project overview goes here in enough detail.",
+		});
+		expect(result).toEqual({
+			result: "Full project overview goes here in enough detail.",
+			summary: "Full project overview goes here in enough detail.",
+		});
+	});
+
 	it("strips null command from attempt_completion", () => {
 		const result = normalizeToolInput("attempt_completion", {
 			result: "Done",

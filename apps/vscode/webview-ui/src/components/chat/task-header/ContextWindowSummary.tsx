@@ -21,6 +21,8 @@ interface TaskContextWindowButtonsProps extends TokenUsageInfoProps {
 	contextWindow: number
 	contextBudget?: ContextBudgetBreakdown
 	useAutoCondense?: boolean
+	/** When false, occupied count is provider-measured — do not mark ≈ */
+	contextUsageApproximate?: boolean
 }
 
 const AccordionItem = memo<{
@@ -108,6 +110,7 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 	percentage,
 	contextBudget,
 	useAutoCondense = false,
+	contextUsageApproximate = false,
 }) => {
 	const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["categories"]))
 	const [exportStatus, setExportStatus] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null)
@@ -159,7 +162,7 @@ export const ContextWindowSummary: React.FC<TaskContextWindowButtonsProps> = ({
 						<span>{t("contextWindow.usedLabel")}</span>
 						<span className="font-mono">
 							{formatTokenNumber(tokenUsed)}
-							{contextBudget ? " ≈" : ""}
+							{contextUsageApproximate ? " ≈" : ""}
 						</span>
 					</div>
 					<div className="flex justify-between">

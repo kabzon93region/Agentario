@@ -85,7 +85,7 @@ const AGENT_MODE_INSTRUCTIONS = `# Agent Mode (Autonomous)
 Fully autonomous agent. Plan → execute → verify — no confirmation needed per step.
 
 ## Rules
-- Gather only needed context (no fixed checklist). Prefer read_files / semantic_search over run_commands for file discovery and contents.
+- Gather only needed context (no fixed checklist). For project overview: git status then root read_files first; use semantic_search only to fill gaps — not 2–3 searches before any read. Prefer read_files over shell listing.
 - MCP memory (@modelcontextprotocol/server-memory) is SHARED across projects — verify against actual files, don't write project facts there.
 - **Anti-loop:** if same error twice → STOP, change approach. Never repeat failed tool call or the same semantic_search query.
 - **Windows:** never \`&&\` (use \`;\`), use PowerShell for git/build/test only — never Get-ChildItem/ls/dir or Get-Content for project discovery/reads.
@@ -239,10 +239,31 @@ function resolveOcaReasoningConfig(mode: Mode, apiConfig: ApiConfiguration | und
 	return isReasoningEffort(effort) ? { thinking: true, reasoningEffort: effort } : undefined
 }
 
+/** Default max completion tokens when LM Studio/Ollama omit max_tokens (server often defaults to 512). */
+const DEFAULT_LOCAL_MAX_OUTPUT_TOKENS = 4_096
+
 function resolveOpenAiCompatibleMaxTokens(config: ApiConfiguration | undefined, mode: Mode): number | undefined {
 	const modelInfo = mode === "plan" ? config?.planModeOpenAiModelInfo : config?.actModeOpenAiModelInfo
 	const maxTokens = modelInfo?.maxTokens
 	return typeof maxTokens === "number" && Number.isFinite(maxTokens) && maxTokens > 0 ? maxTokens : undefined
+}
+
+/**
+ * Local OpenAI-compatible servers (LM Studio / Ollama) often default max_tokens to 512,
+ * which truncates long reports mid-sentence. Always send an explicit output cap.
+ */
+function resolveLocalMaxTokensPerTurn(
+	providerId: string,
+	config: ApiConfiguration | undefined,
+	mode: Mode,
+): number | undefined {
+	if (providerId === "openai") {
+		return resolveOpenAiCompatibleMaxTokens(config, mode)
+	}
+	if (providerId === "lmstudio" || providerId === "ollama") {
+		return DEFAULT_LOCAL_MAX_OUTPUT_TOKENS
+	}
+	return undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -715,7 +736,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		apiKey = resolveApiKey(providerId, apiConfig)
 	}
 	apiKey = apiKey ?? ""
-	const maxTokensPerTurn = providerId === "openai" ? resolveOpenAiCompatibleMaxTokens(apiConfig, mode) : undefined
+	const maxTokensPerTurn = resolveLocalMaxTokensPerTurn(providerId, apiConfig, mode)
 	const reasoningConfig =
 		providerId === "oca"
 			? (resolveOcaReasoningConfig(mode, apiConfig) ?? resolveProviderReasoningConfig(providerId))
