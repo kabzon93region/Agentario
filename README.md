@@ -9,7 +9,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 </p>
 
 <p align="center">
-<strong>Версия расширения: 0.14.36</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+<strong>Версия расширения: 0.14.37</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
 </p>
 
 <div align="center">
@@ -29,7 +29,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 
 ## Быстрый старт (VS Code)
 
-1. Соберите или скачайте VSIX: `release/agentario-0.14.36.vsix` (сборка: `build.cmd` на Windows).
+1. Соберите или скачайте VSIX: `release/agentario-0.14.37.vsix` (сборка: `build.cmd` на Windows).
 2. VS Code → Extensions → `...` → **Install from VSIX**.
 3. Провайдер **LM Studio** или **Ollama** — см. [настройку LM Studio](#lm-studio-локальная-модель) ниже.
 4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright, trueline (правка файлов).

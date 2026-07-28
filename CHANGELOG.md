@@ -2,6 +2,11 @@
 
 Схема версий: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
 
+## [0.14.37] — 2026-07-29
+
+### Fixed
+- `tsconfig.app.json` webview-ui: убраны `vitest/globals` и `@testing-library/jest-dom` из `types` — эти типы нужны только для тестов, а тест-файлы исключены из этого конфига. Устранена ошибка «Cannot find type definition file».
+
 ## [0.14.36] — 2026-07-29
 
 ### Fixed
