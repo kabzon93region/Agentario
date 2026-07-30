@@ -10,20 +10,43 @@ import { isAgentarioStandaloneMode } from "./agentario-standalone"
 
 const BUNDLED_DEFAULT_FILES = AGENTARIO_BUNDLED_DEFAULT_RULE_FILES
 
-async function copyBundledFileIfMissing(bundledName: string, destDir: string): Promise<string | undefined> {
+/** True when the installed default rule still teaches shell directory listing. */
+function needsBundledRulesRefresh(existingContent: string): boolean {
+	return (
+		/Get-ChildItem\s+-Recurse/i.test(existingContent) ||
+		/Рекурсивный список файлов/i.test(existingContent) ||
+		(/Get-ChildItem/i.test(existingContent) && /-Depth/i.test(existingContent))
+	)
+}
+
+/**
+ * Seed or refresh the bundled default rule. Missing files are created.
+ * Existing files that still instruct Get-ChildItem directory listing are overwritten
+ * so they stop fighting the shell bypass guard.
+ */
+async function syncBundledDefaultRule(bundledName: string, destDir: string): Promise<string | undefined> {
 	const destPath = path.join(destDir, bundledName)
+	const srcPath = path.join(HostProvider.get().extensionFsPath, bundledName)
+
+	let existing: string | undefined
 	try {
-		await fs.access(destPath)
-		return undefined
+		existing = await fs.readFile(destPath, "utf8")
 	} catch {
-		// missing
+		existing = undefined
 	}
 
-	const srcPath = path.join(HostProvider.get().extensionFsPath, bundledName)
+	if (existing !== undefined && !needsBundledRulesRefresh(existing)) {
+		return undefined
+	}
+
 	try {
 		const content = await fs.readFile(srcPath, "utf8")
 		await fs.writeFile(destPath, content, "utf8")
-		Logger.log(`[Agentario] Seeded default file: ${destPath}`)
+		Logger.log(
+			existing === undefined
+				? `[Agentario] Seeded default file: ${destPath}`
+				: `[Agentario] Refreshed default rule (removed shell listing advice): ${destPath}`,
+		)
 		return destPath
 	} catch (error) {
 		Logger.warn(`[Agentario] Failed to seed ${bundledName}:`, error)
@@ -64,7 +87,7 @@ export async function seedAgentarioDefaults(stateManager: StateManager): Promise
 	const seededPaths: string[] = []
 
 	for (const fileName of BUNDLED_DEFAULT_FILES) {
-		const written = await copyBundledFileIfMissing(fileName, rulesDir)
+		const written = await syncBundledDefaultRule(fileName, rulesDir)
 		if (written) {
 			seededPaths.push(written)
 		}

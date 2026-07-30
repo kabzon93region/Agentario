@@ -19,6 +19,7 @@
  *   --port PORT         Server port (default: 19229)
  *   --launch-timeout MS Playwright _electron.launch timeout (default: 120000)
  *   --no-browser-capture  Let openExternal() open real browser windows (for interactive OAuth)
+ *   --visible           Show VS Code window (default: hidden off-screen)
  *
  * Env:
  *   VSCODE_TEST_VERSION  Debugee VSCode version to download (default: 1.103.0; the
@@ -40,6 +41,7 @@ import { fileURLToPath } from "node:url"
 import { downloadAndUnzipVSCode, SilentReporter } from "@vscode/test-electron"
 import { _electron, type CDPSession, type ElectronApplication, type Frame, type Page } from "playwright"
 import WebSocket from "ws"
+import { exportMessagesToMarkdown, exportContextFromApiHistory } from "./export-utils"
 
 const __script_dir = typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url))
 
@@ -60,14 +62,16 @@ const EXT_INSPECT_PORT = 9230
 // 60s default, so allow more headroom and let it be overridden.
 const LAUNCH_TIMEOUT_MS = Number.parseInt(getArg("--launch-timeout") || "120000", 10)
 const PROJECT_ROOT = path.resolve(__script_dir, "..", "..", "..")
-const SCREENSHOT_DIR = path.join(os.tmpdir(), "cline-debug")
-const DEFAULT_WORKSPACE = path.join(os.tmpdir(), "cline-debug-workspace")
-const DEFAULT_CLINE_DIR = path.join(os.homedir(), ".cline2") // Separate profile from user's ~/.cline
+const SCREENSHOT_DIR = path.join(os.tmpdir(), "agentario-lab-debug")
+const DEFAULT_WORKSPACE = path.join(os.tmpdir(), "agentario-lab-workspace")
+const DEFAULT_CLINE_DIR = path.join(os.homedir(), ".agentario-lab") // Separate profile from user's main config
 const SKIP_BUILD = args.includes("--skip-build")
 const AUTO_LAUNCH = args.includes("--auto-launch")
 const BROWSER_CAPTURE = !args.includes("--no-browser-capture")
 const WORKSPACE_ARG = getArg("--workspace")
 const CLINE_DIR_ARG = getArg("--cline-dir") // Override the isolated CLINE_DIR
+const VSIX_ARG = getArg("--vsix") // Path to release VSIX for install-extension mode
+const HIDDEN_MODE = args.includes("--visible") ? false : true // Hidden by default
 
 // ============================================================
 // VLQ Sourcemap Decoder
@@ -320,7 +324,7 @@ class DebugHarness {
 	// Lifecycle
 	// ────────────────────────────────────────────
 
-	async launch(opts: { workspace?: string; skipBuild?: boolean } = {}): Promise<any> {
+	async launch(opts: { workspace?: string; skipBuild?: boolean; hidden?: boolean } = {}): Promise<any> {
 		if (this.app) return { status: "already_running" }
 
 		const workspace = opts.workspace || WORKSPACE_ARG || DEFAULT_WORKSPACE
@@ -388,23 +392,25 @@ class DebugHarness {
 				executablePath,
 				args: [
 					`--inspect-extensions=${EXT_INSPECT_PORT}`,
-					`--extensionDevelopmentPath=${PROJECT_ROOT}`,
+					...(VSIX_ARG
+						? [`--install-extension=${path.resolve(VSIX_ARG)}`]
+						: [`--extensionDevelopmentPath=${PROJECT_ROOT}`]),
 					"--disable-extensions",
 					"--disable-workspace-trust",
 					"--no-sandbox",
 					"--disable-updates",
 					"--skip-welcome",
 					"--skip-release-notes",
-					// Headless/VM GPU stacks crash the renderer's GPU process
-					// ("Exiting GPU process during initialization" /
-					// "CreateCommandBuffer kTransientFailure"), which can kill the window
-					// before Playwright finishes attaching and trip the launch timeout.
-					// Force software rendering for a stable debugee.
 					"--disable-gpu",
 					"--disable-gpu-compositing",
 					"--disable-software-rasterizer",
 					"--disable-dev-shm-usage",
 					`--user-data-dir=${userDataDir}`,
+				// Hidden mode: place window off-screen so it never steals focus
+				...(opts.hidden !== false && HIDDEN_MODE ? [
+					"--window-position=-32000,-32000",
+					"--window-size=800,600",
+				] : []),
 					workspace,
 				],
 				env: {
@@ -418,6 +424,7 @@ class DebugHarness {
 					// ── Browser capture: intercept openExternal() for OAuth testing unless explicitly disabled ──
 					CLINE_CAPTURE_BROWSER: BROWSER_CAPTURE ? "1" : "0",
 					CLINE_DEBUG_HARNESS_PORT: String(PORT),
+				LAB_HIDDEN: HIDDEN_MODE ? "1" : "0",
 				},
 				timeout: LAUNCH_TIMEOUT_MS,
 			})
@@ -455,6 +462,8 @@ class DebugHarness {
 			screenshotDir: SCREENSHOT_DIR,
 			clineDir: this.clineDir,
 			browserCapture: BROWSER_CAPTURE,
+			vsixMode: !!VSIX_ARG,
+			vsixPath: VSIX_ARG ? path.resolve(VSIX_ARG) : undefined,
 		}
 	}
 
@@ -881,12 +890,12 @@ class DebugHarness {
 	async uiOpenSidebar(): Promise<any> {
 		if (!this.page) throw new Error("VSCode not running")
 		try {
-			await this.page.getByRole("tab", { name: /Cline/ }).locator("a").click()
+			await this.page.getByRole("tab", { name: /Agentario|Cline/ }).locator("a").click()
 		} catch {
-			// Activity bar might need a different approach
-			await this.page.keyboard.press("Meta+Shift+p")
+			const mod = process.platform === "darwin" ? "Meta" : "Control"
+			await this.page.keyboard.press(`${mod}+Shift+p`)
 			await sleep(300)
-			await this.page.keyboard.type("Cline: Focus on Cline View")
+			await this.page.keyboard.type("Agentario: Focus on Agentario View")
 			await sleep(200)
 			await this.page.keyboard.press("Enter")
 		}
@@ -917,7 +926,8 @@ class DebugHarness {
 
 	async uiCommandPalette(params: { command: string }): Promise<void> {
 		if (!this.page) throw new Error("VSCode not running")
-		await this.page.keyboard.press("Meta+Shift+p")
+		const mod = process.platform === "darwin" ? "Meta" : "Control"
+		await this.page.keyboard.press(`${mod}+Shift+p`)
 		await sleep(500)
 		await this.page.keyboard.type(params.command)
 		await sleep(300)
@@ -1338,6 +1348,371 @@ class DebugHarness {
 	// Command Dispatch
 	// ────────────────────────────────────────────
 
+
+	// ────────────────────────────────────────────
+	// Agentario Lab — High-level API
+	// ────────────────────────────────────────────
+
+	/** Get lab status: VS Code running, active task, idle state */
+	async labStatus(): Promise<any> {
+		const running = !!this.app
+		let idle: boolean | undefined
+		let lastMessagePreview: string | undefined
+		let taskCount: number | undefined
+
+		if (this.clineDir) {
+			try {
+				const historyPath = path.join(this.clineDir, "tasks")
+				if (fs.existsSync(historyPath)) {
+					const entries = fs.readdirSync(historyPath).filter(e => !e.startsWith("."))
+					taskCount = entries.length
+					let newestDir: string | undefined
+					let newestMtime = 0
+					for (const entry of entries) {
+						const entryPath = path.join(historyPath, entry)
+						try {
+							const stat = fs.statSync(entryPath)
+							if (stat.isDirectory() && stat.mtimeMs > newestMtime) {
+								newestMtime = stat.mtimeMs
+								newestDir = entryPath
+							}
+						} catch {}
+					}
+					if (newestDir) {
+						const msgFile = path.join(newestDir, "ui_messages.json")
+						if (fs.existsSync(msgFile)) {
+							const msgs = JSON.parse(fs.readFileSync(msgFile, "utf-8"))
+							if (Array.isArray(msgs) && msgs.length > 0) {
+								const last = msgs[msgs.length - 1]
+								const hasPartial = msgs.some((m: any) => m.partial === true)
+								idle = !hasPartial
+								lastMessagePreview = (last.text || "").substring(0, 200)
+							} else {
+								idle = true
+							}
+						}
+					}
+				}
+			} catch {}
+		}
+
+		return {
+			vscodeRunning: running,
+			clineDir: this.clineDir,
+			taskCount,
+			idle,
+			lastMessagePreview,
+			vsixMode: !!VSIX_ARG,
+		}
+	}
+
+	/**
+	 * Wait for the globalThis.agentario bridge (set by extension.ts when
+	 * CLINE_DEBUG_HARNESS_PORT is present) and call fn(bridge).
+	 * Polls every 500ms for up to 30s so it survives extension activation delay.
+	 */
+	private async labCallBridge<T>(fn: (bridge: any) => T | Promise<T>, timeoutMs = 30_000): Promise<T> {
+		if (!this.extCdp?.connected) throw new Error("Extension host CDP not connected")
+		const deadline = Date.now() + timeoutMs
+		let lastError = ""
+		while (Date.now() < deadline) {
+			try {
+				const result = await this.extCdp.send("Runtime.evaluate", {
+					expression: "typeof globalThis.agentario",
+					returnByValue: true,
+				})
+				if (result?.result?.value === "object") {
+					// Bridge is live — evaluate the call inside the extension host
+					const expr = `(${fn.toString()})(globalThis.agentario)`
+					const res = await this.extCdp.send("Runtime.evaluate", {
+						expression: expr,
+						returnByValue: true,
+						awaitPromise: true,
+					})
+					if (res?.exceptionDetails) {
+						throw new Error(res.exceptionDetails.text || JSON.stringify(res.exceptionDetails))
+					}
+					return res?.result?.value as T
+				}
+			} catch (e: any) {
+				lastError = e.message
+			}
+			await sleep(500)
+		}
+		throw new Error(`Bridge not available after ${timeoutMs}ms. Last error: ${lastError}`)
+	}
+
+	/** Create a new task via CDP bridge(params: { text: string }): Promise<any> {
+		if (!params.text) throw new Error("text is required")
+		return this.labCallBridge((bridge: any) => bridge.initTask(params.text))
+	}
+
+	/** Send a followup response to an active ask via CDP bridge. */
+	async labFollowup(params: { text: string }): Promise<any> {
+		if (!params.text) throw new Error("text is required")
+		return this.labCallBridge((bridge: any) => bridge.askResponse(params.text))
+	}
+
+	/** Find the newest task directory under clineDir/tasks. */
+	private findNewestTaskDir(): string | undefined {
+		if (!this.clineDir) return undefined
+		const historyPath = path.join(this.clineDir, "tasks")
+		if (!fs.existsSync(historyPath)) return undefined
+		const entries = fs.readdirSync(historyPath).filter(e => !e.startsWith("."))
+		let newestDir: string | undefined
+		let newestMtime = 0
+		for (const entry of entries) {
+			const entryPath = path.join(historyPath, entry)
+			try {
+				const stat = fs.statSync(entryPath)
+				if (stat.isDirectory() && stat.mtimeMs > newestMtime) {
+					newestMtime = stat.mtimeMs
+					newestDir = entryPath
+				}
+			} catch {}
+		}
+		return newestDir
+	}
+
+	/** Poll disk until the agent is idle (no partial messages). */
+	async labWaitIdle(params: { timeout?: number; pollMs?: number } = {}): Promise<any> {
+		const timeout = params.timeout ?? 600_000
+		const pollMs = params.pollMs ?? 3_000
+		const start = Date.now()
+
+		while (Date.now() - start < timeout) {
+			const newestDir = this.findNewestTaskDir()
+			if (newestDir) {
+				const msgFile = path.join(newestDir, "ui_messages.json")
+				if (fs.existsSync(msgFile)) {
+					try {
+						const msgs = JSON.parse(fs.readFileSync(msgFile, "utf-8"))
+						if (Array.isArray(msgs) && msgs.length > 0) {
+							const hasPartial = msgs.some((m: any) => m.partial === true)
+							const lastMsg = msgs[msgs.length - 1]
+							const lastTs = lastMsg.ts || 0
+							const staleEnough = (Date.now() - lastTs) > 2000
+							if (!hasPartial && staleEnough) {
+								return {
+									status: "idle",
+									elapsed: Date.now() - start,
+									messageCount: msgs.length,
+									lastMessagePreview: (lastMsg.text || "").substring(0, 200),
+								}
+							}
+						}
+					} catch {}
+				}
+			}
+			await sleep(pollMs)
+		}
+		return { status: "timeout", elapsed: Date.now() - start }
+	}
+
+	/** Get messages from the most recent task's ui_messages.json. */
+	async labGetMessages(params: { count?: number } = {}): Promise<any> {
+		const count = params.count ?? 50
+		const newestDir = this.findNewestTaskDir()
+		if (!newestDir) return { messages: [] }
+		const msgFile = path.join(newestDir, "ui_messages.json")
+		if (!fs.existsSync(msgFile)) return { messages: [] }
+		const allMsgs = JSON.parse(fs.readFileSync(msgFile, "utf-8"))
+		const recent = allMsgs.slice(-count)
+		return {
+			taskDir: newestDir,
+			total: allMsgs.length,
+			shown: recent.length,
+			messages: recent.map((m: any) => ({
+				role: m.type === "say" ? (m.say === "task" || m.say === "user_feedback" ? "user" : "assistant") : m.type,
+				say: m.say,
+				text: (m.text || "").substring(0, 500),
+				partial: m.partial,
+				ts: m.ts,
+			})),
+		}
+	}
+
+	/** Export chat to markdown file (full logic, disk-based, no Save Dialog). */
+	async labExportChat(params: { outPath?: string } = {}): Promise<any> {
+		const newestDir = this.findNewestTaskDir()
+		if (!newestDir) throw new Error("No task directory found")
+		const msgFile = path.join(newestDir, "ui_messages.json")
+		if (!fs.existsSync(msgFile)) throw new Error("No ui_messages.json found")
+		const msgs = JSON.parse(fs.readFileSync(msgFile, "utf-8"))
+		const taskId = path.basename(newestDir)
+		const outPath = params.outPath || path.join(process.cwd(), "Exports", `lab-${taskId}`, "chat-export.md")
+		const outDir = path.dirname(outPath)
+		fs.mkdirSync(outDir, { recursive: true })
+		const md = exportMessagesToMarkdown(msgs, { title: `Agentario Lab Export \u2014 ${taskId}` })
+		fs.writeFileSync(outPath, md, "utf-8")
+		return { path: outPath, taskDir: newestDir, messageCount: msgs.length }
+	}
+
+	/** Take a screenshot (alias for ui.sidebar_screenshot). */
+	async labScreenshot(): Promise<any> {
+		return this.uiSidebarScreenshot()
+	}
+
+	/** Export model context to file (like "Export context to file" button). */
+	async labExportContext(params: { outPath?: string } = {}): Promise<any> {
+		const newestDir = this.findNewestTaskDir()
+		if (!newestDir) throw new Error("No task directory found")
+		const taskId = path.basename(newestDir)
+
+		// Try api_conversation_history.json first (always available)
+		const historyPath = path.join(newestDir, "api_conversation_history.json")
+		if (fs.existsSync(historyPath)) {
+			const outPath = params.outPath || path.join(process.cwd(), "Exports", `lab-${taskId}`, "context-export.txt")
+			const ok = exportContextFromApiHistory(historyPath, outPath)
+			if (ok) return { path: outPath, source: "api_conversation_history.json" }
+		}
+
+		// Fallback: trigger exportContextText via bridge (if CDP connected)
+		if (this.extCdp?.connected) {
+			try {
+				const result = await this.labCallBridge((bridge: any) => {
+					const ctx = bridge.exportContextText()
+					return ctx ? JSON.stringify(ctx) : "no_context"
+				})
+				return { source: "ext.evaluate", result }
+			} catch (e: any) {
+				return { source: "ext.evaluate", error: e.message }
+			}
+		}
+
+		return { error: "No context source available", taskDir: newestDir }
+	}
+
+	/** Collect all session files into an export directory. */
+	async labCollectSessionFiles(params: { outDir?: string } = {}): Promise<any> {
+		const newestDir = this.findNewestTaskDir()
+		if (!newestDir) throw new Error("No task directory found")
+		const taskId = path.basename(newestDir)
+		const outDir = params.outDir || path.join(process.cwd(), "Exports", `lab-${taskId}`)
+
+		fs.mkdirSync(outDir, { recursive: true })
+		const collected: string[] = []
+
+		// 1. Copy ui_messages.json
+		const uiMsgSrc = path.join(newestDir, "ui_messages.json")
+		if (fs.existsSync(uiMsgSrc)) {
+			const dest = path.join(outDir, "ui_messages.json")
+			fs.copyFileSync(uiMsgSrc, dest)
+			collected.push(dest)
+		}
+
+		// 2. Copy api_conversation_history.json
+		const apiHistSrc = path.join(newestDir, "api_conversation_history.json")
+		if (fs.existsSync(apiHistSrc)) {
+			const dest = path.join(outDir, "api_conversation_history.json")
+			fs.copyFileSync(apiHistSrc, dest)
+			collected.push(dest)
+		}
+
+		// 3. Extension log file
+		try {
+			const logsDir = path.join(this.clineDir, "data", "logs", "extension")
+			if (fs.existsSync(logsDir)) {
+				const today = new Date().toISOString().slice(0, 10)
+				const logFile = path.join(logsDir, `agentario-${today}.log`)
+				if (fs.existsSync(logFile)) {
+					const dest = path.join(outDir, "extension.log")
+					fs.copyFileSync(logFile, dest)
+					collected.push(dest)
+				}
+			}
+		} catch {}
+
+		// 4. Compaction debug files (from ~/Documents/agentario-compaction-debug/)
+		try {
+			const compactionDir = path.join(os.homedir(), "Documents", "agentario-compaction-debug")
+			if (fs.existsSync(compactionDir)) {
+				const compOutDir = path.join(outDir, "compaction")
+				fs.mkdirSync(compOutDir, { recursive: true })
+				const files = fs.readdirSync(compactionDir)
+				// Copy files modified today (same day as the session)
+			const today = new Date().toISOString().slice(0, 10)
+				for (const file of files) {
+					const src = path.join(compactionDir, file)
+					try {
+						const stat = fs.statSync(src)
+						if (stat.isFile() && stat.mtime.toISOString().startsWith(today)) {
+							const dest = path.join(compOutDir, file)
+							fs.copyFileSync(src, dest)
+							collected.push(dest)
+						}
+					} catch {}
+				}
+			}
+		} catch {}
+
+		return { outDir, taskId, files: collected }
+	}
+
+	/** Run full automation cycle: launch, CDP task, wait, export, collect. No UI clicks. */
+	async labRun(params: { text: string; workspace?: string; timeout?: number; outDir?: string; screenshot?: boolean }): Promise<any> {
+		if (!params.text) throw new Error("text is required")
+		const timeout = params.timeout ?? 900_000 // 15 min default
+
+		const steps: { step: string; status: string; detail?: any }[] = []
+		const outDir = params.outDir || path.join(process.cwd(), "Exports", `lab-run-${Date.now()}`)
+
+		try {
+			// Step 1: Launch if not running (hidden by default)
+			if (!this.app) {
+				log("[lab.run] Launching VS Code (hidden)...")
+				const launchResult = await this.launch({ workspace: params.workspace, hidden: true })
+				steps.push({ step: "launch", status: "ok", detail: launchResult })
+				await sleep(3000) // Wait for extension activation
+			} else {
+				steps.push({ step: "launch", status: "already_running" })
+			}
+
+			// Step 2: Create task via CDP bridge (no sidebar, no clicks)
+			log("[lab.run] Creating task via bridge...")
+			const taskResult = await this.labNewTask({ text: params.text })
+			steps.push({ step: "new_task", status: "ok", detail: taskResult })
+
+			// Step 3: Wait idle
+			log(`[lab.run] Waiting for idle (timeout: ${timeout}ms)...`)
+			const idleResult = await this.labWaitIdle({ timeout })
+			steps.push({ step: "wait_idle", status: idleResult.status, detail: idleResult })
+
+			if (idleResult.status === "timeout") {
+				return { status: "timeout", steps, outDir }
+			}
+
+			// Step 4: Export chat
+			log("[lab.run] Exporting chat...")
+			const chatPath = path.join(outDir, "chat-export.md")
+			const chatResult = await this.labExportChat({ outPath: chatPath })
+			steps.push({ step: "export_chat", status: "ok", detail: chatResult })
+
+			// Step 5: Export context
+			log("[lab.run] Exporting context...")
+			const ctxPath = path.join(outDir, "context-export.txt")
+			const ctxResult = await this.labExportContext({ outPath: ctxPath })
+			steps.push({ step: "export_context", status: "ok", detail: ctxResult })
+
+			// Step 6: Collect session files
+			log("[lab.run] Collecting session files...")
+			const collectResult = await this.labCollectSessionFiles({ outDir })
+			steps.push({ step: "collect_files", status: "ok", detail: collectResult })
+
+			// Step 7: Screenshot only if explicitly requested
+			if (params.screenshot) {
+				try {
+					const ssResult = await this.labScreenshot()
+					steps.push({ step: "screenshot", status: "ok", detail: ssResult })
+				} catch {}
+			}
+
+			return { status: "completed", steps, outDir, taskId: chatResult.taskDir ? path.basename(chatResult.taskDir) : undefined }
+		} catch (e: any) {
+			steps.push({ step: "error", status: "failed", detail: e.message })
+			return { status: "error", error: e.message, steps, outDir }
+		}
+	}
 	async handleCommand(method: string, params: any): Promise<any> {
 		switch (method) {
 			// Lifecycle
@@ -1429,6 +1804,28 @@ class DebugHarness {
 				return this.uiReactInput(params)
 			case "ui.send_message":
 				return this.uiSendMessage(params)
+
+			// Agentario Lab — High-level API
+			case "lab.status":
+				return this.labStatus()
+			case "lab.new_task":
+				return this.labNewTask(params)
+			case "lab.followup":
+				return this.labFollowup(params)
+			case "lab.wait_idle":
+				return this.labWaitIdle(params)
+			case "lab.get_messages":
+				return this.labGetMessages(params)
+			case "lab.export_chat":
+				return this.labExportChat(params)
+			case "lab.export_context":
+				return this.labExportContext(params)
+			case "lab.collect_session_files":
+				return this.labCollectSessionFiles(params)
+			case "lab.run":
+				return this.labRun(params)
+			case "lab.screenshot":
+				return this.labScreenshot()
 
 			// OAuth & Browser Capture
 			case "oauth.captured_urls":
@@ -1573,6 +1970,7 @@ server.listen(PORT, "127.0.0.1", () => {
 	log(``)
 	log(`Quick start:`)
 	log(`  curl localhost:${PORT}/api -d '{"method":"launch"}'`)
+	log(`  curl localhost:${PORT}/api -d '{"method":"lab.new_task","params":{"text":"Hello"}}'`)
 	log(`  curl localhost:${PORT}/api -d '{"method":"ui.open_sidebar"}'`)
 	log(`  curl localhost:${PORT}/api -d '{"method":"ui.screenshot"}'`)
 	log(`  curl localhost:${PORT}/api -d '{"method":"ext.set_breakpoint","params":{"file":"src/extension.ts","line":42}}'`)

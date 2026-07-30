@@ -5,10 +5,13 @@ import type { CoreCompactionContext } from "../../types/config";
 import { runBasicCompaction } from "./basic-compaction";
 import { createContextCompactionPrepareTurn, resolveAdaptivePreserveRecentTokens } from "./compaction";
 import {
+	buildSummarizationUnits,
 	createTokenEstimator,
 	findCutIndex,
+	packSummarizationUnits,
 	resolveSummarizerConfig,
 	serializeMessage,
+	SOLO_BLOCK_CHAR_THRESHOLD,
 	TOOL_RESULT_CHAR_LIMIT,
 } from "./compaction-shared";
 
@@ -182,6 +185,74 @@ function expectNoOrphanedToolPairs(messages: LlmsProviders.Message[]): void {
 		});
 	}
 }
+
+describe("buildSummarizationUnits / packSummarizationUnits", () => {
+	it("does not truncate large tool results; marks them forceSolo", () => {
+		const long = "x".repeat(SOLO_BLOCK_CHAR_THRESHOLD + 50);
+		const units = buildSummarizationUnits([
+			{
+				role: "user",
+				content: [
+					{
+						type: "tool_result",
+						tool_use_id: "t1",
+						name: "read_files",
+						content: long,
+					},
+				],
+			},
+		]);
+		expect(units).toHaveLength(1);
+		expect(units[0]?.forceSolo).toBe(true);
+		expect(units[0]?.text).toContain(long);
+		expect(units[0]?.text).not.toContain("truncated");
+	});
+
+	it("stubs file content instead of dumping raw body", () => {
+		const units = buildSummarizationUnits([
+			{
+				role: "user",
+				content: [
+					{
+						type: "file",
+						path: "s:\\temo\\convert.py",
+						content: "print('huge')\n".repeat(500),
+					},
+				],
+			},
+		]);
+		expect(units[0]?.text).toContain("convert.py");
+		expect(units[0]?.text).toContain("саммари файла");
+		expect(units[0]?.text).not.toContain("print('huge')");
+	});
+
+	it("puts oversized tool results in solo chunks and labels continuations", () => {
+		const long = "A".repeat(20_000);
+		const units = buildSummarizationUnits([
+			{ role: "user", content: "short before" },
+			{
+				role: "user",
+				content: [
+					{
+						type: "tool_result",
+						tool_use_id: "t1",
+						name: "read_files",
+						content: long,
+					},
+				],
+			},
+		]);
+		const packed = packSummarizationUnits({
+			units,
+			chunkSizeTokens: 500,
+			modelContextTokens: 2_000,
+		});
+		expect(packed.length).toBeGreaterThan(1);
+		expect(packed.some((c) => c.includes("[Продолжение:"))).toBe(true);
+		expect(packed.join("\n")).toContain("short before");
+		expect(packed.join("\n")).toContain("A".repeat(100));
+	});
+});
 
 describe("createContextCompactionPrepareTurn", () => {
 	beforeEach(() => {
@@ -427,8 +498,9 @@ describe("createContextCompactionPrepareTurn", () => {
 		});
 
 		expect(codexConfig).not.toHaveProperty("maxOutputTokens");
-		expect(codexConfig.thinking).toBe(false);
-		expect(anthropicConfig.maxOutputTokens).toBe(1_024);
+		expect(codexConfig.thinking).toBeUndefined();
+		// Do not force a summarizer maxOutputTokens default — LM Studio / model settings apply.
+		expect(anthropicConfig.thinking).toBeUndefined();
 	});
 
 	it("summarizes older messages and keeps recent messages", async () => {
@@ -568,120 +640,6 @@ describe("createContextCompactionPrepareTurn", () => {
 		});
 	});
 
-	it("sends truncated text-block tool results to the agentic summarizer", async () => {
-		const createMessage = vi.fn(() =>
-			streamChunks([
-				{
-					type: "text",
-					id: "summary-tool-output",
-					text: "## Goal\nSummarized tool output\n\n## Next\nContinue",
-				},
-				{ type: "done", id: "summary-tool-output", success: true },
-			]),
-		);
-		createHandlerMock.mockReturnValue({ createMessage });
-		const omittedTail = "TAIL_SHOULD_NOT_REACH_SUMMARIZER";
-		const longToolOutput =
-			"x".repeat(TOOL_RESULT_CHAR_LIMIT + 10_000) + omittedTail;
-		const prepareTurn = createContextCompactionPrepareTurn({
-			providerId: "anthropic",
-			modelId: "mock-model",
-			providerConfig: {
-				providerId: "anthropic",
-				modelId: "mock-model",
-			} as LlmsProviders.ProviderConfig,
-			compaction: {
-				enabled: true,
-				strategy: "agentic",
-				preserveRecentTokens: 1,
-				reserveTokens: 5,
-			},
-			logger: undefined,
-		});
-
-		await prepareTurn?.({
-			agentId: "agent-1",
-			conversationId: "conv-1",
-			parentAgentId: null,
-			iteration: 1,
-			abortSignal: new AbortController().signal,
-			systemPrompt: "You are helpful.",
-			tools: [],
-			messages: [
-				{ role: "user", content: "Run a large command" },
-				{
-					role: "assistant",
-					content: [
-						{
-							type: "tool_use",
-							id: "tool-large",
-							name: "execute_command",
-							input: { command: "print-large-output" },
-						},
-					],
-				},
-				{
-					role: "user",
-					content: [
-						{
-							type: "tool_result",
-							tool_use_id: "tool-large",
-							name: "tool",
-							content: [{ type: "text", text: longToolOutput }],
-						},
-					],
-				},
-				{ role: "assistant", content: "Observed large output" },
-				{ role: "user", content: "Latest request" },
-				{ role: "assistant", content: "Latest answer" },
-			],
-			apiMessages: [
-				{ role: "user", content: "Run a large command" },
-				{
-					role: "assistant",
-					content: [
-						{
-							type: "tool_use",
-							id: "tool-large",
-							name: "execute_command",
-							input: { command: "print-large-output" },
-						},
-					],
-				},
-				{
-					role: "user",
-					content: [
-						{
-							type: "tool_result",
-							tool_use_id: "tool-large",
-							name: "tool",
-							content: [{ type: "text", text: longToolOutput }],
-						},
-					],
-				},
-				{ role: "assistant", content: "Observed large output" },
-				{ role: "user", content: "Latest request" },
-				{ role: "assistant", content: "Latest answer" },
-			],
-			model: {
-				id: "mock-model",
-				provider: "anthropic",
-				info: { id: "mock-model", maxInputTokens: 10 },
-			},
-		});
-
-		expect(createMessage).toHaveBeenCalledTimes(1);
-		const createMessageCalls = createMessage.mock.calls as unknown as [
-			string,
-			Array<{ role: string; content: string }>,
-		][];
-		const summarizerMessages = createMessageCalls[0]?.[1];
-		const summarizerPrompt = summarizerMessages?.[0]?.content ?? "";
-		expect(summarizerPrompt).toContain("[Tool result]");
-		expect(summarizerPrompt).toContain("...[truncated ");
-		expect(summarizerPrompt).not.toContain(omittedTail);
-		expect(summarizerPrompt.length).toBeLessThan(longToolOutput.length);
-	});
 
 	it("never lands the agentic cut in the middle of a tool pair", async () => {
 		// Repro for the "No tool call found for function call output" provider
@@ -852,9 +810,10 @@ describe("createContextCompactionPrepareTurn", () => {
 				providerId: "openai",
 				modelId: "gpt-summary",
 				maxOutputTokens: 512,
-				thinking: false,
 			}),
 		);
+		const calledConfig = createHandlerMock.mock.calls[0]?.[0] as Record<string, unknown>;
+		expect(calledConfig?.thinking).toBeUndefined();
 	});
 
 	it("uses basic compaction without calling the summarizer", async () => {

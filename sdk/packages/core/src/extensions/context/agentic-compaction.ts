@@ -1,5 +1,5 @@
 import { createHandlerAsync } from "@agentario/llms";
-import type { BasicLogger, MessageWithMetadata } from "@agentario/shared";
+import type { BasicLogger } from "@agentario/shared";
 // @ts-ignore - Node.js built-in modules
 import { writeFile, mkdir } from "node:fs/promises";
 // @ts-ignore
@@ -15,6 +15,7 @@ import type { ProviderConfig } from "../../types/provider-settings";
 import {
 	buildSummaryMessage,
 	buildSummaryRequest,
+	buildSummarizationUnits,
 	type EstimateMessageTokens,
 	ensureFilesSection,
 	estimateTokens,
@@ -23,8 +24,8 @@ import {
 	findLatestSummaryIndex,
 	getCompactionSummaryMetadata,
 	isOverallPictureMessage,
+	packSummarizationUnits,
 	resolveSummarizerConfig,
-	serializeConversation,
 	serializeMessage,
 } from "./compaction-shared";
 
@@ -83,6 +84,42 @@ async function writeRequestFile(phase: string, chunkIndex: number | undefined, r
 	}
 }
 
+/**
+ * Agentario: сохраняет полный JSON payload, отправляемый модели:
+ * системный промпт, массив сообщений, параметры провайдера.
+ */
+async function writePayloadFile(
+	phase: string,
+	chunkIndex: number | undefined,
+	providerConfig: ProviderConfig,
+	systemPrompt: string,
+	messages: Array<{ role: string; content: string }>,
+): Promise<string> {
+	if (!DEBUG_DIR) {
+		return "";
+	}
+	try {
+		await mkdir(DEBUG_DIR, { recursive: true });
+		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+		const chunkSuffix = chunkIndex !== undefined ? `_chunk${chunkIndex + 1}` : '';
+		const filename = `PAYLOAD_${phase}${chunkSuffix}_${timestamp}.json`;
+		const filepath = join(DEBUG_DIR, filename);
+		const payload = {
+			providerId: providerConfig.providerId,
+			modelId: providerConfig.modelId,
+			baseUrl: providerConfig.baseUrl,
+			maxOutputTokens: providerConfig.maxOutputTokens,
+			systemPrompt,
+			messages,
+			savedAt: new Date().toISOString(),
+		};
+		await writeFile(filepath, JSON.stringify(payload, null, 2), 'utf-8');
+		return filepath;
+	} catch (err) {
+		return `error: ${err}`;
+	}
+}
+
 async function writeRawResponseFile(phase: string, chunkIndex: number | undefined, rawChunks: string[], textResult: string): Promise<void> {
 	if (!DEBUG_DIR) {
 		return;
@@ -100,13 +137,92 @@ async function writeRawResponseFile(phase: string, chunkIndex: number | undefine
 	}
 }
 
+/**
+ * Agentario: сохраняет полный сырой JSON каждого чанка от модели.
+ * В отличие от writeRawResponseFile (который сохраняет метаданные строками),
+ * здесь — сериализованные объекты чанков целиком.
+ */
+async function writeRawChunksJsonFile(
+	phase: string,
+	chunkIndex: number | undefined,
+	chunkObjects: unknown[],
+): Promise<void> {
+	if (!DEBUG_DIR) {
+		return;
+	}
+	try {
+		await mkdir(DEBUG_DIR, { recursive: true });
+		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+		const chunkSuffix = chunkIndex !== undefined ? `_chunk${chunkIndex + 1}` : '';
+		const filename = `RAW_CHUNKS_JSON_${phase}${chunkSuffix}_${timestamp}.json`;
+		const filepath = join(DEBUG_DIR, filename);
+		await writeFile(filepath, JSON.stringify(chunkObjects, null, 2), 'utf-8');
+	} catch {
+		// debug-only — ignore write failures
+	}
+}
+
+/**
+ * Strip thinking/reasoning tags that leaked into the text channel.
+ *
+ * When a local model (LM Studio) switches from reasoning to text mid-stream,
+ * the text channel may contain `</think>` or `</thinking>` without a
+ * matching opener — the model continued thinking in the text channel after
+ * LM Studio stopped routing to the reasoning channel.
+ *
+ * Strategy:
+ * 1. Main cleanup: remove complete `<think>...</think>` / `<thinking>...</thinking>` blocks.
+ * 2. Post-cleanup safeguard: if a closing think tag still exists (orphaned closer
+ *    without opener), everything before it is leaked thinking — keep only what's after.
+ */
+function stripThinkingTags(text: string): string {
+	if (!text) {
+		return text;
+	}
+
+	let result = text;
+
+	// 1. Main logic: remove complete think/thinking blocks
+	result = result.replace(/<think>[\s\S]*?<\/think>/gi, '');
+	result = result.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+	result = result.replace(/\[thinking\][\s\S]*?\[\/thinking\]/gi, '');
+
+	// 2. Post-cleanup safeguard: orphaned closing tags.
+	//    After step 1, if `</think>` or `</thinking>` still remains,
+	//    it means the opener was in the reasoning channel (already consumed)
+	//    and the closer leaked into text. Everything before it is leaked thinking.
+	const lastThinkClose = result.lastIndexOf('</think>');
+	const lastThinkingClose = result.lastIndexOf('</thinking>');
+	const lastBracketClose = result.lastIndexOf('[/thinking]');
+	const closeIdx = Math.max(lastThinkClose, lastThinkingClose, lastBracketClose);
+	if (closeIdx >= 0) {
+		const closeLen = closeIdx === lastThinkClose
+			? '</think>'.length
+			: closeIdx === lastThinkingClose
+				? '</thinking>'.length
+				: '[/thinking]'.length;
+		const after = result.slice(closeIdx + closeLen).trim();
+		if (after.length > 0) {
+			result = after;
+		}
+	}
+
+	// 3. Strip markdown code fences
+	result = result
+		.replace(/^```(?:markdown|md|json|text)?\s*\n?/g, '')
+		.replace(/\n?```\s*$/g, '')
+		.trim();
+
+	return result;
+}
+
 // Agentario: сборка streaming чанков с разделением reasoning и text
 async function collectStreamingChunks(options: {
 	providerConfig: ProviderConfig;
 	request: string;
 	logger?: BasicLogger;
 	chunkIndex?: number;
-}): Promise<{ text: string; reasoning: string; chunkCount: number; textChunkCount: number; reasoningChunkCount: number; rawChunks: string[] }> {
+}): Promise<{ text: string; reasoning: string; chunkCount: number; textChunkCount: number; reasoningChunkCount: number; rawChunks: string[]; rawChunkObjects: unknown[] }> {
 	const handler = await createHandlerAsync(options.providerConfig);
 
 	let text = "";
@@ -115,6 +231,7 @@ async function collectStreamingChunks(options: {
 	let textChunkCount = 0;
 	let reasoningChunkCount = 0;
 	const rawChunks: string[] = [];
+	const rawChunkObjects: unknown[] = [];
 
 	// Agentario: отправляем ТОЛЬКО user-сообщение без системного промпта.
 	// Системный промпт вызывает конфликт с чат-темплейтами моделей (например, tool-calling темплейты
@@ -126,7 +243,9 @@ async function collectStreamingChunks(options: {
 	)) {
 		chunkCount++;
 		const chunkAny = chunk as unknown as { type: string; text?: string; reasoning?: string; success?: boolean; error?: string | object | Record<string, unknown> };
-		// Agentario: сохраняем RAW данные каждого чанка
+		// Agentario: сохраняем RAW объект каждого чанка (полный JSON)
+		rawChunkObjects.push({ ...chunkAny, _chunkIndex: chunkCount });
+		// Agentario: сохраняем RAW данные каждого чанка (строковое представление)
 		const displayText = chunkAny.text || chunkAny.reasoning || '';
 		rawChunks.push(`[chunk ${chunkCount}] type=${chunkAny.type}, textLen=${chunkAny.text ? chunkAny.text.length : 0}, reasoningLen=${chunkAny.reasoning ? chunkAny.reasoning.length : 0}, text="${displayText.substring(0, 100).replace(/\n/g, '\\n')}"`);
 		// Agentario: логируем первые 5 и каждый 100-й чанк
@@ -169,7 +288,29 @@ async function collectStreamingChunks(options: {
 		}
 	}
 
-	return { text, reasoning, chunkCount, textChunkCount, reasoningChunkCount, rawChunks };
+	return { text, reasoning, chunkCount, textChunkCount, reasoningChunkCount, rawChunks, rawChunkObjects };
+}
+
+// Agentario: try to extract structured summary from reasoning text.
+// Looks for patterns like [User]:, [Agent]:, "Summary:", "Сжатый диалог:" etc.
+function extractSummaryFromReasoning(text: string): string | null {
+	// Pattern 1: structured messages like [User]: ... [Agent]: ...
+	const structuredMatch = text.match(/(?:\[User\]|\[Agent(?:-\w+)?\]|\[Bot\]).+/s);
+	if (structuredMatch) {
+		const start = text.indexOf(structuredMatch[0]);
+		if (start >= 0) {
+			return text.substring(start).trim();
+		}
+	}
+	// Pattern 2: Russian/English summary markers
+	const markers = text.match(/(?:Сжат(?:ый|ие) диалог(?:а)?|Summary|Сжатие|Сжатые сообщения)[:\s]+/i);
+	if (markers) {
+		const start = text.indexOf(markers[0]);
+		if (start >= 0) {
+			return text.substring(start).trim();
+		}
+	}
+	return null;
 }
 
 async function generateSummary(options: {
@@ -181,100 +322,84 @@ async function generateSummary(options: {
 	const phase = options.chunkIndex !== undefined ? 'map' : 'single';
 	options.logger?.log?.(`generateSummary: starting phase=${phase}, chunk=${options.chunkIndex ?? 'N/A'}, provider=${options.providerConfig.providerId}/${options.providerConfig.modelId}, requestLen=${options.request.length}`, { severity: "info" });
 
-	// Agentario: сохраняем запрос в файл ДО отправки
+	// Agentario: сохраняем текст запроса в файл ДО отправки
 	const requestFilePath = await writeRequestFile(phase, options.chunkIndex, options.request);
 	options.logger?.log?.(`generateSummary: request saved to ${requestFilePath}`, { severity: "info" });
 
-	// Agentario: добавляем /no_think к запросу СРАЗУ, чтобы модель не тратила время
-	// на размышления. Размышления не нужны для суммаризации — только итоговый текст.
-	// Это значительно ускоряет суммаризацию (в 2-5 раз).
-	const noThinkRequest = options.request + "\n\n/no_think";
-	await writeRequestFile(phase + '_nothink', options.chunkIndex, noThinkRequest);
+	// Agentario: сохраняем полный JSON payload (messages array + provider config)
+	const apiMessages = [{ role: "user" as const, content: options.request }];
+	await writePayloadFile(phase, options.chunkIndex, options.providerConfig, "", apiMessages);
 
-	let result = await collectStreamingChunks({
+	// Do not append /no_think or force thinking:false — that overrides LM Studio
+	// thinking-budget settings. Use the request as-is.
+	const result = await collectStreamingChunks({
 		...options,
-		request: noThinkRequest,
+		request: options.request,
 	});
 
 	options.logger?.log?.(`generateSummary: done. chunks=${result.chunkCount}, textChunks=${result.textChunkCount}, reasoningChunks=${result.reasoningChunkCount}, textLen=${result.text.length}, reasoningLen=${result.reasoning.length}`, { severity: "info" });
 
-	// Fallback: если модель всё ещё выдала только reasoning — retry без /no_think
-	if (!result.text.trim() && result.reasoning.trim()) {
-		options.logger?.log?.(`generateSummary: model produced only reasoning even with /no_think. Retrying without it.`, { severity: "warn" });
+	// Agentario: сохраняем ВСЕ чанки ответа в файл (текстовое представление)
+	await writeRawResponseFile(phase, options.chunkIndex, result.rawChunks, result.text);
+	// Agentario: сохраняем полный сырой JSON каждого чанка от модели
+	await writeRawChunksJsonFile(phase, options.chunkIndex, result.rawChunkObjects);
 
-		await writeRequestFile(phase + '_fallback', options.chunkIndex, options.request);
-
-		result = await collectStreamingChunks({
-			...options,
-			request: options.request,
-		});
-
-		options.logger?.log?.(`generateSummary: fallback done. chunks=${result.chunkCount}, textChunks=${result.textChunkCount}, reasoningChunks=${result.reasoningChunkCount}, textLen=${result.text.length}, reasoningLen=${result.reasoning.length}`, { severity: "info" });
+	let finalText = result.text.trim();
+	// If the model put the answer only in the reasoning channel, try to extract
+	// useful content. Reasoning is often verbose thinking, not a summary.
+	// Cap reasoning fallback to prevent 78k reasoning dumps from inflating context.
+	if (!finalText && result.reasoning.trim()) {
+		const reasoningText = result.reasoning.trim();
+		const reasoningTokens = estimateTokens(reasoningText.length);
+		const inputTokens = estimateTokens(options.request.length);
+		// If reasoning is more than 1.5x the input, it's thinking — not a summary.
+		if (reasoningTokens > inputTokens * 1.5) {
+			const errorMsg = `Summarizer produced only reasoning (${reasoningTokens} tokens, input ${inputTokens} tokens, ratio ${(reasoningTokens / inputTokens).toFixed(1)}x). Model likely thinks instead of summarizing.`;
+			options.logger?.log?.(errorMsg, { severity: "error" });
+			throw new Error(errorMsg);
+		}
+		// Try to extract the actual summary from reasoning (look for structured markers)
+		const extracted = extractSummaryFromReasoning(reasoningText);
+		if (extracted) {
+			options.logger?.log?.(`generateSummary: extracted summary from reasoning (${extracted.length} chars from ${reasoningText.length} chars reasoning).`, { severity: "info" });
+			finalText = extracted;
+		} else {
+			// Cap reasoning to avoid inflating context
+			const MAX_REASONING_AS_SUMMARY = 4000; // chars
+			if (reasoningText.length > MAX_REASONING_AS_SUMMARY) {
+				options.logger?.log?.(`generateSummary: reasoning too long (${reasoningText.length} chars), truncating to ${MAX_REASONING_AS_SUMMARY}.`, { severity: "warn" });
+				finalText = reasoningText.substring(0, MAX_REASONING_AS_SUMMARY);
+			} else {
+				options.logger?.log?.(`generateSummary: using reasoning as summary body (${reasoningText.length} chars).`, { severity: "warn" });
+				finalText = reasoningText;
+			}
+		}
 	}
 
-	// Agentario: сохраняем ВСЕ чанки ответа в файл (используем text, а НЕ reasoning)
-	await writeRawResponseFile(phase, options.chunkIndex, result.rawChunks, result.text);
-
-	const finalText = result.text.trim();
 	options.logger?.log?.(`[CompactionSummary] model=${options.providerConfig.modelId}, inputChars=${options.request.length}, outputChars=${finalText.length}, textChunks=${result.textChunkCount}/${result.chunkCount}, reasoningChunks=${result.reasoningChunkCount}, preview=${finalText.substring(0, 200)}...`, { severity: "info" });
 
 	if (!finalText) {
-		// Agentario: если и после retry нет text — используем последнюю часть reasoning как fallback
-		if (result.reasoning.trim()) {
-			options.logger?.log?.(`generateSummary: no text even after retry. Using last 500 chars of reasoning as fallback.`, { severity: "warn" });
-			const fallback = result.reasoning.trim().slice(-500);
-			await writeDebugFile(phase, options.chunkIndex, options.request, `[FALLBACK from reasoning]\n${fallback}`);
-			return fallback;
-		}
 		const errorMsg = `Model returned empty response (${result.chunkCount} chunks, ${result.textChunkCount} text, ${result.reasoningChunkCount} reasoning). Provider: ${options.providerConfig.providerId}, Model: ${options.providerConfig.modelId}, BaseUrl: ${options.providerConfig.baseUrl || "default"}`;
 		options.logger?.error?.(errorMsg);
 		throw new Error(errorMsg);
 	}
 
-	// Agentario: убираем markdown разметку и thinking-теги из ответа модели
-	const cleaned = finalText
-		// Убираем thinking-теги (модели могут отправлять thinking как text чанки)
-		.replace(/<think>[\s\S]*?<\/think>/gi, '')
-		.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
-		.replace(/\[thinking\][\s\S]*?\[\/thinking\]/gi, '')
-		// Убираем markdown код-блоки
-		.replace(/^```(?:markdown|md|json|text)?\s*\n?/g, '')
-		.replace(/\n?```\s*$/g, '')
-		.trim();
-	// Agentario: записываем комбинированный файл (запрос + ответ)
+	// Strip accidental think-tag wrappers from the assembled text body.
+	// Handles: complete blocks, orphaned closers (</think> without opener),
+	// and orphaned openers (<think> without closer).
+	const cleaned = stripThinkingTags(finalText);
+
+	// Agentario: reject if summary is larger than input (anti-inflate).
+	const outputTokens = estimateTokens(cleaned.length);
+	const inputTokens = estimateTokens(options.request.length);
+	if (inputTokens > 0 && outputTokens > inputTokens * 0.9) {
+		const errorMsg = `Summarizer output (${outputTokens} tokens) >= 90% of input (${inputTokens} tokens). Summary would not reduce context.`;
+		options.logger?.log?.(errorMsg, { severity: "error" });
+		throw new Error(errorMsg);
+	}
+
 	await writeDebugFile(phase, options.chunkIndex, options.request, cleaned);
 	return cleaned;
-}
-
-/**
- * Split messages into chunks by token count.
- * Each chunk respects message boundaries (never splits a single message).
- */
-function chunkMessages(
-	messages: MessageWithMetadata[],
-	chunkSizeTokens: number,
-	estimateMessageTokens: EstimateMessageTokens,
-): MessageWithMetadata[][] {
-	if (chunkSizeTokens <= 0 || messages.length === 0) {
-		return [messages];
-	}
-	const chunks: typeof messages[] = [];
-	let currentChunk: typeof messages = [];
-	let currentTokens = 0;
-	for (const msg of messages) {
-		const msgTokens = estimateMessageTokens(msg);
-		if (currentChunk.length > 0 && currentTokens + msgTokens > chunkSizeTokens) {
-			chunks.push(currentChunk);
-			currentChunk = [];
-			currentTokens = 0;
-		}
-		currentChunk.push(msg);
-		currentTokens += msgTokens;
-	}
-	if (currentChunk.length > 0) {
-		chunks.push(currentChunk);
-	}
-	return chunks;
 }
 
 // Agentario: извлечение "Общей картины" из суммаризации
@@ -290,7 +415,11 @@ function extractSummarizedMessages(summary: string): string[] {
 	const messages: string[] = [];
 	for (const line of lines) {
 		const trimmed = line.trim();
-		if (/^(?:User|Agent|Пользователь|Агент)[:\s]+/i.test(trimmed)) {
+		// Support both "User:" and "[User]:" / "[Agent-thinking]:" forms from the model.
+		if (
+			/^(?:User|Agent|Пользователь|Агент)[:\s]+/i.test(trimmed) ||
+			/^\[(?:User|Agent|Пользователь|Агент)[^\]]*\]:/i.test(trimmed)
+		) {
 			messages.push(trimmed);
 		}
 	}
@@ -338,8 +467,13 @@ export async function runAgenticCompaction(options: {
 	);
 	options.logger?.log?.(`Agentic compaction: cutIndex=${cutIndex}`, { severity: "info" });
 	
-	// Agentario: статус в UI
-	options.statusCallback?.(`Расчёт cutIndex: ${cutIndex} из ${messages.length}, preserveRecentTokens=${effectivePreserveRecentTokens}`)
+	// Agentario: статус в UI с разбивкой по категориям
+	const pinnedTokens = messages.slice(cutIndex).reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
+	const foldableCount = cutIndex;
+	const preservedCount = messages.length - cutIndex;
+	options.statusCallback?.(
+		`Расчёт: foldable=${foldableCount} сообщ., pinned=${preservedCount} сообщ. (~${pinnedTokens.toLocaleString()} ток.), preserveRecentTokens=${effectivePreserveRecentTokens}`
+	)
 	
 	if (cutIndex <= 0) {
 		options.logger?.log?.(`Agentic compaction: cutIndex check failed (cutIndex=${cutIndex}, len=${messages.length})`, { severity: "warn" });
@@ -377,26 +511,27 @@ export async function runAgenticCompaction(options: {
 
 	const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
 	const useChunked = chunkSize > 0;
+	const modelContextTokens = Math.max(
+		1,
+		options.context.maxInputTokens || DEFAULT_CHUNK_SIZE,
+	);
 
-	// Agentario: динамический лимит output токенов — x2 от размера входного чанка
-	const dynamicMaxOutputTokens = chunkSize > 0 ? chunkSize * 2 : undefined;
-	options.logger?.log?.(`Agentic compaction: dynamicMaxOutputTokens=${dynamicMaxOutputTokens} (chunkSize=${chunkSize})`, { severity: "info" });
-
+	// Do not force maxOutputTokens=chunkSize*2 — leave LM Studio / model defaults.
 	const summarizerProviderConfig = resolveSummarizerConfig({
 		activeProviderConfig: options.providerConfig,
 		summarizer: options.summarizer,
-		maxOutputTokensOverride: dynamicMaxOutputTokens,
 	});
 
 	let rawSummary: string;
 
 	// Agentario: логируем параметры для суммаризации
-	options.logger?.log?.(`Agentic compaction: useChunked=${useChunked}, chunkSize=${chunkSize}, summarizerProvider=${summarizerProviderConfig.providerId}/${summarizerProviderConfig.modelId}`, { severity: "info" });
+	options.logger?.log?.(`Agentic compaction: useChunked=${useChunked}, chunkSize=${chunkSize}, modelContextTokens=${modelContextTokens}, summarizerProvider=${summarizerProviderConfig.providerId}/${summarizerProviderConfig.modelId}`, { severity: "info" });
 
 	try {
 	if (!useChunked) {
-		// Single-pass (unlimited) mode
-		const conversationText = serializeConversation(newMessagesToFold);
+		// Single-pass (unlimited) mode — still stub file bodies; no truncate on tools/thinking
+		const units = buildSummarizationUnits(newMessagesToFold);
+		const conversationText = units.map((u) => u.text).join("\n\n").trim();
 		const summaryRequest = buildSummaryRequest({
 			previousSummary,
 			conversationText,
@@ -415,57 +550,49 @@ export async function runAgenticCompaction(options: {
 			logger: options.logger,
 		});
 	} else {
-		// Map-reduce mode
-		// Agentario: логируем токены каждого сообщения для диагностики
-		let totalTokensToChunk = 0;
-		for (let i = 0; i < newMessagesToFold.length; i++) {
-			const tokens = options.estimateMessageTokens(newMessagesToFold[i]);
-			totalTokensToChunk += tokens;
-			if (i < 5 || tokens > 1000) { // логируем первые 5 и большие
-				options.logger?.log?.(`Agentic compaction: message[${i}] tokens=${tokens}, role=${newMessagesToFold[i].role}`, { severity: "info" });
-			}
-		}
-		options.logger?.log?.(`Agentic compaction: totalTokensToChunk=${totalTokensToChunk}, chunkSize=${chunkSize}`, { severity: "info" });
-		
-		const chunks = chunkMessages(
-			newMessagesToFold,
-			chunkSize,
-			options.estimateMessageTokens,
+		// Map-reduce: pack units without truncating tool_result/thinking; solo chunks at 90% context
+		const units = buildSummarizationUnits(newMessagesToFold);
+		const packedTexts = packSummarizationUnits({
+			units,
+			chunkSizeTokens: chunkSize,
+			modelContextTokens,
+		});
+
+		const totalUnitTokens = units.reduce((sum, u) => sum + estimateTokens(u.text.length), 0);
+		options.statusCallback?.(
+			`К отправке: ${newMessagesToFold.length} сообщ. → ${units.length} units (~${totalUnitTokens.toLocaleString()} ток.), лимит чанка: ${chunkSize} ток., чанков: ${packedTexts.length}`
 		);
-		
-		// Agentario: статус в UI
-		options.statusCallback?.(`Лимит чанка: ${chunkSize} токенов, рассчитано чанков: ${chunks.length}, сообщений для суммаризации: ${newMessagesToFold.length}`)
-		
+
 		options.logger?.debug("Agentic compaction: map-reduce mode", {
 			totalMessages: newMessagesToFold.length,
-			chunks: chunks.length,
+			units: units.length,
+			chunks: packedTexts.length,
 			chunkSizeTokens: chunkSize,
+			modelContextTokens,
 		});
-		// Agentario: логируем размеры чанков
-		for (let i = 0; i < chunks.length; i++) {
-			const chunkTokens = chunks[i].reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
-			options.logger?.log?.(`Agentic compaction: chunk[${i}] messages=${chunks[i].length}, tokens=${chunkTokens}`, { severity: "info" });
+		for (let i = 0; i < packedTexts.length; i++) {
+			options.logger?.log?.(
+				`Agentic compaction: packedChunk[${i}] chars=${packedTexts[i].length}, tokens≈${estimateTokens(packedTexts[i].length)}`,
+				{ severity: "info" },
+			);
 		}
 
-		// Map phase: summarize each chunk
 		const intermediateSummaries: string[] = [];
-		for (let i = 0; i < chunks.length; i++) {
-			const chunkText = serializeConversation(chunks[i]);
-			const chunkTokens = chunks[i].reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
+		for (let i = 0; i < packedTexts.length; i++) {
 			const chunkRequest = buildSummaryRequest({
 				previousSummary: i === 0 ? previousSummary : undefined,
-				conversationText: chunkText,
+				conversationText: packedTexts[i],
 				fileOps: i === 0 ? fileOps : { readFiles: [], modifiedFiles: [] },
 				promptTemplateBefore: options.promptTemplateBefore,
 				promptTemplateAfter: options.promptTemplateAfter,
 			});
-			
-			// Agentario: статус в UI
-			options.statusCallback?.(`Отправка чанка ${i + 1}/${chunks.length}: ${chunks[i].length} сообщений, ${chunkTokens} токенов`)
-			
-			options.logger?.debug(`Compaction map phase chunk ${i + 1}/${chunks.length}`, {
-				chunkMessages: chunks[i].length,
-				chunkChars: chunkText.length,
+
+			options.statusCallback?.(
+				`Отправка чанка ${i + 1}/${packedTexts.length}: ≈${estimateTokens(chunkRequest.length)} токенов (${chunkRequest.length} симв.)`,
+			);
+
+			options.logger?.debug(`Compaction map phase chunk ${i + 1}/${packedTexts.length}`, {
+				chunkChars: packedTexts[i].length,
 			});
 			const chunkSummary = await generateSummary({
 				providerConfig: summarizerProviderConfig,
@@ -475,9 +602,8 @@ export async function runAgenticCompaction(options: {
 			});
 			if (chunkSummary.trim()) {
 				intermediateSummaries.push(chunkSummary.trim());
-				// Agentario: статус в UI
 				const summaryTokens = estimateTokens(chunkSummary.length);
-				options.statusCallback?.(`Чанк ${i + 1}/${chunks.length} готов: ${summaryTokens} токенов в summary`)
+				options.statusCallback?.(`Чанк ${i + 1}/${packedTexts.length} готов: ${summaryTokens} токенов в summary`);
 			}
 		}
 

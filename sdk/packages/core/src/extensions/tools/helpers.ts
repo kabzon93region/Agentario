@@ -187,8 +187,9 @@ export function getShellDiscoveryOrReadBypassError(
 	if (/\b(Get-ChildItem|gci|\bls\b|\bdir\b|\btree\b|Find-ChildItem)\b/i.test(text)) {
 		return (
 			"Do not list directories via shell (Get-ChildItem/ls/dir). " +
-			"Use paths you already know (from git status / prior reads): e.g. rules.md, convert.py, *.py in cwd. " +
-			"Call read_files or attempt_completion — do NOT retry listing."
+			"For overview: run ONLY `git status` (alone, no listing chained). " +
+			"Then read_files on paths from git status, OR semantic_search/search_codebase. " +
+			"Do NOT retry listing."
 		);
 	}
 	if (

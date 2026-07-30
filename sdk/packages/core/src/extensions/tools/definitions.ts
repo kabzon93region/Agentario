@@ -262,8 +262,8 @@ export function createReadFilesTool(
 		name: "read_files",
 		description:
 			"Read file content. To open a known file use this tool — never search_codebase with \"path:1-EOF\". " +
-			"IMPORTANT: Always use start_line/end_line to read only needed lines. " +
-			"For large files (>500 lines), read in chunks of 200 lines. Use semantic_search first to find relevant lines. " +
+			"For LARGE files (>500 lines) when exploring: read WITHOUT start_line/end_line — you get a FILE SUMMARY + preview (first 200 lines), saving context. " +
+			"For targeted reading of specific sections: use start_line/end_line (~200 lines at a time). " +
 			"Do NOT re-read the same path repeatedly — after 1–2 reads, synthesize and attempt_completion. " +
 			"When you already know multiple files you need, read them together in one call, and call this tool in the same response as other independent tool calls. " +
 			`Each read returns at most ${MAX_READ_LINES} lines / ~${Math.round(MAX_READ_OUTPUT_CHARS / 1024)}k characters; longer files report their total line count, page through them with start_line/end_line. ` +
@@ -445,6 +445,8 @@ export function createSearchTool(
 ): AgentTool<SearchCodebaseInput, ToolOperationResult[]> {
 	const timeoutMs = config.searchTimeoutMs ?? 30000;
 	const cwd = config.cwd ?? process.cwd();
+	// Agentario: per-tool identical query rejection (same pattern as semantic_search)
+	const lastNormalizedQueries = new Map<string, number>();
 
 	return createTool<SearchCodebaseInput, ToolOperationResult[]>({
 		name: "search_codebase",
@@ -478,6 +480,15 @@ export function createSearchTool(
 					if (typeof query === "string" && isNaturalLanguageSearchQuery(query)) {
 						return { query, result: "", error: NATURAL_LANGUAGE_SEARCH_ERROR, success: false };
 					}
+					// Agentario: reject identical consecutive queries
+					if (typeof query === "string") {
+						const normalized = query.trim().toLowerCase();
+						const streak = (lastNormalizedQueries.get(normalized) ?? 0) + 1;
+						lastNormalizedQueries.set(normalized, streak);
+						if (streak >= 2) {
+							return { query, result: "", error: REPEATED_SEARCH_QUERY_ERROR, success: false };
+						}
+					}
 					try {
 						const results = await withTimeout(
 							executor(query, cwd, context),
@@ -506,7 +517,9 @@ export function createSearchTool(
 
 const RUN_COMMANDS_SHARED_INSTRUCTIONS =
 	"Use for git, builds, tests, and other shell operations — not for reading, writing, or listing source files. " +
-	"FORBIDDEN: Get-ChildItem/ls/dir/tree (use semantic_search/search_codebase) and Get-Content/cat/type on source/docs (use read_files). " +
+	"FORBIDDEN: Get-ChildItem/ls/dir/tree — never chain them with git status; use semantic_search/search_codebase or read_files on paths from git. " +
+	"FORBIDDEN: Get-Content/cat/type on source/docs (use read_files). " +
+	"For project overview start with ONLY `git status` (one command, no directory listing). " +
 	"Commands must be non-interactive. Commands that require follow-up input like pagers should be skipped or used with supported flags/env (e.g. git --no-pager, --non-interactive) to bypass the interaction steps. " +
 	"Input must be a JSON object with a commands array of strings or { command, args } objects — never a stringified JSON array. ";
 
@@ -937,6 +950,10 @@ const SEMANTIC_SEARCH_DESCRIPTION =
 	"NEVER paste the user's task/question into query (no «ознакомься…», «проанализируй…»). " +
 	"Returns ranked file paths + snippets. Then call read_files on those paths. " +
 	'Never use file ranges like "file:1-EOF".';
+
+const REPEATED_SEARCH_QUERY_ERROR =
+	"Repeated the same search_codebase query. Do NOT retry identical queries. " +
+	"Use read_files on found paths, or attempt_completion if you already have enough info.";
 
 const REPEATED_SEMANTIC_QUERY_ERROR =
 	"Repeated the same semantic_search query. Do NOT retry it. " +

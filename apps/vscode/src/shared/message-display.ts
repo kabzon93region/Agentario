@@ -1,4 +1,4 @@
-﻿import type { AgentarioApiReqInfo, AgentarioMessage } from "./ExtensionMessage"
+import type { AgentarioApiReqInfo, AgentarioMessage } from "./ExtensionMessage"
 
 /** Whether an API request row has finished (works for local LM Studio without cost). */
 export function isApiReqComplete(info: AgentarioApiReqInfo): boolean {
@@ -59,6 +59,66 @@ export function findFollowingApiStats(messages: AgentarioMessage[], fromTs: numb
 	}
 
 	return undefined
+}
+
+/**
+ * Find API stats for a message, looking forward first, then backward.
+ * For completion_result messages, stats often appear BEFORE them (the API request
+ * completes before the final message is emitted).
+ */
+export function findApiStatsForMessage(messages: AgentarioMessage[], fromTs: number): AgentarioApiReqInfo | undefined {
+	// Try forward first (original behavior)
+	const forward = findFollowingApiStats(messages, fromTs)
+	if (forward) {
+		return forward
+	}
+
+	// Agentario: look backward for completion_result or text responses.
+	// The API stats (tokensIn, time, speed) are emitted before the final message.
+	const startIndex = messages.findIndex((message) => message.ts === fromTs)
+	if (startIndex <= 0) {
+		return undefined
+	}
+
+	for (let i = startIndex - 1; i >= 0; i--) {
+		const message = messages[i]
+		// Stop at previous user message boundary
+		if (isUserMessage(message)) {
+			break
+		}
+		const info = parseApiReqInfo(message)
+		if (info && isApiReqComplete(info) && info.tokensIn != null) {
+			return info
+		}
+	}
+
+	return undefined
+}
+
+/**
+ * True when a visible assistant text/completion follows `fromTs` before the next user message.
+ * Used so stats sit under the answer (not under the thinking accordion alone).
+ */
+export function hasFollowingAssistantText(messages: AgentarioMessage[], fromTs: number): boolean {
+	const startIndex = messages.findIndex((message) => message.ts === fromTs)
+	if (startIndex === -1) {
+		return false
+	}
+
+	for (let i = startIndex + 1; i < messages.length; i++) {
+		const message = messages[i]
+		if (isUserMessage(message)) {
+			break
+		}
+		if (message.type === "say" && (message.say === "text" || message.say === "completion_result")) {
+			const text = (message.text ?? "").replace(/[\u0000-\u001F\u200B-\u200D\uFEFF]/g, "").trim()
+			if (text.length > 0) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 export function formatMessageStatsLine(info: AgentarioApiReqInfo): string | undefined {

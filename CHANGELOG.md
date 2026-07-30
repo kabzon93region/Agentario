@@ -2,6 +2,168 @@
 
 Схема версий: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
 
+## [0.14.54] — 2026-07-30
+
+### Added
+- globalThis.agentario bridge в extension host для CDP-управления без UI-кликов (gated CLINE_DEBUG_HARNESS_PORT).
+- labCallBridge helper — ожидание бриджа и вызов функций через Runtime.evaluate.
+- Флаг --visible для harness (по умолчанию VS Code запускается скрыто off-screen).
+
+### Changed
+- lab.new_task / lab.followup / lab.export_context / lab.run переписаны на CDP bridge — **без Playwright кликов** (uiOpenSidebar, keyboard, mouse).
+- VS Code по умолчанию запускается с --window-position=-32000,-32000 (скрыт за экраном).
+- lab.run делает screenshot только при явном screenshot: true.
+
+### Fixed
+- lab.followup отправлял невалидный 
+esponseType: "user_response" — исправлено на "messageResponse".
+- Мёртвый fallback globalThis.agentario?.exportContextText в labExportContext теперь работает через рабочий bridge.
+
+## [0.14.53] — 2026-07-30
+
+### Added
+- Полный экспорт чата через `lab.export_chat` — теперь включает thinking-блоки, tool calls/results, info-сообщения, форматированные команды с выводом.
+- `lab.export_context` — экспорт контекста модели (system prompt + messages) из `api_conversation_history.json`.
+- `lab.collect_session_files` — сбор всех файлов сессии: ui_messages.json, api_conversation_history.json, extension.log, compaction debug файлы.
+- `lab.run` — оркестрация полного цикла: launch → new_task → wait_idle → export_chat → export_context → collect_files → screenshot.
+- CLI команды: `run`, `export-context`, `collect`.
+- Standalone `export-utils.ts` для harness (экспорт без импортов из extension).
+
+### Changed
+- `labExportChat` использует полную логику `exportChatToMarkdown` вместо упрощённого builder.
+
+## [0.14.52] — 2026-07-30
+
+### Added
+- **Agentario Lab** — автоматизированное управление тестовым VS Code для end-to-end тестов.
+- High-level API: `lab.status`, `lab.new_task`, `lab.followup`, `lab.wait_idle`, `lab.get_messages`, `lab.export_chat`, `lab.screenshot`.
+- CLI-обёртка `scripts/agentario-lab.cmd` для Windows.
+- TypeScript HTTP-клиент `lab-client.ts` для программного использования.
+- Режим `--vsix PATH` для запуска с release VSIX (без dev extension).
+- Профиль изоляции: `~/.agentario-lab` вместо `~/.cline2`.
+- Кросс-платформенные пути (Windows: `os.tmpdir()`).
+- Cursor skill `.agents/skills/agentario-lab/SKILL.md`.
+
+### Changed
+- Пути harness обновлены: скриншоты в `agentario-lab-debug`, workspace в `agentario-lab-workspace`.
+- Command palette использует `Control+Shift+p` на Windows (вместо `Meta+Shift+p`).
+- Sidebar ищет вкладку `Agentario|Cline` (вместо только `Cline`).
+- Обновлён README debug-harness: снят «macOS only», добавлена документация Lab API.
+
+## [0.14.51] — 2026-07-30
+
+### Fixed
+- Экспорт чата: задание пользователя (task) теперь всегда в начале экспорта, а не в конце из-за разных систем timestamps.
+- `completion_result` сообщения теперь показывают статистику токенов (ищется и назад, а не только вперёд).
+
+### Changed
+- Скроллбар в ленте чата теперь виден (был скрыт через CSS).
+
+## [0.14.50] — 2026-07-30
+
+### Fixed
+- Длинные thinking-блоки в единицах суммаризации теперь обрезаются до 2000 символов. Ранее полный текст размышлений модели отправлялся в summarizer, раздувая запрос.
+
+### Changed
+- Статус компакции теперь показывает разбивку по категориям: foldable (сообщения для суммаризации), pinned (сохраняемые recent), units, токены.
+- Улучшены сообщения об ошибках при отклонении раздутой суммаризации.
+
+## [0.14.49] — 2026-07-30
+
+### Fixed
+- `read_files` резолвил относительные пути в папку установки VS Code (`process.cwd()`) вместо рабочей папки проекта. Теперь используется session cwd через `FileReadExecutorOptions.cwd` и `context.metadata.cwd`.
+- Суммаризация раздувала контекст: если модель отвечала только reasoning-каналом (без текста), весь reasoning (до 78k токенов) принимался как summary. Теперь reasoning ограничен, проверяется соотношение output/input, summary > 90% input отклоняется.
+- `search_codebase` не блокировал повторные одинаковые запросы (как `semantic_search`). Теперь повторный идентичный query отклоняется мгновенно.
+
+### Changed
+- `read_files` description обновлён: большие файлы без start/end дают FILE SUMMARY + превью вместо полного содержимого.
+- Системный промпт: добавлено описание FILE SUMMARY для больших файлов и fallback при недоступности `semantic_search`.
+- `DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS` = 4096 (был 0 = без лимита).
+
+## [0.14.48] — 2026-07-29
+
+### Fixed
+- `displayInputTokens` показывал ~44k вместо ~27k: теперь не включает `toolTokens` (schemas инструментов), которые не являются частью chat-контекста. Значение совпадает с progress bar (`tokensIn` из API).
+- Полоска контекста обновляется сразу после компакции (без перезахода в чат): после `compaction_result` эмитится `context_stats` с пост-компакционными значениями.
+- Зелёная подсветка completed: для локальных моделей без `attempt_completion` — если модель дала текстовый ответ, фаза автоматически ставится в `completed`.
+
+### Changed
+- Статусные сообщения чанков: отображается полный размер запроса в символах и токенах, убрана нерелевантная часть «(диалог: N)».
+
+## [0.14.47] — 2026-07-29
+
+### Fixed
+- Полоска контекста не обновлялась после компакции: `getContextWindowUsage` теперь сравнивает **новейшие** значения measured и estimated по позиции в массиве сообщений, а не останавливается на первом найденном. После ручной компакции (где `contextBudget` с `tokensIn=0` идёт после старого `api_req_started` с большим `tokensIn`) теперь корректно используется свежая оценка.
+- Размеры чанков суммаризации в чате: теперь отображается полный размер запроса к модели (prompt template + диалог), а не только текста диалога.
+
+### Changed
+- Зелёная подсветка ответа: подсветка зависит от использования инструмента `attempt_completion` моделью — если модель отвечает текстом без вызова этого инструмента, подсветка не появляется (ожидаемое поведение для локальных моделей).
+
+## [0.14.46] — 2026-07-29
+
+### Fixed
+- Суммаризация: обработка `<think>`/`</think>` в text-канале — модель может начать размышления в reasoning-канале, продолжить в text-канале и закрыть `</think>` там. Теперь осиротевшие теги мыслей корректно удаляются из финального текста суммаризации.
+
+### Changed
+- Отладочные файлы суммаризации: добавлены `PAYLOAD_*.json` (полный JSON-запрос к модели: messages array + provider config) и `RAW_CHUNKS_JSON_*.json` (полный сырой JSON каждого чанка от модели).
+
+## [0.14.45] — 2026-07-29
+
+### Fixed
+- Рассинхрон полоски контекста и автокомпакции после смены окна LM Studio mid-session: live `loaded_context_length` форсится при компакции/сессии и обновляет общий кэш + `lmStudioMaxTokens`.
+- Webview перечитывает модель при изменении `lmStudioMaxTokens` / Ollama ctx; знаменатель полоски берёт `contextBudget.contextWindow`, если он уже пришёл из сессии.
+- Числитель полоски: если новая оценка контекста выше устаревшего `tokensIn`, показываем оценку (как в «📊 Контекст»); более низкая оценка по-прежнему не сбивает measured usage.
+- Событие `context_stats` перед компакцией пишет `api_req_started` с `contextBudget`, чтобы полоска сразу совпала с текстом компакции.
+
+## [0.14.44] — 2026-07-29
+
+### Fixed
+- Обзор проекта: убрано противоречие в правилах (раньше `agentario-global-rules` советовал `Get-ChildItem -Depth`, а shell это блокировал) — листинг через shell запрещён явно.
+- Промпт/описание `run_commands`/ошибка bypass: старт обзора только с `git status` (без цепочки listing), дальше `read_files` или `semantic_search`.
+
+## [0.14.43] — 2026-07-29
+
+### Changed
+- Индексация: убран лимит «первые 2 MB» — все файлы из whitelist/basename читаются и индексируются целиком, без статуса `partial` из‑за обрезки чтения.
+
+## [0.14.42] — 2026-07-29
+
+### Fixed
+- **MCP после перезапуска / включения:** очередь подключений в `McpHub` сериализует init, watcher, seed reload и toggle — больше не теряются серверы из‑за гонок.
+- Сессия ждёт `waitUntilConnectionsSettled` перед снимком MCP tools — инструменты доступны сразу, а не после следующего рестарта сессии.
+- Seed MCP: атомарная запись через settings lock; всегда reload после seed; починка `npx`/PATH на Windows для уже существующих серверов; пустой primary settings больше не перекрывает legacy-конфиг без merge.
+
+## [0.14.41] — 2026-07-29
+
+### Fixed
+- Сборка `@agentario/core`: неиспользуемый импорт `MessageWithMetadata`; `DEFAULT_FILE_READ_OPTIONS` совместим с опциональным `summarizeLargeFile`.
+
+## [0.14.40] — 2026-07-29
+
+### Added
+- Большие файлы (`read_files` без диапазона строк): блок `=== FILE SUMMARY ===` — LLM-саммари (если доступен провайдер) или outline-based fallback; затем превью первых 200 строк и навигационная подсказка.
+- UI чата: саммари большого файла в раскрывающемся аккордеоне «Саммари файла»; диапазон строк из заголовка `PREVIEW`.
+- `MessageBuilder`: при усечении tool result секция FILE SUMMARY сохраняется, режется превью/outline.
+
+### Changed
+- `CoreSessionConfig.toolContextMetadata` прокидывается в `AgentConfig` и далее в `AgentToolContext.metadata` (summarizeLargeFile из session-factory).
+- Индексация кодовой базы: `isIndexing=true` сразу при старте `build()`, до обхода файлов и инициализации embeddings.
+- UI индексации: progress bar `N / M` обновляется по ходу (poll каждые 0.5 с во время работы), а не только спиннер до полного завершения.
+
+## [0.14.39] — 2026-07-29
+
+### Changed
+- Суммаризация (agentic): убраны `/no_think`, `thinking: false` и принудительный `maxOutputTokens=chunk×2` — не ломают бюджет размышлений LM Studio.
+- Чанки суммаризации: `tool_result` / thinking больше не обрезаются до 2k; крупные блоки уходят в отдельные соло-чанки размером до 90% окна модели; при разбиении следующего куска добавляется метка `[Продолжение: …]`.
+- Сырое содержимое блоков `file` в чанки суммаризации чата не передаётся (только путь-заглушка) — полное тело файла должно жить в саммари файла (отдельный пайплайн).
+
+## [0.14.38] — 2026-07-29
+
+### Changed
+- Размышления в ленте: во время стриминга раскрывашка открыта с полным текстом (без превью «последние 5 слов»); по окончании сворачивается.
+- Раскрытый блок reasoning без `max-height`/внутреннего скролла — показывается весь текст; кнопка «Размышление» sticky к верху ленты при длинном содержимом.
+- Статистика `in/out` под размышлением не дублируется, если следом есть обычный текстовый ответ — строка stats остаётся под ответом.
+
 ## [0.14.37] — 2026-07-29
 
 ### Fixed

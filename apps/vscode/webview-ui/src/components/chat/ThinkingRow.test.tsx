@@ -11,14 +11,33 @@ describe("ThinkingRow", () => {
 				isVisible={true}
 				reasoningContent="Inspecting files..."
 				showTitle={true}
-				title="Thinking..."
+				title="Размышление…"
 			/>,
 		)
 
-		const title = screen.getByText("Thinking...")
+		const title = screen.getByText("Размышление…")
 		expect(title).toBeInTheDocument()
 		expect(title).toHaveClass("animate-shimmer")
 		expect(screen.getByText("Inspecting files...")).toBeInTheDocument()
+	})
+
+	it("shows full reasoning without a max-height scroll box when expanded", () => {
+		const longText = Array.from({ length: 40 }, (_, i) => `Line ${i + 1} of reasoning`).join("\n")
+		const { container } = render(
+			<ThinkingRow
+				isExpanded={true}
+				isVisible={true}
+				onToggle={vi.fn()}
+				reasoningContent={longText}
+				showTitle={true}
+				title="Размышление"
+			/>,
+		)
+
+		expect(screen.getByText(longText)).toBeInTheDocument()
+		expect(container.querySelector(".max-h-\\[150px\\]")).toBeNull()
+		expect(container.querySelector(".overflow-y-auto")).toBeNull()
+		expect(container.querySelector(".sticky")).toBeInTheDocument()
 	})
 
 	it("calls onToggle when header is clicked", () => {
@@ -31,10 +50,11 @@ describe("ThinkingRow", () => {
 				onToggle={onToggle}
 				reasoningContent="some reasoning"
 				showTitle={true}
+				title="Размышление"
 			/>,
 		)
 
-		fireEvent.click(screen.getByRole("button", { name: /Thinking/i }))
+		fireEvent.click(screen.getByRole("button", { name: /Размышление/i }))
 		expect(onToggle).toHaveBeenCalledTimes(1)
 	})
 })

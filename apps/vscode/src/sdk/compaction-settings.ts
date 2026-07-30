@@ -1,38 +1,8 @@
 import type { CoreCompactionConfig, CoreCompactionSummarizerConfig } from "@agentario/core"
 import type { StateManager } from "@/core/storage/StateManager"
 import { Logger } from "@/shared/services/Logger"
+import { fetchLmStudioContextWindowLive, setCachedLmStudioContextWindow } from "./lm-studio-live-context"
 import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
-
-/**
- * Agentario: запросить live context window из LM Studio native API (/api/v0/models).
- * Возвращает loaded_context_length текущей модели или undefined если API недоступно.
- * Используется в maxInputTokensResolver для получения актуального значения
- * без перезапуска сессии.
- */
-async function fetchLmStudioContextWindowLive(stateManager: StateManager): Promise<number | undefined> {
-	const apiConfig = stateManager.getApiConfiguration()
-	const baseUrl = apiConfig?.lmStudioBaseUrl?.trim() || "http://127.0.0.1:1234"
-	// Agentario: /api/v0/models (native) содержит loaded_context_length, /v1/models (OpenAI) — нет.
-	const url = `${baseUrl.replace(/\/+$/, "")}/api/v0/models`
-	try {
-		const controller = new AbortController()
-		const timeout = setTimeout(() => controller.abort(), 3000)
-		const response = await fetch(url, { signal: controller.signal })
-		clearTimeout(timeout)
-		if (!response.ok) return undefined
-		const data = await response.json() as { data?: Array<{ id: string; loaded_context_length?: number; max_context_length?: number; state?: string }> }
-		const models = data.data
-		if (!Array.isArray(models) || models.length === 0) return undefined
-		const loaded = models.find((m) => m.state === "loaded" && m.loaded_context_length && m.loaded_context_length > 0)
-		if (loaded?.loaded_context_length) return loaded.loaded_context_length
-		const withContext = models.find((m) => m.loaded_context_length && m.loaded_context_length > 0)
-		if (withContext?.loaded_context_length) return withContext.loaded_context_length
-		const first = models.find((m) => m.max_context_length && m.max_context_length > 0)
-		return first?.max_context_length
-	} catch {
-		return undefined
-	}
-}
 
 export type CompactionStrategySetting = "basic" | "agentic"
 
@@ -137,23 +107,27 @@ export function buildCompactionConfig(
 	Logger.log(`[CompactionSettings] build: provider=${activeProviderId}, providerContextWindow=${providerContextWindow ?? "undefined"}, explicitMaxInputTokens=${explicitMaxInputTokens ?? "undefined"}, effectiveMaxInputTokens=${effectiveMaxInputTokens ?? "undefined"}, defaultReserve=${defaultReserve}`)
 
 
-/** Shared fallback chain: explicit settings -> provider window -> LM Studio live API. */
+/** Shared fallback chain: LM Studio live API (force) -> persisted settings -> session window. */
 async function resolveDynamicContextWindow(
 	stateManager: StateManager,
 	activeProviderId: string | undefined,
 	providerContextWindow: number | undefined,
 ): Promise<number | undefined> {
-	const dynamicWindow = readProviderContextWindow(stateManager, activeProviderId)
-	if (typeof dynamicWindow === "number" && dynamicWindow > 0) {
-		return dynamicWindow
-	}
+	// Always refresh LM Studio from the runtime so mid-session context reloads
+	// (e.g. user lowered n_ctx) match compaction + the chat progress bar.
 	if (activeProviderId === "lmstudio" || activeProviderId === "openai-compatible") {
-		const liveWindow = await fetchLmStudioContextWindowLive(stateManager)
+		const apiConfig = stateManager.getApiConfiguration()
+		const liveWindow = await fetchLmStudioContextWindowLive(apiConfig?.lmStudioBaseUrl, { force: true })
 		if (typeof liveWindow === "number" && liveWindow > 0) {
 			stateManager.setGlobalState("lmStudioMaxTokens", String(liveWindow))
+			setCachedLmStudioContextWindow(liveWindow)
 			Logger.log(`[CompactionSettings] live LM Studio context window=${liveWindow}`)
 			return liveWindow
 		}
+	}
+	const dynamicWindow = readProviderContextWindow(stateManager, activeProviderId)
+	if (typeof dynamicWindow === "number" && dynamicWindow > 0) {
+		return dynamicWindow
 	}
 	return typeof providerContextWindow === "number" && providerContextWindow > 0
 		? providerContextWindow

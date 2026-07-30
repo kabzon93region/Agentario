@@ -1,4 +1,4 @@
-﻿// Replaces classic task creation from src/core/task/index.ts (see origin/main)
+// Replaces classic task creation from src/core/task/index.ts (see origin/main)
 //
 // Creates and manages SDK sessions using AgentarioCore. This factory handles:
 // - Creating AgentarioCore instances with proper configuration
@@ -51,6 +51,7 @@ import { toSdkProviderId } from "./model-catalog/sdk-provider-id"
 import { providerAllowsCustomModelIds } from "./model-catalog/custom-model-ids"
 import { getProviderSettingsManager } from "./provider-migration"
 import { buildSapProviderConfig, type SapProviderConfig } from "./sap-config"
+import { createLargeFileSummarizer } from "./file-content-summarizer"
 import type { SdkSessionHost } from "./session-host"
 
 // ---------------------------------------------------------------------------
@@ -85,10 +86,10 @@ const AGENT_MODE_INSTRUCTIONS = `# Agent Mode (Autonomous)
 Fully autonomous agent. Plan → execute → verify — no confirmation needed per step.
 
 ## Rules
-- Gather only needed context (no fixed checklist). For project overview: git status then root read_files first; use semantic_search only to fill gaps — not 2–3 searches before any read. Prefer read_files over shell listing.
+- Gather only needed context (no fixed checklist). For project overview: ONLY \`git status\` (alone), then root read_files / one semantic_search — never Get-ChildItem/ls/dir chained with git.
 - MCP memory (@modelcontextprotocol/server-memory) is SHARED across projects — verify against actual files, don't write project facts there.
 - **Anti-loop:** if same error twice → STOP, change approach. Never repeat failed tool call or the same semantic_search query.
-- **Windows:** never \`&&\` (use \`;\`), use PowerShell for git/build/test only — never Get-ChildItem/ls/dir or Get-Content for project discovery/reads.
+- **Windows:** never \`&&\`; PowerShell for git/build/test only — never Get-ChildItem/ls/dir/tree or Get-Content for discovery/reads.
 
 ## Protocol
 1. Analyze → 2. Decompose into steps → 3. Assess risks → 4. Execute → 5. Verify → 6. Summarize
@@ -560,36 +561,12 @@ export function resolveVertexProviderConfig(config: ApiConfiguration): Pick<Prov
 }
 
 /**
- * Agentario: запросить live context window из LM Studio API (/v1/models).
- * Возвращает loaded_context_length текущей модели или undefined если API недоступно.
- * Используется при создании сессии, чтобы не зависеть от stale persisted lmStudioMaxTokens.
+ * Agentario: live context window из LM Studio при создании сессии
+ * (force — не зависеть от stale UI-кэша / persisted lmStudioMaxTokens).
  */
 async function fetchLmStudioContextWindow(apiConfig: ApiConfiguration): Promise<number | undefined> {
-	const baseUrl = apiConfig.lmStudioBaseUrl?.trim() || "http://127.0.0.1:1234"
-	// Agentario: используем /api/v0/models вместо /v1/models —
-	// OpenAI-compatible endpoint не содержит loaded_context_length/max_context_length,
-	// а native LM Studio API содержит.
-	const url = `${baseUrl.replace(/\/+$/, "")}/api/v0/models`
-	try {
-		const controller = new AbortController()
-		const timeout = setTimeout(() => controller.abort(), 3000)
-		const response = await fetch(url, { signal: controller.signal })
-		clearTimeout(timeout)
-		if (!response.ok) return undefined
-		const data = await response.json() as { data?: Array<{ id: string; loaded_context_length?: number; max_context_length?: number; state?: string }> }
-		const models = data.data
-		if (!Array.isArray(models) || models.length === 0) return undefined
-		// Prefer loaded model's context window
-		const loaded = models.find((m) => m.state === "loaded" && m.loaded_context_length && m.loaded_context_length > 0)
-		if (loaded?.loaded_context_length) return loaded.loaded_context_length
-		// Fallback to any model with context info
-		const withContext = models.find((m) => m.loaded_context_length && m.loaded_context_length > 0)
-		if (withContext?.loaded_context_length) return withContext.loaded_context_length
-		const first = models.find((m) => m.max_context_length && m.max_context_length > 0)
-		return first?.max_context_length
-	} catch {
-		return undefined
-	}
+	const { fetchLmStudioContextWindowLive } = await import("./lm-studio-live-context")
+	return fetchLmStudioContextWindowLive(apiConfig.lmStudioBaseUrl, { force: true })
 }
 
 export function resolveBaseUrl(providerId: string, config: ApiConfiguration): string | undefined {
@@ -833,8 +810,10 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	if (providerId === "lmstudio") {
 		providerContextWindow = await fetchLmStudioContextWindow(apiConfig)
 		if (providerContextWindow && providerContextWindow > 0) {
-			// Persist the live value so the resolver and UI read the current context window
+			// Persist + shared cache so the webview resolver and progress bar match compaction.
 			stateManager.setGlobalState("lmStudioMaxTokens", String(providerContextWindow))
+			const { setCachedLmStudioContextWindow } = await import("./lm-studio-live-context")
+			setCachedLmStudioContextWindow(providerContextWindow)
 		}
 		if (!providerContextWindow && apiConfig?.lmStudioMaxTokens) {
 			const parsed = Number.parseInt(String(apiConfig.lmStudioMaxTokens).trim(), 10)
@@ -947,6 +926,10 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 			logger: sdkLogger,
 		},
 		hooks: buildAgentHooks(StateManager.get()),
+		toolContextMetadata: {
+			summarizeLargeFile: createLargeFileSummarizer(providerConfig),
+			cwd,
+		},
 	}
 
 	return config

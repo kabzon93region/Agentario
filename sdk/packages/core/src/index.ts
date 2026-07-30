@@ -802,6 +802,11 @@ export {
 	ToolPresets,
 } from "./extensions/tools";
 export {
+	FILE_SUMMARY_HEADER,
+	buildOutlineFileSummary,
+	extractFileSummarySection,
+} from "./extensions/tools/executors/file-read";
+export {
 	type ClineRecommendedModel,
 	type ClineRecommendedModelsData,
 	FALLBACK_CLINE_RECOMMENDED_MODELS,

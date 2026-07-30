@@ -35,7 +35,7 @@ import {
 import { MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
 import { canRestoreWorkspaceFromMessage } from "@/components/chat/chat-view/utils/messageUtils"
-import { findFollowingApiStats } from "@shared/message-display"
+import { findApiStatsForMessage, findFollowingApiStats, hasFollowingAssistantText } from "@shared/message-display"
 import { OptionsButtons } from "@/components/chat/OptionsButtons"
 import { WithCopyButton } from "@/components/common/CopyButton"
 import McpResponseDisplay from "@/components/mcp/chat-display/McpResponseDisplay"
@@ -162,7 +162,13 @@ export const ChatRowContent = memo(
 			selectedText: "",
 		})
 		const contentRef = useRef<HTMLDivElement>(null)
-		const messageApiStats = useMemo(() => findFollowingApiStats(agentarioMessages, message.ts), [agentarioMessages, message.ts])
+		const messageApiStats = useMemo(() => message.say === "completion_result"
+			? findApiStatsForMessage(agentarioMessages, message.ts)
+			: findFollowingApiStats(agentarioMessages, message.ts), [agentarioMessages, message.ts, message.say])
+		const deferStatsToFollowingText = useMemo(
+			() => message.say === "reasoning" && hasFollowingAssistantText(agentarioMessages, message.ts),
+			[agentarioMessages, message.say, message.ts],
+		)
 
 		// Command output expansion state (for all messages, but only used by command messages)
 		const [isOutputFullyExpanded, setIsOutputFullyExpanded] = useState(false)
@@ -173,6 +179,19 @@ export const ChatRowContent = memo(
 		const hasAutoExpandedRef = useRef(false)
 		const hasAutoCollapsedRef = useRef(false)
 		const prevIsLastRef = useRef(isLast)
+		const wasReasoningStreamingRef = useRef(false)
+
+		// After reasoning finishes streaming, force-collapse if the row was left expanded.
+		useEffect(() => {
+			if (message.say !== "reasoning") {
+				return
+			}
+			const streaming = message.partial === true
+			if (wasReasoningStreamingRef.current && !streaming && isExpanded) {
+				onToggleExpand(message.ts)
+			}
+			wasReasoningStreamingRef.current = streaming
+		}, [message.say, message.partial, message.ts, isExpanded, onToggleExpand])
 
 		// Auto-expand completion output when it's the last message (runs once per message)
 		useEffect(() => {
@@ -505,8 +524,8 @@ export const ChatRowContent = memo(
 										"cursor-default select-text": isImage,
 									})}
 									onClick={() => {
-										if (!isImage) {
-											FileServiceClient.openFile(StringRequest.create({ value: tool.content })).catch(
+										if (!isImage && tool.path) {
+											FileServiceClient.openFile(StringRequest.create({ value: tool.path })).catch(
 												(err) => console.error("Failed to open file:", err),
 											)
 										}
@@ -526,6 +545,18 @@ export const ChatRowContent = memo(
 									{!isImage && <SquareArrowOutUpRightIcon className="size-2" />}
 								</div>
 							</div>
+							{tool.content ? (
+								<div className="mt-2">
+									<div className="text-description text-xs mb-1 px-1">Саммари файла</div>
+									<CodeAccordian
+										code={tool.content}
+										isExpanded={isExpanded}
+										language="markdown"
+										onToggleExpand={handleToggle}
+										path={tool.path}
+									/>
+								</div>
+							) : null}
 						</div>
 					)
 				case "listFilesTopLevel":
@@ -933,25 +964,24 @@ export const ChatRowContent = memo(
 								</div>
 							)
 						}
-						const showFeatureTip = isReasoningStreaming
+						// Streaming: keep accordion open with full text. Finished: collapsed unless user expands.
+						const reasoningExpanded = isReasoningStreaming || isExpanded
 						return (
 							<div>
 								<ThinkingRow
-									isExpanded={(isReasoningStreaming && hasReasoningText) || isExpanded}
+									isExpanded={reasoningExpanded}
 									isStreaming={isReasoningStreaming}
 									isVisible={true}
 									onToggle={isReasoningStreaming ? undefined : handleToggle}
-									reasoningContent={message.text ?? ""}
-									showChevron={!isReasoningStreaming || hasReasoningText}
+									reasoningContent={rawText}
+									showChevron={!isReasoningStreaming}
 									showTitle={true}
-									title={
-										isReasoningStreaming
-											? `Размышление… ${(message.text ?? "").trim().split(/\s+/).slice(-5).join(" ")}`
-											: "Размышление"
-									}
+									title={isReasoningStreaming ? "Размышление…" : "Размышление"}
 								/>
 								{isReasoningStreaming && showFeatureTips !== false && <FeatureTip />}
-								{!isReasoningStreaming && <MessageStatsFooter stats={messageApiStats} />}
+								{!isReasoningStreaming && !deferStatsToFollowingText && (
+									<MessageStatsFooter stats={messageApiStats} />
+								)}
 							</div>
 						)
 					}

@@ -1,4 +1,4 @@
-﻿import type { ApiProvider, ModelInfo } from "@shared/api"
+import type { ApiProvider, ModelInfo } from "@shared/api"
 import { ResolveModelInfoRequest } from "@shared/proto/agentario/models"
 import { fromProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
 import type { Mode } from "@shared/storage/types"
@@ -83,6 +83,8 @@ function getActiveProviderAndModelId(apiConfiguration: ReturnType<typeof useExte
 export function useNormalizedApiConfiguration(mode: Mode): NormalizedApiConfig {
 	const { apiConfiguration } = useExtensionState()
 	const { provider, modelId } = getActiveProviderAndModelId(apiConfiguration, mode)
+	const lmStudioMaxTokens = apiConfiguration?.lmStudioMaxTokens
+	const ollamaApiOptionsCtxNum = apiConfiguration?.ollamaApiOptionsCtxNum
 	const [resolvedInfo, setResolvedInfo] = useState<
 		Awaited<ReturnType<typeof ModelsServiceClient.resolveModelInfo>> | undefined
 	>(undefined)
@@ -110,7 +112,9 @@ export function useNormalizedApiConfiguration(mode: Mode): NormalizedApiConfig {
 		return () => {
 			cancelled = true
 		}
-	}, [provider, modelId])
+		// Re-resolve when local provider context window settings change (mid-session
+		// LM Studio / Ollama reload) so TaskHeader matches compaction.
+	}, [provider, modelId, lmStudioMaxTokens, ollamaApiOptionsCtxNum])
 
 	return useMemo(() => {
 		if (!resolvedInfo || resolvedInfo.source === "unknown" || !resolvedInfo.modelInfo) {

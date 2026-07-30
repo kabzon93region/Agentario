@@ -319,4 +319,39 @@ describe("createFileReadExecutor", () => {
 			await fs.rm(dir, { recursive: true, force: true });
 		}
 	});
+
+	it("resolves relative paths using cwd from options", async () => {
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "agents-file-read-"));
+		try {
+			await fs.writeFile(path.join(dir, "test.txt"), "from cwd option", "utf-8");
+			const readFile = createFileReadExecutor({ cwd: dir });
+			const result = await readFile(
+				{ path: "test.txt" },
+				{ agentId: "agent-1", conversationId: "conv-1", iteration: 1 },
+			) as string;
+			expect(result).toContain("from cwd option");
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("resolves relative paths using cwd from context.metadata", async () => {
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "agents-file-read-"));
+		try {
+			await fs.writeFile(path.join(dir, "test.txt"), "from metadata cwd", "utf-8");
+			const readFile = createFileReadExecutor();
+			const result = await readFile(
+				{ path: "test.txt" },
+				{
+					agentId: "agent-1",
+					conversationId: "conv-1",
+					iteration: 1,
+					metadata: { cwd: dir },
+				},
+			) as string;
+			expect(result).toContain("from metadata cwd");
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
 });

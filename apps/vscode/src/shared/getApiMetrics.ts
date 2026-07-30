@@ -84,16 +84,22 @@ export type ContextWindowUsage = {
 /**
  * Gets context-window usage for the task header progress bar.
  *
- * Prefer the last **measured** provider input (`tokensIn` + cache) over a newer
- * `contextBudget.totalEstimated`-only `api_req_started`. Otherwise the bar jumps
- * up after each model reply, then drops when the next iteration posts an estimate
- * before usage arrives (often ~2× lower for local models / RU text).
+ * Scans backwards to find the NEWEST measured (tokensIn + cache) and the NEWEST
+ * contextBudget.totalEstimated independently. Then:
+ * - If the estimate is strictly newer (closer to array end) → use it (handles
+ *   post-compaction where the estimate reflects the compressed context).
+ * - If the measured value is newer → use it (real provider usage data).
+ * - If both come from the same message → prefer measured unless estimate is higher.
  *
  * Agentario: НЕ включаем tokensOut — выходные токены не занимают контекст.
  */
 export function getContextWindowUsage(messages: AgentarioMessage[]): ContextWindowUsage {
 	let lastMeasured = 0
 	let lastEstimated = 0
+	/** Index of the newest message carrying a measured value (tokensIn > 0). */
+	let lastMeasuredIdx = -1
+	/** Index of the newest message carrying an estimated value (contextBudget.totalEstimated > 0). */
+	let lastEstimatedIdx = -1
 
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const msg = messages[i]
@@ -107,16 +113,17 @@ export function getContextWindowUsage(messages: AgentarioMessage[]): ContextWind
 				}
 				const measured =
 					(parsed.tokensIn || 0) + (parsed.cacheWrites || 0) + (parsed.cacheReads || 0)
-				if (measured > 0 && lastMeasured === 0) {
+				if (measured > 0 && lastMeasuredIdx < 0) {
 					lastMeasured = measured
+					lastMeasuredIdx = i
 				}
 				const estimated = parsed.contextBudget?.totalEstimated ?? 0
-				if (estimated > 0 && lastEstimated === 0) {
+				if (estimated > 0 && lastEstimatedIdx < 0) {
 					lastEstimated = estimated
+					lastEstimatedIdx = i
 				}
-				if (lastMeasured > 0) {
-					// Measured wins even if a newer estimate-only message exists.
-					return { used: lastMeasured, approximate: false }
+				if (lastMeasuredIdx >= 0 && lastEstimatedIdx >= 0) {
+					break
 				}
 			} catch {
 				// Ignore JSON parse errors, continue searching
@@ -124,6 +131,23 @@ export function getContextWindowUsage(messages: AgentarioMessage[]): ContextWind
 		}
 	}
 
+	if (lastMeasured > 0 && lastEstimated > 0) {
+		// If the estimate is strictly newer (found at a higher index in the
+		// backwards scan = closer to the array end), prefer it — it reflects
+		// a more recent snapshot (e.g. post-compaction contextBudget).
+		if (lastEstimatedIdx > lastMeasuredIdx) {
+			return { used: lastEstimated, approximate: true }
+		}
+		// Same message or measured is newer: prefer measured (real provider data)
+		// unless the estimate is significantly higher (stale measured after cancel / reload).
+		if (lastEstimatedIdx === lastMeasuredIdx && lastEstimated > lastMeasured) {
+			return { used: lastEstimated, approximate: true }
+		}
+		return { used: lastMeasured, approximate: false }
+	}
+	if (lastMeasured > 0) {
+		return { used: lastMeasured, approximate: false }
+	}
 	if (lastEstimated > 0) {
 		return { used: lastEstimated, approximate: true }
 	}

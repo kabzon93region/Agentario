@@ -31,11 +31,9 @@ import { Logger } from "@/shared/services/Logger"
 
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-qwen3-embedding-0.6b"
 const DEFAULT_LM_STUDIO_BASE_URL = "http://localhost:1234"
-/** Max bytes read from disk per file for binary/structured formats (JSON, SQL). */
-const MAX_READ_BYTES = 2 * 1024 * 1024
 
-/** Text/code formats: read entire file without size limit. */
-const UNLIMITED_READ_EXTENSIONS = new Set([
+/** Text/code formats eligible for indexing (full file, no size cap). */
+const INCLUDE_EXTENSIONS = new Set([
 	// Web
 	".html", ".htm", ".css", ".scss", ".sass", ".less", ".styl",
 	// JavaScript / TypeScript
@@ -98,10 +96,6 @@ const BINARY_EXTENSIONS = new Set([
 	".class", ".jar", ".war", ".ear", ".pyc", ".pyo", ".wasm",
 	".ttf", ".otf", ".woff", ".woff2", ".eot",
 	".mp3", ".mp4", ".avi", ".mov",
-])
-
-const INCLUDE_EXTENSIONS = new Set([
-	...UNLIMITED_READ_EXTENSIONS,
 ])
 
 const EXCLUDE_DIRS = new Set([
@@ -308,41 +302,9 @@ async function walkFiles(workspacePath: string, dir = workspacePath, result: str
 	return result
 }
 
-async function readTextForIndexing(filePath: string, fileSize: number): Promise<{ text: string; readTruncated: boolean }> {
-	const ext = path.extname(filePath).toLowerCase()
-	const isUnlimited = UNLIMITED_READ_EXTENSIONS.has(ext)
-
-	// Text/code formats: read entire file
-	if (isUnlimited) {
-		return { text: await fs.readFile(filePath, "utf8"), readTruncated: false }
-	}
-
-	// Binary/structured formats (JSON, SQL): apply size limit
-	if (fileSize <= MAX_READ_BYTES) {
-		return { text: await fs.readFile(filePath, "utf8"), readTruncated: false }
-	}
-
-	const handle = await fs.open(filePath, "r")
-	try {
-		const buffer = Buffer.alloc(MAX_READ_BYTES)
-		const { bytesRead } = await handle.read(buffer, 0, MAX_READ_BYTES, 0)
-		let end = bytesRead
-		while (end > 0 && (buffer[end - 1]! & 0xc0) === 0x80) {
-			end--
-		}
-		return { text: buffer.subarray(0, end).toString("utf8"), readTruncated: true }
-	} finally {
-		await handle.close()
-	}
-}
-
-function partialIndexNote(chunkCount: number, readTruncated: boolean): string {
-	const approxKb = Math.round((chunkCount * CHUNK_CHARS) / 1024)
-	const parts = [`Indexed ${chunkCount} chunk(s) (~${approxKb} KB)`]
-	if (readTruncated) {
-		parts.push(`file read capped at ${Math.round(MAX_READ_BYTES / 1024)} KB`)
-	}
-	return parts.join("; ")
+async function readTextForIndexing(filePath: string): Promise<string> {
+	// Indexable files are read fully — no per-file byte cap.
+	return fs.readFile(filePath, "utf8")
 }
 
 async function requestEmbeddings(client: LmStudioEmbeddingClient, inputs: string[]): Promise<number[][]> {
@@ -482,6 +444,9 @@ class CodebaseIndexServiceImpl {
 		if (this.indexing) {
 			return this.getStatus()
 		}
+		this.indexing = true
+		this.progress = { current: 0, total: 0, path: undefined, indexSizeBytes: 0 }
+
 		const workspacePath = getWorkspacePath()
 		const indexSettings = getCodebaseIndexSettings()
 		const baseUrl = indexSettings.baseUrl
@@ -538,7 +503,6 @@ class CodebaseIndexServiceImpl {
 		meta.baseUrl = baseUrl
 		meta.lastError = undefined
 
-		this.indexing = true
 		this.abortRequested = false
 		this.lastError = undefined
 		this.progress = {
@@ -582,7 +546,7 @@ class CodebaseIndexServiceImpl {
 
 				let record: IndexedFileRecord
 				try {
-					const { text, readTruncated } = await readTextForIndexing(filePath, stat.size)
+					const text = await readTextForIndexing(filePath)
 					if (useLocalManifestOnly) {
 						record = {
 							path: relativePath,
@@ -601,19 +565,13 @@ class CodebaseIndexServiceImpl {
 								...batch.map((chunk, index) => ({ text: chunk, embedding: embeddings[index] ?? [] })),
 							)
 						}
-						const isPartial = indexedChunks.length > 0 && readTruncated
 						record = {
 							path: relativePath,
-							status: indexedChunks.length === 0 ? "skipped" : isPartial ? "partial" : "indexed",
+							status: indexedChunks.length === 0 ? "skipped" : "indexed",
 							size: stat.size,
 							mtimeMs: stat.mtimeMs,
 							chunks: indexedChunks,
-							error:
-								indexedChunks.length === 0
-									? "No indexable text content"
-									: isPartial
-										? partialIndexNote(indexedChunks.length, readTruncated)
-										: undefined,
+							error: indexedChunks.length === 0 ? "No indexable text content" : undefined,
 						}
 					}
 				} catch (error) {

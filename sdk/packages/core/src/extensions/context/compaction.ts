@@ -570,8 +570,14 @@ export function createContextCompactionPrepareTurn(
 	const statusReason =
 		mode === "manual" ? "manual_compaction" : "auto_compaction";
 	// Agentario: эмитим статистику контекста ПЕРЕД "auto-compacting"
-	// displayInputTokens = cappedInputTokens (estimate если lastInputTokens подозрительно высок, иначе max(model, estimate))
-	const displayInputTokens = cappedInputTokens;
+	// displayInputTokens — значение для UI (📊 Контекст, progress bar, итоговое сообщение).
+	// НЕ включает toolTokens (schemas), т.к. progress bar показывает tokensIn из API,
+	// а tool schemas — это system-level overhead, не chat content.
+	// Используем rawLastInputTokens если доступен (реальные токены от модели),
+	// иначе chatTokens + systemPromptTokens (без tool schemas).
+	const displayInputTokens = rawLastInputTokens > 0
+		? Math.min(rawLastInputTokens, maxInputTokens || Infinity)
+		: Math.min(chatTokens + systemPromptTokens, maxInputTokens || Infinity);
 	const contextPercent = maxInputTokens > 0 ? Math.round((displayInputTokens / maxInputTokens) * 100) : 0;
 	const statsMessage = `📊 Контекст: ${displayInputTokens.toLocaleString()} / ${maxInputTokens.toLocaleString()} токенов (${contextPercent}%)`;
 	context.emitStatusNotice?.(statsMessage, {
@@ -658,6 +664,16 @@ export function createContextCompactionPrepareTurn(
 			afterPercent,
 			durationMs,
 			durationSec,
+		});
+		// Agentario: эмитим context_stats ПОСЛЕ компакции с НОВЫМИ значениями,
+		// чтобы progress bar обновился сразу (без перезахода в чат).
+		// Без этого полоска показывает старое значение до следующего API-запроса.
+		context.emitStatusNotice?.(`📊 Контекст (после компакции): ${afterTokens.toLocaleString()} / ${maxInputTokens.toLocaleString()} токенов (${afterPercent}%)`, {
+			kind: "context_stats",
+			reason: statusReason,
+			inputTokens: afterTokens,
+			maxInputTokens,
+			contextPercent: afterPercent,
 		});
 		captureCompactionExecuted(config.telemetry, {
 				ulid: telemetryUlid,

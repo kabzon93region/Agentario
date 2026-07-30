@@ -142,6 +142,8 @@ export interface VscodeExtraToolsOptions {
 }
 
 export async function createVscodeExtraTools(mcpHub: McpHub, options?: VscodeExtraToolsOptions): Promise<AgentTool[]> {
+	// Ensure MCP connects finished after restart / enable before we snapshot tools.
+	await mcpHub.waitUntilConnectionsSettled()
 	const provider = new McpHubToolProvider(mcpHub)
 	const mcpTools = await Promise.all(
 		mcpHub.getServers().map(async (server) => {

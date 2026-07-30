@@ -36,6 +36,9 @@ export { createEditorExecutor, type EditorExecutorOptions } from "./editor";
 export {
 	createFileReadExecutor,
 	type FileReadExecutorOptions,
+	FILE_SUMMARY_HEADER,
+	extractFileSummarySection,
+	buildOutlineFileSummary,
 } from "./file-read";
 export { createSearchExecutor, type SearchExecutorOptions } from "./search";
 export {

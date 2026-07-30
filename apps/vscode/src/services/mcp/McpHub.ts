@@ -61,6 +61,12 @@ export class McpHub {
 	connections: McpConnection[] = []
 	isConnecting = false
 	/**
+	 * Serializes connection rebuilds (init, watcher, seed reload, toggle, RPC).
+	 * Without this, overlapping updateServerConnections calls race and can drop
+	 * or partially connect servers right after restart / settings changes.
+	 */
+	private connectionUpdateChain: Promise<void> = Promise.resolve()
+	/**
 	 * Fingerprint of the connection-relevant view of the settings file as of the
 	 * watcher's last reconciliation.
 	 *
@@ -130,6 +136,38 @@ export class McpHub {
 		// Only return enabled servers
 
 		return this.connections.filter((conn) => !conn.server.disabled).map((conn) => conn.server)
+	}
+
+	/**
+	 * Queue connection mutations so init / watcher / seed reload / toggle never overlap.
+	 */
+	private enqueueConnectionUpdate<T>(operation: () => Promise<T>): Promise<T> {
+		const run = this.connectionUpdateChain.then(operation, operation)
+		this.connectionUpdateChain = run.then(
+			() => undefined,
+			() => undefined,
+		)
+		return run
+	}
+
+	/**
+	 * Wait until queued connection updates finish and no enabled server is still
+	 * in "connecting". Used before snapshotting MCP tools into a new session so
+	 * tools are available immediately after restart / enable.
+	 */
+	public async waitUntilConnectionsSettled(timeoutMs = 20_000): Promise<void> {
+		const deadline = Date.now() + timeoutMs
+		while (Date.now() < deadline) {
+			await this.connectionUpdateChain
+			const stillConnecting =
+				this.isConnecting ||
+				this.connections.some((conn) => !conn.server.disabled && conn.server.status === "connecting")
+			if (!stillConnecting) {
+				return
+			}
+			await setTimeoutPromise(50)
+		}
+		Logger.warn(`[McpHub] waitUntilConnectionsSettled timed out after ${timeoutMs}ms`)
 	}
 
 	/**
@@ -913,154 +951,163 @@ export class McpHub {
 	}
 
 	async updateServerConnectionsRPC(newServers: Record<string, McpServerConfig>): Promise<void> {
-		this.isConnecting = true
-		this.removeAllFileWatchers()
-		const currentNames = new Set(this.connections.map((conn) => conn.server.name))
-		const newNames = new Set(Object.keys(newServers))
+		return this.enqueueConnectionUpdate(async () => {
+			this.isConnecting = true
+			try {
+				this.removeAllFileWatchers()
+				const currentNames = new Set(this.connections.map((conn) => conn.server.name))
+				const newNames = new Set(Object.keys(newServers))
 
-		// Delete removed servers
-		for (const name of currentNames) {
-			if (!newNames.has(name)) {
-				await this.deleteConnection(name)
-				Logger.log(`Deleted MCP server: ${name}`)
-			}
-		}
-
-		// Update or add servers
-		for (const [name, config] of Object.entries(newServers)) {
-			const currentConnection = this.connections.find((conn) => conn.server.name === name)
-
-			if (!currentConnection) {
-				// New server
-				try {
-					if (config.type === "stdio") {
-						this.setupFileWatcher(name, config)
+				// Delete removed servers
+				for (const name of currentNames) {
+					if (!newNames.has(name)) {
+						await this.deleteConnection(name)
+						Logger.log(`Deleted MCP server: ${name}`)
 					}
-					await this.connectToServer(name, config, "rpc")
-				} catch (error) {
-					Logger.error(`Failed to connect to new MCP server ${name}:`, error)
 				}
-			} else if (
-				this.configsRequireRestart(JSON.parse(currentConnection.server.config), config) ||
-				this.serverGainedOAuthTokens(currentConnection, config)
-			) {
-				// Existing server with changed connection config (excludes Cline-specific settings),
-				// or an unauthenticated server whose OAuth tokens just appeared (e.g. CLI authorized it)
-				try {
-					if (config.type === "stdio") {
-						this.setupFileWatcher(name, config)
-					}
-					await this.deleteConnection(name) // Don't clear OAuth - just reconnecting with new config
-					await this.connectToServer(name, config, "rpc")
-					Logger.log(`Reconnected MCP server with updated config: ${name}`)
-				} catch (error) {
-					Logger.error(`Failed to reconnect MCP server ${name}:`, error)
-				}
-			} else {
-				// Only Cline-specific settings changed - update in-memory state without restart
-				const autoApprove = config.autoApprove || []
-				if (currentConnection.server.tools) {
-					currentConnection.server.tools = currentConnection.server.tools.map((tool) => ({
-						...tool,
-						autoApprove: autoApprove.includes(tool.name),
-					}))
-				}
-				// Also update Cline-specific settings in the stored config.
-				// This handles the case where someone manually edits the MCP settings file -
-				// the file watcher triggers this code path, and we need to sync the in-memory
-				// config with the file without restarting the server.
-				const currentConfig = JSON.parse(currentConnection.server.config)
-				currentConfig.autoApprove = config.autoApprove
-				currentConfig.timeout = config.timeout
-				currentConnection.server.config = JSON.stringify(currentConfig)
-			}
-		}
 
-		this.isConnecting = false
+				// Update or add servers
+				for (const [name, config] of Object.entries(newServers)) {
+					const currentConnection = this.connections.find((conn) => conn.server.name === name)
+
+					if (!currentConnection) {
+						// New server
+						try {
+							if (config.type === "stdio") {
+								this.setupFileWatcher(name, config)
+							}
+							await this.connectToServer(name, config, "rpc")
+						} catch (error) {
+							Logger.error(`Failed to connect to new MCP server ${name}:`, error)
+						}
+					} else if (
+						this.configsRequireRestart(JSON.parse(currentConnection.server.config), config) ||
+						this.serverGainedOAuthTokens(currentConnection, config)
+					) {
+						// Existing server with changed connection config (excludes Cline-specific settings),
+						// or an unauthenticated server whose OAuth tokens just appeared (e.g. CLI authorized it)
+						try {
+							if (config.type === "stdio") {
+								this.setupFileWatcher(name, config)
+							}
+							await this.deleteConnection(name) // Don't clear OAuth - just reconnecting with new config
+							await this.connectToServer(name, config, "rpc")
+							Logger.log(`Reconnected MCP server with updated config: ${name}`)
+						} catch (error) {
+							Logger.error(`Failed to reconnect MCP server ${name}:`, error)
+						}
+					} else {
+						// Only Cline-specific settings changed - update in-memory state without restart
+						const autoApprove = config.autoApprove || []
+						if (currentConnection.server.tools) {
+							currentConnection.server.tools = currentConnection.server.tools.map((tool) => ({
+								...tool,
+								autoApprove: autoApprove.includes(tool.name),
+							}))
+						}
+						// Also update Cline-specific settings in the stored config.
+						// This handles the case where someone manually edits the MCP settings file -
+						// the file watcher triggers this code path, and we need to sync the in-memory
+						// config with the file without restarting the server.
+						const currentConfig = JSON.parse(currentConnection.server.config)
+						currentConfig.autoApprove = config.autoApprove
+						currentConfig.timeout = config.timeout
+						currentConnection.server.config = JSON.stringify(currentConfig)
+					}
+				}
+			} finally {
+				this.isConnecting = false
+			}
+		})
 	}
 
 	async updateServerConnections(newServers: Record<string, McpServerConfig>): Promise<void> {
-		this.isConnecting = true
-		this.removeAllFileWatchers()
-		const currentNames = new Set(this.connections.map((conn) => conn.server.name))
-		const newNames = new Set(Object.keys(newServers))
+		return this.enqueueConnectionUpdate(async () => {
+			this.isConnecting = true
+			try {
+				this.removeAllFileWatchers()
+				const currentNames = new Set(this.connections.map((conn) => conn.server.name))
+				const newNames = new Set(Object.keys(newServers))
 
-		// Track if any connection-level changes occurred (excludes Cline-specific settings)
-		let connectionChangesOccurred = false
+				// Track if any connection-level changes occurred (excludes Cline-specific settings)
+				let connectionChangesOccurred = false
 
-		// Delete removed servers
-		for (const name of currentNames) {
-			if (!newNames.has(name)) {
-				await this.clearOAuthForConnection(name) // Clear OAuth data first
-				await this.deleteConnection(name) // Then delete connection
-				Logger.log(`Deleted MCP server: ${name}`)
-				connectionChangesOccurred = true
-			}
-		}
-
-		// Update or add servers
-		for (const [name, config] of Object.entries(newServers)) {
-			const currentConnection = this.connections.find((conn) => conn.server.name === name)
-
-			if (!currentConnection) {
-				// New server
-				try {
-					if (config.type === "stdio") {
-						this.setupFileWatcher(name, config)
+				// Delete removed servers
+				for (const name of currentNames) {
+					if (!newNames.has(name)) {
+						await this.clearOAuthForConnection(name) // Clear OAuth data first
+						await this.deleteConnection(name) // Then delete connection
+						Logger.log(`Deleted MCP server: ${name}`)
+						connectionChangesOccurred = true
 					}
-					await this.connectToServer(name, config, "internal")
-					connectionChangesOccurred = true
-				} catch (error) {
-					Logger.error(`Failed to connect to new MCP server ${name}:`, error)
 				}
-			} else if (
-				this.configsRequireRestart(JSON.parse(currentConnection.server.config), config) ||
-				this.serverGainedOAuthTokens(currentConnection, config)
-			) {
-				// Existing server with changed connection config (excludes Cline-specific settings),
-				// or an unauthenticated server whose OAuth tokens just appeared in the settings
-				// file (e.g. the CLI or another window completed authorization for it)
-				try {
-					// Set status to "connecting" and notify webview before restart (same pattern as restartConnection)
-					currentConnection.server.status = "connecting"
-					currentConnection.server.error = ""
+
+				// Update or add servers
+				for (const [name, config] of Object.entries(newServers)) {
+					const currentConnection = this.connections.find((conn) => conn.server.name === name)
+
+					if (!currentConnection) {
+						// New server
+						try {
+							if (config.type === "stdio") {
+								this.setupFileWatcher(name, config)
+							}
+							await this.connectToServer(name, config, "internal")
+							connectionChangesOccurred = true
+						} catch (error) {
+							Logger.error(`Failed to connect to new MCP server ${name}:`, error)
+						}
+					} else if (
+						this.configsRequireRestart(JSON.parse(currentConnection.server.config), config) ||
+						this.serverGainedOAuthTokens(currentConnection, config)
+					) {
+						// Existing server with changed connection config (excludes Cline-specific settings),
+						// or an unauthenticated server whose OAuth tokens just appeared in the settings
+						// file (e.g. the CLI or another window completed authorization for it)
+						try {
+							// Set status to "connecting" and notify webview before restart (same pattern as restartConnection)
+							currentConnection.server.status = "connecting"
+							currentConnection.server.error = ""
+							await this.notifyWebviewOfServerChanges()
+
+							if (config.type === "stdio") {
+								this.setupFileWatcher(name, config)
+							}
+							await this.deleteConnection(name)
+							await this.connectToServer(name, config, "internal")
+							Logger.log(`Reconnected MCP server with updated config: ${name}`)
+							connectionChangesOccurred = true
+						} catch (error) {
+							Logger.error(`Failed to reconnect MCP server ${name}:`, error)
+						}
+					} else {
+						// Only Cline-specific settings changed - update in-memory state without restart
+						// Don't set connectionChangesOccurred since the RPC already returned the updated state
+						const autoApprove = config.autoApprove || []
+						if (currentConnection.server.tools) {
+							currentConnection.server.tools = currentConnection.server.tools.map((tool) => ({
+								...tool,
+								autoApprove: autoApprove.includes(tool.name),
+							}))
+						}
+						// Also update Cline-specific settings in the stored config
+						const currentConfig = JSON.parse(currentConnection.server.config)
+						currentConfig.autoApprove = config.autoApprove
+						currentConfig.timeout = config.timeout
+						currentConnection.server.config = JSON.stringify(currentConfig)
+					}
+				}
+
+				// Only notify webview if actual connection changes occurred.
+				// For Cline-specific settings changes, the RPC response already updated the webview,
+				// so we skip notification to avoid race conditions.
+				if (connectionChangesOccurred) {
 					await this.notifyWebviewOfServerChanges()
-
-					if (config.type === "stdio") {
-						this.setupFileWatcher(name, config)
-					}
-					await this.deleteConnection(name)
-					await this.connectToServer(name, config, "internal")
-					Logger.log(`Reconnected MCP server with updated config: ${name}`)
-					connectionChangesOccurred = true
-				} catch (error) {
-					Logger.error(`Failed to reconnect MCP server ${name}:`, error)
 				}
-			} else {
-				// Only Cline-specific settings changed - update in-memory state without restart
-				// Don't set connectionChangesOccurred since the RPC already returned the updated state
-				const autoApprove = config.autoApprove || []
-				if (currentConnection.server.tools) {
-					currentConnection.server.tools = currentConnection.server.tools.map((tool) => ({
-						...tool,
-						autoApprove: autoApprove.includes(tool.name),
-					}))
-				}
-				// Also update Cline-specific settings in the stored config
-				const currentConfig = JSON.parse(currentConnection.server.config)
-				currentConfig.autoApprove = config.autoApprove
-				currentConfig.timeout = config.timeout
-				currentConnection.server.config = JSON.stringify(currentConfig)
+			} finally {
+				this.isConnecting = false
 			}
-		}
-
-		// Only notify webview if actual connection changes occurred.
-		// For Cline-specific settings changes, the RPC response already updated the webview,
-		// so we skip notification to avoid race conditions.
-		if (connectionChangesOccurred) {
-			await this.notifyWebviewOfServerChanges()
-		}
-		this.isConnecting = false
+		})
 	}
 
 	/**
@@ -1303,55 +1350,57 @@ export class McpHub {
 	// Public methods for server management
 
 	public async toggleServerDisabledRPC(serverName: string, disabled: boolean): Promise<McpServer[]> {
-		this.isConnecting = true
-		try {
-			// Hold the cross-process lock across read-modify-write so a concurrent
-			// writer (CLI, OAuth handshake, another window) cannot clobber this
-			// toggle. Connection rebuild stays OUTSIDE the lock: connectToServer can
-			// trigger SDK OAuth writes that take the same (non-reentrant) lock.
-			const settingsPath = await getMcpSettingsFilePathHelper(await this.getSettingsDirectoryPath())
-			await updateMcpSettingsFile(settingsPath, (validated) => {
-				const servers = validated.mcpServers as Record<string, any>
+		return this.enqueueConnectionUpdate(async () => {
+			this.isConnecting = true
+			try {
+				// Hold the cross-process lock across read-modify-write so a concurrent
+				// writer (CLI, OAuth handshake, another window) cannot clobber this
+				// toggle. Connection rebuild stays OUTSIDE the lock: connectToServer can
+				// trigger SDK OAuth writes that take the same (non-reentrant) lock.
+				const settingsPath = await getMcpSettingsFilePathHelper(await this.getSettingsDirectoryPath())
+				await updateMcpSettingsFile(settingsPath, (validated) => {
+					const servers = validated.mcpServers as Record<string, any>
 
-				if (!servers[serverName]) {
-					throw new Error(`Server "${serverName}" not found in MCP configuration`)
+					if (!servers[serverName]) {
+						throw new Error(`Server "${serverName}" not found in MCP configuration`)
+					}
+
+					servers[serverName].disabled = disabled
+					validated.mcpServers = servers
+					return validated
+				})
+				const config = await this.readPostWriteMcpSettings()
+
+				// Rebuild the connection so the toggle takes effect. A disabled
+				// server's connection is a stub with no live transport/client, so the
+				// toggle must route through connectToServer(), which opens a real
+				// transport when enabled or creates a disconnected stub when disabled.
+				// deleteConnection preserves OAuth state.
+				const mcpServers = config.mcpServers as Record<string, McpServerConfig>
+				const newConfig = mcpServers[serverName]
+				await this.deleteConnection(serverName)
+				await this.connectToServer(serverName, newConfig, "rpc")
+
+				// Refresh the SDK session's tool list to reflect the server
+				// appearing or disappearing.
+				await this.notifyWebviewOfServerChanges()
+
+				const serverOrder = Object.keys(config.mcpServers || {})
+				return this.getSortedMcpServers(serverOrder)
+			} catch (error) {
+				Logger.error("Failed to update server disabled state:", error)
+				if (error instanceof Error) {
+					Logger.error("Error details:", error.message, error.stack)
 				}
-
-				servers[serverName].disabled = disabled
-				validated.mcpServers = servers
-				return validated
-			})
-			const config = await this.readPostWriteMcpSettings()
-
-			// Rebuild the connection so the toggle takes effect. A disabled
-			// server's connection is a stub with no live transport/client, so the
-			// toggle must route through connectToServer(), which opens a real
-			// transport when enabled or creates a disconnected stub when disabled.
-			// deleteConnection preserves OAuth state.
-			const mcpServers = config.mcpServers as Record<string, McpServerConfig>
-			const newConfig = mcpServers[serverName]
-			await this.deleteConnection(serverName)
-			await this.connectToServer(serverName, newConfig, "rpc")
-
-			// Refresh the SDK session's tool list to reflect the server
-			// appearing or disappearing.
-			await this.notifyWebviewOfServerChanges()
-
-			const serverOrder = Object.keys(config.mcpServers || {})
-			return this.getSortedMcpServers(serverOrder)
-		} catch (error) {
-			Logger.error("Failed to update server disabled state:", error)
-			if (error instanceof Error) {
-				Logger.error("Error details:", error.message, error.stack)
+				HostProvider.window.showMessage({
+					type: ShowMessageType.ERROR,
+					message: `Failed to update server state: ${error instanceof Error ? error.message : String(error)}`,
+				})
+				throw error
+			} finally {
+				this.isConnecting = false
 			}
-			HostProvider.window.showMessage({
-				type: ShowMessageType.ERROR,
-				message: `Failed to update server state: ${error instanceof Error ? error.message : String(error)}`,
-			})
-			throw error
-		} finally {
-			this.isConnecting = false
-		}
+		})
 	}
 
 	async readResource(serverName: string, uri: string): Promise<McpResourceResponse> {

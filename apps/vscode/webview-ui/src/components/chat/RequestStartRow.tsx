@@ -247,13 +247,15 @@ export const RequestStartRow: React.FC<RequestStartRowProps> = ({
 				</div>
 			)}
 			{showStreamingReasoning && (
-				<div className="ml-1 pl-0 mb-1 -mt-1.25 pt-1">
-					<div className="inline-flex justify-baseline gap-0.5 text-left select-none px-0 w-full">
-						<span className="animate-shimmer bg-linear-90 from-foreground to-description bg-[length:200%_100%] bg-clip-text text-transparent text-[13px] leading-none">
-							{`Размышление… ${reasoningText.split(/\s+/).slice(-5).join(" ")}`}
-						</span>
-					</div>
-				</div>
+				<ThinkingRow
+					isExpanded={true}
+					isStreaming={true}
+					isVisible={true}
+					reasoningContent={reasoningText}
+					showChevron={false}
+					showTitle={true}
+					title="Размышление…"
+				/>
 			)}
 			{showCompletedReasoning && (
 				<ThinkingRow

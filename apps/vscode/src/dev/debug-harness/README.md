@@ -1,471 +1,420 @@
 # Debug Harness
 
-An HTTP-controlled debug server for the Cline VSCode extension. Provides
+An HTTP-controlled debug server for the Agentario VSCode extension. Provides
 programmatic access to:
 
 - **Extension host debugging** (Node.js): breakpoints, evaluate, step, pause/resume via CDP
 - **Webview debugging** (Chrome): breakpoints, evaluate via CDP
-- **UI automation**: click, type, screenshot, open sidebar via Playwright
+- **UI automation**: click, type, screenshot, open sidebar via Playwright (visible mode only)
+- **Hidden mode**: VS Code runs off-screen by default, controlled via CDP bridge (no UI clicks)
 - **Sourcemap resolution**: set breakpoints by original source file + line
-- **Data isolation**: separate `~/.cline2` profile so debugee doesn't interfere with debugger
+- **Data isolation**: separate `~/.agentario-lab` profile so debugee doesn't interfere with debugger
 - **OAuth testing**: browser URL capture, token inspection, callback simulation
+- **Agentario Lab**: high-level API for agentic testing (create tasks, wait idle, export)
 
-Designed to be driven from an agentic loop via `curl` commands.
+Designed to be driven from an agentic loop via `curl` commands or the `lab-client.ts` TS client.
+
+Works on **Windows**, macOS, and Linux.
 
 ## Quick Start
 
 ```bash
 # Terminal 1: Start the debug harness server
-bun src/dev/debug-harness/server.ts --auto-launch --skip-build
+bun apps/vscode/src/dev/debug-harness/server.ts --auto-launch --skip-build
 
 # Terminal 2: Interact via curl
 curl localhost:19229/api -d '{"method":"status"}'
-curl localhost:19229/api -d '{"method":"ui.open_sidebar"}'
+curl localhost:19229/api -d '{"method":"lab.status"}'
 curl localhost:19229/api -d '{"method":"ui.screenshot"}'
+
+# Or use the CLI wrapper (Windows)
+scripts\agentario-lab.cmd status
+scripts\agentario-lab.cmd new-task "Hello, analyze this project"
+scripts\agentario-lab.cmd wait-idle --timeout 600000
+scripts\agentario-lab.cmd export Exports\lab-run.md
 ```
 
 ## Server Options
 
 ```
-bun src/dev/debug-harness/server.ts [options]
+bun apps/vscode/src/dev/debug-harness/server.ts [options]
 
 Options:
   --skip-build        Skip building extension/webview (use existing dist/)
   --auto-launch       Automatically launch VSCode on startup
-  --workspace PATH    Workspace directory to open (default: /tmp/cline-debug-workspace)
+  --workspace PATH    Workspace directory to open (default: <os.tmpdir>/agentario-lab-workspace)
   --port PORT         Server port (default: 19229)
-  --cline-dir PATH    Override the debugee's CLINE_DIR (default: ~/.cline2)
-```
-
-## Full Build + Launch (first time)
-
-```bash
-# This builds protos, extension (unminified+sourcemaps), webview (unminified+sourcemaps),
-# downloads VSCode, launches it, and connects CDP to the extension host.
-bun src/dev/debug-harness/server.ts --auto-launch
+  --cline-dir PATH    Override the debugee's CLINE_DIR (default: ~/.agentario-lab)
+  --vsix PATH         Install release VSIX instead of dev extension
+  --visible           Show VS Code window (default: hidden off-screen)
+  --launch-timeout MS Playwright launch timeout (default: 120000)
 ```
 
 ## Data Isolation
 
-The debugee runs with `CLINE_DIR=~/.cline2` by default, keeping its data
-separate from your real `~/.cline`. This prevents:
+The debugee runs with `CLINE_DIR=~/.agentario-lab` by default, keeping its data
+separate from the user's main Agentario installation. Override with `--cline-dir PATH`.
 
-- Logging out of the debugger when the debugee logs out
-- Task history, API keys, and settings leaking between instances
-- State corruption from shared secrets.json
+Screenshots go to `<os.tmpdir>/agentario-lab-debug/`.
 
-The isolated CLINE_DIR is reported in `status()` and `launch()` responses:
+## Agentario Lab API
 
-```bash
-curl localhost:19229/api -d '{"method":"status"}'
-# → { "clineDir": "/Users/you/.cline2", ... }
-```
+High-level methods for automated testing. By default, these use the **CDP bridge** (`globalThis.agentario`) for invisible control — no Playwright UI clicks. VS Code runs hidden (off-screen).
+with disk-based state detection.
 
-To use a different directory: `--cline-dir /tmp/test-cline-dir`
+### lab.status
 
-## Browser Capture & OAuth Testing
-
-When the debug harness launches VSCode, it sets `CLINE_CAPTURE_BROWSER=1`
-which intercepts all `openExternal()` calls in the debugee. Instead of
-opening a real browser, URLs are:
-
-1. **Logged to disk** at `$CLINE_DIR/data/debug-captured-urls.jsonl`
-2. **POSTed in real-time** to the debug harness server at `/captured-url`
-3. **Queryable** via the `oauth.captured_urls` API method
-
-### OAuth API
-
-| Method | Params | Description |
-|--------|--------|-------------|
-| `oauth.captured_urls` | `{clear?}` | Get URLs the debugee tried to open (captured by browser interception) |
-| `oauth.read_stored_token` | | Read auth token presence from debugee's secrets.json |
-| `oauth.simulate_callback` | `{path, code?, state?, provider?, token?}` | Build a vscode:// callback URI (for MCP/provider OAuth) |
-| `oauth.read_captured_urls_file` | | Read the on-disk JSONL file of captured URLs |
-
-### Testing Cline OAuth (login flow)
-
-The Cline OAuth flow uses the SDK's local callback server. When the user
-clicks "Login", the SDK:
-
-1. Starts a local HTTP server on a random port
-2. Calls `openExternal(authorizationUrl)` — which we capture
-3. The user authenticates in the browser — which we need to simulate
-4. The provider redirects to the local callback server with `?code=...`
-5. The SDK captures the code and exchanges it for tokens
-
-**To test this flow:**
+Returns VS Code state, active task count, idle flag, and last message preview.
 
 ```bash
-# 1. Click "Login" in the debugee's sidebar
-curl localhost:19229/api -d '{"method":"ui.open_sidebar"}'
-# Dismiss overlays first (see "Dismissing Promotional Overlays" below)
-curl localhost:19229/api -d '{"method":"ui.locator","params":{"text":"Login to Cline","frame":"sidebar","action":"click"}}'
-
-# 2. Check captured URLs to find the authorization URL
-curl localhost:19229/api -d '{"method":"oauth.captured_urls"}'
-# → { "urls": [{ "url": "https://api.cline.bot/auth/authorize?callback_url=http://127.0.0.1:PORT/..." }] }
-
-# 3. The authorization URL has a callback_url pointing to the SDK's local server.
-#    To complete the flow, you need to either:
-#    a. Open the authorization URL in a real browser (it will redirect back
-#       to the SDK's local callback server automatically)
-#    b. Simulate the redirect by extracting the callback_url and making
-#       a curl request to it with a code parameter:
-curl "http://127.0.0.1:PORT/auth/callback?code=TEST_CODE" 2>/dev/null
-
-# 4. Verify the token was stored
-curl localhost:19229/api -d '{"method":"oauth.read_stored_token"}'
-# → { "found": true, "hasAccountId": true, "keys": ["cline:clineAccountId"] }
-
-# 5. Take a screenshot to verify the UI shows authenticated state
-curl localhost:19229/api -d '{"method":"ui.screenshot"}'
+curl localhost:19229/api -d '{"method":"lab.status"}'
 ```
 
-### Testing MCP OAuth
+### lab.new_task
 
-MCP servers that require OAuth use a different flow: the browser redirects
-to a `vscode://` URI handled by the extension's URI handler. The auth provider
-(e.g. Linear) decides the `code`; for end-to-end testing, pair this with the
-local MCP OAuth test server (`bun run dev:mcp-oauth-test-server`, see
-`src/dev/mcp-oauth-test-server/README.md`), which mints real codes/tokens.
+Creates a new task (opens sidebar + sends message). Returns when the message is dispatched.
 
 ```bash
-# 1. Trigger MCP OAuth (e.g., click "Authenticate" button for a server)
-# 2. Check captured URLs for the authorization URL
-curl localhost:19229/api -d '{"method":"oauth.captured_urls"}'
-#    The authorize URL contains redirect_uri=vscode://saoudrizwan.claude-dev/mcp-auth/callback/HASH
-
-# 3. Get a real authorization code from the auth server, e.g. by following the
-#    captured authorize URL (the test server auto-approves and 302s to the
-#    vscode:// callback carrying ?code=...&state=...):
-curl -s -D - -o /dev/null "<captured-authorize-url>" | grep -i '^location:'
-
-# 4. DELIVER the vscode:// callback to the extension. VSCode only routes real
-#    vscode:// URIs to the registered handler, which the harness can't
-#    synthesize — and the extension host is ESM, so you can't require() the
-#    handler module. Instead, call the __clineHandleUri hook (see below):
-curl localhost:19229/api -d '{
-  "method": "ext.evaluate",
-  "params": {
-    "awaitPromise": true,
-    "expression": "globalThis.__clineHandleUri(\"vscode://saoudrizwan.claude-dev/mcp-auth/callback/HASH?code=REAL_CODE&state=SAVED_STATE\")"
-  }
-}'
-
-# 5. Verify tokens were stored
-curl localhost:19229/api -d '{"method":"oauth.read_stored_token"}'
+curl localhost:19229/api -d '{"method":"lab.new_task","params":{"text":"Analyze this project"}}'
 ```
 
-> **`globalThis.__clineHandleUri(url)` — debug-only URI delivery hook.**
-> Registered in `src/extension.ts` during activation, **only** when
-> `CLINE_CAPTURE_BROWSER` is set (which the harness always sets), so it never
-> ships in production. It calls the same `SharedUriHandler.handleUri(url)` that
-> VSCode's real `registerUriHandler` invokes, returning a `Promise<boolean>`
-> (pass `awaitPromise: true`). Use it for any `vscode://` callback — MCP,
-> OpenRouter, `/auth`, etc. `oauth.simulate_callback` only *builds* the URI; this
-> hook actually *delivers* it.
+### lab.followup
 
-
-### Testing Provider OAuth (OpenRouter, etc.)
+Sends a followup response to an active ask.
 
 ```bash
-# 1. Trigger provider login (e.g., "Get OpenRouter API Key" button)
-# 2. Check captured URLs
-curl localhost:19229/api -d '{"method":"oauth.captured_urls"}'
-# 3. Simulate the redirect callback
-curl localhost:19229/api -d '{
-  "method": "oauth.simulate_callback",
-  "params": {"path": "/openrouter", "code": "TEST_CODE"}
-}'
+curl localhost:19229/api -d '{"method":"lab.followup","params":{"text":"Continue"}}'
 ```
 
-## Practical Tips
+### lab.wait_idle
 
-### Dismissing Promotional Overlays
-
-On fresh launches, one or more full-screen promo overlays may appear and
-block all sidebar interactions. **Always dismiss them immediately after
-opening the sidebar**, before any other interaction.
+Polls `ui_messages.json` on disk until no `partial: true` messages remain and
+the last message is stale (>2s old). Returns `idle` or `timeout`.
 
 ```bash
-# Open sidebar first
-curl localhost:19229/api -d '{"method":"ui.open_sidebar"}'
-# Dismiss ALL overlays (may need to run twice for multiple overlays)
-curl localhost:19229/api -d '{"method":"web.evaluate","params":{"expression":"document.querySelectorAll(\".sr-only\").forEach(el => el.parentElement?.click())"}}'
+curl localhost:19229/api -d '{"method":"lab.wait_idle","params":{"timeout":600000}}'
 ```
 
-### Navigating Between Views Using Commands
+### lab.get_messages
 
-Instead of trying to find and click small icons in the sidebar header,
-use VSCode commands via the command palette. These are registered in
-`src/registry.ts`:
-
-| Command | What it opens |
-|---------|--------------|
-| `cline.accountButtonClicked` | Account / sign-in view |
-| `cline.historyButtonClicked` | Task history view |
-| `cline.settingsButtonClicked` | Settings view |
-| `cline.mcpButtonClicked` | MCP servers view |
-| `cline.plusButtonClicked` | New task (chat view) |
-| `cline.worktreesButtonClicked` | Worktrees view |
+Returns recent messages from the most recent task's `ui_messages.json`.
 
 ```bash
-# Navigate to account view
-curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"cline.accountButtonClicked"}}'
-
-# Navigate to history view
-curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"cline.historyButtonClicked"}}'
-
-# Navigate to settings view
-curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"cline.settingsButtonClicked"}}'
-
-# Navigate to MCP view
-curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"cline.mcpButtonClicked"}}'
-
-# Start a new task (return to chat view)
-curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"cline.plusButtonClicked"}}'
+curl localhost:19229/api -d '{"method":"lab.get_messages","params":{"count":20}}'
 ```
 
-### Typical Session Workflow
+### lab.export_chat
+
+Exports the most recent task to a markdown file. No Save Dialog.
 
 ```bash
-# 1. Launch (if not using --auto-launch)
-curl localhost:19229/api -d '{"method":"launch","params":{"skipBuild":true}}'
-
-# 2. Open sidebar and dismiss overlays
-curl localhost:19229/api -d '{"method":"ui.open_sidebar"}'
-curl localhost:19229/api -d '{"method":"web.evaluate","params":{"expression":"document.querySelectorAll(\".sr-only\").forEach(el => el.parentElement?.click())"}}'
-
-# 3. Check status (verify CLINE_DIR, browser capture, etc.)
-curl localhost:19229/api -d '{"method":"status"}'
-
-# 4. Navigate to the view you need
-curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"cline.accountButtonClicked"}}'
-
-# 5. Interact and verify
-curl localhost:19229/api -d '{"method":"ui.screenshot"}'
-
-# 6. For OAuth flows, check captured URLs
-curl localhost:19229/api -d '{"method":"oauth.captured_urls"}'
-
-# 7. When done, shut down
-curl localhost:19229/api -d '{"method":"shutdown"}'
+curl localhost:19229/api -d '{"method":"lab.export_chat","params":{"outPath":"Exports/lab-run.md"}}'
 ```
 
-## API
+### lab.screenshot
 
-All commands are sent as `POST /api` with JSON body `{"method": "...", "params": {...}}`.
+Alias for `ui.sidebar_screenshot`.
 
-Responses: `{"result": {...}}` on success, `{"error": "..."}` on failure.
+```bash
+curl localhost:19229/api -d '{"method":"lab.screenshot"}'
+```
 
-Convenience endpoints:
-- `GET /health` — `{"status": "ok"}`
-- `GET /status` — Full harness status
-- `POST /captured-url` — Internal: receives captured browser URLs from debugee
+### lab.export_context
+
+Exports model context (system prompt + messages) from `api_conversation_history.json`.
+Similar to the "Export context to file" button in the UI.
+
+```bash
+curl localhost:19229/api -d '{"method":"lab.export_context","params":{"outPath":"Exports/lab-run/context.txt"}}'
+```
+
+### lab.collect_session_files
+
+Copies all session files into a single output directory:
+- `ui_messages.json` — raw chat messages
+- `api_conversation_history.json` — full API history
+- `extension.log` — extension log for today
+- `compaction/` — compaction debug files from today
+
+```bash
+curl localhost:19229/api -d '{"method":"lab.collect_session_files","params":{"outDir":"Exports/lab-run"}}'
+```
+
+### lab.run
+
+Full automation cycle: launch, create task, wait for idle, export chat, export context, collect session files, screenshot.
+Returns when the agent finishes responding (or timeout).
+
+```bash
+curl localhost:19229/api -d '{"method":"lab.run","params":{"text":"Analyze this project","workspace":"S:\\temo","timeout":900000}}'
+```
+
+Response:
+```json
+{
+  "status": "completed",
+  "steps": [
+    {"step": "launch", "status": "ok", "detail": {...}},
+    {"step": "open_sidebar", "status": "ok"},
+    {"step": "new_task", "status": "ok"},
+    {"step": "wait_idle", "status": "idle", "detail": {"elapsed": 45000}},
+    {"step": "export_chat", "status": "ok", "detail": {"path": "..."}},
+    {"step": "export_context", "status": "ok", "detail": {"path": "..."}},
+    {"step": "collect_files", "status": "ok", "detail": {"files": [...]}},
+    {"step": "screenshot", "status": "ok"}
+  ],
+  "outDir": "Exports/lab-run-1234567890",
+  "taskId": "..."
+}
+```
+
+## VSIX Launch Mode
+
+To test a release VSIX (not dev extension):
+
+```bash
+bun apps/vscode/src/dev/debug-harness/server.ts --auto-launch --vsix release/agentario-0.14.52.vsix
+```
+
+This uses `--install-extension=PATH` instead of `--extensionDevelopmentPath`.
+
+## CLI Wrapper (Windows)
+
+```bat
+scripts\agentario-lab.cmd start --workspace Z:\T\TEMO --vsix release\agentario-0.14.52.vsix
+scripts\agentario-lab.cmd new-task "Analyze this project"
+scripts\agentario-lab.cmd wait-idle --timeout 900000
+scripts\agentario-lab.cmd export Exports\lab-run.md
+scripts\agentario-lab.cmd screenshot
+scripts\agentario-lab.cmd stop
+```
+
+## TypeScript Client
+
+```typescript
+import { LabClient } from "./lab-client"
+
+const lab = new LabClient()
+await lab.launch({ workspace: "Z:\\T\\TEMO" })
+await lab.newTask("Analyze this project")
+const result = await lab.waitIdle({ timeout: 600000 })
+const msgs = await lab.getMessages({ count: 10 })
+const exported = await lab.exportChat({ outPath: "Exports/lab-run.md" })
+```
+
+## Low-level API Reference
 
 ### Lifecycle
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `launch` | `{workspace?, skipBuild?}` | Build + launch VSCode |
-| `shutdown` | | Close VSCode and CDP connections |
-| `status` | | Current state of all components |
-| `connect_webview` | | Connect CDP to the webview (call after sidebar is open) |
+| `launch` | `{workspace?, skipBuild?}` | Build + download VSCode + launch Electron |
+| `shutdown` | | Kill VSCode process |
+| `status` | | Connection status, CDP state |
 
-### Extension Host Debugging (Node.js)
+### Extension Host Debugging (ext.*)
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `ext.set_breakpoint` | `{file, line, column?, condition?}` | Set breakpoint by source file (sourcemap-resolved) |
-| `ext.set_breakpoint_raw` | `{url?, urlRegex?, scriptId?, lineNumber, columnNumber?, condition?}` | Set breakpoint with raw CDP params |
-| `ext.remove_breakpoint` | `{breakpointId}` | Remove a breakpoint |
-| `ext.evaluate` | `{expression, callFrameId?}` | Evaluate expression (at breakpoint or global) |
-| `ext.pause` | | Pause execution |
+| `ext.set_breakpoint` | `{file, line, condition?}` | Set breakpoint by source file |
+| `ext.set_breakpoint_raw` | `{url, line, column?, condition?}` | Set breakpoint by URL |
+| `ext.remove_breakpoint` | `{breakpointId}` | Remove breakpoint |
+| `ext.evaluate` | `{expression, callFrameId?}` | Evaluate in extension host |
+| `ext.pause` | | Pause extension host |
 | `ext.resume` | | Resume execution |
 | `ext.step_over` | | Step over |
 | `ext.step_into` | | Step into |
 | `ext.step_out` | | Step out |
-| `ext.call_stack` | | Get call stack (when paused) |
+| `ext.call_stack` | | Get current call stack |
 | `ext.scripts` | `{filter?}` | List loaded scripts |
-| `ext.source_files` | | List source files from sourcemap |
+| `ext.source_files` | | List source files in sourcemap |
 | `ext.get_properties` | `{objectId}` | Get object properties |
-| `ext.get_script_source` | `{scriptId}` | Get script source text |
+| `ext.get_script_source` | `{scriptId}` | Get script source |
 
-### Webview Debugging (Chrome)
-
-Call `connect_webview` first after the sidebar is open (only needed for breakpoints/stepping).
+### Webview Debugging (web.*)
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `web.set_breakpoint` | `{url, line, column?, condition?}` | Set breakpoint by URL pattern |
-| `web.remove_breakpoint` | `{breakpointId}` | Remove a breakpoint |
-| `web.evaluate` | `{expression, callFrameId?}` | Evaluate in sidebar (Playwright) or at breakpoint (CDP) |
-| `web.post_message` | `{message}` | Send a postMessage to the extension host via exposed vsCodeApi |
-| `web.pause` | | Pause |
-| `web.resume` | | Resume |
-| `web.step_over/into/out` | | Stepping |
+| `web.set_breakpoint` | `{url, line, column?, condition?}` | Set breakpoint in webview |
+| `web.remove_breakpoint` | `{breakpointId}` | Remove breakpoint |
+| `web.evaluate` | `{expression, callFrameId?}` | Evaluate in webview |
+| `web.post_message` | `{message}` | Send postMessage to webview |
+| `web.pause` | | Pause webview |
+| `web.resume` | | Resume execution |
 
-### UI Automation (Playwright)
+### UI Automation (ui.*)
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `ui.screenshot` | `{fullPage?}` | Take screenshot → returns `{path}` (use `read_file` on the path, don't `open` the file) |
-| `ui.sidebar_screenshot` | | Screenshot focused on sidebar → returns `{path}` |
-| `ui.click` | `{selector, frame?, delay?}` | Click element (`frame: "sidebar"` for webview) |
+| `ui.screenshot` | `{fullPage?}` | Take screenshot |
+| `ui.sidebar_screenshot` | | Screenshot of sidebar frame |
+| `ui.click` | `{selector, frame?, delay?}` | Click element |
 | `ui.fill` | `{selector, text, frame?}` | Fill input |
-| `ui.press` | `{key}` | Press key (e.g., "Enter", "Meta+Shift+p") |
+| `ui.press` | `{key}` | Press key |
 | `ui.type` | `{text, delay?}` | Type text |
-| `ui.open_sidebar` | | Open the Cline sidebar |
+| `ui.open_sidebar` | | Open Agentario sidebar tab |
 | `ui.frames` | | List all frames |
 | `ui.wait_for_selector` | `{selector, frame?, timeout?}` | Wait for element |
 | `ui.command_palette` | `{command}` | Open command palette and run command |
 | `ui.get_text` | `{selector, frame?}` | Get element text |
-| `ui.locator` | `{role?, name?, testId?, text?, frame?, action?, value?}` | Rich Playwright locator (auto-retries with frame refresh for sidebar) |
-| `ui.react_input` | `{text, selector?, clear?, submit?}` | Set React-controlled textarea value via `execCommand('insertText')` |
-| `ui.send_message` | `{text, images?, files?, responseType?}` | Send a chat message bypassing the textarea (via gRPC postMessage) |
+| `ui.locator` | `{role?, name?, testId?, text?, ...}` | Rich Playwright locator |
+| `ui.react_input` | `{selector?, text, clear?, submit?}` | Set text in React-controlled textarea |
+| `ui.send_message` | `{text, images?, files?, responseType?}` | Send chat message via gRPC |
 
-### OAuth & Browser Capture
+### Navigation Shortcuts
 
-| Method | Params | Description |
-|--------|--------|-------------|
-| `oauth.captured_urls` | `{clear?}` | Get URLs the debugee tried to open in a browser |
-| `oauth.read_stored_token` | | Check auth token presence in debugee's secrets.json |
-| `oauth.simulate_callback` | `{path, code?, state?, provider?, token?}` | Build a vscode:// callback URI for MCP/provider OAuth (does NOT deliver it) |
-| `oauth.read_captured_urls_file` | | Read on-disk JSONL log of captured URLs |
-
-To actually **deliver** a `vscode://` callback to the extension, call the
-debug-only hook via `ext.evaluate` (with `awaitPromise: true`):
-`globalThis.__clineHandleUri("vscode://saoudrizwan.claude-dev/...?code=...&state=...")`.
-It invokes the same `SharedUriHandler.handleUri` as VSCode's real URI handler
-and is registered only when `CLINE_CAPTURE_BROWSER` is set (never in prod). See
-"Testing MCP OAuth" above.
-
-### Combined
-
-| Method | Params | Description |
-|--------|--------|-------------|
-| `wait_for_pause` | `{timeout?}` | Block until any debuggee hits a breakpoint |
-
-## Example Workflows
-
-### 1. Set a breakpoint and observe execution
+| Command | Description |
+|---------|-------------|
+| `agentario.plusButtonClicked` | New task (chat view) |
+| `agentario.historyButtonClicked` | Task history view |
+| `agentario.settingsButtonClicked` | Settings view |
+| `agentario.mcpButtonClicked` | MCP servers view |
+| `agentario.accountButtonClicked` | Account view |
+| `agentario.worktreesButtonClicked` | Worktrees view |
 
 ```bash
-curl localhost:19229/api -d '{
-  "method": "ext.set_breakpoint",
-  "params": {"file": "src/extension.ts", "line": 25}
-}'
+# New task
+curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"agentario.plusButtonClicked"}}'
+
+# Navigate to history view
+curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"agentario.historyButtonClicked"}}'
+
+# Navigate to settings view
+curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"agentario.settingsButtonClicked"}}'
+```
+
+## Debug Mode
+
+The harness writes `.js.map` files alongside the built extension and connects
+to the extension host's V8 inspector on port `9230`.
+
+**First launch:** Start the debug harness with `--auto-launch` to build the
+extension and launch VSCode with debugging enabled.
+
+```bash
+bun apps/vscode/src/dev/debug-harness/server.ts --auto-launch
+```
+
+This will:
+1. Build the extension (unminified, with sourcemaps)
+2. Build the webview (unminified, with inline sourcemaps)
+3. Download a compatible VSCode version
+4. Launch it with the Agentario extension in development mode
+5. Connect CDP to the extension host
+
+## Claude Code Integration
+
+When using Claude Code (cursor-agent), prefer the Python `lab-client.ts`
+TypeScript client over raw `curl` commands. The client provides typed methods
+and handles JSON serialization.
+
+## Examples
+
+### Set Breakpoint and Inspect
+
+```bash
+# Set breakpoint in extension
+curl localhost:19229/api -d '{"method":"ext.set_breakpoint","params":{"file":"src/extension.ts","line":42}}'
+
+# Trigger the code path (e.g., by clicking in the webview)
 curl localhost:19229/api -d '{"method":"ui.open_sidebar"}'
-curl localhost:19229/api -d '{"method":"wait_for_pause","params":{"timeout":10000}}'
+curl localhost:19229/api -d '{"method":"ui.click","params":{"selector":"[data-testid=\\"chat-input\\"]"}}'
+
+# Check if paused
 curl localhost:19229/api -d '{"method":"ext.call_stack"}'
+
+# Evaluate expression
+curl localhost:19229/api -d '{"method":"ext.evaluate","params":{"expression":"process.env"}}'
+
+# Resume
 curl localhost:19229/api -d '{"method":"ext.resume"}'
 ```
 
-### 2. Test OAuth login flow
+### Automated Smoke Test
 
 ```bash
-# Dismiss overlays, then click Login
+# Start harness with a fixture workspace
+bun apps/vscode/src/dev/debug-harness/server.ts --auto-launch --workspace path/to/fixture
+
+# Wait for sidebar
+curl localhost:19229/api -d '{"method":"ui.wait_for_selector","params":{"selector":"[data-testid=\\"chat-input\\"]","timeout":30000}}'
+
+# Send a test message
+curl localhost:19229/api -d '{"method":"lab.new_task","params":{"text":"Hello, this is a test"}}'
+
+# Wait for completion
+curl localhost:19229/api -d '{"method":"lab.wait_idle","params":{"timeout":120000}}'
+
+# Export the chat
+curl localhost:19229/api -d '{"method":"lab.export_chat","params":{"outPath":"Exports/smoke-test.md"}}'
+
+# Verify the export
+cat Exports/smoke-test.md
+```
+
+### OAuth Testing
+
+```bash
+# Open sidebar (OAuth flow starts, browser URL is captured instead of opening)
 curl localhost:19229/api -d '{"method":"ui.open_sidebar"}'
-curl localhost:19229/api -d '{"method":"web.evaluate","params":{"expression":"document.querySelectorAll(\".sr-only\").forEach(el => el.parentElement?.click())"}}'
-curl localhost:19229/api -d '{"method":"ui.locator","params":{"text":"Login to Cline","frame":"sidebar","action":"click"}}'
+sleep 2
 
-# Check what URL was captured
+# Check captured URLs
 curl localhost:19229/api -d '{"method":"oauth.captured_urls"}'
+# Returns: {"urls":[{"timestamp":...,"url":"https://app.cline.bot/oauth?..."}]}
 
-# The URL contains callback_url=http://127.0.0.1:PORT/...
-# Open it in a real browser to complete auth, or simulate:
-# (extract the port from the captured URL first)
-curl "http://127.0.0.1:PORT/callback?code=real_or_test_code"
+# Simulate callback
+curl localhost:19229/api -d '{"method":"oauth.simulate_callback","params":{"url":"https://app.cline.bot/oauth/callback?code=TEST123"}}'
 
-# Verify token stored
+# Check stored token
 curl localhost:19229/api -d '{"method":"oauth.read_stored_token"}'
 ```
 
-### 3. Navigate to Account view and check auth state
-
-```bash
-curl localhost:19229/api -d '{"method":"ui.command_palette","params":{"command":"cline.accountButtonClicked"}}'
-curl localhost:19229/api -d '{"method":"ui.screenshot"}'
-```
-
-## How It Works
-
-1. **Build**: esbuild bundles `src/extension.ts` → `dist/extension.js` (unminified, with
-   sourcemaps). Vite builds `webview-ui/` → `webview-ui/build/` (unminified, inline sourcemaps).
-
-2. **Launch**: Uses `@vscode/test-electron` to download VSCode, then Playwright's
-   `_electron.launch()` to start it with `--inspect-extensions=9230` for Node.js inspector
-   access and `--extensionDevelopmentPath` to load our extension.
-
-3. **Data Isolation**: Sets `CLINE_DIR=~/.cline2` in the debugee's environment, ensuring
-   the debugee uses a completely separate data directory from the user's real `~/.cline`.
-   The `createStorageContext()` function in `src/shared/storage/storage-context.ts` reads
-   this environment variable to determine where to store globalState.json, secrets.json,
-   task history, and workspace state.
-
-4. **Browser Capture**: Sets `CLINE_CAPTURE_BROWSER=1` and `CLINE_DEBUG_HARNESS_PORT=19229`
-   in the debugee's environment. When `openExternal()` is called in `src/utils/env.ts`, it
-   checks for `CLINE_CAPTURE_BROWSER` and, if set, logs the URL to a JSONL file and POSTs
-   it to the debug harness server instead of opening a real browser. This is essential for
-   testing OAuth flows without a visible browser.
-
-5. **Extension CDP**: Connects to the extension host's V8 inspector via WebSocket on port 9230.
-   Enables `Debugger` and `Runtime` domains. Tracks `scriptParsed` events and `paused`/`resumed`
-   state.
-
-6. **Sourcemap Resolution**: When setting breakpoints by source file, reads `dist/extension.js.map`
-   and resolves the original file + line to the generated (bundled) file + line using VLQ-decoded
-   sourcemap mappings.
-
-7. **Webview CDP**: After the sidebar loads, creates a Playwright CDP session for the webview
-   frame, enabling debugger commands. Falls back to `frame.evaluate()` for expression evaluation.
-
-8. **UI Automation**: Playwright's Page/Frame APIs provide click, fill, type, screenshot, locator
-   queries, and more. The sidebar webview is accessed as a Frame within the VSCode window.
-
-## Caveats
-
-**⚠️ Data Isolation**: The debugee uses `~/.cline2` by default. If you need to test with
-existing data from your real `~/.cline`, copy it: `cp -r ~/.cline ~/.cline2`. Be aware that
-secrets (API keys, auth tokens) will be shared if you do this.
-
-**⚠️ "Introducing Cline Kanban" overlay**: On fresh launches, a full-screen promo overlay may
-appear in the sidebar. It blocks all interactions and makes screenshots useless. **Dismiss it
-immediately after opening the sidebar**, before doing anything else:
-```bash
-curl localhost:19229/api -d '{"method":"ui.open_sidebar"}'
-curl localhost:19229/api -d '{"method":"web.evaluate","params":{"expression":"document.querySelectorAll(\".sr-only\").forEach(el => el.parentElement?.click())"}}'
-```
-
-**Screenshots**: `ui.screenshot` and `ui.sidebar_screenshot` save PNG files to `/tmp/cline-debug/`
-and return `{path}` in the response. **Do NOT `open` the file** — on macOS this launches Preview.app
-which covers the VSCode window. Use `read_file` on the returned path to examine the image.
-
-**OAuth with real providers**: The browser capture only intercepts the URL that the debugee tries
-to open. For Cline OAuth, the SDK's local callback server is still running and will accept
-redirects. For provider OAuth (OpenRouter, MCP), you need to simulate the `vscode://` callback
-URI — see the OAuth testing section above.
-
-**Cline OAuth with invalid codes**: If you simulate the OAuth callback with a fake code, the
-SDK's token exchange will fail (the provider won't recognize the code). You need either a real
-authorization code (obtained by completing the flow in a browser) or a way to mock the token
-exchange endpoint.
-
 ## Troubleshooting
 
-**"Inspector not available on port 9230"**: The extension host hasn't started yet. Wait longer
-or check that the extension built correctly.
+### "No sidebar frame found"
 
-**"Sidebar frame not found"**: The Cline sidebar isn't open. Use `ui.open_sidebar` first.
+The Agentario webview may not have loaded yet. Try:
 
-**"Webview CDP not connected"**: Call `connect_webview` after the sidebar is open. If it fails,
-webview breakpoints aren't available, but `web.evaluate` still works via Playwright.
+```bash
+# Check what frames exist
+curl localhost:19229/api -d '{"method":"ui.frames"}'
 
-**Sourcemap resolution fails**: Use `ext.source_files` to see what paths the sourcemap contains,
-then use `ext.set_breakpoint_raw` with a `urlRegex` pattern.
+# Wait for the sidebar
+curl localhost:19229/api -d '{"method":"ui.wait_for_selector","params":{"selector":"[data-testid=\\"chat-input\\"]","timeout":30000}}'
+```
 
-**Screenshots directory**: Saved to `/tmp/cline-debug/` (configurable via SCREENSHOT_DIR).
+### "Webview CDP not connected"
 
-**Debugee still uses ~/.cline**: Check that `CLINE_DIR` appears in the `status()` response.
-If it's missing, the debugee may have been launched before the harness set the env var.
-Shutdown and relaunch.
+The webview inspector may need explicit connection. After launch:
+
+```bash
+curl localhost:19229/api -d '{"method":"connect_webview"}'
+```
+
+### Port Conflicts
+
+If port `9230` (extension inspector) or `19229` (harness) is in use:
+
+```bash
+# Kill existing processes on the port (Windows)
+netstat -ano | findstr :19229
+taskkill /PID <pid> /F
+
+# Or use a different port
+bun apps/vscode/src/dev/debug-harness/server.ts --port 19230
+```
+
+### Launch Timeout
+
+First launch downloads VSCode (~100MB). If it times out:
+
+```bash
+bun apps/vscode/src/dev/debug-harness/server.ts --launch-timeout 300000
+```
+
+### Windows-Specific Issues
+
+- Paths use `os.tmpdir()` for screenshots and workspace
+- Command palette uses `Control+Shift+p` (not `Meta+Shift+p`)
+- Profile dir: `%USERPROFILE%\.agentario-lab`

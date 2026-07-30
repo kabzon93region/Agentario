@@ -48,12 +48,34 @@ export interface FileReadExecutorOptions {
 	 * @default false
 	 */
 	includeLineNumbers?: boolean;
+
+	/**
+	 * Working directory for resolving relative file paths.
+	 * Defaults to process.cwd() if not set.
+	 */
+	cwd?: string;
+
+	/**
+	 * Optional LLM summarizer for large files (no line range).
+	 * Falls back to outline-based summary when unavailable or on error.
+	 */
+	summarizeLargeFile?: (input: {
+		path: string;
+		sizeBytes: number;
+		totalLines: number;
+		preview: string;
+		outlineText: string;
+	}) => Promise<string>;
 }
 
-const DEFAULT_FILE_READ_OPTIONS: Required<FileReadExecutorOptions> = {
+const DEFAULT_FILE_READ_OPTIONS: Required<
+	Omit<FileReadExecutorOptions, "summarizeLargeFile" | "cwd">
+> &
+	Pick<FileReadExecutorOptions, "summarizeLargeFile" | "cwd"> = {
 	maxFileSizeBytes: 10_000_000, // 10MB default limit
 	encoding: "utf-8", // Default to UTF-8 encoding
 	includeLineNumbers: true, // Include line numbers by default
+	summarizeLargeFile: undefined,
 };
 
 const MAX_TEXT_STREAM_BYTES = 100_000_000;
@@ -63,6 +85,77 @@ const AUTO_CHUNK_SIZE_BYTES = 50_000; // ~50KB threshold for auto-chunking
 const AUTO_CHUNK_LINES = 200; // Read only first N lines for large files
 // Agentario: Smart Chunked Navigation — regex outline limits
 const OUTLINE_MAX_ENTRIES = 100; // Max signatures in outline
+
+export const FILE_SUMMARY_HEADER = "=== FILE SUMMARY ===";
+const PREVIEW_HEADER_PREFIX = "=== PREVIEW";
+
+export function extractFileSummarySection(text: string): string | undefined {
+	const headerIndex = text.indexOf(FILE_SUMMARY_HEADER);
+	if (headerIndex === -1) {
+		return undefined;
+	}
+	const afterHeader = text.slice(headerIndex + FILE_SUMMARY_HEADER.length).replace(/^\s*\n/, "");
+	const nextSection = afterHeader.search(/\n=== [^=]/);
+	if (nextSection >= 0) {
+		const summary = afterHeader.slice(0, nextSection).trim();
+		return summary || undefined;
+	}
+	const summary = afterHeader.trim();
+	return summary || undefined;
+}
+
+export function buildOutlineFileSummary(args: {
+	path: string;
+	sizeBytes: number;
+	totalLines?: number;
+	outlineText: string;
+}): string {
+	const fileName = args.path.split(/[/\\]/).pop() ?? args.path;
+	const sizeLabel = `${args.sizeBytes.toLocaleString()} bytes`;
+	const linesLabel =
+		typeof args.totalLines === "number" && args.totalLines > 0
+			? `, ${args.totalLines} lines`
+			: "";
+	const summaryLines: string[] = [
+		`File: ${fileName} (${sizeLabel}${linesLabel}).`,
+	];
+
+	const outlineBody = args.outlineText.trim();
+	if (outlineBody) {
+		summaryLines.push("", "Structure (outline):");
+		const outlineEntries = outlineBody
+			.split("\n")
+			.map((line) => line.trim())
+			.filter(
+				(line) =>
+					line.length > 0 &&
+					!line.startsWith("===") &&
+					!line.startsWith("Use start_line"),
+			);
+		const maxOutlineLines = 7;
+		for (const line of outlineEntries.slice(0, maxOutlineLines)) {
+			summaryLines.push(line);
+		}
+		if (outlineEntries.length > maxOutlineLines) {
+			summaryLines.push(`... and ${outlineEntries.length - maxOutlineLines} more entries`);
+		}
+	} else {
+		summaryLines.push(
+			"No structure outline detected — use start_line/end_line or semantic_search.",
+		);
+	}
+
+	summaryLines.push("", "Preview of the first lines is below; read specific ranges as needed.");
+	return summaryLines.slice(0, 12).join("\n");
+}
+
+function buildPreviewHeader(
+	startLine: number,
+	endLine: number,
+	totalLines: number,
+): string {
+	return `${PREVIEW_HEADER_PREFIX} (lines ${startLine}-${endLine} of ${totalLines}) ===`;
+}
 
 /**
  * Regex patterns for extracting code structure (functions, classes, etc.)
@@ -383,19 +476,41 @@ async function readTextWindow(
  * const content = await readFile({ path: "/path/to/file.ts" }, context)
  * ```
  */
+type LargeFileSummarizer = NonNullable<FileReadExecutorOptions["summarizeLargeFile"]>;
+
+function resolveLargeFileSummarizer(
+	options: FileReadExecutorOptions,
+	context: AgentToolContext,
+): LargeFileSummarizer | undefined {
+	if (typeof options.summarizeLargeFile === "function") {
+		return options.summarizeLargeFile;
+	}
+	const metadataSummarizer = context.metadata?.summarizeLargeFile;
+	return typeof metadataSummarizer === "function"
+		? (metadataSummarizer as LargeFileSummarizer)
+		: undefined;
+}
+
 export function createFileReadExecutor(
 	options: FileReadExecutorOptions = {},
 ): FileReadExecutor {
-	const { maxFileSizeBytes, encoding, includeLineNumbers } = {
+	const { maxFileSizeBytes, encoding, includeLineNumbers, summarizeLargeFile } = {
 		...DEFAULT_FILE_READ_OPTIONS,
 		...options,
 	};
+	const configuredCwd = options.cwd;
 
 	return async (request: ReadFileRequest, context: AgentToolContext) => {
 		const { path: filePath, start_line, end_line } = request;
+		// Agentario: resolve relative paths against session cwd, not process.cwd().
+		// process.cwd() in VS Code extension host = IDE install dir (e.g. "C:\Program Files\Microsoft VS Code\"),
+		// which produces wrong paths for project files.
+		const effectiveCwd = configuredCwd
+			?? (typeof context.metadata?.cwd === "string" ? context.metadata.cwd : undefined)
+			?? process.cwd();
 		const initialPath = path.isAbsolute(filePath)
 			? path.normalize(filePath)
-			: path.resolve(process.cwd(), filePath);
+			: path.resolve(effectiveCwd, filePath);
 		// Tolerate Unicode-whitespace mismatches (e.g. macOS Sonoma+
 		// screenshot paths where the on-disk filename contains U+202F but
 		// the caller's string has a regular space).
@@ -440,39 +555,44 @@ export function createFileReadExecutor(
 		}
 
 		// Agentario: Smart Chunked Navigation — auto-chunk with regex outline.
-		// Instead of just "first 200 lines + hint", parse the file structure and return an outline.
 		let effectiveStartLine = start_line;
 		let effectiveEndLine = end_line;
-		let autoChunkHint = "";
+		let largeFileContext:
+			| {
+					totalLines: number;
+					outlineText: string;
+			  }
+			| undefined;
 		if (!start_line && !end_line && stat.size > AUTO_CHUNK_SIZE_BYTES) {
 			effectiveStartLine = 1;
 			effectiveEndLine = AUTO_CHUNK_LINES;
 
-			// Tier 1: Try regex outline parsing
+			let totalLines = 0;
+			let outlineText = "";
 			try {
-				const totalLines = await countFileLines(resolvedPath, encoding, context.signal);
-				const outlineEntries = await parseFileOutline(resolvedPath, encoding, context.signal);
+				totalLines = await countFileLines(resolvedPath, encoding, context.signal);
+				const outlineEntries = await parseFileOutline(
+					resolvedPath,
+					encoding,
+					context.signal,
+				);
 				if (outlineEntries.length > 0) {
-					const outline = formatOutline(outlineEntries, totalLines);
-					autoChunkHint = `\n\n[Agentario: Large file (${stat.size} bytes, ${totalLines} lines). Showing first ${AUTO_CHUNK_LINES} lines + structure outline.${outline}]`;
+					outlineText = formatOutline(outlineEntries, totalLines);
 				} else {
-					// Tier 3: Try AST (Tree-sitter) parsing as fallback
 					try {
 						const astResult = await parseFileWithTreeSitter(resolvedPath);
 						if (astResult?.success && astResult.entries.length > 0) {
-							const astOutline = formatAstOutline(astResult);
-							autoChunkHint = `\n\n[Agentario: Large file (${stat.size} bytes, ${astResult.totalLines} lines). Showing first ${AUTO_CHUNK_LINES} lines + AST outline.${astOutline}]`;
-						} else {
-							autoChunkHint = `\n\n[Agentario: File is large (${stat.size} bytes). Showing first ${AUTO_CHUNK_LINES} lines. Use start_line/end_line to read specific sections, or use semantic_search to find relevant code first.]`;
+							outlineText = formatAstOutline(astResult);
+							totalLines = astResult.totalLines;
 						}
 					} catch {
-						autoChunkHint = `\n\n[Agentario: File is large (${stat.size} bytes). Showing first ${AUTO_CHUNK_LINES} lines. Use start_line/end_line to read specific sections, or use semantic_search to find relevant code first.]`;
+						// AST outline unavailable — continue with empty outline
 					}
 				}
 			} catch {
-				// Fallback: outline parsing failed, use simple hint
-				autoChunkHint = `\n\n[Agentario: File is large (${stat.size} bytes). Showing first ${AUTO_CHUNK_LINES} lines. Use start_line/end_line to read specific sections, or use semantic_search to find relevant code first.]`;
+				// Outline parsing failed — summary falls back to size/line hints only
 			}
+			largeFileContext = { totalLines, outlineText };
 		}
 
 		const content = await readTextWindow(
@@ -484,6 +604,47 @@ export function createFileReadExecutor(
 			context.signal,
 		);
 
-		return autoChunkHint ? content + autoChunkHint : content;
+		if (largeFileContext) {
+			const { totalLines, outlineText } = largeFileContext;
+			const summarizer = summarizeLargeFile ?? resolveLargeFileSummarizer(options, context);
+			let summary = buildOutlineFileSummary({
+				path: resolvedPath,
+				sizeBytes: stat.size,
+				totalLines: totalLines > 0 ? totalLines : undefined,
+				outlineText,
+			});
+			if (summarizer) {
+				try {
+					summary = (
+						await summarizer({
+							path: resolvedPath,
+							sizeBytes: stat.size,
+							totalLines: totalLines > 0 ? totalLines : AUTO_CHUNK_LINES,
+							preview: content,
+							outlineText,
+						})
+					).trim() || summary;
+				} catch {
+					// LLM summarizer failed — keep outline-based summary
+				}
+			}
+
+			const previewHeader = buildPreviewHeader(
+				effectiveStartLine ?? 1,
+				effectiveEndLine ?? AUTO_CHUNK_LINES,
+				totalLines > 0 ? totalLines : AUTO_CHUNK_LINES,
+			);
+			const navigationHint =
+				totalLines > 0
+					? `\n\n[Agentario: Large file (${stat.size} bytes, ${totalLines} lines). Use start_line/end_line to read specific sections, or use semantic_search to find relevant code.]`
+					: `\n\n[Agentario: File is large (${stat.size} bytes). Showing first ${AUTO_CHUNK_LINES} lines. Use start_line/end_line to read specific sections, or use semantic_search to find relevant code first.]`;
+
+			return (
+				`${FILE_SUMMARY_HEADER}\n${summary}\n\n` +
+				`${previewHeader}\n${content}${navigationHint}`
+			);
+		}
+
+		return content;
 	};
 }

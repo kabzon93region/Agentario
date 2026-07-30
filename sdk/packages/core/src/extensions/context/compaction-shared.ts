@@ -19,7 +19,7 @@ export const DEFAULT_TARGET_RATIO = 0.7;
 export const DEFAULT_RESERVE_TOKENS = 16_384;
 export const DEFAULT_PRESERVE_RECENT_TOKENS = 20_000;
 // Agentario: fallback — переопределяется динамически из chunkSize в runAgenticCompaction
-export const DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS = 0;
+export const DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS = 4096;
 export const TOOL_RESULT_CHAR_LIMIT = 2_000;
 export const FILE_CONTENT_CHAR_LIMIT = 2_000;
 export const MIN_TRUNCATED_MESSAGE_TOKENS = 8;
@@ -101,20 +101,56 @@ export function formatToolInput(input: Record<string, unknown>): string {
 		.join(", ");
 }
 
-export function serializeMessage(message: MessageWithMetadata): string {
+export type SerializeMessageOptions = {
+	/**
+	 * Truncate tool_result / thinking / file for basic compaction retained messages.
+	 * Agentic map-phase uses `false` — oversized blocks go to solo chunks instead.
+	 * @default true
+	 */
+	truncateLargeBlocks?: boolean;
+	/**
+	 * How to render `type:"file"` blocks for summarization input.
+	 * - `truncated` — first N chars (basic)
+	 * - `stub` — path only; raw file body must not enter chat summarizer chunks
+	 * @default "truncated"
+	 */
+	fileContentMode?: "truncated" | "stub";
+};
+
+/** Soft threshold: tool_result / thinking above this go to an individual chunk. */
+export const SOLO_BLOCK_CHAR_THRESHOLD = 2_000;
+
+/** Max characters for thinking blocks in summarization units. Longer thinking is truncated. */
+export const THINKING_TRUNCATE_CHARS = 2_000;
+
+/** Individual oversized blocks may use up to this fraction of the model context window. */
+export const SOLO_CHUNK_CONTEXT_RATIO = 0.9;
+
+export function serializeMessage(
+	message: MessageWithMetadata,
+	options?: SerializeMessageOptions,
+): string {
+	const truncateLargeBlocks = options?.truncateLargeBlocks !== false;
+	const fileContentMode = options?.fileContentMode ?? "truncated";
+	const roleLabel = message.role === "user" ? "User" : "Bot";
+
 	if (typeof message.content === "string") {
-		return `[${message.role === "user" ? "User" : "Bot"}]: ${message.content}`;
+		return `[${roleLabel}]: ${message.content}`;
 	}
 	const lines: string[] = [];
 	for (const block of message.content) {
 		switch (block.type) {
 			case "text":
-				lines.push(
-					`[${message.role === "user" ? "User" : "Bot"}]: ${block.text}`,
-				);
+				lines.push(`[${roleLabel}]: ${block.text}`);
 				break;
 			case "thinking":
-				lines.push(`[Bot thinking]: ${truncateText(block.thinking, 2_000)}`);
+				lines.push(
+					`[Bot thinking]: ${
+						truncateLargeBlocks
+							? truncateText(block.thinking, 2_000)
+							: block.thinking
+					}`,
+				);
 				break;
 			case "redacted_thinking":
 				lines.push("[Bot thinking]: [redacted]");
@@ -125,25 +161,252 @@ export function serializeMessage(message: MessageWithMetadata): string {
 				);
 				break;
 			case "tool_result":
-				lines.push(`[Tool result]: ${flattenToolResultContent(block.content)}`);
+				lines.push(
+					`[Tool result]: ${
+						truncateLargeBlocks
+							? flattenToolResultContent(block.content)
+							: flattenToolResultContentFull(block.content)
+					}`,
+				);
 				break;
 			case "file":
-				lines.push(
-					`[${message.role === "user" ? "User" : "Bot"} file ${block.path}]: ${truncateText(block.content, FILE_CONTENT_CHAR_LIMIT)}`,
-				);
+				if (fileContentMode === "stub") {
+					lines.push(
+						`[${roleLabel} file ${block.path}]: [саммари файла — сырое содержимое в суммаризацию чата не передаётся]`,
+					);
+				} else {
+					lines.push(
+						`[${roleLabel} file ${block.path}]: ${truncateText(block.content, FILE_CONTENT_CHAR_LIMIT)}`,
+					);
+				}
 				break;
 			case "image":
-				lines.push(
-					`[${message.role === "user" ? "User" : "Bot"} image]: ${block.mediaType}`,
-				);
+				lines.push(`[${roleLabel} image]: ${block.mediaType}`);
 				break;
 		}
 	}
 	return lines.join("\n");
 }
 
-export function serializeConversation(messages: MessageWithMetadata[]): string {
-	return messages.map(serializeMessage).join("\n\n").trim();
+/** Flatten tool_result without the 2k compaction cap (agentic summarizer input). */
+export function flattenToolResultContentFull(
+	content: ToolResultContent["content"],
+): string {
+	if (typeof content === "string") {
+		return content;
+	}
+	return content
+		.map((block) => {
+			switch (block.type) {
+				case "text":
+					return block.text;
+				case "file":
+					// Nested file bodies are not re-sent into chat summarization.
+					return `<file path="${block.path}">[саммари файла — сырое содержимое опущено]</file>`;
+				case "image":
+					return `[image:${block.mediaType}]`;
+				default:
+					return "";
+			}
+		})
+		.join("\n");
+}
+
+export function serializeConversation(
+	messages: MessageWithMetadata[],
+	options?: SerializeMessageOptions,
+): string {
+	return messages.map((m) => serializeMessage(m, options)).join("\n\n").trim();
+}
+
+/** One dialog fragment for map-phase packing (may span multiple chunks with continuation). */
+export type SummarizationUnit = {
+	text: string;
+	/** Short label for continuation headers, e.g. "Tool result", "Bot thinking", "User" */
+	label: string;
+	forceSolo: boolean;
+};
+
+/**
+ * Split messages into summarization units without truncating tool_result / thinking.
+ * File blocks become path stubs (raw content stays out of chat summarizer).
+ */
+export function buildSummarizationUnits(
+	messages: MessageWithMetadata[],
+): SummarizationUnit[] {
+	const units: SummarizationUnit[] = [];
+	for (const message of messages) {
+		const roleLabel = message.role === "user" ? "User" : "Bot";
+		if (typeof message.content === "string") {
+			const text = `[${roleLabel}]: ${message.content}`;
+			units.push({
+				text,
+				label: roleLabel,
+				forceSolo: message.content.length > SOLO_BLOCK_CHAR_THRESHOLD,
+			});
+			continue;
+		}
+		for (const block of message.content) {
+			switch (block.type) {
+				case "text": {
+					const text = `[${roleLabel}]: ${block.text}`;
+					units.push({
+						text,
+						label: roleLabel,
+						forceSolo: block.text.length > SOLO_BLOCK_CHAR_THRESHOLD,
+					});
+					break;
+				}
+				case "thinking": {
+					// Agentario: truncate long thinking blocks for summarization.
+					// The summarizer doesn't need the full thinking text — only key points.
+					const rawThinking = block.thinking;
+					const thinkingText = rawThinking.length > THINKING_TRUNCATE_CHARS
+						? `[Bot thinking (truncated ${rawThinking.length}→${THINKING_TRUNCATE_CHARS} chars)]: ${rawThinking.substring(0, THINKING_TRUNCATE_CHARS)}…`
+						: `[Bot thinking]: ${rawThinking}`;
+					units.push({
+						text: thinkingText,
+						label: "Bot thinking",
+						forceSolo: rawThinking.length > SOLO_BLOCK_CHAR_THRESHOLD,
+					});
+					break;
+				}
+				case "redacted_thinking":
+					units.push({
+						text: "[Bot thinking]: [redacted]",
+						label: "Bot thinking",
+						forceSolo: false,
+					});
+					break;
+				case "tool_use": {
+					const body = `${block.name}(${formatToolInput(block.input)})`;
+					units.push({
+						text: `[Bot tool calls]: ${body}`,
+						label: `Bot tool calls (${block.name})`,
+						forceSolo: body.length > SOLO_BLOCK_CHAR_THRESHOLD,
+					});
+					break;
+				}
+				case "tool_result": {
+					const body = flattenToolResultContentFull(block.content);
+					units.push({
+						text: `[Tool result]: ${body}`,
+						label: block.name ? `Tool result (${block.name})` : "Tool result",
+						forceSolo: body.length > SOLO_BLOCK_CHAR_THRESHOLD,
+					});
+					break;
+				}
+				case "file":
+					units.push({
+						text: `[${roleLabel} file ${block.path}]: [саммари файла — сырое содержимое в суммаризацию чата не передаётся]`,
+						label: `${roleLabel} file ${block.path}`,
+						forceSolo: false,
+					});
+					break;
+				case "image":
+					units.push({
+						text: `[${roleLabel} image]: ${block.mediaType}`,
+						label: `${roleLabel} image`,
+						forceSolo: false,
+					});
+					break;
+			}
+		}
+	}
+	return units;
+}
+
+/**
+ * Pack units into conversation-text chunks for the summarizer.
+ * - Normal budget: `chunkSizeTokens`
+ * - Solo / oversized tool_result & thinking: up to 90% of model context
+ * - Split bodies get a continuation header on the next chunk
+ */
+export function packSummarizationUnits(options: {
+	units: SummarizationUnit[];
+	chunkSizeTokens: number;
+	modelContextTokens: number;
+}): string[] {
+	const normalBudget = Math.max(1, options.chunkSizeTokens);
+	const soloBudget = Math.max(
+		1,
+		Math.floor(options.modelContextTokens * SOLO_CHUNK_CONTEXT_RATIO),
+	);
+
+	const chunks: string[] = [];
+	let currentParts: string[] = [];
+	let currentTokens = 0;
+	let pendingContinuation: string | undefined;
+
+	const flush = () => {
+		if (currentParts.length === 0) {
+			return;
+		}
+		chunks.push(currentParts.join("\n\n").trim());
+		currentParts = [];
+		currentTokens = 0;
+	};
+
+	const pushPart = (text: string, tokens: number) => {
+		if (pendingContinuation) {
+			currentParts.push(`[Продолжение: ${pendingContinuation}]`);
+			pendingContinuation = undefined;
+		}
+		currentParts.push(text);
+		currentTokens += tokens;
+	};
+
+	const emitSplitUnit = (unit: SummarizationUnit, budget: number) => {
+		flush();
+		const charsPerChunk = Math.max(256, Math.floor(budget * CHARS_PER_TOKEN));
+		if (unit.text.length <= charsPerChunk) {
+			pushPart(unit.text, estimateTokens(unit.text.length));
+			flush();
+			return;
+		}
+		let offset = 0;
+		let partIndex = 0;
+		while (offset < unit.text.length) {
+			const slice = unit.text.slice(offset, offset + charsPerChunk);
+			offset += charsPerChunk;
+			if (partIndex === 0) {
+				pushPart(slice, estimateTokens(slice.length));
+			} else {
+				pendingContinuation = unit.label;
+				pushPart(slice, estimateTokens(slice.length));
+			}
+			flush();
+			partIndex++;
+			if (offset < unit.text.length) {
+				pendingContinuation = unit.label;
+			}
+		}
+	};
+
+	for (const unit of options.units) {
+		const unitTokens = estimateTokens(unit.text.length);
+		const solo = unit.forceSolo || unitTokens > normalBudget;
+
+		if (solo) {
+			emitSplitUnit(unit, soloBudget);
+			continue;
+		}
+
+		if (currentParts.length > 0 && currentTokens + unitTokens > normalBudget) {
+			// Would need truncation to keep with prior dialog — move to its own chunk instead.
+			flush();
+		}
+
+		if (unitTokens > normalBudget) {
+			emitSplitUnit(unit, soloBudget);
+			continue;
+		}
+
+		pushPart(unit.text, unitTokens);
+	}
+
+	flush();
+	return chunks.filter((c) => c.length > 0);
 }
 
 // Agentario: проверка является ли сообщение "Общей картиной"
@@ -604,7 +867,7 @@ export function buildSummaryRequest(options: {
 export function resolveSummarizerConfig(options: {
 	activeProviderConfig: ProviderConfig;
 	summarizer?: CoreCompactionSummarizerConfig;
-	/** Agentario: динамический лимит output токенов (перекрывает дефолт) */
+	/** Optional max output tokens override (prefer omitting — use LM Studio / model defaults). */
 	maxOutputTokensOverride?: number;
 }): ProviderConfig {
 	const summarizer = options.summarizer;
@@ -615,21 +878,25 @@ export function resolveSummarizerConfig(options: {
 		const filteredCapabilities = config.capabilities?.filter(
 			(c) => c !== "tools"
 		);
+		// Do NOT set thinking:false / reasoning overrides — that breaks LM Studio
+		// thinking-budget settings. Leave provider/model thinking config untouched.
+		const { thinking: _thinking, ...rest } = config as ProviderConfig & {
+			thinking?: unknown;
+		};
 		if (config.providerId === "openai-codex") {
-			const { maxOutputTokens: _maxOutputTokens, ...rest } = config;
+			const { maxOutputTokens: _maxOutputTokens, ...codexRest } = rest;
 			return {
-				...rest,
-				thinking: false,
+				...codexRest,
 				...(filteredCapabilities ? { capabilities: filteredCapabilities } : {}),
 			};
 		}
+		const maxOutputTokens =
+			options.maxOutputTokensOverride
+			?? rest.maxOutputTokens
+			?? DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS;
 		return {
-			...config,
-			maxOutputTokens:
-				options.maxOutputTokensOverride
-				?? config.maxOutputTokens
-				?? DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS,
-			thinking: false,
+			...rest,
+			...(maxOutputTokens > 0 ? { maxOutputTokens } : {}),
 			...(filteredCapabilities ? { capabilities: filteredCapabilities } : {}),
 		};
 	};

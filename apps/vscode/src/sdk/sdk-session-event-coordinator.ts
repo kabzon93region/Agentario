@@ -102,6 +102,11 @@ export class SdkSessionEventCoordinator {
 					Logger.debug("[SdkController] turn-complete straggler after cancel; preserving resumable phase")
 				} else if (this.options.messageTranslatorState.wasAttemptCompletionSeen()) {
 					this.options.setTurnPhase?.("completed")
+				} else if (this.options.messageTranslatorState.wasTextGenerationSeen()) {
+					// Agentario: автоподсветка completed для моделей без attempt_completion
+					// (локальные модели, которые не поддерживают tool calling).
+					// Если модель дала текстовый ответ — считаем ход завершённым.
+					this.options.setTurnPhase?.("completed")
 				} else {
 					this.options.setTurnPhase?.("awaiting_followup")
 				}

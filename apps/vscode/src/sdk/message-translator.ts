@@ -1,4 +1,4 @@
-﻿// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
+// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
 //
 // Translates SDK session events into AgentarioMessage[] for webview consumption.
 // The webview expects AgentarioMessage objects with ask/say types; this module
@@ -26,6 +26,7 @@
 // - SDK "ended" event → finalizes the session
 
 import type { CoreSessionEvent } from "@agentario/core"
+import { extractFileSummarySection } from "@agentario/core"
 import type { Message as SdkMessage } from "@agentario/llms"
 import type { AgentEvent, ContextBudgetBreakdown } from "@agentario/shared"
 import { CONTEXT_BUDGET_NOTICE_KIND, normalizeToolInput } from "@agentario/shared"
@@ -467,6 +468,21 @@ export class MessageTranslatorState {
 		return this.attemptCompletionSeen
 	}
 
+	// Agentario: отслеживаем, была ли текстовая генерация от модели в этом ходу.
+	// Используется для автоподсветки completed, если модель не использует attempt_completion
+	// (например, локальные модели без tool calling).
+	private textGenerationSeen = false
+
+	/** Mark that the model produced text output (not just tool calls) */
+	setTextGenerationSeen(): void {
+		this.textGenerationSeen = true
+	}
+
+	/** Check if the model produced text output in this turn */
+	wasTextGenerationSeen(): boolean {
+		return this.textGenerationSeen
+	}
+
 	// -----------------------------------------------------------------------
 	// spawn_agent tracking — aggregates parallel spawn_agent tool calls into
 	// the rich SubagentStatusRow UI (use_subagents + subagent messages).
@@ -594,6 +610,7 @@ export class MessageTranslatorState {
 	 */
 	clearTurnOutcome(): void {
 		this.attemptCompletionSeen = false
+		this.textGenerationSeen = false
 	}
 }
 
@@ -971,6 +988,42 @@ export function extractToolOutputText(output: unknown): string {
 	return JSON.stringify(output)
 }
 
+const READ_FILE_UI_OUTPUT_PREVIEW_CHARS = 2_000
+
+export function extractReadFileUiContent(output: unknown): {
+	summary?: string
+	content?: string
+	readLineStart?: number
+	readLineEnd?: number
+} {
+	const text = extractToolOutputText(output)
+	if (!text) {
+		return {}
+	}
+
+	const summary = extractFileSummarySection(text)
+	const previewMatch = text.match(/=== PREVIEW \(lines (\d+)-(\d+) of (\d+)\) ===/)
+	const readLineStart = previewMatch ? Number.parseInt(previewMatch[1], 10) : undefined
+	const readLineEnd = previewMatch ? Number.parseInt(previewMatch[2], 10) : undefined
+
+	return {
+		summary,
+		content: summary ?? text.slice(0, READ_FILE_UI_OUTPUT_PREVIEW_CHARS),
+		readLineStart: Number.isFinite(readLineStart) ? readLineStart : undefined,
+		readLineEnd: Number.isFinite(readLineEnd) ? readLineEnd : undefined,
+	}
+}
+
+function enrichReadFileSayTool(sayTool: AgentarioSayTool, output: unknown): AgentarioSayTool {
+	const uiContent = extractReadFileUiContent(output)
+	return {
+		...sayTool,
+		...(uiContent.content ? { content: uiContent.content } : {}),
+		...(uiContent.readLineStart != null ? { readLineStart: uiContent.readLineStart } : {}),
+		...(uiContent.readLineEnd != null ? { readLineEnd: uiContent.readLineEnd } : {}),
+	}
+}
+
 // ---------------------------------------------------------------------------
 // MCP tool detection
 // ---------------------------------------------------------------------------
@@ -1098,6 +1151,8 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 			switch (event.contentType) {
 				case "text": {
 					state.markGenerationStartIfNeeded()
+					// Agentario: отмечаем что модель начала генерировать текст
+					state.setTextGenerationSeen()
 					// The SDK emits MULTIPLE content_start events for streaming text.
 					// Each has `text` (the delta) and `accumulated` (full text so far).
 					// We use `accumulated` so the webview can update the message in-place
@@ -1299,6 +1354,10 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 			switch (event.contentType) {
 				case "text": {
 					const ts = state.clearStreamingText()
+					// Agentario: отмечаем что модель сгенерировала текст (для автоподсветки completed)
+					if (event.text && event.text.trim().length > 0) {
+						state.setTextGenerationSeen()
+					}
 					messages.push({
 						ts,
 						type: "say",
@@ -1496,16 +1555,25 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 					if (toolName === "read_files" || toolName === "read_file") {
 						const parsedInput = parseToolInput(storedInput)
 						const filePaths = extractFilePaths(parsedInput)
+						const readFileUi = !event.error ? extractReadFileUiContent(event.output) : {}
 						if (filePaths.length > 1) {
 							filePaths.forEach((filePath, index) => {
+								const toolPayload: AgentarioSayTool = {
+									tool: "readFile",
+									path: filePath,
+									...(index === 0 && readFileUi.content ? { content: readFileUi.content } : {}),
+									...(index === 0 && readFileUi.readLineStart != null
+										? {
+												readLineStart: readFileUi.readLineStart,
+												readLineEnd: readFileUi.readLineEnd,
+											}
+										: {}),
+								}
 								messages.push({
 									ts: index === 0 ? ts : state.nextTs(),
 									type: "say",
 									say: "tool",
-									text: JSON.stringify({
-										tool: "readFile",
-										path: filePath,
-									} satisfies AgentarioSayTool),
+									text: JSON.stringify(toolPayload),
 									partial: false,
 								})
 							})
@@ -1513,7 +1581,10 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 						}
 					}
 
-					const sayTool = sdkToolToAgentarioSayTool(toolName, storedInput)
+					let sayTool = sdkToolToAgentarioSayTool(toolName, storedInput)
+					if ((toolName === "read_files" || toolName === "read_file") && !event.error) {
+						sayTool = enrichReadFileSayTool(sayTool, event.output)
+					}
 					// If there's an error, include it in the tool message
 					if (event.error) {
 						messages.push({
@@ -1594,6 +1665,43 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 					Logger.warn("[MessageTranslator] Context budget notice received but parsing failed", event.metadata)
 				}
 				break
+			}
+			// Sync progress bar with compaction's preflight stats (📊 Контекст: N / M).
+			// Without this, the bar can stay on stale measured tokensIn / old model window
+			// while the chat shows the live compaction numbers.
+			if (metadataKind === "context_stats" && event.metadata) {
+				const inputTokens =
+					typeof event.metadata.inputTokens === "number" && event.metadata.inputTokens > 0
+						? event.metadata.inputTokens
+						: undefined
+				const maxInputTokens =
+					typeof event.metadata.maxInputTokens === "number" && event.metadata.maxInputTokens > 0
+						? event.metadata.maxInputTokens
+						: undefined
+				if (inputTokens !== undefined && maxInputTokens !== undefined) {
+					const budget: ContextBudgetBreakdown = {
+						contextWindow: maxInputTokens,
+						totalEstimated: inputTokens,
+						pinnedEstimated: 0,
+						compressibleEstimated: inputTokens,
+						categories: {
+							system: 0,
+							rules: 0,
+							tools: 0,
+							mcp: 0,
+							skills: 0,
+							chat: inputTokens,
+						},
+					}
+					state.setPendingContextBudget(budget)
+					messages.push({
+						ts: state.nextTs(),
+						type: "say",
+						say: "api_req_started",
+						text: JSON.stringify({ contextBudget: budget }),
+						partial: false,
+					})
+				}
 			}
 			// Agent notices are informational
 			messages.push({

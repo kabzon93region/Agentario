@@ -1,6 +1,11 @@
-﻿import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import type { AgentarioMessage } from "./ExtensionMessage"
-import { findFollowingApiStats, formatMessageStatsLine, isApiReqComplete } from "./message-display"
+import {
+	findFollowingApiStats,
+	formatMessageStatsLine,
+	hasFollowingAssistantText,
+	isApiReqComplete,
+} from "./message-display"
 
 describe("isApiReqComplete", () => {
 	it("treats tokensIn as completion for local providers", () => {
@@ -24,6 +29,28 @@ describe("findFollowingApiStats", () => {
 		const stats = findFollowingApiStats(messages, 1)
 		expect(stats?.tokensIn).toBe(10)
 		expect(stats?.durationMs).toBe(2000)
+	})
+})
+
+describe("hasFollowingAssistantText", () => {
+	it("detects text after reasoning before the next user message", () => {
+		const messages: AgentarioMessage[] = [
+			{ ts: 1, type: "say", say: "reasoning", text: "think" },
+			{ ts: 2, type: "say", say: "text", text: "answer" },
+			{ ts: 3, type: "say", say: "user_feedback", text: "next" },
+		]
+		expect(hasFollowingAssistantText(messages, 1)).toBe(true)
+		expect(hasFollowingAssistantText(messages, 2)).toBe(false)
+	})
+
+	it("ignores empty text and stops at user messages", () => {
+		const messages: AgentarioMessage[] = [
+			{ ts: 1, type: "say", say: "reasoning", text: "think" },
+			{ ts: 2, type: "say", say: "text", text: "   " },
+			{ ts: 3, type: "say", say: "user_feedback", text: "next" },
+			{ ts: 4, type: "say", say: "text", text: "later" },
+		]
+		expect(hasFollowingAssistantText(messages, 1)).toBe(false)
 	})
 })
 

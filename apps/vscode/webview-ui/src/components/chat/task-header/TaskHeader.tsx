@@ -263,7 +263,11 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							cacheWrites={cacheWrites}
 							contextBudget={contextBudget}
 							contextUsageApproximate={contextUsageApproximate}
-							contextWindow={selectedModelInfo?.contextWindow}
+							contextWindow={
+								contextBudget?.contextWindow && contextBudget.contextWindow > 0
+									? contextBudget.contextWindow
+									: selectedModelInfo?.contextWindow
+							}
 							lastApiReqTotalTokens={lastApiReqTotalTokens}
 							onSendMessage={onSendMessage}
 							tokensIn={tokensIn}

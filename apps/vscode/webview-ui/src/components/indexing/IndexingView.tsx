@@ -132,19 +132,57 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 						updatedAtMs: 0,
 					})
 				} else if (action === "rebuild") {
-					setClearConfirmPending(false)
+				setClearConfirmPending(false)
+				// Optimistic: start polling before the blocking RPC returns.
+				setIndex((prev) => ({
+					workspacePath: prev?.workspacePath ?? "",
+					indexPath: prev?.indexPath ?? "",
+					embeddingModel: prev?.embeddingModel ?? "",
+					baseUrl: prev?.baseUrl ?? "",
+					files: prev?.files ?? [],
+					totalFiles: prev?.totalFiles ?? 0,
+					indexedFiles: prev?.indexedFiles ?? 0,
+					skippedFiles: prev?.skippedFiles ?? 0,
+					errorFiles: prev?.errorFiles ?? 0,
+					indexSizeBytes: prev?.indexSizeBytes ?? 0,
+					updatedAtMs: prev?.updatedAtMs ?? 0,
+					isIndexing: true,
+					progressCurrent: 0,
+					progressTotal: prev?.totalFiles && prev.totalFiles > 0 ? prev.totalFiles : 0,
+					progressPath: undefined,
+					lastError: prev?.lastError,
+				}))
 					setIndex(await IndexingServiceClient.rebuildIndex(EmptyRequest.create({})))
 				} else {
-					setClearConfirmPending(false)
-					setIndex(await IndexingServiceClient.updateIndex(EmptyRequest.create({})))
+				setClearConfirmPending(false)
+				setIndex((prev) => ({
+					workspacePath: prev?.workspacePath ?? "",
+					indexPath: prev?.indexPath ?? "",
+					embeddingModel: prev?.embeddingModel ?? "",
+					baseUrl: prev?.baseUrl ?? "",
+					files: prev?.files ?? [],
+					totalFiles: prev?.totalFiles ?? 0,
+					indexedFiles: prev?.indexedFiles ?? 0,
+					skippedFiles: prev?.skippedFiles ?? 0,
+					errorFiles: prev?.errorFiles ?? 0,
+					indexSizeBytes: prev?.indexSizeBytes ?? 0,
+					updatedAtMs: prev?.updatedAtMs ?? 0,
+					isIndexing: true,
+					progressCurrent: 0,
+					progressTotal: prev?.totalFiles && prev.totalFiles > 0 ? prev.totalFiles : 0,
+					progressPath: undefined,
+					lastError: prev?.lastError,
+				}))
+				setIndex(await IndexingServiceClient.updateIndex(EmptyRequest.create({})))
 				}
 			} catch (caught) {
 				setError(caught instanceof Error ? caught.message : String(caught))
+				await loadStatus().catch(() => undefined)
 			} finally {
 				setIsWorking(false)
 			}
 		},
-		[clearConfirmPending],
+		[clearConfirmPending, loadStatus],
 	)
 
 	useEffect(() => {
@@ -156,14 +194,16 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 	}, [loadStatus])
 
 	useEffect(() => {
-		if (!index?.isIndexing) {
+		// Poll while local busy flag OR host reports indexing — getIndexStatus
+		// returns live progress during the blocking rebuild/update RPC.
+		if (!isWorking && !index?.isIndexing) {
 			return
 		}
 		const timer = window.setInterval(() => {
 			loadStatus().catch((caught) => console.error(caught))
-		}, 1000)
+		}, 500)
 		return () => window.clearInterval(timer)
-	}, [index?.isIndexing, loadStatus])
+	}, [isWorking, index?.isIndexing, loadStatus])
 
 	useEffect(() => {
 		if (!usesAiEmbeddings || codebaseIndexAiBackend !== "lmstudio") {
@@ -382,17 +422,19 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 					<span>Errors: {index?.errorFiles ?? 0}</span>
 					<span>Index size: {formatBytes(indexSizeBytes)}</span>
 				</div>
-				{busy && progressTotal > 0 && (
+				{busy && (
 					<div className="mb-2 text-[11px] leading-tight">
 						<div className="mb-1 flex items-center justify-between gap-2">
 							<span>
-								Progress: {progressCurrent} / {progressTotal} ({progressPercent}%)
+								{progressTotal > 0
+									? `Прогресс: ${progressCurrent} / ${progressTotal} (${progressPercent}%)`
+									: "Подготовка списка файлов…"}
 							</span>
 						</div>
 						<div className="h-1.5 overflow-hidden rounded bg-[var(--vscode-editor-inactiveSelectionBackground)]">
 							<div
 								className="h-full bg-[var(--vscode-progressBar-background)] transition-[width] duration-300"
-								style={{ width: `${progressPercent}%` }}
+								style={{ width: `${progressTotal > 0 ? progressPercent : 5}%` }}
 							/>
 						</div>
 						{index?.progressPath && (
@@ -403,7 +445,7 @@ const IndexingView = ({ onDone }: IndexingViewProps) => {
 					</div>
 				)}
 				<div className="mb-2 text-[10px] text-description leading-tight">
-					Чанк ~3072 симв. (~1024 tok), нахлёст 17.5%, batch до 2048 tok. Большие файлы — первые 2 MB.
+					Чанк ~3072 симв. (~1024 tok), нахлёст 17.5%, batch до 2048 tok. Файлы индексируются целиком (без лимита размера).
 				</div>
 				<div className="flex flex-wrap gap-1.5">
 					{clearConfirmPending ? (

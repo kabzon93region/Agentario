@@ -24,6 +24,9 @@ import {
 	type ToolResultContent,
 	validateAndReserveImageMedia,
 } from "@agentario/shared";
+import {
+	FILE_SUMMARY_HEADER,
+} from "../../extensions/tools/executors/file-read";
 
 export const DEFAULT_MAX_TOOL_RESULT_CHARS = 8_000;
 export const DEFAULT_MAX_FILE_CONTENT_CHARS = 50_000;
@@ -63,6 +66,40 @@ const TRUNCATE_ASSISTANT_TEXT_BUDGET_MARKER = (n: number) =>
 	`\n\n...[assistant text truncated: omitted ${n} chars to fit provider request budget]...\n\n`;
 const TRUNCATE_ASSISTANT_TOOL_MARKUP_MARKER = (n: number) =>
 	`\n\n...[assistant text truncated: omitted ${n} chars due to repeated tool-call markup]...\n\n`;
+
+export function truncatePreservingFileSummary(text: string, maxChars: number): string {
+	if (text.length <= maxChars) {
+		return text;
+	}
+	const headerIndex = text.indexOf(FILE_SUMMARY_HEADER);
+	if (headerIndex === -1) {
+		return text;
+	}
+	const afterHeaderStart = headerIndex + FILE_SUMMARY_HEADER.length;
+	const afterHeader = text.slice(afterHeaderStart);
+	const nextSection = afterHeader.search(/\n=== [^=]/);
+	const summaryEnd =
+		nextSection >= 0 ? afterHeaderStart + nextSection : text.length;
+	const summaryPart = text.slice(0, summaryEnd);
+	const restPart = text.slice(summaryEnd);
+	if (summaryPart.length >= maxChars) {
+		return (
+			summaryPart.slice(0, Math.max(0, maxChars - 32)) +
+			`\n\n...[file summary truncated]...\n\n`
+		);
+	}
+	const restBudget = maxChars - summaryPart.length;
+	if (restPart.length <= restBudget) {
+		return text;
+	}
+	const removed = restPart.length - restBudget;
+	const marker = `\n\n...[truncated ${removed} chars; file summary preserved]...\n\n`;
+	const headBudget = Math.max(0, Math.floor((restBudget - marker.length) * 0.65));
+	const tailBudget = Math.max(0, restBudget - marker.length - headBudget);
+	const truncatedRest =
+		restPart.slice(0, headBudget) + marker + restPart.slice(-tailBudget);
+	return summaryPart + truncatedRest;
+}
 
 interface ReadLocator {
 	path: string;
@@ -1095,6 +1132,9 @@ export class MessageBuilder {
 	 * Falls back to standard truncateMiddle for smaller texts.
 	 */
 	private smartTruncateText(text: string): string {
+		if (text.includes(FILE_SUMMARY_HEADER)) {
+			return truncatePreservingFileSummary(text, this.maxToolResultChars);
+		}
 		if (text.length <= SMART_TRUNCATION_THRESHOLD) {
 			return this.truncateMiddle(text);
 		}

@@ -534,6 +534,7 @@ export class LocalRuntimeHost implements RuntimeHost {
 			},
 			logger: runtime.logger ?? configWithProvider.logger,
 			extensionContext: configWithProvider.extensionContext,
+			toolContextMetadata: configWithProvider.toolContextMetadata,
 			onEvent: (event: AgentEvent) =>
 				this.eventBridge.dispatchAgentEvent(
 					sessionId,

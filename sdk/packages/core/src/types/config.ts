@@ -239,4 +239,6 @@ export interface CoreSessionConfig
 	bashTimeoutMs?: number;
 	/** Timeout for search_codebase (ms). Host may override SDK default (30s). */
 	searchTimeoutMs?: number;
+	/** Metadata forwarded to tool executors via AgentToolContext.metadata */
+	toolContextMetadata?: Record<string, unknown>;
 }

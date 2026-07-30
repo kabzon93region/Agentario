@@ -117,7 +117,15 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 	}
 	lines.push(`Exported: ${exportedAt.toISOString()}`, "", "---", "")
 
-	const ordered = [...messages].sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0))
+	// Agentario: pin task message(s) to the beginning, then sort rest by ts.
+	// Task messages use Date.now() while SDK messages use minter.nextId() (1,2,3...),
+	// so naive ts-sort puts task at the end.
+	const taskMessages = messages.filter(m => m.say === "task")
+	const otherMessages = messages.filter(m => m.say !== "task")
+	const ordered = [
+		...taskMessages.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)),
+		...otherMessages.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)),
+	]
 
 	for (const message of ordered) {
 		if (message.partial) {

@@ -164,6 +164,38 @@ describe("getLastApiReqTotalTokens", () => {
 		assert.equal(usage.used, 22_570)
 		assert.equal(usage.approximate, false)
 	})
+
+	it("prefers a higher newer estimate over stale measured usage", () => {
+		const messages: AgentarioMessage[] = [
+			{
+				ts: 1,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({
+					tokensIn: 20_000,
+					tokensOut: 80,
+				}),
+			},
+			{
+				ts: 2,
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({
+					contextBudget: {
+						contextWindow: 36_864,
+						totalEstimated: 32_960,
+						pinnedEstimated: 10_000,
+						compressibleEstimated: 22_960,
+						categories: { system: 3_000, rules: 2_000, tools: 3_000, mcp: 1_000, skills: 1_000, chat: 22_960 },
+					},
+				}),
+			},
+		]
+
+		const usage = getContextWindowUsage(messages)
+		assert.equal(usage.used, 32_960)
+		assert.equal(usage.approximate, true)
+	})
 })
 
 describe("getLastContextBudget", () => {

@@ -1,4 +1,4 @@
-﻿// The module 'vscode' contains the VS Code extensibility API
+// The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 
 import assert from "node:assert"
@@ -101,16 +101,20 @@ export async function activate(context: vscode.ExtensionContext) {
 	migrateStandaloneProviderSettings(StateManager.get())
 	await seedAgentarioDefaults(StateManager.get())
 	const mcpSeed = await seedAgentarioMcpSettings(StateManager.get())
-	if (mcpSeed.added.length > 0 || mcpSeed.templateUpgraded) {
-		try {
-			await webview.controller.mcpHub.reloadSettingsFromDisk()
-			await webview.controller.postStateToWebview()
-			Logger.log(
-				`[Agentario] MCP reloaded (${mcpSeed.added.length} new): ${mcpSeed.added.join(", ") || "template upgrade"}`,
-			)
-		} catch (error) {
-			Logger.warn("[Agentario] Failed to reload MCP after template merge:", error)
-		}
+	// Always reload after seed: init may have raced with the write, and transport
+	// repairs / template merges must take effect immediately after restart.
+	try {
+		await webview.controller.mcpHub.reloadSettingsFromDisk()
+		await webview.controller.mcpHub.waitUntilConnectionsSettled()
+		await webview.controller.postStateToWebview()
+		Logger.log(
+			`[Agentario] MCP reloaded after seed (+${mcpSeed.added.length} new` +
+				`${mcpSeed.repaired.length ? `, repaired ${mcpSeed.repaired.length}` : ""}` +
+				`${mcpSeed.templateUpgraded ? ", template upgrade" : ""}): ` +
+				`${mcpSeed.added.join(", ") || mcpSeed.repaired.join(", ") || "synced"}`,
+		)
+	} catch (error) {
+		Logger.warn("[Agentario] Failed to reload MCP after template merge:", error)
 	}
 
 	// 5. Register services and commands specific to VS Code
@@ -230,6 +234,24 @@ export async function activate(context: vscode.ExtensionContext) {
 	// `ext.evaluate`. Gated on CLINE_CAPTURE_BROWSER so it never ships in prod.
 	if (process.env.CLINE_CAPTURE_BROWSER === "1" || process.env.CLINE_CAPTURE_BROWSER === "true") {
 		;(globalThis as Record<string, unknown>).__clineHandleUri = (url: string) => SharedUriHandler.handleUri(url)
+	}
+
+	// Debug-harness Lab bridge: expose controller methods on globalThis so the
+	// harness can create tasks, send responses, and export context via CDP
+	// Runtime.evaluate -- without Playwright UI clicks. Gated on
+	// CLINE_DEBUG_HARNESS_PORT so it never ships in production builds.
+	if (process.env.CLINE_DEBUG_HARNESS_PORT) {
+		const g = globalThis as Record<string, unknown>
+		g.agentario = {
+			initTask: (text?: string, images?: string[], files?: string[]) =>
+				WebviewProvider.getInstance().controller.initTask(text, images, files),
+			askResponse: (text?: string, images?: string[], files?: string[]) =>
+				WebviewProvider.getInstance().controller.askResponse(text, images, files),
+			exportContextText: () =>
+				WebviewProvider.getInstance().controller.captureModelContext(),
+			getActiveTaskId: () =>
+				WebviewProvider.getInstance().controller.task?.taskId ?? null,
+		}
 	}
 
 	// Register size testing commands in development mode
