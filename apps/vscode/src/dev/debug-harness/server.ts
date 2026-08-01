@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bun
+#!/usr/bin/env bun
 
 /**
  * Debug Harness Server
@@ -62,6 +62,9 @@ const EXT_INSPECT_PORT = 9230
 // 60s default, so allow more headroom and let it be overridden.
 const LAUNCH_TIMEOUT_MS = Number.parseInt(getArg("--launch-timeout") || "120000", 10)
 const PROJECT_ROOT = path.resolve(__script_dir, "..", "..", "..")
+// Windows cmd.exe cannot use UNC paths as cwd — resolve to a local temp dir for build commands
+const IS_UNC = PROJECT_ROOT.startsWith("\\\\") || PROJECT_ROOT.startsWith("//")
+const BUILD_CWD = IS_UNC ? path.join(os.tmpdir(), "agentario-build-cwd") : PROJECT_ROOT
 const SCREENSHOT_DIR = path.join(os.tmpdir(), "agentario-lab-debug")
 const DEFAULT_WORKSPACE = path.join(os.tmpdir(), "agentario-lab-workspace")
 const DEFAULT_CLINE_DIR = path.join(os.homedir(), ".agentario-lab") // Separate profile from user's main config
@@ -72,6 +75,7 @@ const WORKSPACE_ARG = getArg("--workspace")
 const CLINE_DIR_ARG = getArg("--cline-dir") // Override the isolated CLINE_DIR
 const VSIX_ARG = getArg("--vsix") // Path to release VSIX for install-extension mode
 const HIDDEN_MODE = args.includes("--visible") ? false : true // Hidden by default
+const EXT_AGENTARIO_API_PORT = Number.parseInt(getArg("--api-port") || "19231", 10)
 
 // ============================================================
 // VLQ Sourcemap Decoder
@@ -311,6 +315,7 @@ class DebugHarness {
 	private webCdp: CdpClient | null = null
 	private webCdpSession: CDPSession | null = null // Playwright CDP session fallback
 	private screenshotCounter = 0
+	private agentarioApiPort = EXT_AGENTARIO_API_PORT
 	private extSourceMap: SourceMapJSON | null = null
 	private clineDir: string = DEFAULT_CLINE_DIR // The CLINE_DIR used for the debugee
 
@@ -333,28 +338,48 @@ class DebugHarness {
 
 		// Build
 		if (!opts.skipBuild && !SKIP_BUILD) {
+			// On Windows, cmd.exe cannot use UNC paths as cwd — create a junction if needed
+			let buildCwd = PROJECT_ROOT
+			if (IS_UNC) {
+				fs.mkdirSync(BUILD_CWD, { recursive: true })
+				// Create a directory junction from local path to UNC path
+				try {
+					fs.rmSync(BUILD_CWD, { recursive: true, force: true })
+				} catch {}
+				try {
+					execSync(`mklink /J "${BUILD_CWD}" "${PROJECT_ROOT}"`, { stdio: "inherit" })
+					log(`Created junction: ${BUILD_CWD} → ${PROJECT_ROOT}`)
+				} catch (e: any) {
+					log(`Junction creation failed, trying copy: ${e.message}`)
+					// Fallback: copy project files to local dir
+					execSync(`xcopy "${PROJECT_ROOT}" "${BUILD_CWD}\\*\\" /E /Y /Q`, { stdio: "inherit" })
+				}
+				buildCwd = BUILD_CWD
+			}
 			log("Building extension (unminified, with sourcemaps)...")
-			const execOpts: ExecSyncOptions = { cwd: PROJECT_ROOT, stdio: "inherit", env: { ...process.env, IS_DEV: "true" } }
+			const execOpts: ExecSyncOptions = { cwd: buildCwd, stdio: "inherit", env: { ...process.env, IS_DEV: "true" } }
 			execSync("bun run protos", execOpts)
 			execSync("bun esbuild.mjs", execOpts)
 			log("Building webview (unminified, with inline sourcemaps)...")
 			execSync("cd webview-ui && bunx vite build -- --dev-build", execOpts)
 		}
 
-		// Verify build output exists
-		const extJs = path.join(PROJECT_ROOT, "dist", "extension.js")
-		if (!fs.existsSync(extJs)) {
-			throw new Error(`Extension not built: ${extJs} not found. Run without --skip-build.`)
-		}
+		// Verify build output exists (skip in VSIX mode — extension installed from VSIX)
+		if (!VSIX_ARG) {
+			const extJs = path.join(PROJECT_ROOT, "dist", "extension.js")
+			if (!fs.existsSync(extJs)) {
+				throw new Error(`Extension not built: ${extJs} not found. Run without --skip-build.`)
+			}
 
-		// Load extension sourcemap for breakpoint resolution
-		const mapFile = extJs + ".map"
-		if (fs.existsSync(mapFile)) {
-			try {
-				this.extSourceMap = JSON.parse(fs.readFileSync(mapFile, "utf-8"))
-				log(`Loaded extension sourcemap (${this.extSourceMap!.sources.length} source files)`)
-			} catch (e: any) {
-				log(`Warning: Could not load sourcemap: ${e.message}`)
+			// Load extension sourcemap for breakpoint resolution
+			const mapFile = extJs + ".map"
+			if (fs.existsSync(mapFile)) {
+				try {
+					this.extSourceMap = JSON.parse(fs.readFileSync(mapFile, "utf-8"))
+					log(`Loaded extension sourcemap (${this.extSourceMap!.sources.length} source files)`)
+				} catch (e: any) {
+					log(`Warning: Could not load sourcemap: ${e.message}`)
+				}
 			}
 		}
 
@@ -424,6 +449,7 @@ class DebugHarness {
 					// ── Browser capture: intercept openExternal() for OAuth testing unless explicitly disabled ──
 					CLINE_CAPTURE_BROWSER: BROWSER_CAPTURE ? "1" : "0",
 					CLINE_DEBUG_HARNESS_PORT: String(PORT),
+					AGENTARIO_API_PORT: String(EXT_AGENTARIO_API_PORT),
 				LAB_HIDDEN: HIDDEN_MODE ? "1" : "0",
 				},
 				timeout: LAUNCH_TIMEOUT_MS,
@@ -1353,6 +1379,53 @@ class DebugHarness {
 	// Agentario Lab — High-level API
 	// ────────────────────────────────────────────
 
+
+	// ── Agentario REST API helpers ──
+
+	private agentarioApiUrl(path: string): string {
+		const port = this.agentarioApiPort || EXT_AGENTARIO_API_PORT
+		return `http://127.0.0.1:${port}${path}`
+	}
+
+	private async labApiFetch(method: string, params: Record<string, any> = {}, timeoutMs = 60000): Promise<any> {
+		const url = this.agentarioApiUrl(method)
+		const controller = new AbortController()
+		const timer = setTimeout(() => controller.abort(), timeoutMs)
+		try {
+			const isGet = Object.keys(params).length === 0 && !method.includes("?")
+			let fetchUrl = url
+			if (Object.keys(params).length > 0 && method.includes("?")) {
+				// Append query params for GET
+				const qs = new URLSearchParams(params as any).toString()
+				fetchUrl = `${url}&${qs}`
+			}
+			const res = await fetch(fetchUrl, {
+				method: isGet ? "GET" : "POST",
+				headers: isGet ? {} : { "Content-Type": "application/json" },
+				body: isGet ? undefined : JSON.stringify(params),
+				signal: controller.signal,
+			})
+			return await res.json()
+		} finally {
+			clearTimeout(timer)
+		}
+	}
+
+	private async waitForAgentarioApi(timeoutMs = 60000): Promise<void> {
+		const start = Date.now()
+		while (Date.now() - start < timeoutMs) {
+			try {
+				const res = await fetch(this.agentarioApiUrl("/health"), { signal: AbortSignal.timeout(3000) })
+				if (res.ok) {
+					log("[Agentario API] Extension API is available")
+					return
+				}
+			} catch {}
+			await sleep(1000)
+		}
+		throw new Error(`Agentario API not available after ${timeoutMs}ms`)
+	}
+
 	/** Get lab status: VS Code running, active task, idle state */
 	async labStatus(): Promise<any> {
 		const running = !!this.app
@@ -1406,51 +1479,47 @@ class DebugHarness {
 		}
 	}
 
-	/**
-	 * Wait for the globalThis.agentario bridge (set by extension.ts when
-	 * CLINE_DEBUG_HARNESS_PORT is present) and call fn(bridge).
-	 * Polls every 500ms for up to 30s so it survives extension activation delay.
-	 */
-	private async labCallBridge<T>(fn: (bridge: any) => T | Promise<T>, timeoutMs = 30_000): Promise<T> {
-		if (!this.extCdp?.connected) throw new Error("Extension host CDP not connected")
-		const deadline = Date.now() + timeoutMs
-		let lastError = ""
-		while (Date.now() < deadline) {
-			try {
-				const result = await this.extCdp.send("Runtime.evaluate", {
-					expression: "typeof globalThis.agentario",
-					returnByValue: true,
-				})
-				if (result?.result?.value === "object") {
-					// Bridge is live — evaluate the call inside the extension host
-					const expr = `(${fn.toString()})(globalThis.agentario)`
-					const res = await this.extCdp.send("Runtime.evaluate", {
-						expression: expr,
-						returnByValue: true,
-						awaitPromise: true,
-					})
-					if (res?.exceptionDetails) {
-						throw new Error(res.exceptionDetails.text || JSON.stringify(res.exceptionDetails))
-					}
-					return res?.result?.value as T
-				}
-			} catch (e: any) {
-				lastError = e.message
-			}
-			await sleep(500)
+ = {}): Promise<any> {
+		// Always reconnect if force=true, or if not connected
+		if (this.extCdp?.connected && !params.force) return { status: "already_connected" }
+
+		// Close old connection if any
+		if (this.extCdp?.connected) {
+			try { this.extCdp.close() } catch {}
 		}
-		throw new Error(`Bridge not available after ${timeoutMs}ms. Last error: ${lastError}`)
+
+		const port = params.port || EXT_INSPECT_PORT
+		if (params.clineDir) {
+			this.clineDir = params.clineDir
+		} else if (!this.clineDir) {
+			this.clineDir = DEFAULT_CLINE_DIR
+		}
+		fs.mkdirSync(this.clineDir, { recursive: true })
+		fs.mkdirSync(path.join(this.clineDir, "data"), { recursive: true })
+
+		log(`[lab.connect] Connecting to extension host CDP on port ${port}...`)
+		try {
+			const wsUrl = await this.waitForInspector(port, 30000)
+			await this.extCdp.connect(wsUrl)
+			await this.extCdp.enableDebugger()
+			log("[lab.connect] Extension host CDP connected")
+			return { status: "connected", port, clineDir: this.clineDir }
+		} catch (e: any) {
+			return { status: "error", error: e.message }
+		}
 	}
 
-	/** Create a new task via CDP bridge(params: { text: string }): Promise<any> {
+
+	/** Create a new task via Agentario REST API. */
+	async labNewTask(params: { text: string }): Promise<any> {
 		if (!params.text) throw new Error("text is required")
-		return this.labCallBridge((bridge: any) => bridge.initTask(params.text))
+		return this.labApiFetch("/api/new_task", { text: params.text })
 	}
 
-	/** Send a followup response to an active ask via CDP bridge. */
+	/** Send a followup response via Agentario REST API. */
 	async labFollowup(params: { text: string }): Promise<any> {
 		if (!params.text) throw new Error("text is required")
-		return this.labCallBridge((bridge: any) => bridge.askResponse(params.text))
+		return this.labApiFetch("/api/followup", { text: params.text })
 	}
 
 	/** Find the newest task directory under clineDir/tasks. */
@@ -1474,50 +1543,31 @@ class DebugHarness {
 		return newestDir
 	}
 
-	/** Poll disk until the agent is idle (no partial messages). */
+	/** Poll the extension's REST API until the agent is idle. */
 	async labWaitIdle(params: { timeout?: number; pollMs?: number } = {}): Promise<any> {
 		const timeout = params.timeout ?? 600_000
 		const pollMs = params.pollMs ?? 3_000
 		const start = Date.now()
 
 		while (Date.now() - start < timeout) {
-			const newestDir = this.findNewestTaskDir()
-			if (newestDir) {
-				const msgFile = path.join(newestDir, "ui_messages.json")
-				if (fs.existsSync(msgFile)) {
-					try {
-						const msgs = JSON.parse(fs.readFileSync(msgFile, "utf-8"))
-						if (Array.isArray(msgs) && msgs.length > 0) {
-							const hasPartial = msgs.some((m: any) => m.partial === true)
-							const lastMsg = msgs[msgs.length - 1]
-							const lastTs = lastMsg.ts || 0
-							const staleEnough = (Date.now() - lastTs) > 2000
-							if (!hasPartial && staleEnough) {
-								return {
-									status: "idle",
-									elapsed: Date.now() - start,
-									messageCount: msgs.length,
-									lastMessagePreview: (lastMsg.text || "").substring(0, 200),
-								}
-							}
-						}
-					} catch {}
+			try {
+				const result = await this.labApiFetch(`/api/wait_idle?timeout=${pollMs}&pollMs=${pollMs}`, {}, pollMs + 5000)
+				if (result.status === "idle") {
+					return { ...result, elapsed: Date.now() - start }
 				}
-			}
+			} catch {}
 			await sleep(pollMs)
 		}
 		return { status: "timeout", elapsed: Date.now() - start }
 	}
 
-	/** Get messages from the most recent task's ui_messages.json. */
+	/** Get messages via Agentario REST API, fallback to disk. */
 	async labGetMessages(params: { count?: number } = {}): Promise<any> {
 		const count = params.count ?? 50
-		const newestDir = this.findNewestTaskDir()
-		if (!newestDir) return { messages: [] }
-		const msgFile = path.join(newestDir, "ui_messages.json")
-		if (!fs.existsSync(msgFile)) return { messages: [] }
-		const allMsgs = JSON.parse(fs.readFileSync(msgFile, "utf-8"))
-		const recent = allMsgs.slice(-count)
+		try {
+			return await this.labApiFetch(`/api/messages?limit=${count}`)
+		} catch {}
+		// Fallback: read from disk
 		return {
 			taskDir: newestDir,
 			total: allMsgs.length,
@@ -1532,8 +1582,16 @@ class DebugHarness {
 		}
 	}
 
-	/** Export chat to markdown file (full logic, disk-based, no Save Dialog). */
+	/** Export chat via Agentario REST API, fallback to disk. */
 	async labExportChat(params: { outPath?: string } = {}): Promise<any> {
+		// Try REST API first
+		try {
+			const outPath = params.outPath || path.join(process.cwd(), "Exports", `chat-export-${Date.now()}.md`)
+			const result = await this.labApiFetch(`/api/export_chat?outPath=${encodeURIComponent(outPath)}`)
+			if (result && result.path) return { ...result, taskDir: this.findNewestTaskDir() }
+		} catch {}
+
+		// Fallback: read from disk
 		const newestDir = this.findNewestTaskDir()
 		if (!newestDir) throw new Error("No task directory found")
 		const msgFile = path.join(newestDir, "ui_messages.json")
@@ -1553,31 +1611,31 @@ class DebugHarness {
 		return this.uiSidebarScreenshot()
 	}
 
-	/** Export model context to file (like "Export context to file" button). */
+	/** Export model context via Agentario REST API, fallback to disk. */
 	async labExportContext(params: { outPath?: string } = {}): Promise<any> {
+		// Try REST API first
+		try {
+			const result = await this.labApiFetch("/api/context", {}, 60000)
+			if (result && !result.error) {
+				if (params.outPath) {
+					const text = typeof result === "string" ? result : JSON.stringify(result, null, 2)
+					fs.mkdirSync(path.dirname(params.outPath), { recursive: true })
+					fs.writeFileSync(params.outPath, text, "utf-8")
+					return { path: params.outPath, source: "api" }
+				}
+				return { source: "api", data: result }
+			}
+		} catch {}
+
+		// Fallback: read from disk
 		const newestDir = this.findNewestTaskDir()
 		if (!newestDir) throw new Error("No task directory found")
 		const taskId = path.basename(newestDir)
-
-		// Try api_conversation_history.json first (always available)
 		const historyPath = path.join(newestDir, "api_conversation_history.json")
 		if (fs.existsSync(historyPath)) {
 			const outPath = params.outPath || path.join(process.cwd(), "Exports", `lab-${taskId}`, "context-export.txt")
 			const ok = exportContextFromApiHistory(historyPath, outPath)
 			if (ok) return { path: outPath, source: "api_conversation_history.json" }
-		}
-
-		// Fallback: trigger exportContextText via bridge (if CDP connected)
-		if (this.extCdp?.connected) {
-			try {
-				const result = await this.labCallBridge((bridge: any) => {
-					const ctx = bridge.exportContextText()
-					return ctx ? JSON.stringify(ctx) : "no_context"
-				})
-				return { source: "ext.evaluate", result }
-			} catch (e: any) {
-				return { source: "ext.evaluate", error: e.message }
-			}
 		}
 
 		return { error: "No context source available", taskDir: newestDir }
@@ -1658,12 +1716,21 @@ class DebugHarness {
 		const outDir = params.outDir || path.join(process.cwd(), "Exports", `lab-run-${Date.now()}`)
 
 		try {
-			// Step 1: Launch if not running (hidden by default)
-			if (!this.app) {
-				log("[lab.run] Launching VS Code (hidden)...")
-				const launchResult = await this.launch({ workspace: params.workspace, hidden: true })
-				steps.push({ step: "launch", status: "ok", detail: launchResult })
-				await sleep(3000) // Wait for extension activation
+			// Step 1: Connect to running VS Code or launch new one
+			if (this.extCdp?.connected) {
+				steps.push({ step: "connect", status: "already_connected" })
+			} else if (!this.app) {
+				// Try connecting to an existing VS Code instance first
+				log("[lab.run] Trying to connect to existing VS Code...")
+				const connectResult = await this.labConnect()
+				if (connectResult.status === "connected") {
+					steps.push({ step: "connect", status: "ok", detail: connectResult })
+				} else {
+					log("[lab.run] No existing VS Code found, launching new one (hidden)...")
+					const launchResult = await this.launch({ workspace: params.workspace, hidden: true, skipBuild: !!VSIX_ARG })
+					steps.push({ step: "launch", status: "ok", detail: launchResult })
+					await sleep(3000) // Wait for extension activation
+				}
 			} else {
 				steps.push({ step: "launch", status: "already_running" })
 			}
@@ -1808,6 +1875,8 @@ class DebugHarness {
 			// Agentario Lab — High-level API
 			case "lab.status":
 				return this.labStatus()
+			case "lab.connect":
+				return this.labConnect(params)
 			case "lab.new_task":
 				return this.labNewTask(params)
 			case "lab.followup":

@@ -508,6 +508,7 @@ export class Controller {
 				const host = await VscodeSessionHost.create({ mcpHub: this.mcpHub })
 				return { host, dispose: () => host.dispose("compactHistoryTask") }
 			},
+			getProviderScale: () => this.messageTranslatorState.getProviderScale(),
 		})
 		this.sessionEvents = new SdkSessionEventCoordinator({
 			messageTranslatorState: this.messageTranslatorState,
@@ -1147,11 +1148,12 @@ export class Controller {
 	 * - "context" (default): summarize context only
 	 * - "full": re-summarize entire chat history
 	 */
-	async compactTask(mode: "context" | "full" = "context"): Promise<void> {
-		await this.compaction.compactTask(mode)
+	async compactTask(mode: "context" | "full" = "context"): Promise<import("./sdk-compaction-coordinator").CompactTaskResult> {
+		const result = await this.compaction.compactTask(mode)
 		// После compaction устанавливаем idle чтобы разблокировать ввод
 		this.turnStateTracker.set("idle")
 		await this.postStateToWebview()
+		return result
 	}
 
 	async clearTask(): Promise<void> {

@@ -291,6 +291,10 @@ const USER_SETTINGS_FIELDS = {
 	smartTruncationTail: { default: 1000 as number },
 	// Agentario: Context Protection — AST Navigator (Tier 3)
 	astNavigatorEnabled: { default: false as boolean },
+	// Agentario: Lab API Server settings
+	labApiEnabled: { default: false as boolean },
+	labApiPort: { default: 19231 as number },
+	labClineDir: { default: "" as string },
 	/** Agentario: chat UI theme */
 	chatTheme: { default: "default" as "default" | "cursor" },
 	subagentsEnabled: { default: false as boolean },

@@ -55,6 +55,7 @@ export const en = {
 			general: "General",
 			remoteConfig: "Remote Config",
 			about: "About",
+			lab: "Lab API",
 			debug: "Debug",
 		},
 	},
@@ -331,6 +332,17 @@ export const en = {
 	mcp: {
 		remoteServers: "Remote Servers",
 		configure: "Configure",
+	},
+	lab: {
+		enableApiServer: "Lab API Server",
+		enableApiDesc: "Auto-start REST API server when Agentario starts",
+		port: "Port",
+		clineDir: "CLINE_DIR (profile)",
+		clineDirDesc: "Path to isolated profile for tests. Empty = .agentario-lab by default",
+		testConnection: "Test Connection",
+		testing: "Testing...",
+		unavailable: "Unavailable",
+		howToUse: "How to use:\n1. Enable Lab API Server above\n2. Configure port and profile path\n3. Restart VS Code (or click Test Connection)\n4. API will be available automatically when Agentario starts",
 	},
 	debug: {
 		resetWorkspace: "Reset Workspace State",

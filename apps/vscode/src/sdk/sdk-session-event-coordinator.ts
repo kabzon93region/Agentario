@@ -1,4 +1,4 @@
-﻿import type { CoreSessionEvent } from "@agentario/core"
+import type { CoreSessionEvent } from "@agentario/core"
 import { refreshAgentarioRecommendedModels } from "@/core/controller/models/refreshAgentarioRecommendedModels"
 import { saveDisplayMessages } from "@core/storage/disk"
 import type { StateManager } from "@/core/storage/StateManager"
@@ -102,10 +102,14 @@ export class SdkSessionEventCoordinator {
 					Logger.debug("[SdkController] turn-complete straggler after cancel; preserving resumable phase")
 				} else if (this.options.messageTranslatorState.wasAttemptCompletionSeen()) {
 					this.options.setTurnPhase?.("completed")
-				} else if (this.options.messageTranslatorState.wasTextGenerationSeen()) {
-					// Agentario: автоподсветка completed для моделей без attempt_completion
-					// (локальные модели, которые не поддерживают tool calling).
-					// Если модель дала текстовый ответ — считаем ход завершённым.
+				} else if (
+					this.options.messageTranslatorState.wasTextGenerationSeen() ||
+					this.hasRecentAssistantText()
+				) {
+					// Local models often finish with plain say:text instead of attempt_completion.
+					// Phase "completed" alone only changes footer buttons — the green box needs
+					// say:"completion_result". Promote the last assistant text in-place.
+					this.promoteLastTextToCompletionResult()
 					this.options.setTurnPhase?.("completed")
 				} else {
 					this.options.setTurnPhase?.("awaiting_followup")
@@ -166,6 +170,50 @@ export class SdkSessionEventCoordinator {
 				Logger.error("[SdkController] Failed to post state after event:", err)
 			})
 		}
+	}
+
+	/** True if the active task already has a non-empty assistant text/completion message. */
+	private hasRecentAssistantText(): boolean {
+		try {
+			const msgs = this.options.getTask()?.messageStateHandler?.getagentarioMessages?.() ?? []
+			for (let i = msgs.length - 1; i >= 0 && i >= msgs.length - 30; i--) {
+				const m = msgs[i]
+				if (m?.type === "say" && (m.say === "text" || m.say === "completion_result") && (m.text || "").trim().length > 40) {
+					return true
+				}
+			}
+		} catch {
+			// ignore
+		}
+		return false
+	}
+
+	/**
+	 * Promote the last say:"text" to say:"completion_result" (same ts → in-place update)
+	 * so the webview renders the green Task Completed box when the model skipped attempt_completion.
+	 */
+	private promoteLastTextToCompletionResult(): boolean {
+		try {
+			const handler = this.options.getTask()?.messageStateHandler
+			if (!handler?.getagentarioMessages || !handler.addMessages) return false
+			const msgs = handler.getagentarioMessages()
+			for (let i = msgs.length - 1; i >= 0; i--) {
+				const m = msgs[i]
+				if (m?.type === "say" && m.say === "completion_result" && (m.text || "").trim().length > 0) {
+					this.options.messageTranslatorState.setAttemptCompletionSeen?.()
+					return true
+				}
+				if (m?.type === "say" && m.say === "text" && (m.text || "").trim().length > 40) {
+					handler.addMessages([{ ...m, say: "completion_result", partial: false }])
+					this.options.messageTranslatorState.setAttemptCompletionSeen?.()
+					Logger.log(`[SdkController] Promoted say:text ts=${m.ts} → completion_result for green highlight`)
+					return true
+				}
+			}
+		} catch (err) {
+			Logger.warn("[SdkController] promoteLastTextToCompletionResult failed:", err)
+		}
+		return false
 	}
 
 	private zeroCostForFreeClineModel(result: TranslationResult): Promise<void> | undefined {

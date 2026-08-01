@@ -10,11 +10,11 @@ Use this skill when you need to:
 
 ## Hidden Mode (Default)
 
-Lab runs VS Code **off-screen** by default (`--window-position=-32000,-32000`). The window is never visible and never steals focus. All interaction happens through the **CDP bridge** (`globalThis.agentario`) — no Playwright UI clicks.
+Lab runs VS Code **off-screen** by default (`--window-position=-32000,-32000`). The window is never visible and never steals focus. All interaction happens through the **native REST API** (port 19231) running inside the extension — no CDP, no Playwright UI clicks.
 
 To see the VS Code window (for visual debugging), use `--visible` flag.
 
-**No "autoclicker"**: Lab does not simulate mouse clicks or keyboard input on the visible UI. Tasks are created via CDP `Runtime.evaluate` calling `globalThis.agentario.initTask()` directly in the extension host.
+**No "autoclicker"**: Lab does not simulate mouse clicks or keyboard input on the visible UI. Tasks are created via REST API calls directly to the extension host (`/api/new_task`).
 
 ## Prerequisites
 
@@ -45,6 +45,27 @@ Wait 10-30 seconds for VS Code to launch. Check status:
 ```bat
 scripts\agentario-lab.cmd status
 ```
+
+### 1b. Connect to Existing VS Code
+
+If you already have VS Code running with Agentario (with `AGENTARIO_API_PORT=19231` in its env), you can control it directly via the REST API:
+
+```bat
+:: Check if extension API is available
+curl http://localhost:19231/health
+
+:: Create task directly
+curl -X POST http://localhost:19231/api/new_task -H "Content-Type: application/json" -d "{\"text\": \"Hello\"}"
+```
+
+Or use the CLI (it automatically detects the API):
+
+```bat
+scripts\agentario-lab.cmd status
+scripts\agentario-lab.cmd new-task "Analyze project"
+```
+
+No console windows, no extra VS Code instances needed when the extension API is running.
 
 ### 2. Create a Task
 
@@ -138,23 +159,42 @@ const exported = await lab.exportChat({ outPath: "Exports/lab-run.md" })
 
 ## curl Commands
 
-All methods accept JSON POST to `http://localhost:19229/api`:
+### Extension REST API (port 19231) — preferred
 
 ```bash
+# Health check
+curl http://localhost:19231/health
+
 # Status
-curl localhost:19229/api -d '{"method":"lab.status"}'
+curl http://localhost:19231/api/status
 
 # New task
-curl localhost:19229/api -d '{"method":"lab.new_task","params":{"text":"Hello"}}'
+curl -X POST http://localhost:19231/api/new_task -H "Content-Type: application/json" -d '{"text":"Hello"}'
+
+# Followup
+curl -X POST http://localhost:19231/api/followup -H "Content-Type: application/json" -d '{"text":"Continue"}'
 
 # Wait idle
-curl localhost:19229/api -d '{"method":"lab.wait_idle","params":{"timeout":600000}}'
+curl http://localhost:19231/api/wait_idle?timeout=600000
 
 # Get messages
-curl localhost:19229/api -d '{"method":"lab.get_messages","params":{"count":20}}'
+curl http://localhost:19231/api/messages?limit=20
 
-# Export
-curl localhost:19229/api -d '{"method":"lab.export_chat","params":{"outPath":"Exports/lab.md"}}'
+# Export chat
+curl "http://localhost:19231/api/export_chat?outPath=Exports/lab.md"
+
+# Export context
+curl http://localhost:19231/api/context
+
+# Cancel
+curl -X POST http://localhost:19231/api/cancel
+```
+
+### Harness API (port 19229) — for lab.run lifecycle
+
+```bash
+# Full automation run
+curl localhost:19229/api -d '{"method":"lab.run","params":{"text":"Analyze project","workspace":"Z:\\T\\TEMO"}}'
 
 # Screenshot
 curl localhost:19229/api -d '{"method":"lab.screenshot"}'
@@ -233,6 +273,7 @@ The lab profile is separate from your main Agentario config, so changes won't af
 
 | What | Where |
 |------|-------|
+| REST API server | `apps/vscode/src/dev/agentario-api-server.ts` |
 | Harness server | `apps/vscode/src/dev/debug-harness/server.ts` |
 | Lab client | `apps/vscode/src/dev/debug-harness/lab-client.ts` |
 | CLI wrapper | `scripts/agentario-lab.cmd` |

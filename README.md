@@ -5,11 +5,11 @@
 <h1 align="center">Agentario</h1>
 
 <p align="center">
-Autonomous coding agent for VS Code — **автономный продукт** для локальных LLM (LM Studio, Ollama). Без аккаунта Cline и без обязательного интернета.
+Autonomous coding agent for VS Code вЂ” **Р°РІС‚РѕРЅРѕРјРЅС‹Р№ РїСЂРѕРґСѓРєС‚** РґР»СЏ Р»РѕРєР°Р»СЊРЅС‹С… LLM (LM Studio, Ollama). Р‘РµР· Р°РєРєР°СѓРЅС‚Р° Cline Рё Р±РµР· РѕР±СЏР·Р°С‚РµР»СЊРЅРѕРіРѕ РёРЅС‚РµСЂРЅРµС‚Р°.
 </p>
 
 <p align="center">
-<strong>Версия расширения: 0.14.54</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+<strong>Р’РµСЂСЃРёСЏ СЂР°СЃС€РёСЂРµРЅРёСЏ: 0.14.57</strong> В· <a href="CHANGELOG.md">Changelog</a> В· <a href="VERSIONING.md">РЎС…РµРјР° РІРµСЂСЃРёР№</a>
 </p>
 
 <div align="center">
@@ -19,7 +19,7 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 <tr>
 <td align="center"><a href="https://github.com/kabzon93region/Agentario"><strong>GitHub</strong></a></td>
 <td align="center"><a href="CHANGELOG.md"><strong>Changelog</strong></a></td>
-<td align="center"><a href="VERSIONING.md"><strong>Версии</strong></a></td>
+<td align="center"><a href="VERSIONING.md"><strong>Р’РµСЂСЃРёРё</strong></a></td>
 <td align="center"><a href="https://github.com/kabzon93region/Agentario#readme" target="_blank"><strong>Docs</strong></a></td>
 </tr>
 </tbody>
@@ -27,100 +27,100 @@ Autonomous coding agent for VS Code — **автономный продукт** 
 
 </div>
 
-## Быстрый старт (VS Code)
+## Р‘С‹СЃС‚СЂС‹Р№ СЃС‚Р°СЂС‚ (VS Code)
 
-1. Соберите или скачайте VSIX: `release/agentario-0.14.48.vsix` (сборка: `build.cmd` на Windows).
-2. VS Code → Extensions → `...` → **Install from VSIX**.
-3. Провайдер **LM Studio** или **Ollama** — см. [настройку LM Studio](#lm-studio-локальная-модель) ниже.
-4. MCP (опционально): `setup-mcp.cmd` — memory, sequential-thinking, playwright, trueline (правка файлов).
+1. РЎРѕР±РµСЂРёС‚Рµ РёР»Рё СЃРєР°С‡Р°Р№С‚Рµ VSIX: `release/agentario-0.14.48.vsix` (СЃР±РѕСЂРєР°: `build.cmd` РЅР° Windows).
+2. VS Code в†’ Extensions в†’ `...` в†’ **Install from VSIX**.
+3. РџСЂРѕРІР°Р№РґРµСЂ **LM Studio** РёР»Рё **Ollama** вЂ” СЃРј. [РЅР°СЃС‚СЂРѕР№РєСѓ LM Studio](#lm-studio-Р»РѕРєР°Р»СЊРЅР°СЏ-РјРѕРґРµР»СЊ) РЅРёР¶Рµ.
+4. MCP (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ): `setup-mcp.cmd` вЂ” memory, sequential-thinking, playwright, trueline (РїСЂР°РІРєР° С„Р°Р№Р»РѕРІ).
 
-### Автономный режим (без Cline cloud)
+### РђРІС‚РѕРЅРѕРјРЅС‹Р№ СЂРµР¶РёРј (Р±РµР· Cline cloud)
 
-Agentario поставляется с `endpoints.json` в VSIX → режим **selfHosted**:
+Agentario РїРѕСЃС‚Р°РІР»СЏРµС‚СЃСЏ СЃ `endpoints.json` РІ VSIX в†’ СЂРµР¶РёРј **selfHosted**:
 
-- **Не нужен** аккаунт Cline, OAuth и интернет для работы чата (достаточно LM Studio / Ollama).
-- Облачные провайдеры Cline (`cline`, `cline-pass`) скрыты; телеметрия и remote config отключены.
-- MCP — локальные процессы через `npx` (первый запуск может потребовать npm; для offline см. `setup-mcp.cmd` с кэшем пакетов).
-- Свой `~/.agentario/endpoints.json` — см. `config/agentario-endpoints.json`.
-- **Системный промпт и Rules:** см. [config/PROMPTS_AND_RULES.md](config/PROMPTS_AND_RULES.md).
+- **РќРµ РЅСѓР¶РµРЅ** Р°РєРєР°СѓРЅС‚ Cline, OAuth Рё РёРЅС‚РµСЂРЅРµС‚ РґР»СЏ СЂР°Р±РѕС‚С‹ С‡Р°С‚Р° (РґРѕСЃС‚Р°С‚РѕС‡РЅРѕ LM Studio / Ollama).
+- РћР±Р»Р°С‡РЅС‹Рµ РїСЂРѕРІР°Р№РґРµСЂС‹ Cline (`cline`, `cline-pass`) СЃРєСЂС‹С‚С‹; С‚РµР»РµРјРµС‚СЂРёСЏ Рё remote config РѕС‚РєР»СЋС‡РµРЅС‹.
+- MCP вЂ” Р»РѕРєР°Р»СЊРЅС‹Рµ РїСЂРѕС†РµСЃСЃС‹ С‡РµСЂРµР· `npx` (РїРµСЂРІС‹Р№ Р·Р°РїСѓСЃРє РјРѕР¶РµС‚ РїРѕС‚СЂРµР±РѕРІР°С‚СЊ npm; РґР»СЏ offline СЃРј. `setup-mcp.cmd` СЃ РєСЌС€РµРј РїР°РєРµС‚РѕРІ).
+- РЎРІРѕР№ `~/.agentario/endpoints.json` вЂ” СЃРј. `config/agentario-endpoints.json`.
+- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ Рё Rules:** СЃРј. [config/PROMPTS_AND_RULES.md](config/PROMPTS_AND_RULES.md).
 
-### Сборка (Windows)
+### РЎР±РѕСЂРєР° (Windows)
 
-### Сборка и релиз (Windows)
+### РЎР±РѕСЂРєР° Рё СЂРµР»РёР· (Windows)
 
 ```bat
 build.cmd
 publish-release.cmd
 ```
 
-- **`build.cmd`** → `release/agentario-<version>.vsix`
-- **`publish-release.cmd`** → GitHub: commit, tag, Release + VSIX ([config/RELEASE.md](config/RELEASE.md))
+- **`build.cmd`** в†’ `release/agentario-<version>.vsix`
+- **`publish-release.cmd`** в†’ GitHub: commit, tag, Release + VSIX ([config/RELEASE.md](config/RELEASE.md))
 
-### LM Studio (локальная модель)
+### LM Studio (Р»РѕРєР°Р»СЊРЅР°СЏ РјРѕРґРµР»СЊ)
 
-| Где | Что |
+| Р“РґРµ | Р§С‚Рѕ |
 |-----|-----|
-| **Сервер LM Studio** | Загрузить модель, Local Server, порт `1234`, доступ по LAN |
-| **VS Code + Agentario** | Провайдер LM Studio, URL `http://<ip>:1234`, выбрать загруженную модель |
+| **РЎРµСЂРІРµСЂ LM Studio** | Р—Р°РіСЂСѓР·РёС‚СЊ РјРѕРґРµР»СЊ, Local Server, РїРѕСЂС‚ `1234`, РґРѕСЃС‚СѓРї РїРѕ LAN |
+| **VS Code + Agentario** | РџСЂРѕРІР°Р№РґРµСЂ LM Studio, URL `http://<ip>:1234`, РІС‹Р±СЂР°С‚СЊ Р·Р°РіСЂСѓР¶РµРЅРЅСѓСЋ РјРѕРґРµР»СЊ |
 
-MCP и индексация codebase работают на **ПК с VS Code**, не на машине с LM Studio.
+MCP Рё РёРЅРґРµРєСЃР°С†РёСЏ codebase СЂР°Р±РѕС‚Р°СЋС‚ РЅР° **РџРљ СЃ VS Code**, РЅРµ РЅР° РјР°С€РёРЅРµ СЃ LM Studio.
 
-#### Генерация: thinking budget ≠ лимит ответа
+#### Р“РµРЅРµСЂР°С†РёСЏ: thinking budget в‰  Р»РёРјРёС‚ РѕС‚РІРµС‚Р°
 
-В LM Studio это **разные** настройки:
+Р’ LM Studio СЌС‚Рѕ **СЂР°Р·РЅС‹Рµ** РЅР°СЃС‚СЂРѕР№РєРё:
 
-| Параметр | Что ограничивает |
+| РџР°СЂР°РјРµС‚СЂ | Р§С‚Рѕ РѕРіСЂР°РЅРёС‡РёРІР°РµС‚ |
 |----------|------------------|
-| **Thinking / reasoning budget** | Только блок размышлений; после лимита модель закрывает thinking и пишет ответ |
-| **Max tokens / длина ответа** | Вся генерация (thinking + ответ + tool calls) |
+| **Thinking / reasoning budget** | РўРѕР»СЊРєРѕ Р±Р»РѕРє СЂР°Р·РјС‹С€Р»РµРЅРёР№; РїРѕСЃР»Рµ Р»РёРјРёС‚Р° РјРѕРґРµР»СЊ Р·Р°РєСЂС‹РІР°РµС‚ thinking Рё РїРёС€РµС‚ РѕС‚РІРµС‚ |
+| **Max tokens / РґР»РёРЅР° РѕС‚РІРµС‚Р°** | Р’СЃСЏ РіРµРЅРµСЂР°С†РёСЏ (thinking + РѕС‚РІРµС‚ + tool calls) |
 
-Если оба стоят на **512**, размышление может съесть почти весь бюджет — отчёт в чате оборвётся mid-sentence (`out: 512`). С **0.14.36** Agentario для LM Studio/Ollama шлёт `maxTokensPerTurn = 4096`. В UI LM Studio тоже снимите жёсткий потолок ответа (или поставьте ≥ 2–4k), если нужны длинные итоги.
+Р•СЃР»Рё РѕР±Р° СЃС‚РѕСЏС‚ РЅР° **512**, СЂР°Р·РјС‹С€Р»РµРЅРёРµ РјРѕР¶РµС‚ СЃСЉРµСЃС‚СЊ РїРѕС‡С‚Рё РІРµСЃСЊ Р±СЋРґР¶РµС‚ вЂ” РѕС‚С‡С‘С‚ РІ С‡Р°С‚Рµ РѕР±РѕСЂРІС‘С‚СЃСЏ mid-sentence (`out: 512`). РЎ **0.14.36** Agentario РґР»СЏ LM Studio/Ollama С€Р»С‘С‚ `maxTokensPerTurn = 4096`. Р’ UI LM Studio С‚РѕР¶Рµ СЃРЅРёРјРёС‚Рµ Р¶С‘СЃС‚РєРёР№ РїРѕС‚РѕР»РѕРє РѕС‚РІРµС‚Р° (РёР»Рё РїРѕСЃС‚Р°РІСЊС‚Рµ в‰Ґ 2вЂ“4k), РµСЃР»Рё РЅСѓР¶РЅС‹ РґР»РёРЅРЅС‹Рµ РёС‚РѕРіРё.
 
-#### Индексация (embeddings)
+#### РРЅРґРµРєСЃР°С†РёСЏ (embeddings)
 
-- Нужна модель в **embedding-слоте** LM Studio (type `embeddings` в API), не chat-модель из LLM-слота.
-- Модель вроде `lfm2.5-embedding-350m`: **My Models → ⚙️ → Domain Type → Embedding**, затем Load в Developer.
-- После смены domain контекст embedding-модели может уменьшиться (например 120k → 20k) — это нормально для экономии VRAM.
-- Подробно: [`config/lmstudio-indexing.md`](config/lmstudio-indexing.md).
+- РќСѓР¶РЅР° РјРѕРґРµР»СЊ РІ **embedding-СЃР»РѕС‚Рµ** LM Studio (type `embeddings` РІ API), РЅРµ chat-РјРѕРґРµР»СЊ РёР· LLM-СЃР»РѕС‚Р°.
+- РњРѕРґРµР»СЊ РІСЂРѕРґРµ `lfm2.5-embedding-350m`: **My Models в†’ вљ™пёЏ в†’ Domain Type в†’ Embedding**, Р·Р°С‚РµРј Load РІ Developer.
+- РџРѕСЃР»Рµ СЃРјРµРЅС‹ domain РєРѕРЅС‚РµРєСЃС‚ embedding-РјРѕРґРµР»Рё РјРѕР¶РµС‚ СѓРјРµРЅСЊС€РёС‚СЊСЃСЏ (РЅР°РїСЂРёРјРµСЂ 120k в†’ 20k) вЂ” СЌС‚Рѕ РЅРѕСЂРјР°Р»СЊРЅРѕ РґР»СЏ СЌРєРѕРЅРѕРјРёРё VRAM.
+- РџРѕРґСЂРѕР±РЅРѕ: [`config/lmstudio-indexing.md`](config/lmstudio-indexing.md).
 
-#### LM Studio без GUI (headless)
+#### LM Studio Р±РµР· GUI (headless)
 
-На ПК с сервером LM Studio можно не держать окно приложения:
+РќР° РџРљ СЃ СЃРµСЂРІРµСЂРѕРј LM Studio РјРѕР¶РЅРѕ РЅРµ РґРµСЂР¶Р°С‚СЊ РѕРєРЅРѕ РїСЂРёР»РѕР¶РµРЅРёСЏ:
 
 ```bat
 scripts\lmstudio-headless-server.cmd
 ```
 
-Режим `restore` — `lms daemon up` + `lms server start` (последние настройки загрузки из LM Studio).  
-Режим `load` — явная загрузка chat + embedding с `--context-length` из скрипта.  
-Документация LM Studio: [headless](https://lmstudio.ai/docs/developer/core/headless), [lms CLI](https://lmstudio.ai/docs/cli).
+Р РµР¶РёРј `restore` вЂ” `lms daemon up` + `lms server start` (РїРѕСЃР»РµРґРЅРёРµ РЅР°СЃС‚СЂРѕР№РєРё Р·Р°РіСЂСѓР·РєРё РёР· LM Studio).  
+Р РµР¶РёРј `load` вЂ” СЏРІРЅР°СЏ Р·Р°РіСЂСѓР·РєР° chat + embedding СЃ `--context-length` РёР· СЃРєСЂРёРїС‚Р°.  
+Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ LM Studio: [headless](https://lmstudio.ai/docs/developer/core/headless), [lms CLI](https://lmstudio.ai/docs/cli).
 
 ### MCP
 
-**Требуется Node.js LTS** (для stdio-серверов: memory, sequential-thinking, playwright). VS Code не видит `npx`, если Node не в **системном** PATH — скрипт `setup-mcp.cmd` прописывает полный путь к `npx.cmd`.
+**РўСЂРµР±СѓРµС‚СЃСЏ Node.js LTS** (РґР»СЏ stdio-СЃРµСЂРІРµСЂРѕРІ: memory, sequential-thinking, playwright). VS Code РЅРµ РІРёРґРёС‚ `npx`, РµСЃР»Рё Node РЅРµ РІ **СЃРёСЃС‚РµРјРЅРѕРј** PATH вЂ” СЃРєСЂРёРїС‚ `setup-mcp.cmd` РїСЂРѕРїРёСЃС‹РІР°РµС‚ РїРѕР»РЅС‹Р№ РїСѓС‚СЊ Рє `npx.cmd`.
 
 ```bat
 setup-mcp.cmd
 ```
 
-Конфиг: `%USERPROFILE%\.agentario\data\settings\agentario_mcp_settings.json` (legacy: `.cline\...\cline_mcp_settings.json`). Шаблон: `config/agentario-recommended-mcp.json`.
+РљРѕРЅС„РёРі: `%USERPROFILE%\.agentario\data\settings\agentario_mcp_settings.json` (legacy: `.cline\...\cline_mcp_settings.json`). РЁР°Р±Р»РѕРЅ: `config/agentario-recommended-mcp.json`.
 
-Playwright MCP (опционально):
+Playwright MCP (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ):
 
 ```powershell
 & "C:\path\to\npx.cmd" playwright install chromium
 ```
 
-### Правила и конфигурация
+### РџСЂР°РІРёР»Р° Рё РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ
 
-| Область | Путь |
+| РћР±Р»Р°СЃС‚СЊ | РџСѓС‚СЊ |
 |---------|------|
-| Глобальные правила | `Documents\Agentario\Rules\` |
-| Данные расширения | `%USERPROFILE%\.agentario\` |
-| Правила проекта | `.agentariorules` или `.agentario\rules\` |
-| Исключения файлов | `.agentarioignore` (legacy: `.clineignore`) |
+| Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїСЂР°РІРёР»Р° | `Documents\Agentario\Rules\` |
+| Р”Р°РЅРЅС‹Рµ СЂР°СЃС€РёСЂРµРЅРёСЏ | `%USERPROFILE%\.agentario\` |
+| РџСЂР°РІРёР»Р° РїСЂРѕРµРєС‚Р° | `.agentariorules` РёР»Рё `.agentario\rules\` |
+| РСЃРєР»СЋС‡РµРЅРёСЏ С„Р°Р№Р»РѕРІ | `.agentarioignore` (legacy: `.clineignore`) |
 
-Старые пути Cline (`.cline`, `.clinerules`, `Documents\Cline`) по-прежнему читаются для совместимости.
+РЎС‚Р°СЂС‹Рµ РїСѓС‚Рё Cline (`.cline`, `.clinerules`, `Documents\Cline`) РїРѕ-РїСЂРµР¶РЅРµРјСѓ С‡РёС‚Р°СЋС‚СЃСЏ РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё.
 
 ---
 
@@ -235,7 +235,7 @@ npm install @cline/sdk
 
 | Product | Description | Location | CHANGELOG |
 |---------|------------|--------------|--------------|
-| **Agentario (VS Code)** | Форк Cline: русский UI, LM Studio, сборка Windows, MCP-шаблоны. | [`apps/vscode/`](apps/vscode/) | [CHANGELOG.md](CHANGELOG.md) |
+| **Agentario (VS Code)** | Р¤РѕСЂРє Cline: СЂСѓСЃСЃРєРёР№ UI, LM Studio, СЃР±РѕСЂРєР° Windows, MCP-С€Р°Р±Р»РѕРЅС‹. | [`apps/vscode/`](apps/vscode/) | [CHANGELOG.md](CHANGELOG.md) |
 | **SDK** | Node.js programmatic agent API (upstream). | [`sdk/`](sdk/) | [sdk/CHANGELOG.md](sdk/CHANGELOG.md) |
 | **CLI** | Terminal UI (upstream). | [`apps/cli/`](apps/cli/) | [apps/cli/CHANGELOG.md](apps/cli/CHANGELOG.md) |
 
@@ -336,8 +336,8 @@ cline --json "List all TODO comments" | jq -r 'select(.type == "agent_event" and
 
 ## Contributing
 
-Форк поддерживается в [kabzon93region/Agentario](https://github.com/kabzon93region/Agentario). Upstream: [cline/cline](https://github.com/cline/cline) — см. [CONTRIBUTING.md](CONTRIBUTING.md).
+Р¤РѕСЂРє РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ РІ [kabzon93region/Agentario](https://github.com/kabzon93region/Agentario). Upstream: [cline/cline](https://github.com/cline/cline) вЂ” СЃРј. [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[Apache 2.0 © 2026 Cline Bot Inc.](./LICENSE) — форк Agentario распространяется на тех же условиях.
+[Apache 2.0 В© 2026 Cline Bot Inc.](./LICENSE) вЂ” С„РѕСЂРє Agentario СЂР°СЃРїСЂРѕСЃС‚СЂР°РЅСЏРµС‚СЃСЏ РЅР° С‚РµС… Р¶Рµ СѓСЃР»РѕРІРёСЏС….

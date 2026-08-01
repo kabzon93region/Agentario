@@ -18,8 +18,9 @@ export const DEFAULT_THRESHOLD_RATIO = 0.9;
 export const DEFAULT_TARGET_RATIO = 0.7;
 export const DEFAULT_RESERVE_TOKENS = 16_384;
 export const DEFAULT_PRESERVE_RECENT_TOKENS = 20_000;
-// Agentario: fallback — переопределяется динамически из chunkSize в runAgenticCompaction
-export const DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS = 4096;
+// Agentario: fallback — переопределяется динамически из chunkSize в runAgenticCompaction.
+// 16384 достаточно для reasoning-моделей (qwen и др.), которые тратят ~4000 токенов на thinking.
+export const DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS = 16384;
 export const TOOL_RESULT_CHAR_LIMIT = 2_000;
 export const FILE_CONTENT_CHAR_LIMIT = 2_000;
 export const MIN_TRUNCATED_MESSAGE_TOKENS = 8;
@@ -476,11 +477,11 @@ export function createTokenEstimator(
 							formatToolInput(block.input).length;
 						break;
 					case "tool_result":
+						// Всегда считаем полный размер — buildSummarizationUnits использует
+						// flattenToolResultContentFull (без лимита), estimator должен совпадать
 						contentLength +=
 							"[Tool result]: ".length +
-							(forProvider
-								? estimateToolResultProviderLength(block.content)
-								: estimateToolResultSerializedLength(block.content));
+							estimateToolResultProviderLength(block.content);
 						break;
 					case "file":
 						contentLength +=
@@ -500,17 +501,6 @@ export function createTokenEstimator(
 		cache.set(ref, value);
 		return value;
 	};
-}
-
-/**
- * Оценивает длину сериализованного tool_result после flattenToolResultContent().
- * Учитывает лимиты truncateToolResultContentForCompaction().
- */
-function estimateToolResultSerializedLength(content: unknown): number {
-	return estimateToolResultLength(content, {
-		textLimit: TOOL_RESULT_CHAR_LIMIT,
-		fileLimit: FILE_CONTENT_CHAR_LIMIT,
-	});
 }
 
 /** Full length of tool_result as present in API-prepared messages (no extra 2k cap). */
@@ -650,6 +640,90 @@ export function findLastAssistantIndex(
 		}
 	}
 	return -1;
+}
+
+/**
+ * Agentario: Find the last assistant message with a substantive text block.
+ * A "substantive" assistant message has at least one `type: "text"` block
+ * with non-empty content (not just thinking / tool_use / tool_result).
+ * Returns -1 if none found.
+ */
+export function findLastSubstantiveAssistantIndex(
+	messages: MessageWithMetadata[],
+): number {
+	for (let index = messages.length - 1; index >= 0; index -= 1) {
+		const msg = messages[index];
+		if (msg.role !== "assistant") {
+			continue;
+		}
+		if (typeof msg.content === "string" && msg.content.trim().length > 0) {
+			return index;
+		}
+		if (Array.isArray(msg.content)) {
+			const hasText = msg.content.some(
+				(block) =>
+					block.type === "text" &&
+					"text" in block &&
+					typeof block.text === "string" &&
+					block.text.trim().length > 0,
+			);
+			if (hasText) {
+				return index;
+			}
+		}
+	}
+	return -1;
+}
+
+export interface WrapUpRange {
+	/** Index of the first turn-start user message (the task / first question). */
+	preserveFirst: number;
+	/** Index of the last assistant message with substantive text (the final answer). */
+	preserveLast: number;
+	/** Index where folding starts (preserveFirst + 1). */
+	foldStart: number;
+	/** Index where folding ends (preserveLast, exclusive). */
+	foldEnd: number;
+}
+
+/**
+ * Agentario: Compute the wrap-up range for forced/compaction.
+ *
+ * For a completed dialogue the structure is typically:
+ *   [0] user task       ← preserveFirst
+ *   [1..N-1] tools/thinking/file-results  ← fold these
+ *   [N] assistant text  ← preserveLast
+ *
+ * Returns `null` when:
+ *   - fewer than 3 messages
+ *   - no first turn-start user message
+ *   - no substantive assistant answer (agent still mid-flight)
+ *   - first and last are the same (nothing to fold)
+ */
+export function findWrapUpRange(
+	messages: MessageWithMetadata[],
+): WrapUpRange | null {
+	if (messages.length < 3) {
+		return null;
+	}
+	const preserveFirst = findFirstUserMessageIndex(messages);
+	if (preserveFirst < 0) {
+		return null;
+	}
+	const preserveLast = findLastSubstantiveAssistantIndex(messages);
+	if (preserveLast < 0) {
+		return null;
+	}
+	// Nothing between first and last — nothing to fold.
+	if (preserveLast <= preserveFirst + 1) {
+		return null;
+	}
+	return {
+		preserveFirst,
+		preserveLast,
+		foldStart: preserveFirst + 1,
+		foldEnd: preserveLast,
+	};
 }
 
 export function findLatestSummaryIndex(
@@ -834,6 +908,33 @@ export const DEFAULT_PROMPT_BEFORE = `Ты — компрессор(суммар
 
 export const DEFAULT_PROMPT_AFTER = `Выводи мне в ответ только обработанный диалог с сжатыми тобой сообщениями, без кавычек, без предисловий "Вот сжатое сообщение".`;
 
+// Agentario: wrap-up промпт — для принудительной суммаризации завершённого диалога.
+// Сохраняет якоря (задание + финальный ответ), сжимает промежуточную работу.
+export const WRAP_UP_PROMPT_BEFORE = `Ты — компрессор текста для принудительной суммаризации завершённого диалога. Твоя задача — сжать ПРОМЕЖУТОЧНУЮ работу (вызовы инструментов, чтение файлов, thinking-блоки, промежуточные действия) в краткий связный итог.
+
+Первое сообщение (задание пользователя) и последнее (финальный ответ агента) ты НЕ сжимаешь — они остаются как есть. Твоя задача — сжать ВСЁ между ними.
+
+Правила:
+1. Оставь только суть: что делали, какие файлы читали/писали, какие команды выполняли, какие выводы сделали по ходу.
+2. Для прочитанных файлов — краткая характеристика (назначение, ключевые функции/выводы), без сырого кода.
+3. Удали служебные маркеры (Tool calls, Thinking, Completed, пути к файлам, diff-блоки).
+4. Формат: один связный абзац или несколько кратких тезисов.
+5. Обязательно добавь секцию:
+## Находки из файлов
+- путь: краткое описание (назначение, ключевые элементы)
+
+6. В конце (перед финальным ответом) — список прочитанных/изменённых файлов (пути).`;
+
+export const WRAP_UP_PROMPT_AFTER = `Выводи ответ строго в формате:
+[сжатый итог промежуточной работы]
+## Находки из файлов
+- ...
+## Files
+Read:
+- ...
+Modified:
+- ...`;
+
 export function buildSummaryRequest(options: {
 	previousSummary?: string;
 	conversationText: string;
@@ -842,6 +943,8 @@ export function buildSummaryRequest(options: {
 	promptTemplateBefore?: string;
 	/** Agentario: custom prompt template part AFTER the conversation text */
 	promptTemplateAfter?: string;
+	/** Agentario: use wrap-up prompts (preserves anchors, compresses middle) */
+	wrapUp?: boolean;
 }): string {
 	// Agentario: строго по шаблону — промпт + диалог
 	// Если есть предыдущая суммаризация, добавляем её в начало диалога
@@ -850,6 +953,13 @@ export function buildSummaryRequest(options: {
 		dialogContent = `[Предыдущая суммаризация]\n${options.previousSummary.trim()}\n\n${options.conversationText || "(пусто)"}`;
 	} else {
 		dialogContent = options.conversationText || "(пусто)";
+	}
+
+	// Agentario: wrap-up mode — используем специальный промпт для принудительной суммаризации
+	if (options.wrapUp) {
+		const before = options.promptTemplateBefore?.trim() || WRAP_UP_PROMPT_BEFORE;
+		const after = options.promptTemplateAfter?.trim() || WRAP_UP_PROMPT_AFTER;
+		return `${before}\n\n--- НАЧАЛО ДИАЛОГА ---\n${dialogContent}\n--- КОНЕЦ ДИАЛОГА ---\n\n${after}`;
 	}
 
 	// Agentario: если задан пользовательский шаблон — используем его

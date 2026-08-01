@@ -8,6 +8,8 @@ import {
 	buildSummarizationUnits,
 	createTokenEstimator,
 	findCutIndex,
+	findLastSubstantiveAssistantIndex,
+	findWrapUpRange,
 	packSummarizationUnits,
 	resolveSummarizerConfig,
 	serializeMessage,
@@ -2098,5 +2100,92 @@ describe("findCutIndex Agentario cutIndex=0 guard", () => {
 		const cut = findCutIndex(messages, 50_000, estimate);
 		expect(cut).toBe(2);
 		expect(cut).toBeGreaterThan(0);
+	});
+});
+
+describe("findLastSubstantiveAssistantIndex", () => {
+	it("returns last assistant with text block", () => {
+		const messages = [
+			{ role: "user" as const, content: "task" },
+			{ role: "assistant" as const, content: [{ type: "tool_use", id: "t1", name: "read_files", input: {} }] },
+			{ role: "assistant" as const, content: [{ type: "text", text: "Here is the result" }] },
+		];
+		expect(findLastSubstantiveAssistantIndex(messages)).toBe(2);
+	});
+
+	it("returns -1 when no assistant has text", () => {
+		const messages = [
+			{ role: "user" as const, content: "task" },
+			{ role: "assistant" as const, content: [{ type: "tool_use", id: "t1", name: "read_files", input: {} }] },
+		];
+		expect(findLastSubstantiveAssistantIndex(messages)).toBe(-1);
+	});
+
+	it("handles string content", () => {
+		const messages = [
+			{ role: "user" as const, content: "task" },
+			{ role: "assistant" as const, content: "final answer" },
+		];
+		expect(findLastSubstantiveAssistantIndex(messages)).toBe(1);
+	});
+});
+
+describe("findWrapUpRange", () => {
+	it("returns null for fewer than 3 messages", () => {
+		expect(findWrapUpRange([
+			{ role: "user" as const, content: "task" },
+			{ role: "assistant" as const, content: "answer" },
+		])).toBeNull();
+	});
+
+	it("returns null when no substantive assistant answer exists", () => {
+		expect(findWrapUpRange([
+			{ role: "user" as const, content: "task" },
+			{ role: "assistant" as const, content: [{ type: "tool_use", id: "t1", name: "read_files", input: {} }] },
+			{ role: "user" as const, content: [{ type: "tool_result", tool_use_id: "t1", name: "tool", content: "result" }] },
+		])).toBeNull();
+	});
+
+	it("returns range for single-turn completed dialogue", () => {
+		const messages = [
+			{ role: "user" as const, content: "Analyze the project" },
+			{ role: "assistant" as const, content: [{ type: "tool_use", id: "t1", name: "read_files", input: {} }] },
+			{ role: "user" as const, content: [{ type: "tool_result", tool_use_id: "t1", name: "tool", content: "file contents" }] },
+			{ role: "assistant" as const, content: "The project is a web app." },
+		];
+		const range = findWrapUpRange(messages);
+		expect(range).not.toBeNull();
+		expect(range!.preserveFirst).toBe(0);
+		expect(range!.preserveLast).toBe(3);
+		expect(range!.foldStart).toBe(1);
+		expect(range!.foldEnd).toBe(3);
+	});
+
+	it("returns null when first and last are adjacent (nothing to fold)", () => {
+		const messages = [
+			{ role: "user" as const, content: "task" },
+			{ role: "assistant" as const, content: "answer" },
+		];
+		// Only 2 messages — returns null from the < 3 guard
+		expect(findWrapUpRange(messages)).toBeNull();
+	});
+
+	it("handles multi-turn dialogue with tool pairs in the middle", () => {
+		const messages = [
+			{ role: "user" as const, content: "Initial task" },
+			{ role: "assistant" as const, content: [{ type: "tool_use", id: "t1", name: "read_files", input: {} }] },
+			{ role: "user" as const, content: [{ type: "tool_result", tool_use_id: "t1", name: "tool", content: "result" }] },
+			{ role: "assistant" as const, content: "Intermediate answer" },
+			{ role: "user" as const, content: "Continue" },
+			{ role: "assistant" as const, content: [{ type: "tool_use", id: "t2", name: "read_files", input: {} }] },
+			{ role: "user" as const, content: [{ type: "tool_result", tool_use_id: "t2", name: "tool", content: "result2" }] },
+			{ role: "assistant" as const, content: "Final answer with findings" },
+		];
+		const range = findWrapUpRange(messages);
+		expect(range).not.toBeNull();
+		expect(range!.preserveFirst).toBe(0);
+		expect(range!.preserveLast).toBe(7);
+		expect(range!.foldStart).toBe(1);
+		expect(range!.foldEnd).toBe(7);
 	});
 });

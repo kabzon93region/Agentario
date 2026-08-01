@@ -1,7 +1,8 @@
-﻿export interface WebviewMessage {
-	type: "grpc_request" | "grpc_request_cancel"
+export interface WebviewMessage {
+	type: "grpc_request" | "grpc_request_cancel" | "lab_api_request"
 	grpc_request?: GrpcRequest
 	grpc_request_cancel?: GrpcCancel
+	lab_api_request?: LabApiRequest
 }
 
 export type GrpcRequest = {
@@ -14,6 +15,13 @@ export type GrpcRequest = {
 
 export type GrpcCancel = {
 	request_id: string // ID of the request to cancel
+}
+
+export type LabApiRequest = {
+	request_id: string
+	path: string // e.g. "/health"
+	method?: string // default GET
+	body?: any
 }
 
 export type AgentarioAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"

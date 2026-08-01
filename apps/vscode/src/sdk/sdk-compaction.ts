@@ -39,6 +39,8 @@ export interface CompactSessionMessagesInput {
 export interface CompactSessionMessagesResult {
 	compacted: boolean
 	messages: SdkMessage[]
+	/** Agentario: specific reason when compaction was skipped or failed */
+	reason?: string
 }
 
 /**
@@ -86,7 +88,7 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 	)
 	if (!compact) {
 		Logger.warn("[SdkCompaction] Compaction prepareTurn unavailable; skipping manual compaction")
-		return { compacted: false, messages: input.messages }
+		return { compacted: false, messages: input.messages, reason: "prepareTurn_unavailable" }
 	}
 
 	const result = await compact({
@@ -113,18 +115,18 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 	// Agentario: логируем результат для диагностики
 	Logger.info(`[SdkCompaction] compact() returned: ${result ? "object" : "null"}, input.messages.length=${input.messages.length}`)
 	if (result) {
-		Logger.info(`[SdkCompaction] result.messages.length=${result.messages.length}, sameRef=${result.messages === input.messages}`)
+		Logger.info(`[SdkCompaction] result.messages.length=${result.messages.length}, sameRef=${result.messages === input.messages}, skipReason=${result.skipReason ?? "none"}`)
 	}
 
 	if (!result) {
 		Logger.warn("[SdkCompaction] compact() returned null/undefined")
-		return { compacted: false, messages: input.messages }
+		return { compacted: false, messages: input.messages, reason: "compact_returned_null" }
 	}
 	// Если messages - та же ссылка, считаем что не сжато
 	if (result.messages === input.messages) {
 		Logger.warn(`[SdkCompaction] compact() returned same reference (${result.messages.length} items)`)
-		return { compacted: false, messages: input.messages }
+		return { compacted: false, messages: input.messages, reason: result.skipReason ?? "same_reference" }
 	}
-	Logger.info(`[SdkCompaction] compact() succeeded: ${input.messages.length} -> ${result.messages.length} messages`)
-	return { compacted: true, messages: result.messages }
+	Logger.info(`[SdkCompaction] compact() succeeded: ${input.messages.length} -> ${result.messages.length} messages, skipReason=${result.skipReason ?? "none"}`)
+	return { compacted: true, messages: result.messages, reason: result.skipReason }
 }

@@ -71,6 +71,8 @@ export interface CoreCompactionContext {
 
 export interface CoreCompactionResult {
 	messages: MessageWithMetadata[];
+	/** Agentario: specific reason when compaction was skipped or result is partial */
+	skipReason?: string;
 }
 
 export interface CoreCompactionSummarizerConfig {

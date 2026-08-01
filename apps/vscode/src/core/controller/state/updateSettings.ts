@@ -395,6 +395,18 @@ export async function updateSettings(controller: Controller, request: UpdateSett
 			controller.stateManager.setGlobalState("astNavigatorEnabled", request.astNavigatorEnabled)
 		}
 
+		// Agentario: Lab API Server settings
+		if (request.labApiEnabled !== undefined) {
+			controller.stateManager.setGlobalState("labApiEnabled", request.labApiEnabled)
+		}
+		if (request.labApiPort !== undefined) {
+			controller.stateManager.setGlobalState("labApiPort", request.labApiPort)
+		}
+		if (request.labClineDir !== undefined) {
+			const trimmed = request.labClineDir.trim()
+			controller.stateManager.setGlobalState("labClineDir", trimmed.length > 0 ? trimmed : "")
+		}
+
 		// Post updated state to webview — skip if preset was applied since
 		// applyModelProfilePreset already called postStateToWebview directly.
 		if (!presetApplied) {

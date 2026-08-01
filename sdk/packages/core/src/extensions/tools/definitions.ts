@@ -331,6 +331,21 @@ export function createReadFilesTool(
 
 					const normalizedPath = pathText.replace(/\\/g, "/").toLowerCase();
 					const prior = pathReadCounts.get(normalizedPath) ?? 0;
+					// Block full-file re-reads after the first successful read (same path, no new range).
+					const hasRange =
+						typeof (request as { start_line?: number }).start_line === "number" ||
+						typeof (request as { end_line?: number }).end_line === "number";
+					if (normalizedPath && prior >= 1 && !hasRange) {
+						return {
+							query: formatReadFileQuery(request),
+							result: "",
+							error:
+								`Already read "${pathText}" ${prior} time(s). Do NOT re-read the whole file. ` +
+								"Synthesize what you know and call attempt_completion. " +
+								"For another section, pass a different start_line/end_line once; otherwise finish.",
+							success: false,
+						};
+					}
 					if (normalizedPath && prior >= 2) {
 						return {
 							query: formatReadFileQuery(request),
@@ -382,9 +397,22 @@ function isNaturalLanguageSearchQuery(query: string): boolean {
 	return false;
 }
 
+/** Model fakes semantic_search by stuffing "semantic: ..." into search_codebase regex. */
+function isFakeSemanticSearchQuery(query: string): boolean {
+	const q = query.trim();
+	if (/^semantic\s*:/i.test(q)) return true;
+	if (/^sem(?:antic)?[_\s-]?search\s*:/i.test(q)) return true;
+	return false;
+}
+
 const NATURAL_LANGUAGE_SEARCH_ERROR =
 	"search_codebase expects a regex/symbol pattern (e.g. function name, import path), not a natural-language sentence. " +
-	"Use semantic_search for meaning-based discovery, then read_files on the returned paths.";
+	"If semantic_search is in your tools list, use it for meaning-based discovery; otherwise use read_files on paths from git status / known root files.";
+
+const FAKE_SEMANTIC_SEARCH_ERROR =
+	'Invalid search_codebase query: do NOT pass "semantic: ..." into regex. ' +
+	"That is not a regex pattern. If semantic_search is available, call it with a short topic; " +
+	"if it is NOT in your tools list, use read_files on paths from git status (README.md, rules.md, *.py/*.ts in root) or a real regex symbol name.";
 
 function isFileRangePseudoQuery(query: string): boolean {
 	const q = query.trim();
@@ -476,6 +504,9 @@ export function createSearchTool(
 				queries.map(async (query): Promise<ToolOperationResult> => {
 					if (typeof query === "string" && isFileRangePseudoQuery(query)) {
 						return { query, result: "", error: FILE_RANGE_QUERY_ERROR, success: false };
+					}
+					if (typeof query === "string" && isFakeSemanticSearchQuery(query)) {
+						return { query, result: "", error: FAKE_SEMANTIC_SEARCH_ERROR, success: false };
 					}
 					if (typeof query === "string" && isNaturalLanguageSearchQuery(query)) {
 						return { query, result: "", error: NATURAL_LANGUAGE_SEARCH_ERROR, success: false };

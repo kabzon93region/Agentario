@@ -22,6 +22,7 @@ import {
 	extractFileOps,
 	findCutIndex,
 	findLatestSummaryIndex,
+	findWrapUpRange,
 	getCompactionSummaryMetadata,
 	isOverallPictureMessage,
 	packSummarizationUnits,
@@ -353,25 +354,57 @@ async function generateSummary(options: {
 		const reasoningTokens = estimateTokens(reasoningText.length);
 		const inputTokens = estimateTokens(options.request.length);
 		// If reasoning is more than 1.5x the input, it's thinking — not a summary.
+		// Agentario: retry with /no_think suffix before giving up.
 		if (reasoningTokens > inputTokens * 1.5) {
 			const errorMsg = `Summarizer produced only reasoning (${reasoningTokens} tokens, input ${inputTokens} tokens, ratio ${(reasoningTokens / inputTokens).toFixed(1)}x). Model likely thinks instead of summarizing.`;
-			options.logger?.log?.(errorMsg, { severity: "error" });
-			throw new Error(errorMsg);
+			options.logger?.log?.(`${errorMsg} Retrying with /no_think...`, { severity: "warn" });
+			// Retry: append /no_think to suppress reasoning for Qwen-like models
+			const noThinkRequest = options.request + "\n\n/no_think";
+			try {
+				const retryResult = await collectStreamingChunks({
+					...options,
+					request: noThinkRequest,
+				});
+				options.logger?.log?.(`generateSummary: /no_think retry done. chunks=${retryResult.chunkCount}, textChunks=${retryResult.textChunkCount}, reasoningChunks=${retryResult.reasoningChunkCount}, textLen=${retryResult.text.length}`, { severity: "info" });
+				const retryText = retryResult.text.trim();
+				if (retryText) {
+					options.logger?.log?.(`generateSummary: /no_think retry succeeded (${retryText.length} chars text).`, { severity: "info" });
+					finalText = retryText;
+				} else {
+					// Retry also failed — try to use reasoning as fallback
+					const retryReasoning = retryResult.reasoning.trim();
+					if (retryReasoning) {
+						options.logger?.log?.(`generateSummary: /no_think retry produced reasoning only (${retryReasoning.length} chars). Using as fallback.`, { severity: "warn" });
+						const MAX_REASONING_AS_SUMMARY = 4000;
+						finalText = retryReasoning.length > MAX_REASONING_AS_SUMMARY
+							? retryReasoning.substring(0, MAX_REASONING_AS_SUMMARY)
+							: retryReasoning;
+					} else {
+						options.logger?.log?.(errorMsg, { severity: "error" });
+						throw new Error(errorMsg);
+					}
+				}
+			} catch (retryErr) {
+				options.logger?.log?.(`${errorMsg} /no_think retry also failed: ${retryErr}`, { severity: "error" });
+				throw new Error(errorMsg);
+			}
 		}
 		// Try to extract the actual summary from reasoning (look for structured markers)
-		const extracted = extractSummaryFromReasoning(reasoningText);
-		if (extracted) {
-			options.logger?.log?.(`generateSummary: extracted summary from reasoning (${extracted.length} chars from ${reasoningText.length} chars reasoning).`, { severity: "info" });
-			finalText = extracted;
-		} else {
-			// Cap reasoning to avoid inflating context
-			const MAX_REASONING_AS_SUMMARY = 4000; // chars
-			if (reasoningText.length > MAX_REASONING_AS_SUMMARY) {
-				options.logger?.log?.(`generateSummary: reasoning too long (${reasoningText.length} chars), truncating to ${MAX_REASONING_AS_SUMMARY}.`, { severity: "warn" });
-				finalText = reasoningText.substring(0, MAX_REASONING_AS_SUMMARY);
+		if (!finalText) {
+			const extracted = extractSummaryFromReasoning(reasoningText);
+			if (extracted) {
+				options.logger?.log?.(`generateSummary: extracted summary from reasoning (${extracted.length} chars from ${reasoningText.length} chars reasoning).`, { severity: "info" });
+				finalText = extracted;
 			} else {
-				options.logger?.log?.(`generateSummary: using reasoning as summary body (${reasoningText.length} chars).`, { severity: "warn" });
-				finalText = reasoningText;
+				// Cap reasoning to avoid inflating context
+				const MAX_REASONING_AS_SUMMARY = 4000; // chars
+				if (reasoningText.length > MAX_REASONING_AS_SUMMARY) {
+					options.logger?.log?.(`generateSummary: reasoning too long (${reasoningText.length} chars), truncating to ${MAX_REASONING_AS_SUMMARY}.`, { severity: "warn" });
+					finalText = reasoningText.substring(0, MAX_REASONING_AS_SUMMARY);
+				} else {
+					options.logger?.log?.(`generateSummary: using reasoning as summary body (${reasoningText.length} chars).`, { severity: "warn" });
+					finalText = reasoningText;
+				}
 			}
 		}
 	}
@@ -439,6 +472,8 @@ export async function runAgenticCompaction(options: {
 	logger?: BasicLogger;
 	/** Agentario: compaction mode - "context" uses previous summary, "full" re-summarizes all */
 	compactionMode?: "context" | "full";
+	/** Agentario: auto vs manual compaction trigger */
+	mode?: "auto" | "manual";
 	/** Agentario: callback for status updates in UI */
 	statusCallback?: (message: string) => void;
 }): Promise<CoreCompactionResult | undefined> {
@@ -468,17 +503,140 @@ export async function runAgenticCompaction(options: {
 	options.logger?.log?.(`Agentic compaction: cutIndex=${cutIndex}`, { severity: "info" });
 	
 	// Agentario: статус в UI с разбивкой по категориям
+	const totalTokens = messages.reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
+	const foldTokens = messages.slice(0, cutIndex).reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
 	const pinnedTokens = messages.slice(cutIndex).reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
 	const foldableCount = cutIndex;
 	const preservedCount = messages.length - cutIndex;
 	options.statusCallback?.(
-		`Расчёт: foldable=${foldableCount} сообщ., pinned=${preservedCount} сообщ. (~${pinnedTokens.toLocaleString()} ток.), preserveRecentTokens=${effectivePreserveRecentTokens}`
+		`Расчёт: ${totalTokens.toLocaleString()} ток. диалога, на суммаризацию: ${foldTokens.toLocaleString()} ток. (${foldableCount} сообщ.), сохранено: ${pinnedTokens.toLocaleString()} ток. (${preservedCount} сообщ.)`
 	)
 	
 	if (cutIndex <= 0) {
 		options.logger?.log?.(`Agentic compaction: cutIndex check failed (cutIndex=${cutIndex}, len=${messages.length})`, { severity: "warn" });
 		options.statusCallback?.(`Ошибка: cutIndex=${cutIndex} некорректен`)
 		return undefined;
+	}
+
+	// Agentario: wrap-up mode — ТОЛЬКО для manual compaction с завершённым диалогом.
+	// Сохраняет первый user-turn (задание) и последний assistant text (ответ),
+	// сжимает промежуточную работу (tools, thinking, файлы).
+	// context/full compaction НЕ используют wrap-up — для них нужен стандартный
+	// диалоговый формат суммаризации (压缩对话), а не схлопывание в один блок.
+	const isManual = options.mode === "manual";
+	const useWrapUp = isManual && options.compactionMode !== "context" && options.compactionMode !== "full";
+	if (useWrapUp) {
+		const wrapRange = findWrapUpRange(messages);
+		if (wrapRange) {
+			options.logger?.log?.(`Agentic compaction: wrap-up mode active: preserveFirst=${wrapRange.preserveFirst}, preserveLast=${wrapRange.preserveLast}, fold=[${wrapRange.foldStart}..${wrapRange.foldEnd})`, { severity: "info" });
+			options.statusCallback?.(`Wrap-up: задание=[${wrapRange.preserveFirst}], ответ=[${wrapRange.preserveLast}], fold=${wrapRange.foldEnd - wrapRange.foldStart} сообщ.`);
+
+			const foldMessages = messages.slice(wrapRange.foldStart, wrapRange.foldEnd);
+			if (foldMessages.length === 0) {
+				options.logger?.log?.("Agentic compaction: wrap-up fold range is empty, nothing to compress", { severity: "warn" });
+				return { messages, skipReason: "no_foldable_middle" };
+			}
+
+			// Extract file ops from fold messages only
+			const foldFileOps = extractFileOps(foldMessages);
+			const summarizerProviderConfig = resolveSummarizerConfig({
+				activeProviderConfig: options.providerConfig,
+				summarizer: options.summarizer,
+			});
+			const modelContextTokens = Math.max(1, options.context.maxInputTokens || DEFAULT_CHUNK_SIZE);
+			const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
+
+			// Build summarization units from fold messages
+			const units = buildSummarizationUnits(foldMessages);
+			const packedTexts = packSummarizationUnits({
+				units,
+				chunkSizeTokens: chunkSize,
+				modelContextTokens,
+			});
+
+			options.logger?.log?.(`Agentic compaction: wrap-up units=${units.length}, chunks=${packedTexts.length}`, { severity: "info" });
+
+			// Summarize fold messages with wrap-up prompts
+			let rawSummary: string;
+			try {
+				if (packedTexts.length === 1) {
+					const summaryRequest = buildSummaryRequest({
+						conversationText: packedTexts[0],
+						fileOps: foldFileOps,
+						wrapUp: true,
+					});
+					rawSummary = await generateSummary({
+						providerConfig: summarizerProviderConfig,
+						request: summaryRequest,
+						logger: options.logger,
+					});
+				} else {
+					const intermediateSummaries: string[] = [];
+					for (let i = 0; i < packedTexts.length; i++) {
+						const chunkTokens = estimateTokens(packedTexts[i].length);
+						const chunkRequest = buildSummaryRequest({
+							previousSummary: i === 0 ? undefined : intermediateSummaries[i - 1],
+							conversationText: packedTexts[i],
+							fileOps: i === 0 ? foldFileOps : { readFiles: [], modifiedFiles: [] },
+							wrapUp: true,
+						});
+						options.statusCallback?.(`Wrap-up чанк ${i + 1}/${packedTexts.length}: ~${chunkTokens.toLocaleString()} ток. на входе`);
+						const chunkSummary = await generateSummary({
+							providerConfig: summarizerProviderConfig,
+							request: chunkRequest,
+							logger: options.logger,
+							chunkIndex: i,
+						});
+						if (chunkSummary.trim()) {
+							intermediateSummaries.push(chunkSummary.trim());
+							const summaryTokens = estimateTokens(chunkSummary.length);
+							options.statusCallback?.(`Wrap-up чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
+						}
+					}
+					if (intermediateSummaries.length === 0) {
+						options.logger?.log?.("Agentic compaction: wrap-up intermediateSummaries empty", { severity: "warn" });
+						return { messages, skipReason: "empty_summary" };
+					}
+					rawSummary = intermediateSummaries[intermediateSummaries.length - 1];
+				}
+			} catch (error) {
+				const errMsg = error instanceof Error ? error.message : String(error);
+				options.logger?.log?.(`Agentic compaction: wrap-up generateSummary failed: ${errMsg}`, { severity: "error" });
+				options.statusCallback?.(`Wrap-up ошибка: ${errMsg.substring(0, 200)}`);
+				return { messages, skipReason: `summary_error: ${errMsg.substring(0, 100)}` };
+			}
+
+			if (!rawSummary?.trim()) {
+				options.logger?.log?.("Agentic compaction: wrap-up rawSummary empty", { severity: "warn" });
+				return { messages, skipReason: "empty_summary" };
+			}
+
+			const summary = ensureFilesSection(rawSummary, foldFileOps);
+			const tokensBefore = messages.reduce(
+				(total, message) => total + options.estimateMessageTokens(message),
+				0,
+			);
+
+			// Build result: [firstTask, summary, lastAnswer]
+			const resultMessages = [
+				messages[wrapRange.preserveFirst],
+				buildSummaryMessage({ summary, fileOps: foldFileOps, tokensBefore }),
+				messages[wrapRange.preserveLast],
+			];
+
+			const tokensAfter = resultMessages.reduce(
+				(total, message) => total + options.estimateMessageTokens(message),
+				0,
+			);
+
+			options.logger?.log?.(`Agentic compaction: wrap-up complete: ${messages.length} → ${resultMessages.length} messages, tokens ${tokensBefore} → ${tokensAfter}`, { severity: "info" });
+			options.statusCallback?.(`Wrap-up завершён: ${tokensBefore.toLocaleString()} → ${tokensAfter.toLocaleString()} ток.`);
+
+			return { messages: resultMessages };
+		}
+
+		// No wrap-up range available — fall through to normal compaction
+		options.logger?.log?.("Agentic compaction: wrap-up range not available, falling back to standard cut", { severity: "info" });
 	}
 
 	const messagesToSummarize = messages.slice(0, cutIndex);
@@ -579,6 +737,7 @@ export async function runAgenticCompaction(options: {
 
 		const intermediateSummaries: string[] = [];
 		for (let i = 0; i < packedTexts.length; i++) {
+			const chunkTokens = estimateTokens(packedTexts[i].length);
 			const chunkRequest = buildSummaryRequest({
 				previousSummary: i === 0 ? previousSummary : undefined,
 				conversationText: packedTexts[i],
@@ -588,7 +747,7 @@ export async function runAgenticCompaction(options: {
 			});
 
 			options.statusCallback?.(
-				`Отправка чанка ${i + 1}/${packedTexts.length}: ≈${estimateTokens(chunkRequest.length)} токенов (${chunkRequest.length} симв.)`,
+				`Чанк ${i + 1}/${packedTexts.length}: ~${chunkTokens.toLocaleString()} ток. на входе`,
 			);
 
 			options.logger?.debug(`Compaction map phase chunk ${i + 1}/${packedTexts.length}`, {
@@ -603,7 +762,7 @@ export async function runAgenticCompaction(options: {
 			if (chunkSummary.trim()) {
 				intermediateSummaries.push(chunkSummary.trim());
 				const summaryTokens = estimateTokens(chunkSummary.length);
-				options.statusCallback?.(`Чанк ${i + 1}/${packedTexts.length} готов: ${summaryTokens} токенов в summary`);
+				options.statusCallback?.(`Чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
 			}
 		}
 

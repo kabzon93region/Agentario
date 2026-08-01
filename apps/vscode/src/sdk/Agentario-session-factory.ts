@@ -751,6 +751,18 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		}
 	}
 
+	// Sync prompt with actual tools: semantic_search is only registered when an embeddings index exists.
+	try {
+		const { createSemanticSearchExecutor } = await import("./semantic-search-executor")
+		const semanticExecutor = await createSemanticSearchExecutor({ workspacePath: cwd })
+		if (!semanticExecutor) {
+			systemPrompt = `${systemPrompt}\n\n# Tool availability\n\nsemantic_search is NOT available in this workspace (no embeddings index). Do NOT call it and do NOT fake it via search_codebase with "semantic: ..." or natural-language queries. Use read_files on paths from git status / known root files, or search_codebase with a real regex/symbol.`
+			Logger.log("[SessionFactory] Injected semantic_search-unavailable note into system prompt")
+		}
+	} catch (error) {
+		Logger.warn("[SessionFactory] Failed to check semantic_search availability:", error)
+	}
+
 	// Inject preferred language instructions when a non-default language is selected.
 	// Mirrors classic src/core/task/index.ts preferredLanguage handling.
 	try {

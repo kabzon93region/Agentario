@@ -1036,10 +1036,11 @@ export class SessionRuntime {
 					unscaledBreakdown,
 					this.contextBudgetProviderScale,
 				);
-				context.emitStatusNotice?.(CONTEXT_BUDGET_NOTICE_KIND, {
-					kind: CONTEXT_BUDGET_NOTICE_KIND,
-					...breakdown,
-				});
+			context.emitStatusNotice?.(CONTEXT_BUDGET_NOTICE_KIND, {
+				kind: CONTEXT_BUDGET_NOTICE_KIND,
+				providerScale: this.contextBudgetProviderScale,
+				...breakdown,
+			});
 			}
 
 			if (!result) {

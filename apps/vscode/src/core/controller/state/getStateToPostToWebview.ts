@@ -104,7 +104,7 @@ export async function getStateToPostToWebview(controller: StatePostController): 
 	const dismissedBanners = stateManager.getGlobalStateKey("dismissedBanners")
 	const showFeatureTips = stateManager.getGlobalSettingsKey("showFeatureTips")
 
-	// Agentario: Context Protection — Tier 1/2/3
+	// Agentario: Context Protection РІР‚вЂќ Tier 1/2/3
 	const smartChunkingEnabled = stateManager.getGlobalSettingsKey("smartChunkingEnabled")
 	const showFileOutline = stateManager.getGlobalSettingsKey("showFileOutline")
 	const maxOutlineEntries = stateManager.getGlobalSettingsKey("maxOutlineEntries")
@@ -113,6 +113,11 @@ export async function getStateToPostToWebview(controller: StatePostController): 
 	const smartTruncationHead = stateManager.getGlobalSettingsKey("smartTruncationHead")
 	const smartTruncationTail = stateManager.getGlobalSettingsKey("smartTruncationTail")
 	const astNavigatorEnabled = stateManager.getGlobalSettingsKey("astNavigatorEnabled")
+
+	// Agentario: Lab API Server settings
+	const labApiEnabled = stateManager.getGlobalSettingsKey("labApiEnabled")
+	const labApiPort = stateManager.getGlobalSettingsKey("labApiPort")
+	const labClineDir = stateManager.getGlobalSettingsKey("labClineDir")
 
 	const localAgentarioRulesToggles = stateManager.getWorkspaceStateKey("localAgentarioRulesToggles")
 	const localWindsurfRulesToggles = stateManager.getWorkspaceStateKey("localWindsurfRulesToggles")
@@ -244,6 +249,9 @@ export async function getStateToPostToWebview(controller: StatePostController): 
 		smartTruncationHead,
 		smartTruncationTail,
 		astNavigatorEnabled,
+		labApiEnabled,
+		labApiPort,
+		labClineDir,
 		banners,
 		welcomeBanners,
 		openAiCodexIsAuthenticated,

@@ -270,6 +270,8 @@ export class MessageTranslatorState {
 	private generationStartedAtMs: number | undefined
 	/** Latest estimated context budget for the active iteration. */
 	private pendingContextBudget: ContextBudgetBreakdown | undefined
+	/** EMA scale: provider tokensIn / char-estimate (from context-budget notice). */
+	private pendingProviderScale = 1
 	/**
 	 * Process-wide id/seq/epoch authority. Shared with the interaction coordinator and history
 	 * rendering so that message ids never collide across generators. See message-id-minter.ts.
@@ -304,8 +306,13 @@ export class MessageTranslatorState {
 		this.pendingContextBudget = undefined
 	}
 
-	setPendingContextBudget(budget: ContextBudgetBreakdown | undefined): void {
+	setPendingContextBudget(budget: ContextBudgetBreakdown | undefined, providerScale?: number): void {
 		this.pendingContextBudget = budget
+		if (providerScale !== undefined) this.pendingProviderScale = providerScale
+	}
+
+	getProviderScale(): number {
+		return this.pendingProviderScale
 	}
 
 	getPendingContextBudget(): ContextBudgetBreakdown | undefined {
@@ -1651,9 +1658,10 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 				event.message === CONTEXT_BUDGET_NOTICE_KIND
 			if (isContextBudgetNotice && event.metadata) {
 				const budget = parseContextBudgetMetadata(event.metadata)
+				const ps = typeof event.metadata.providerScale === 'number' ? event.metadata.providerScale : undefined
 				if (budget) {
 					Logger.log(`[MessageTranslator] Context budget received: system=${budget.categories.system}, rules=${budget.categories.rules}, tools=${budget.categories.tools}, chat=${budget.categories.chat}, total=${budget.totalEstimated}`)
-					state.setPendingContextBudget(budget)
+					state.setPendingContextBudget(budget, ps)
 					messages.push({
 						ts: state.nextTs(),
 						type: "say",

@@ -55,8 +55,9 @@ export const ru = {
 			general: "Общие",
 			remoteConfig: "Удалённая конфигурация",
 			about: "О программе",
+			lab: "Lab API",
 			debug: "Отладка",
-		},
+	},
 	},
 	api: {
 		provider: "Провайдер API",
@@ -337,6 +338,17 @@ export const ru = {
 	mcp: {
 		remoteServers: "Удалённые серверы",
 		configure: "Настройка",
+	},
+	lab: {
+		enableApiServer: "Lab API Server",
+		enableApiDesc: "Автозапуск REST API сервера при старте Agentario",
+		port: "Порт",
+		clineDir: "CLINE_DIR (профиль)",
+		clineDirDesc: "Путь к изолированному профилю для тестов. Пусто = .agentario-lab по умолчанию",
+		testConnection: "Проверить соединение",
+		testing: "Проверка...",
+		unavailable: "Недоступен",
+		howToUse: "Как использовать:\n1. Включите Lab API Server выше\n2. Настройте порт и путь к профилю\n3. Перезапустите VS Code (или нажмите «Проверить соединение»)\n4. API будет доступен автоматически при старте Agentario",
 	},
 	debug: {
 		resetWorkspace: "Сбросить state workspace",

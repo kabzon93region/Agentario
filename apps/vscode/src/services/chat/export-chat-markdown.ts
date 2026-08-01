@@ -1,4 +1,4 @@
-﻿import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
+import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
 import type { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"
 import { formatMessageStatsLine } from "@shared/message-display"
 
@@ -43,7 +43,8 @@ function parseTool(text: string | undefined): AgentarioSayTool {
 }
 
 function formatTs(ts: number | undefined): string {
-	if (!ts || !Number.isFinite(ts) || ts <= 0) {
+	// AgentarioMessage.ts is often a MessageIdMinter counter, not wall-clock ms.
+	if (!ts || !Number.isFinite(ts) || ts < 1_000_000_000_000) {
 		return ""
 	}
 	try {

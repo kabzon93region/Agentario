@@ -18,6 +18,7 @@ import type { Message as SdkMessage } from "@agentario/llms"
 import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import type { Mode } from "@shared/storage/types"
 import { estimateTokens } from "@agentario/shared"
+import { createTokenEstimator } from "@agentario/core"
 import type { StateManager } from "@/core/storage/StateManager"
 import { Logger } from "@/shared/services/Logger"
 import { compactSessionMessages } from "./sdk-compaction"
@@ -37,6 +38,13 @@ type StartInput = Parameters<VscodeSessionHost["start"]>[0]
 type InitialMessages = StartInput["initialMessages"]
 type SessionConfig = Awaited<ReturnType<SdkSessionConfigBuilder["build"]>>
 
+export interface CompactTaskResult {
+	compacted: boolean
+	reason?: string
+	messagesBefore?: number
+	messagesAfter?: number
+}
+
 export interface SdkCompactionCoordinatorOptions {
 	stateManager: StateManager
 	sessions: SdkSessionLifecycle
@@ -47,12 +55,16 @@ export interface SdkCompactionCoordinatorOptions {
 	buildStartSessionInput: (config: SessionConfig, input: { cwd: string; mode: Mode }) => StartInput
 	resetMessageTranslator: () => void
 	postStateToWebview: () => Promise<void>
-	/** Создаёт временный sdkHost для чтения истории (dispose вызывается автоматически). */
+	/** РЎРѕР·РґР°С‘С‚ РІСЂРµРјРµРЅРЅС‹Р№ sdkHost РґР»СЏ С‡С‚РµРЅРёСЏ РёСЃС‚РѕСЂРёРё (dispose РІС‹Р·С‹РІР°РµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё). */
 	createTempHost: () => Promise<{ host: SdkSessionHost; dispose: () => Promise<void> }>
+	/** EMA scale: provider tokensIn / char-estimate. РњР°СЃС€С‚Р°Р±РёСЂСѓРµС‚ chars/3 Рє СЂРµР°Р»СЊРЅС‹Рј С‚РѕРєРµРЅР°Рј РїСЂРѕРІР°Р№РґРµСЂР°. */
+	getProviderScale?: () => number
 }
 
 export class SdkCompactionCoordinator {
 	private compactInFlight = false
+	/** Timestamp of last completed compaction (for dedup and post-compaction result). */
+	private lastCompactCompletedAt = 0
 
 	constructor(private readonly options: SdkCompactionCoordinatorOptions) {}
 
@@ -68,10 +80,22 @@ export class SdkCompactionCoordinator {
 	 * - "context" (default): summarize context only
 	 * - "full": re-summarize entire chat history
 	 */
-	async compactTask(compactionMode: "context" | "full" = "context"): Promise<void> {
+	async compactTask(compactionMode: "context" | "full" = "context"): Promise<CompactTaskResult> {
 		if (this.compactInFlight) {
-			Logger.warn("[SdkController] compactTask: a compaction is already in progress; ignoring")
-			return
+			// Р–РґС‘Рј Р·Р°РІРµСЂС€РµРЅРёСЏ С‚РµРєСѓС‰РµР№ РєРѕРјРїР°РєС†РёРё РІРјРµСЃС‚Рѕ РЅРµРјРµРґР»РµРЅРЅРѕРіРѕ РѕС‚РєР»РѕРЅРµРЅРёСЏ.
+			// Р­С‚Рѕ СЂРµС€Р°РµС‚ РїСЂРѕР±Р»РµРјСѓ false positive РєРѕРіРґР° API-РєР»РёРµРЅС‚ РІС‹Р·С‹РІР°РµС‚ compact
+			// РїРѕРєР° РїСЂРµРґС‹РґСѓС‰РёР№ РІС‹Р·РѕРІ РµС‰С‘ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ (LLM СЃСѓРјРјР°СЂРёР·Р°С†РёСЏ 30-60СЃ).
+			Logger.log("[SdkController] compactTask: compaction in progress, waiting for completion...")
+			const start = Date.now()
+			while (this.compactInFlight && (Date.now() - start) < 120_000) {
+				await new Promise(r => setTimeout(r, 1000))
+			}
+			if (!this.compactInFlight) {
+				// РљРѕРјРїР°РєС†РёСЏ Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РїРѕРєР° Р¶РґР°Р»Рё вЂ” РІРѕР·РІСЂР°С‰Р°РµРј СЂРµР·СѓР»СЊС‚Р°С‚ РЅР° РѕСЃРЅРѕРІРµ С‚РµРєСѓС‰РµРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ
+				Logger.log("[SdkController] compactTask: previous compaction completed while waiting")
+				return this.buildPostCompactionResult()
+			}
+			return { compacted: false, reason: "compaction_already_in_progress" }
 		}
 
 		const activeSession = this.options.sessions.getActiveSession()
@@ -79,25 +103,27 @@ export class SdkCompactionCoordinator {
 
 		// No active session, but we have a task loaded from history
 		if (!activeSession && task?.taskId) {
-			Logger.log(`[SdkController] compactTask: No active session, but task ${task.taskId} is loaded — creating session for compaction`)
+			Logger.log(`[SdkController] compactTask: No active session, but task ${task.taskId} is loaded вЂ” creating session for compaction`)
 			this.compactInFlight = true
 			try {
-				await this.compactHistoryTask(task.taskId, compactionMode)
+				const result = await this.compactHistoryTask(task.taskId, compactionMode)
+				return result
 			} catch (error) {
 				Logger.error("[SdkController] compactTask (history) failed:", error)
 				this.emitInfo(`Compaction failed: ${error instanceof Error ? error.message : String(error)}`)
 				await this.options.postStateToWebview()
+				return { compacted: false, reason: error instanceof Error ? error.message : String(error) }
 			} finally {
 				this.compactInFlight = false
+				this.lastCompactCompletedAt = Date.now()
 			}
-			return
 		}
 
 		if (!activeSession) {
 			Logger.warn("[SdkController] compactTask: No active task to compact")
-			this.emitInfo("Нет активной задачи для сжатия.")
+			this.emitInfo("РќРµС‚ Р°РєС‚РёРІРЅРѕР№ Р·Р°РґР°С‡Рё РґР»СЏ СЃР¶Р°С‚РёСЏ.")
 			await this.options.postStateToWebview()
-			return
+			return { compacted: false, reason: "no_active_task" }
 		}
 
 		// A turn is still running; compacting mid-turn would race the live agent
@@ -105,33 +131,36 @@ export class SdkCompactionCoordinator {
 		if (activeSession.isRunning) {
 			this.emitInfo("Cannot compact while a response is in progress. Try again once the current turn finishes.")
 			await this.options.postStateToWebview()
-			return
+			return { compacted: false, reason: "session_busy" }
 		}
 
 		this.compactInFlight = true
 		try {
-			await this.runCompaction(activeSession.sdkHost, activeSession.sessionId, compactionMode)
+			const result = await this.runCompaction(activeSession.sdkHost, activeSession.sessionId, compactionMode)
+			return result
 		} catch (error) {
 			Logger.error("[SdkController] compactTask failed:", error)
 			this.emitInfo(`Compaction failed: ${error instanceof Error ? error.message : String(error)}`)
 			await this.options.postStateToWebview()
+			return { compacted: false, reason: error instanceof Error ? error.message : String(error) }
 		} finally {
 			this.compactInFlight = false
+			this.lastCompactCompletedAt = Date.now()
 		}
 	}
 
-	private async runCompaction(sdkHost: SdkSessionHost, sessionId: string, compactionMode: "context" | "full" = "context"): Promise<void> {
-		// Agentario: логируем режим суммаризации
+	private async runCompaction(sdkHost: SdkSessionHost, sessionId: string, compactionMode: "context" | "full" = "context"): Promise<CompactTaskResult> {
+		// Agentario: Р»РѕРіРёСЂСѓРµРј СЂРµР¶РёРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё
 		Logger.log(`[SdkCompaction] runCompaction: compactionMode=${compactionMode}, sessionId=${sessionId}`)
 		
-		// Agentario: для full режима читаем display messages (полная история)
+		// Agentario: РґР»СЏ full СЂРµР¶РёРјР° С‡РёС‚Р°РµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ)
 		let messages: SdkMessage[]
 		if (compactionMode === "full") {
 			const task = this.options.getTask()
 			const agentarioMessages = task?.messageStateHandler.getagentarioMessages() ?? []
 			Logger.log(`[SdkCompaction] full mode: task=${task ? 'exists' : 'undefined'}, agentarioMessages.length=${agentarioMessages.length}`)
 			
-			// Логируем типы сообщений
+			// Р›РѕРіРёСЂСѓРµРј С‚РёРїС‹ СЃРѕРѕР±С‰РµРЅРёР№
 			const typeCounts: Record<string, number> = {}
 			for (const m of agentarioMessages) {
 				const key = `${m.type}/${m.say || 'none'}`
@@ -139,7 +168,7 @@ export class SdkCompactionCoordinator {
 			}
 			Logger.log(`[SdkCompaction] full mode: message types: ${JSON.stringify(typeCounts)}`)
 			
-			// Конвертируем AgentarioMessage в SDK Message (включаем все значимые типы)
+			// РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј AgentarioMessage РІ SDK Message (РІРєР»СЋС‡Р°РµРј РІСЃРµ Р·РЅР°С‡РёРјС‹Рµ С‚РёРїС‹)
 			messages = agentarioMessages
 				.filter(m => m.type === "say" && (
 					m.say === "task" || m.say === "user_feedback" || m.say === "text" ||
@@ -151,7 +180,7 @@ export class SdkCompactionCoordinator {
 				})) as SdkMessage[]
 			Logger.log(`[SdkCompaction] full mode: converted ${agentarioMessages.length} cline messages to ${messages.length} sdk messages`)
 
-			// Agentario: считаем токены по ВСЕМ display сообщениям (более точно)
+			// Agentario: СЃС‡РёС‚Р°РµРј С‚РѕРєРµРЅС‹ РїРѕ Р’РЎР•Рњ display СЃРѕРѕР±С‰РµРЅРёСЏРј (Р±РѕР»РµРµ С‚РѕС‡РЅРѕ)
 			const displayTotalChars = agentarioMessages.reduce((sum, m) => {
 				let chars = (m.text || "").length
 				if (m.images) chars += m.images.length * 500 // ~500 chars per image
@@ -166,7 +195,7 @@ export class SdkCompactionCoordinator {
 		if (messagesBefore === 0) {
 			this.emitInfo("No messages to compact.")
 			await this.options.postStateToWebview()
-			return
+			return { compacted: false, reason: "no_messages" }
 		}
 
 		const cwd = await this.options.getWorkspaceRoot()
@@ -185,17 +214,18 @@ export class SdkCompactionCoordinator {
 			},
 			sessionId,
 			messages,
-			compactionMode, // Agentario: передаём режим суммаризации
-			statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback для статусов в UI
+			compactionMode, // Agentario: РїРµСЂРµРґР°С‘Рј СЂРµР¶РёРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё
+			statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback РґР»СЏ СЃС‚Р°С‚СѓСЃРѕРІ РІ UI
 		})
 
 		if (!result.compacted) {
-			// Determine the reason for better user feedback
-			const messages = (await sdkHost.readMessages(sessionId)) as SdkMessage[]
-			const reason = this.diagnoseCompactionFailure(messages)
+			// Agentario: prefer SDK-provided reason over catch-all diagnoseCompactionFailure.
+			// SDK reason is specific (e.g. "no_foldable_middle", "empty_summary").
+			// diagnoseCompactionFailure is a fallback for cases where SDK didn't provide a reason.
+			const reason = result.reason || this.diagnoseCompactionFailure((await sdkHost.readMessages(sessionId)) as SdkMessage[])
 			this.emitInfo(reason)
 			await this.options.postStateToWebview()
-			return
+			return { compacted: false, reason, messagesBefore }
 		}
 
 		// Persist the compacted messages to disk BEFORE restarting the session.
@@ -223,7 +253,7 @@ export class SdkCompactionCoordinator {
 		if (!rebuildResult) {
 			this.emitInfo("Compaction could not be applied because the session was replaced.")
 			await this.options.postStateToWebview()
-			return
+			return { compacted: false, reason: "session_replaced", messagesBefore, messagesAfter: result.messages.length }
 		}
 
 		const { startResult } = rebuildResult
@@ -232,13 +262,11 @@ export class SdkCompactionCoordinator {
 			task.taskId = startResult.sessionId
 		}
 
-		// Рассчитываем токены до и после для статистики
-		const tokensBefore = messages.reduce((total, msg) => {
-			const text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)
-			return total + estimateTokens(text.length)
-		}, 0)
+		// Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С‚РѕРєРµРЅС‹ РґРѕ Рё РїРѕСЃР»Рµ РґР»СЏ СЃС‚Р°С‚РёСЃС‚РёРєРё (РµРґРёРЅС‹Р№ estimator СЃ РєСЌРїР°РјРё)
+		const estimator = createTokenEstimator("compaction")
+		const tokensBefore = messages.reduce((total, msg) => total + estimator(msg), 0)
 
-		// Agentario: сохраняем display messages (полная история) ПЕРЕД изменениями
+		// Agentario: СЃРѕС…СЂР°РЅСЏРµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ) РџР•Р Р•Р” РёР·РјРµРЅРµРЅРёСЏРјРё
 		if (task) {
 			const displayMessages = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
 			await saveDisplayMessages(sessionId, displayMessages).catch(err =>
@@ -248,17 +276,14 @@ export class SdkCompactionCoordinator {
 		}
 
 		// Convert compacted SDK messages to agentarioMessages for context (model).
-		// Display messages remain unchanged — user sees full history.
+		// Display messages remain unchanged вЂ” user sees full history.
 		const { sdkMessagesToagentarioMessages } = await import("./message-translator")
 		const compactedagentarioMessages: AgentarioMessage[] = sdkMessagesToagentarioMessages(result.messages)
 			.filter((m) => !(m.type === "ask" && m.ask === "completion_result"))
 
-		const chatTokens = result.messages.reduce((total, msg) => {
-			const text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)
-			return total + estimateTokens(text.length)
-		}, 0)
+		const chatTokens = result.messages.reduce((total, msg) => total + estimator(msg), 0)
 
-		// Agentario: более детальные категории context budget
+		// Agentario: Р±РѕР»РµРµ РґРµС‚Р°Р»СЊРЅС‹Рµ РєР°С‚РµРіРѕСЂРёРё context budget
 		const systemPrompt = config.systemPrompt ?? ""
 		const systemTokens = estimateTokens(systemPrompt.length)
 		const rulesTokens = 3000 // Agentario rules + .clinerules
@@ -278,12 +303,12 @@ export class SdkCompactionCoordinator {
 			measuredAt: Date.now(),
 		}
 
-		// Agentario: обновляем ТОЛЬКО context messages (для модели), display не трогаем
+		// Agentario: РѕР±РЅРѕРІР»СЏРµРј РўРћР›Р¬РљРћ context messages (РґР»СЏ РјРѕРґРµР»Рё), display РЅРµ С‚СЂРѕРіР°РµРј
 		if (task) {
-			// Обновляем context messages (то что видит модель)
+			// РћР±РЅРѕРІР»СЏРµРј context messages (С‚Рѕ С‡С‚Рѕ РІРёРґРёС‚ РјРѕРґРµР»СЊ)
 			task.messageStateHandler.replaceContextMessages(compactedagentarioMessages)
 
-			// Добавляем context budget в display для обновления прогресс-бара
+			// Р”РѕР±Р°РІР»СЏРµРј context budget РІ display РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂР°
 			const contextBudgetMsg: AgentarioMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -294,7 +319,7 @@ export class SdkCompactionCoordinator {
 			task.messageStateHandler.addMessages([contextBudgetMsg])
 		}
 
-		// Сохраняем обновлённые display messages на диск (фильтруем info-сообщения)
+		// РЎРѕС…СЂР°РЅСЏРµРј РѕР±РЅРѕРІР»С‘РЅРЅС‹Рµ display messages РЅР° РґРёСЃРє (С„РёР»СЊС‚СЂСѓРµРј info-СЃРѕРѕР±С‰РµРЅРёСЏ)
 		if (task) {
 			const updatedDisplay = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
 			await saveDisplayMessages(sessionId, updatedDisplay).catch(err =>
@@ -304,7 +329,7 @@ export class SdkCompactionCoordinator {
 
 		this.options.resetMessageTranslator()
 
-		// Сохраняем summary в файл
+		// РЎРѕС…СЂР°РЅСЏРµРј summary РІ С„Р°Р№Р»
 		const summaryPath = this.saveSummaryToFile(result.messages, sessionId)
 
 		this.emitInfo(this.formatCompactionStatus(messagesBefore, result.messages.length, tokensBefore, chatTokens, sessionId, summaryPath))
@@ -316,6 +341,7 @@ export class SdkCompactionCoordinator {
 		Logger.log(
 			`[SdkController] Compacted session ${sessionId}: ${messagesBefore} -> ${result.messages.length} messages (new session ${startResult.sessionId})`,
 		)
+		return { compacted: true, messagesBefore, messagesAfter: result.messages.length }
 	}
 
 	/**
@@ -323,27 +349,27 @@ export class SdkCompactionCoordinator {
 	 * Creates a temporary sdkHost, reads messages, compacts, starts a new session
 	 * and restores compacted messages back into the UI.
 	 */
-	private async compactHistoryTask(taskId: string, compactionMode: "context" | "full" = "context"): Promise<void> {
+	private async compactHistoryTask(taskId: string, compactionMode: "context" | "full" = "context"): Promise<CompactTaskResult> {
 		const temp = await this.options.createTempHost()
 		try {
 			const task = this.options.getTask()
 			if (!task) {
-				this.emitInfo("Нет загруженной задачи.")
+				this.emitInfo("РќРµС‚ Р·Р°РіСЂСѓР¶РµРЅРЅРѕР№ Р·Р°РґР°С‡Рё.")
 				await this.options.postStateToWebview()
-				return
+				return { compacted: false, reason: "no_task" }
 			}
 
-			// Индикация начала компакта
-			this.emitInfo(compactionMode === "full" ? "Полная суммаризация чата..." : "Сжатие контекста...")
+			// РРЅРґРёРєР°С†РёСЏ РЅР°С‡Р°Р»Р° РєРѕРјРїР°РєС‚Р°
+			this.emitInfo(compactionMode === "full" ? "РџРѕР»РЅР°СЏ СЃСѓРјРјР°СЂРёР·Р°С†РёСЏ С‡Р°С‚Р°..." : "РЎР¶Р°С‚РёРµ РєРѕРЅС‚РµРєСЃС‚Р°...")
 			await this.options.postStateToWebview()
 
-			// Agentario: для full режима читаем display messages (полная история)
+			// Agentario: РґР»СЏ full СЂРµР¶РёРјР° С‡РёС‚Р°РµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ)
 			let messages: SdkMessage[]
 			if (compactionMode === "full") {
 				const agentarioMessages = task.messageStateHandler.getagentarioMessages() ?? []
 				Logger.log(`[SdkCompaction] full mode (history): agentarioMessages.length=${agentarioMessages.length}`)
 				
-				// Логируем типы сообщений
+				// Р›РѕРіРёСЂСѓРµРј С‚РёРїС‹ СЃРѕРѕР±С‰РµРЅРёР№
 				const typeCounts: Record<string, number> = {}
 				for (const m of agentarioMessages) {
 					const key = `${m.type}/${m.say || 'none'}`
@@ -351,7 +377,7 @@ export class SdkCompactionCoordinator {
 				}
 				Logger.log(`[SdkCompaction] full mode (history): message types: ${JSON.stringify(typeCounts)}`)
 				
-				// Конвертируем AgentarioMessage в SDK Message (включаем все значимые типы)
+				// РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј AgentarioMessage РІ SDK Message (РІРєР»СЋС‡Р°РµРј РІСЃРµ Р·РЅР°С‡РёРјС‹Рµ С‚РёРїС‹)
 				messages = agentarioMessages
 					.filter(m => (
 						(m.type === "say" && (
@@ -366,14 +392,14 @@ export class SdkCompactionCoordinator {
 					})) as SdkMessage[]
 				Logger.log(`[SdkCompaction] full mode (history): converted ${agentarioMessages.length} cline messages to ${messages.length} sdk messages`)
 
-				// Agentario: считаем токены по конвертированным SDK сообщениям (как в суммаризации)
+				// Agentario: СЃС‡РёС‚Р°РµРј С‚РѕРєРµРЅС‹ РїРѕ РєРѕРЅРІРµСЂС‚РёСЂРѕРІР°РЅРЅС‹Рј SDK СЃРѕРѕР±С‰РµРЅРёСЏРј (РєР°Рє РІ СЃСѓРјРјР°СЂРёР·Р°С†РёРё)
 				const convertedTotalChars = messages.reduce((sum, m) => {
 					let chars = (m.content || "").length
 					return sum + chars
 				}, 0)
 				Logger.log(`[SdkCompaction] full mode (history): converted messages chars=${convertedTotalChars}, estimated tokens=${Math.ceil(convertedTotalChars / 3)}`)
 
-				// Agentario: сохраняем полный текст чата в отладочный файл
+				// Agentario: СЃРѕС…СЂР°РЅСЏРµРј РїРѕР»РЅС‹Р№ С‚РµРєСЃС‚ С‡Р°С‚Р° РІ РѕС‚Р»Р°РґРѕС‡РЅС‹Р№ С„Р°Р№Р»
 				try {
 					const { mkdir, writeFile } = await import("fs/promises")
 					const { join } = await import("path")
@@ -381,7 +407,7 @@ export class SdkCompactionCoordinator {
 					await mkdir(debugDir, { recursive: true })
 					const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 					const fullChatPath = join(debugDir, `full_chat_${timestamp}.txt`)
-					const fullChatContent = messages.map((m, i) => `=== СООБЩЕНИЕ ${i + 1} [${m.role}] ===\n\n${m.content}`).join('\n\n\n')
+					const fullChatContent = messages.map((m, i) => `=== РЎРћРћР‘Р©Р•РќРР• ${i + 1} [${m.role}] ===\n\n${m.content}`).join('\n\n\n')
 					await writeFile(fullChatPath, fullChatContent, 'utf-8')
 					Logger.log(`[SdkCompaction] full mode (history): saved full chat to ${fullChatPath}`)
 				} catch (err) {
@@ -393,9 +419,9 @@ export class SdkCompactionCoordinator {
 			
 			const messagesBefore = messages.length
 			if (messagesBefore === 0) {
-				this.emitInfo("Нет сообщений для сжатия.")
+				this.emitInfo("РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ СЃР¶Р°С‚РёСЏ.")
 				await this.options.postStateToWebview()
-				return
+				return { compacted: false, reason: "no_messages" }
 			}
 
 			const cwd = await this.options.getWorkspaceRoot()
@@ -414,15 +440,16 @@ export class SdkCompactionCoordinator {
 				},
 				sessionId: taskId,
 				messages,
-				compactionMode, // Agentario: передаём режим суммаризации
-				statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback для статусов в UI
+				compactionMode, // Agentario: РїРµСЂРµРґР°С‘Рј СЂРµР¶РёРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё
+				statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback РґР»СЏ СЃС‚Р°С‚СѓСЃРѕРІ РІ UI
 			})
 
 			if (!result.compacted) {
-				const reason = this.diagnoseCompactionFailure(messages)
+				// Agentario: prefer SDK-provided reason over catch-all diagnoseCompactionFailure
+				const reason = result.reason || this.diagnoseCompactionFailure(messages)
 				this.emitInfo(reason)
 				await this.options.postStateToWebview()
-				return
+				return { compacted: false, reason, messagesBefore }
 			}
 
 			// Persist the compacted messages to disk BEFORE starting the new session.
@@ -435,7 +462,7 @@ export class SdkCompactionCoordinator {
 				// Continue with session restart even if persistence fails
 			}
 
-			// 1. Стартуем новую сессию с compact'нутыми сообщениями
+			// 1. РЎС‚Р°СЂС‚СѓРµРј РЅРѕРІСѓСЋ СЃРµСЃСЃРёСЋ СЃ compact'РЅСѓС‚С‹РјРё СЃРѕРѕР±С‰РµРЅРёСЏРјРё
 			config.sessionId = taskId
 			const startInput = this.options.buildStartSessionInput(config, { cwd, mode })
 			const startResult = await this.options.sessions.startNewSession({
@@ -446,32 +473,27 @@ export class SdkCompactionCoordinator {
 
 			task.taskId = startResult.startResult.sessionId
 
-			// Рассчитываем токены до и после
-			const tokensBefore = messages.reduce((total, msg) => {
-				const text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)
-				return total + estimateTokens(text.length)
-			}, 0)
+			// Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С‚РѕРєРµРЅС‹ РґРѕ Рё РїРѕСЃР»Рµ (РµРґРёРЅС‹Р№ estimator СЃ РєСЌРїР°РјРё)
+			const estimator = createTokenEstimator("compaction")
+			const tokensBefore = messages.reduce((total, msg) => total + estimator(msg), 0)
 
-			// Agentario: сохраняем display messages (полная история) ПЕРЕД изменениями (фильтруем info)
+			// Agentario: СЃРѕС…СЂР°РЅСЏРµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ) РџР•Р Р•Р” РёР·РјРµРЅРµРЅРёСЏРјРё (С„РёР»СЊС‚СЂСѓРµРј info)
 			const displayMessages = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
 			await saveDisplayMessages(taskId, displayMessages).catch(err =>
 				Logger.error("[SdkCompaction] Failed to save display messages (history):", err)
 			)
 			Logger.log(`[SdkCompaction] Saved ${displayMessages.length} display messages to disk (history)`)
 
-			// 2. Конвертируем compact'нутые SDK-сообщения в AgentarioMessage[] для контекста (модель)
-			// Display messages remain unchanged — user sees full history.
+			// 2. РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј compact'РЅСѓС‚С‹Рµ SDK-СЃРѕРѕР±С‰РµРЅРёСЏ РІ AgentarioMessage[] РґР»СЏ РєРѕРЅС‚РµРєСЃС‚Р° (РјРѕРґРµР»СЊ)
+			// Display messages remain unchanged вЂ” user sees full history.
 			const { sdkMessagesToagentarioMessages } = await import("./message-translator")
 			const compactedagentarioMessages: AgentarioMessage[] = sdkMessagesToagentarioMessages(result.messages)
 				.filter((m) => !(m.type === "ask" && m.ask === "completion_result"))
 
-			// 3. Рассчитываем новый contextBudget
-			const chatTokens = result.messages.reduce((total, msg) => {
-				const text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content)
-				return total + estimateTokens(text.length)
-			}, 0)
+			// 3. Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј РЅРѕРІС‹Р№ contextBudget
+			const chatTokens = result.messages.reduce((total, msg) => total + estimator(msg), 0)
 
-			// Agentario: более детальные категории context budget
+			// Agentario: Р±РѕР»РµРµ РґРµС‚Р°Р»СЊРЅС‹Рµ РєР°С‚РµРіРѕСЂРёРё context budget
 			const systemPrompt = config.systemPrompt ?? ""
 			const systemTokens = estimateTokens(systemPrompt.length)
 			const rulesTokens = 3000 // Agentario rules + .clinerules
@@ -491,10 +513,10 @@ export class SdkCompactionCoordinator {
 				measuredAt: Date.now(),
 			}
 
-			// Agentario: обновляем ТОЛЬКО context messages (для модели), display не трогаем
+			// Agentario: РѕР±РЅРѕРІР»СЏРµРј РўРћР›Р¬РљРћ context messages (РґР»СЏ РјРѕРґРµР»Рё), display РЅРµ С‚СЂРѕРіР°РµРј
 			task.messageStateHandler.replaceContextMessages(compactedagentarioMessages)
 
-			// Добавляем context budget в display для обновления прогресс-бара
+			// Р”РѕР±Р°РІР»СЏРµРј context budget РІ display РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂР°
 			const contextBudgetMsg: AgentarioMessage = {
 				ts: Date.now(),
 				type: "say",
@@ -504,7 +526,7 @@ export class SdkCompactionCoordinator {
 			}
 			task.messageStateHandler.addMessages([contextBudgetMsg])
 
-			// Сохраняем обновлённые display messages на диск (фильтруем info)
+			// РЎРѕС…СЂР°РЅСЏРµРј РѕР±РЅРѕРІР»С‘РЅРЅС‹Рµ display messages РЅР° РґРёСЃРє (С„РёР»СЊС‚СЂСѓРµРј info)
 			const updatedDisplay = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
 			await saveDisplayMessages(taskId, updatedDisplay).catch(err =>
 				Logger.error("[SdkCompaction] Failed to save updated display messages (history):", err)
@@ -512,7 +534,7 @@ export class SdkCompactionCoordinator {
 
 			this.options.resetMessageTranslator()
 
-			// Сохраняем summary в файл
+			// РЎРѕС…СЂР°РЅСЏРµРј summary РІ С„Р°Р№Р»
 			const summaryPath = this.saveSummaryToFile(result.messages, taskId)
 
 			this.emitInfo(this.formatCompactionStatus(messagesBefore, result.messages.length, tokensBefore, chatTokens, taskId, summaryPath))
@@ -524,6 +546,7 @@ export class SdkCompactionCoordinator {
 			Logger.log(
 				`[SdkController] Compacted history task ${taskId}: ${messagesBefore} -> ${result.messages.length} messages (session ${startResult.startResult.sessionId})`,
 			)
+			return { compacted: true, messagesBefore, messagesAfter: result.messages.length }
 		} finally {
 			await temp.dispose()
 		}
@@ -533,14 +556,14 @@ export class SdkCompactionCoordinator {
 
 	private diagnoseCompactionFailure(messages: SdkMessage[]): string {
 		if (messages.length === 0) {
-			return "Нет сообщений для сжатия."
+			return "РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РґР»СЏ СЃР¶Р°С‚РёСЏ."
 		}
 		if (messages.length <= 2) {
-			return `Слишком мало сообщений (${messages.length}) для сжатия. Нужно минимум 3.`
+			return `РЎР»РёС€РєРѕРј РјР°Р»Рѕ СЃРѕРѕР±С‰РµРЅРёР№ (${messages.length}) РґР»СЏ СЃР¶Р°С‚РёСЏ. РќСѓР¶РЅРѕ РјРёРЅРёРјСѓРј 3.`
 		}
 		// Check if all messages are in the protected tail (last turn)
 		// Basic compaction protects the last user message and everything after it
-		return "Сообщения уже минимальны или все в текущем диалоге — сжимать нечего. Попробуйте позже, когда будет больше истории."
+		return "РЎРѕРѕР±С‰РµРЅРёСЏ СѓР¶Рµ РјРёРЅРёРјР°Р»СЊРЅС‹ РёР»Рё РІСЃРµ РІ С‚РµРєСѓС‰РµРј РґРёР°Р»РѕРіРµ вЂ” СЃР¶РёРјР°С‚СЊ РЅРµС‡РµРіРѕ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ, РєРѕРіРґР° Р±СѓРґРµС‚ Р±РѕР»СЊС€Рµ РёСЃС‚РѕСЂРёРё."
 	}
 
 	private getCurrentMode(): Mode {
@@ -548,32 +571,40 @@ export class SdkCompactionCoordinator {
 		return m === "plan" ? m : "act"
 	}
 
+	/**
+	 * Builds a result for when compaction just completed while we were waiting.
+	 * Returns compacted=false with a distinct reason so callers know it was a legitimate skip.
+	 */
+	private buildPostCompactionResult(): CompactTaskResult {
+		return { compacted: false, reason: "compaction_just_completed" }
+	}
+
 	private formatCompactionStatus(messagesBefore: number, messagesAfter: number, tokensBefore?: number, tokensAfter?: number, sessionId?: string, summaryPath?: string): string {
-		let status = `Сжатие выполнено`
+		let status = `РЎР¶Р°С‚РёРµ РІС‹РїРѕР»РЅРµРЅРѕ`
 		if (tokensBefore !== undefined && tokensAfter !== undefined) {
 			const saved = tokensBefore - tokensAfter
 			const percent = tokensBefore > 0 ? Math.round((saved / tokensBefore) * 100) : 0
-			status += `: ${messagesBefore}→${messagesAfter} сообщ., ${tokensBefore.toLocaleString()}→${tokensAfter.toLocaleString()} токенов (сохранено ${saved.toLocaleString()}, ${percent}%)`
+			status += `: ${messagesBefore}в†’${messagesAfter} СЃРѕРѕР±С‰., ${tokensBefore.toLocaleString()}в†’${tokensAfter.toLocaleString()} С‚РѕРє. (РѕСЃРІРѕР±РѕР¶РґРµРЅРѕ ${saved.toLocaleString()}, ${percent}%)`
 		} else if (messagesBefore === messagesAfter) {
-			status += `: ${messagesAfter} сообщений (контекст сжат)`
+			status += `: ${messagesAfter} СЃРѕРѕР±С‰РµРЅРёР№ (РєРѕРЅС‚РµРєСЃС‚ СЃР¶Р°С‚)`
 		} else {
-			status += `: ${messagesBefore}→${messagesAfter} сообщений`
+			status += `: ${messagesBefore}в†’${messagesAfter} СЃРѕРѕР±С‰РµРЅРёР№`
 		}
 		if (summaryPath) {
-			status += `\nФайл: ${summaryPath}`
+			status += `\nР¤Р°Р№Р»: ${summaryPath}`
 		}
 		if (sessionId) {
-			status += `\nСессия: ${sessionId}`
+			status += `\nРЎРµСЃСЃРёСЏ: ${sessionId}`
 		}
 		return status
 	}
 
 	private saveSummaryToFile(messages: SdkMessage[], sessionId: string): string | undefined {
 		try {
-			// Ищем summary-сообщение в результатах сжатия
+			// РС‰РµРј summary-СЃРѕРѕР±С‰РµРЅРёРµ РІ СЂРµР·СѓР»СЊС‚Р°С‚Р°С… СЃР¶Р°С‚РёСЏ
 			const summaryMsg = messages.find((m: any) => m.metadata?.kind === "compaction_summary")
 			if (!summaryMsg) {
-				// Если нет summary-метаданных, сохраняем весь диалог
+				// Р•СЃР»Рё РЅРµС‚ summary-РјРµС‚Р°РґР°РЅРЅС‹С…, СЃРѕС…СЂР°РЅСЏРµРј РІРµСЃСЊ РґРёР°Р»РѕРі
 				const transcript = messages.map((m: SdkMessage) => {
 					const role = m.role ?? "unknown"
 					const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content)
@@ -618,16 +649,19 @@ export class SdkCompactionCoordinator {
 	}
 }
 
-/** Фильтрует compaction-info сообщения из display messages перед сохранением в историю.
- *  Временные сообщения ("auto-compacting", "compacting") НЕ сохраняются.
- *  Статистика (📊) и результат (✅) СОХРАНЯЮТСЯ для истории. */
+/** Р¤РёР»СЊС‚СЂСѓРµС‚ compaction-info СЃРѕРѕР±С‰РµРЅРёСЏ РёР· display messages РїРµСЂРµРґ СЃРѕС…СЂР°РЅРµРЅРёРµРј РІ РёСЃС‚РѕСЂРёСЋ.
+ *  Р’СЂРµРјРµРЅРЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ ("auto-compacting", "compacting") РќР• СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ.
+ *  РЎС‚Р°С‚РёСЃС‚РёРєР° (рџ“Љ) Рё СЂРµР·СѓР»СЊС‚Р°С‚ (вњ…) РЎРћРҐР РђРќРЇР®РўРЎРЇ РґР»СЏ РёСЃС‚РѕСЂРёРё. */
 export function filterCompactionInfoMessages(messages: AgentarioMessage[]): AgentarioMessage[] {
 	return messages.filter((m) => {
 		if (m.type !== "say" || m.say !== "info") return true
 		const text = m.text || ""
-		// Сохраняем статистику контекста и результат компакции
-		if (text.startsWith("📊") || text.startsWith("✅")) return true
-		// Фильтруем временные индикаторы прогресса
+		// РЎРѕС…СЂР°РЅСЏРµРј СЃС‚Р°С‚РёСЃС‚РёРєСѓ РєРѕРЅС‚РµРєСЃС‚Р° Рё СЂРµР·СѓР»СЊС‚Р°С‚ РєРѕРјРїР°РєС†РёРё
+		if (text.startsWith("рџ“Љ") || text.startsWith("вњ…")) return true
+		// Р¤РёР»СЊС‚СЂСѓРµРј РІСЂРµРјРµРЅРЅС‹Рµ РёРЅРґРёРєР°С‚РѕСЂС‹ РїСЂРѕРіСЂРµСЃСЃР°
 		return false
 	})
 }
+
+
+

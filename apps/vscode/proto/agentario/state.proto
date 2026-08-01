@@ -494,6 +494,10 @@ message UpdateSettingsRequest {
   optional int32 smart_truncation_tail = 71;
   // Agentario: Context Protection — AST Navigator (Tier 3)
   optional bool ast_navigator_enabled = 72;
+  // Agentario: Lab API Server settings
+  optional bool lab_api_enabled = 73;
+  optional int32 lab_api_port = 74;
+  optional string lab_cline_dir = 75;
 }
 
 message UpdateTerminalConnectionTimeoutRequest {

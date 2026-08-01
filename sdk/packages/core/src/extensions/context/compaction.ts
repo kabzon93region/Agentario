@@ -160,6 +160,7 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 			promptTemplateBefore: compaction?.promptTemplateBefore,
 			promptTemplateAfter: compaction?.promptTemplateAfter,
 			logger,
+			mode, // Agentario: auto vs manual
 			compactionMode, // Agentario: передаём режим суммаризации
 			statusCallback, // Agentario: callback для статусов в UI
 		}),

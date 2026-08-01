@@ -18,19 +18,31 @@ curl localhost:19229/api -d '{"method":"lab.status"}'
 
 ## Agentario Lab - High-level API
 
-For automated testing, use the lab.* methods. By default, VS Code runs **hidden** (off-screen) and all control happens via **CDP bridge** - no Playwright UI clicks. Use --visible to see the window.
+For automated testing, use the REST API (port 19231) or CLI. VS Code runs **hidden** (off-screen) by default. Use --visible to see the window.
+
+### Extension REST API (preferred)
 
 ```bash
-# Create a task and wait for completion
-curl localhost:19229/api -d '{"method":"lab.new_task","params":{"text":"Analyze this project"}}'
-curl localhost:19229/api -d '{"method":"lab.wait_idle","params":{"timeout":600000}}'
-curl localhost:19229/api -d '{"method":"lab.export_chat","params":{"outPath":"Exports/lab.md"}}'
+# Health check
+curl http://localhost:19231/health
+
+# Create a task
+curl -X POST http://localhost:19231/api/new_task -H "Content-Type: application/json" -d '{"text":"Analyze this project"}'
+
+# Wait for idle
+curl http://localhost:19231/api/wait_idle?timeout=600000
+
+# Export chat
+curl "http://localhost:19231/api/export_chat?outPath=Exports/lab.md"
+
+# Get messages
+curl http://localhost:19231/api/messages?limit=20
 ```
 
-Or use the CLI wrapper:
+### CLI wrapper
 
 ```bat
-scripts\agentario-lab.cmd start --workspace Z:\T\TEMO --vsix release\agentario-0.14.52.vsix
+scripts\agentario-lab.cmd start --workspace Z:\T\TEMO --vsix release\agentario-0.14.55.vsix
 scripts\agentario-lab.cmd new-task "Analyze this project"
 scripts\agentario-lab.cmd wait-idle --timeout 600000
 scripts\agentario-lab.cmd export Exports\lab.md

@@ -1,5 +1,6 @@
 import { sendShowWebviewEvent } from "@core/controller/ui/subscribeToShowWebview"
 import { WebviewProvider } from "@core/webview"
+import http from "node:http"
 import * as vscode from "vscode"
 import { handleGrpcRequest, handleGrpcRequestCancel } from "@/core/controller/grpc-handler"
 import { HostProvider } from "@/hosts/host-provider"
@@ -159,6 +160,31 @@ export class VscodeWebviewProvider extends WebviewProvider implements vscode.Web
 			case "grpc_request_cancel": {
 				if (message.grpc_request_cancel) {
 					await handleGrpcRequestCancel(postMessageToWebview, message.grpc_request_cancel)
+				}
+				break
+			}
+			case "lab_api_request": {
+				if (message.lab_api_request) {
+					const { request_id, path: apiPath, method = "GET", body } = message.lab_api_request
+					const port = this.controller?.stateManager?.getGlobalSettingsKey?.("labApiPort") || 19231
+					try {
+						const result = await new Promise<any>((resolve, reject) => {
+							const reqOpts: any = { hostname: "127.0.0.1", port, path: apiPath, method, headers: { "Content-Type": "application/json" } }
+							const req = http.request(reqOpts, (res: any) => {
+								let data = ""
+								res.on("data", (chunk: any) => { data += chunk })
+								res.on("end", () => {
+									try { resolve(JSON.parse(data)) } catch { resolve({ raw: data }) }
+								})
+							})
+							req.on("error", (err: any) => reject(err))
+							if (body) req.write(JSON.stringify(body))
+							req.end()
+						})
+						postMessageToWebview({ type: "lab_api_response", lab_api_response: { request_id, data: result } })
+					} catch (err: any) {
+						postMessageToWebview({ type: "lab_api_response", lab_api_response: { request_id, error: err.message || String(err) } })
+					}
 				}
 				break
 			}

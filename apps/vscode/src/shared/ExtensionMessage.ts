@@ -18,8 +18,15 @@ import { TelemetrySetting } from "./TelemetrySetting"
 import { UserInfo } from "./UserInfo"
 // webview will hold state
 export interface ExtensionMessage {
-	type: "grpc_response" // New type for gRPC responses
+	type: "grpc_response" | "lab_api_response"
 	grpc_response?: GrpcResponse
+	lab_api_response?: LabApiResponse
+}
+
+export type LabApiResponse = {
+	request_id: string
+	data?: any
+	error?: string
 }
 
 export type GrpcResponse = {
@@ -116,7 +123,7 @@ export interface ExtensionState {
 	compactionApiKey?: string
 	compactionChunkSize?: number
 	compactionDoubleSummarization?: boolean
-	/** Agentario: reserve tokens for model output — auto-condense trigger threshold */
+	/** Agentario: reserve tokens for model output РІР‚вЂќ auto-condense trigger threshold */
 	compactionReserveTokens?: number
 	/** Agentario: max input tokens override for compaction trigger (0 = auto-detect) */
 	compactionMaxInputTokens?: number
@@ -155,17 +162,21 @@ export interface ExtensionState {
 	openAiCodexIsAuthenticated?: boolean
 	/** Agentario: chat UI theme - "default" or "cursor" (compact Cursor-style) */
 	chatTheme?: "default" | "cursor"
-	// Agentario: Context Protection — Smart Chunked Navigation (Tier 1)
+	// Agentario: Context Protection РІР‚вЂќ Smart Chunked Navigation (Tier 1)
 	smartChunkingEnabled?: boolean
 	showFileOutline?: boolean
 	maxOutlineEntries?: number
-	// Agentario: Context Protection — Tool Result Truncation (Tier 2)
+	// Agentario: Context Protection РІР‚вЂќ Tool Result Truncation (Tier 2)
 	smartTruncationEnabled?: boolean
 	smartTruncationThreshold?: number
 	smartTruncationHead?: number
 	smartTruncationTail?: number
-	// Agentario: Context Protection — AST Navigator (Tier 3)
+	// Agentario: Context Protection РІР‚вЂќ AST Navigator (Tier 3)
 	astNavigatorEnabled?: boolean
+	// Agentario: Lab API Server settings
+	labApiEnabled?: boolean
+	labApiPort?: number
+	labClineDir?: string
 }
 
 /**

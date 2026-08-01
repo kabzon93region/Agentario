@@ -35,6 +35,7 @@ import { sendAddToInputEvent } from "./core/controller/ui/subscribeToAddToInput"
 import { sendShowWebviewEvent } from "./core/controller/ui/subscribeToShowWebview"
 import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
 import { StateManager } from "./core/storage/StateManager"
+import { startAgentarioApiServer } from "./dev/agentario-api-server"
 import {
 	cleanupMcpMarketplaceCatalogFromGlobalState,
 	cleanupOldApiKey,
@@ -85,7 +86,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	setupHostProvider(context)
 
 	// 2. Clean up legacy data patterns within VSCode's native storage.
-	// Moves workspace→global keys, task history→file, custom instructions→rules, etc.
+	// Moves workspaceв†’global keys, task historyв†’file, custom instructionsв†’rules, etc.
 	// Must run BEFORE the file export so we copy clean state.
 	await cleanupLegacyVSCodeStorage(context)
 
@@ -175,7 +176,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(commands.AccountButton, () => {
 			if (isAgentarioStandaloneMode()) {
 				void vscode.window.showInformationMessage(
-					"Agentario работает автономно. Аккаунт Cline не используется — выберите провайдера в Settings (LM Studio, Xiaomi MiMo и другие OpenAI-compatible API).",
+					"Agentario СЂР°Р±РѕС‚Р°РµС‚ Р°РІС‚РѕРЅРѕРјРЅРѕ. РђРєРєР°СѓРЅС‚ Cline РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ вЂ” РІС‹Р±РµСЂРёС‚Рµ РїСЂРѕРІР°Р№РґРµСЂР° РІ Settings (LM Studio, Xiaomi MiMo Рё РґСЂСѓРіРёРµ OpenAI-compatible API).",
 				)
 				return
 			}
@@ -236,23 +237,28 @@ export async function activate(context: vscode.ExtensionContext) {
 		;(globalThis as Record<string, unknown>).__clineHandleUri = (url: string) => SharedUriHandler.handleUri(url)
 	}
 
-	// Debug-harness Lab bridge: expose controller methods on globalThis so the
-	// harness can create tasks, send responses, and export context via CDP
-	// Runtime.evaluate -- without Playwright UI clicks. Gated on
-	// CLINE_DEBUG_HARNESS_PORT so it never ships in production builds.
-	if (process.env.CLINE_DEBUG_HARNESS_PORT) {
-		const g = globalThis as Record<string, unknown>
-		g.agentario = {
-			initTask: (text?: string, images?: string[], files?: string[]) =>
-				WebviewProvider.getInstance().controller.initTask(text, images, files),
-			askResponse: (text?: string, images?: string[], files?: string[]) =>
-				WebviewProvider.getInstance().controller.askResponse(text, images, files),
-			exportContextText: () =>
-				WebviewProvider.getInstance().controller.captureModelContext(),
-			getActiveTaskId: () =>
-				WebviewProvider.getInstance().controller.task?.taskId ?? null,
+	// Agentario REST API Server: lightweight HTTP API for lab automation.
+	// Starts if AGENTARIO_API_PORT env is set OR labApiEnabled setting is true.
+	const labApiEnabledSetting = StateManager.get().getGlobalSettingsKey("labApiEnabled") as boolean | undefined
+	const envApiPort = process.env.AGENTARIO_API_PORT ? parseInt(process.env.AGENTARIO_API_PORT) : undefined
+	const settingsApiPort = labApiEnabledSetting ? (StateManager.get().getGlobalSettingsKey("labApiPort") as number || 19231) : undefined
+	const labApiPort = envApiPort || settingsApiPort
+	if (labApiPort) {
+		const apiPort = labApiPort
+		const clineDir = process.env.CLINE_DIR || (StateManager.get().getGlobalSettingsKey("labClineDir") as string) || path.join(os.homedir(), ".agentario-lab")
+		try {
+			startAgentarioApiServer({
+				port: apiPort,
+				controller: WebviewProvider.getInstance().controller,
+				clineDir,
+				vscode,
+			})
+			Logger.log(`[Agentario API] Server started on port ${apiPort}, clineDir: ${clineDir}`)
+		} catch (err: any) {
+			Logger.error(`[Agentario API] Failed to start: ${err.message}`)
 		}
 	}
+
 
 	// Register size testing commands in development mode
 	if (IS_DEV) {
@@ -745,7 +751,7 @@ async function getBinaryLocation(name: string): Promise<string> {
 
 	// VS Code 1.122.0 (microsoft/vscode#317978 et al.) migrated from @vscode/ripgrep
 	// to @vscode/ripgrep-universal, which ships per-platform/arch subdirectories.
-	// Probe the new layout first; fall back to the legacy paths for ≤1.121.x.
+	// Probe the new layout first; fall back to the legacy paths for в‰¤1.121.x.
 	const platformArch = `${process.platform}-${process.arch}`
 	const binPath =
 		(await checkPath(`node_modules/@vscode/ripgrep-universal/bin/${platformArch}/`)) ||

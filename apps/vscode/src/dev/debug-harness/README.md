@@ -6,11 +6,11 @@ programmatic access to:
 - **Extension host debugging** (Node.js): breakpoints, evaluate, step, pause/resume via CDP
 - **Webview debugging** (Chrome): breakpoints, evaluate via CDP
 - **UI automation**: click, type, screenshot, open sidebar via Playwright (visible mode only)
-- **Hidden mode**: VS Code runs off-screen by default, controlled via CDP bridge (no UI clicks)
+- **Hidden mode**: VS Code runs off-screen by default, controlled via native REST API (port 19231) — no CDP, no UI clicks
 - **Sourcemap resolution**: set breakpoints by original source file + line
 - **Data isolation**: separate `~/.agentario-lab` profile so debugee doesn't interfere with debugger
 - **OAuth testing**: browser URL capture, token inspection, callback simulation
-- **Agentario Lab**: high-level API for agentic testing (create tasks, wait idle, export)
+- **Agentario Lab**: high-level REST API (port 19231) for agentic testing + harness lifecycle (create tasks, wait idle, export)
 
 Designed to be driven from an agentic loop via `curl` commands or the `lab-client.ts` TS client.
 
@@ -59,7 +59,7 @@ Screenshots go to `<os.tmpdir>/agentario-lab-debug/`.
 
 ## Agentario Lab API
 
-High-level methods for automated testing. By default, these use the **CDP bridge** (`globalThis.agentario`) for invisible control — no Playwright UI clicks. VS Code runs hidden (off-screen).
+High-level methods for automated testing. By default, these use the **native REST API** (port 19231) for invisible control — no CDP, no Playwright UI clicks. VS Code runs hidden (off-screen).
 with disk-based state detection.
 
 ### lab.status

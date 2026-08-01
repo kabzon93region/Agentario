@@ -20,7 +20,7 @@ enum IndexedFileStatus {
   INDEXED_FILE_STATUS_INDEXED = 1;
   INDEXED_FILE_STATUS_SKIPPED = 2;
   INDEXED_FILE_STATUS_ERROR = 3;
-  // First N chunks only — file is larger than the per-file chunk budget.
+  // First N chunks only -- file is larger than the per-file chunk budget.
   INDEXED_FILE_STATUS_PARTIAL = 4;
 }
 

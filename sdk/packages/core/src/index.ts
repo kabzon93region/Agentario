@@ -757,6 +757,7 @@ export async function loadOpenTelemetryAdapter() {
 }
 export { Agent, createAgentRuntime } from "@agentario/agents";
 export { createContextCompactionPrepareTurn } from "./extensions/context/compaction";
+export { createTokenEstimator } from "./extensions/context/compaction-shared";
 export {
 	CONTEXT_BUDGET_NOTICE_KIND,
 	estimateContextBudget,

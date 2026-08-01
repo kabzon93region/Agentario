@@ -1,4 +1,4 @@
-﻿import type { ExtensionMessage } from "@shared/ExtensionMessage"
+import type { ExtensionMessage } from "@shared/ExtensionMessage"
 import { isClineInternalTester } from "@shared/internal/account"
 import { ResetStateRequest } from "@shared/proto/agentario/state"
 import type { UserOrganization } from "@shared/proto/index.agentario"
@@ -8,6 +8,7 @@ import {
 	HardDriveDownload,
 	Info,
 	type LucideIcon,
+	Server,
 	Shield,
 	SlidersHorizontal,
 	SquareTerminal,
@@ -36,11 +37,12 @@ import { RemoteConfigSection } from "./sections/RemoteConfigSection"
 import SummarizationSettingsSection from "./sections/SummarizationSettingsSection"
 import ContextProtectionSection from "./sections/ContextProtectionSection"
 import TerminalSettingsSection from "./sections/TerminalSettingsSection"
+import LabSection from "./sections/LabSection"
 
 const IS_DEV = process.env.IS_DEV
 
 // Tab definitions
-type SettingsTabID = "api-config" | "features" | "summarization" | "context-protection" | "terminal" | "general" | "about" | "debug" | "remote-config"
+type SettingsTabID = "api-config" | "features" | "summarization" | "context-protection" | "terminal" | "general" | "about" | "debug" | "remote-config" | "lab"
 interface SettingsTab {
 	id: SettingsTabID
 	name: string
@@ -110,6 +112,13 @@ const getSettingsTabs = (): SettingsTab[] => [
 		icon: Info,
 	},
 	{
+		id: "lab",
+		name: "Lab API",
+		tooltipText: "Lab API Server",
+		headerText: "Lab API Server",
+		icon: Server,
+	},
+	{
 		id: "debug",
 		name: t("settings.tabs.debug"),
 		tooltipText: t("settings.tabs.debug"),
@@ -153,6 +162,7 @@ const SettingsView = ({ onDone, targetSection }: SettingsViewProps) => {
 			terminal: TerminalSettingsSection,
 			"remote-config": RemoteConfigSection,
 			about: AboutSection,
+			lab: LabSection,
 			debug: DebugSection,
 		}),
 		[],
