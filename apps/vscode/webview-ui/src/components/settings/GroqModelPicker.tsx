@@ -1,4 +1,4 @@
-﻿import type { ModelInfo } from "@shared/api"
+import type { ModelInfo } from "@shared/api"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { fromProtobufModels } from "@shared/proto-conversions/models/typeConversion"
 import { Mode } from "@shared/storage/types"

@@ -1,4 +1,4 @@
-﻿import type { AgentarioCoreStartInput, ITelemetryService } from "@agentario/core"
+import type { AgentarioCoreStartInput, ITelemetryService } from "@agentario/core"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockClineCoreCreate = vi.hoisted(() => vi.fn())

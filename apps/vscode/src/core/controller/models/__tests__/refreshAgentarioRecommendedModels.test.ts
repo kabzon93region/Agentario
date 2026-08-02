@@ -1,4 +1,4 @@
-﻿import * as sdkCore from "@agentario/core"
+import * as sdkCore from "@agentario/core"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ClineEnv } from "@/config"
 import { refreshAgentarioRecommendedModels, resetAgentarioRecommendedModelsCacheForTests } from "../refreshAgentarioRecommendedModels"

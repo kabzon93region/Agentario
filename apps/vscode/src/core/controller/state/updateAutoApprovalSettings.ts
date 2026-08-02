@@ -1,4 +1,4 @@
-﻿import { Empty } from "@shared/proto/agentario/common"
+import { Empty } from "@shared/proto/agentario/common"
 import { AutoApprovalSettingsRequest } from "@shared/proto/agentario/state"
 import { Controller } from ".."
 

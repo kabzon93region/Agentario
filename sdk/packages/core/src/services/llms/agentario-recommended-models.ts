@@ -1,4 +1,4 @@
-﻿import { getAgentarioEnvironmentConfig } from "@agentario/shared";
+import { getAgentarioEnvironmentConfig } from "@agentario/shared";
 import { ProviderSettingsManager } from "../storage/provider-settings-manager";
 
 export interface ClineRecommendedModel {

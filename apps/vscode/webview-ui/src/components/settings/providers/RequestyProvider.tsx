@@ -1,4 +1,4 @@
-﻿import { toRequestyServiceUrl } from "@shared/clients/requesty"
+import { toRequestyServiceUrl } from "@shared/clients/requesty"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { Mode } from "@shared/storage/types"
 import { VSCodeButton, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"

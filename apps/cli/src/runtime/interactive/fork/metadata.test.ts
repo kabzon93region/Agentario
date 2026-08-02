@@ -1,4 +1,4 @@
-﻿import { SessionSource } from "@agentario/core";
+import { SessionSource } from "@agentario/core";
 import type { Message } from "@agentario/shared";
 import { describe, expect, it } from "vitest";
 import { buildForkSessionMetadata } from "./metadata";

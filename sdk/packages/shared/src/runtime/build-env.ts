@@ -1,4 +1,4 @@
-﻿import { basename } from "node:path";
+import { basename } from "node:path";
 
 export const CLINE_BUILD_ENV_ENV = "CLINE_BUILD_ENV";
 export const CLINE_DEBUG_HOST_ENV = "CLINE_DEBUG_HOST";

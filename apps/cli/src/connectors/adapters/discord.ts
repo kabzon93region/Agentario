@@ -1,4 +1,4 @@
-﻿import {
+import {
 	createDiscordAdapter,
 	type DiscordAdapter,
 } from "@chat-adapter/discord";

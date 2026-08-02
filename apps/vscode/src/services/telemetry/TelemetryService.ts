@@ -1,4 +1,4 @@
-﻿import { HostProvider } from "@hosts/host-provider"
+import { HostProvider } from "@hosts/host-provider"
 import type { BrowserSettings } from "@shared/BrowserSettings"
 import { ApiFormat, apiFormatToJSON } from "@shared/proto/agentario/models"
 import { ShowMessageType } from "@shared/proto/host/window"

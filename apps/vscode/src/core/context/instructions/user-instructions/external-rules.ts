@@ -1,4 +1,4 @@
-﻿import { combineRuleToggles, synchronizeRuleToggles } from "@core/context/instructions/user-instructions/rule-helpers"
+import { combineRuleToggles, synchronizeRuleToggles } from "@core/context/instructions/user-instructions/rule-helpers"
 import { GlobalFileNames } from "@core/storage/disk"
 import { AgentarioRulesToggles } from "@shared/Agentario-rules"
 import path from "path"

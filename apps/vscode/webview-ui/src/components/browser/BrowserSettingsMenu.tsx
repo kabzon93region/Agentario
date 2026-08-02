@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { useEffect, useRef, useState } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"

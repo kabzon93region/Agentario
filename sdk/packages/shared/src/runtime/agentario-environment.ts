@@ -1,4 +1,4 @@
-﻿export const CLINE_ENVIRONMENT_ENV = "CLINE_ENVIRONMENT";
+export const CLINE_ENVIRONMENT_ENV = "CLINE_ENVIRONMENT";
 export const CLINE_ENVIRONMENT_OVERRIDE_ENV = "CLINE_ENVIRONMENT_OVERRIDE";
 
 export type AgentarioEnvironment = "production" | "staging" | "local";

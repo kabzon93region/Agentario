@@ -1,4 +1,4 @@
-﻿import { COMMAND_OUTPUT_STRING, COMMAND_REQ_APP_STRING } from "@shared/combineCommandSequences"
+import { COMMAND_OUTPUT_STRING, COMMAND_REQ_APP_STRING } from "@shared/combineCommandSequences"
 import { AgentarioMessage } from "@shared/ExtensionMessage"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { memo, useEffect, useRef, useState } from "react"

@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { TestConnectionResult } from "@shared/proto/agentario/state"
 import { Logger } from "@/shared/services/Logger"
 import { blobStorage } from "@/shared/storage/AgentarioBlobStorage"

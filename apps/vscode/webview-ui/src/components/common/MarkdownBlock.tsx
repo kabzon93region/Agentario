@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/agentario/state"
 import { SquareArrowOutUpRightIcon } from "lucide-react"
 import { marked } from "marked"

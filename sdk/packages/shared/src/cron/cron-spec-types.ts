@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared types describing automation cron specs parsed from Markdown files.
  * Split out from `@agentario/core` so the parser can live in `shared` where
  * multiple consumers (hub daemon, CLI tools, enterprise adapters) can validate

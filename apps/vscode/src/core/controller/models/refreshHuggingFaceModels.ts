@@ -1,4 +1,4 @@
-﻿import { getProviderCollectionSync } from "@agentario/llms"
+import { getProviderCollectionSync } from "@agentario/llms"
 import type { ModelInfo } from "@shared/api"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { OpenRouterCompatibleModelInfo, OpenRouterModelInfo } from "@shared/proto/agentario/models"

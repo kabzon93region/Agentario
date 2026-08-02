@@ -1,4 +1,4 @@
-﻿import {
+import {
 	CodebaseIndex,
 	IndexedFile,
 	IndexedFileStatus,

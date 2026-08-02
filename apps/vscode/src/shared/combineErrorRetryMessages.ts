@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "./ExtensionMessage"
+import { AgentarioMessage } from "./ExtensionMessage"
 
 /**
  * Consolidates error_retry messages in a retry sequence, keeping only the latest one,

@@ -1,4 +1,4 @@
-﻿import type {
+import type {
 	AgentarioAccountActionRequest,
 	ProviderActionRequest,
 } from "@agentario/shared";

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	createCoreSettingsService,
 	disablePluginMcpServersInSettings,
 	setDisabledPlugin,

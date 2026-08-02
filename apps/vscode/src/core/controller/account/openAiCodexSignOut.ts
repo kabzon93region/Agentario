@@ -1,4 +1,4 @@
-﻿import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
+import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
 import { AuthService } from "@/sdk/auth-service"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."

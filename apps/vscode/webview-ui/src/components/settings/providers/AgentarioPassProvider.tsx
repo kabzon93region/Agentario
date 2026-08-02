@@ -1,4 +1,4 @@
-﻿import type { ModelInfo } from "@shared/api"
+import type { ModelInfo } from "@shared/api"
 import { openAiModelInfoSafeDefaults } from "@shared/api"
 import { Mode } from "@shared/storage/types"
 import { buildClinePassSubscriptionPageUrl } from "@/components/onboarding/AgentarioPassSubscribe"

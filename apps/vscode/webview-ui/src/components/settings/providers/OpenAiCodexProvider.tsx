@@ -1,4 +1,4 @@
-﻿import { openAiModelInfoSafeDefaults } from "@shared/api"
+import { openAiModelInfoSafeDefaults } from "@shared/api"
 import { fromProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
 import type { Mode } from "@shared/storage/types"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"

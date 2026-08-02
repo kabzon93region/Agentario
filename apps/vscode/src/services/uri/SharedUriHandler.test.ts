@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, it, mock } from "bun:test"
 import { expect } from "chai"
 import * as fs from "fs/promises"
 import os from "os"

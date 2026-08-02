@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared terminal module for both VSCode and Standalone environments.
  *
  * This module provides terminal management functionality that works across:

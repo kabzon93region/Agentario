@@ -1,4 +1,4 @@
-﻿import { DeleteAllTaskHistoryCount } from "@shared/proto/agentario/task"
+import { DeleteAllTaskHistoryCount } from "@shared/proto/agentario/task"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."
 

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type AgentEvent,
 	type AgentResult,
 	type ProviderSettings,

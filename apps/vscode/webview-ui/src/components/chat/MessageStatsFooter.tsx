@@ -1,4 +1,4 @@
-﻿import type { AgentarioApiReqInfo } from "@shared/ExtensionMessage"
+import type { AgentarioApiReqInfo } from "@shared/ExtensionMessage"
 import { formatMessageStatsLine } from "@shared/message-display"
 
 interface MessageStatsFooterProps {

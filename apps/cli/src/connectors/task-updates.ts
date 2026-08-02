@@ -1,4 +1,4 @@
-﻿import type { HubSessionClient } from "@agentario/core";
+import type { HubSessionClient } from "@agentario/core";
 import type { TeamProgressProjectionEvent } from "@agentario/shared";
 import type { Chat, Thread } from "chat";
 import type { CliLoggerAdapter } from "../logging/adapter";

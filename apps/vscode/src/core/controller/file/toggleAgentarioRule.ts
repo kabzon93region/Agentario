@@ -1,4 +1,4 @@
-﻿import { getWorkspaceBasename } from "@core/workspace"
+import { getWorkspaceBasename } from "@core/workspace"
 import type { ToggleAgentarioRuleRequest } from "@shared/proto/agentario/file"
 import { RuleScope, ToggleAgentarioRules } from "@shared/proto/agentario/file"
 import * as path from "path"

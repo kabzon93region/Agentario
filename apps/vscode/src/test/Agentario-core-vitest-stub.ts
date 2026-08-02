@@ -1,4 +1,4 @@
-﻿import { getGeneratedModelsForProvider, MODEL_COLLECTIONS_BY_PROVIDER_ID } from "@agentario/llms"
+import { getGeneratedModelsForProvider, MODEL_COLLECTIONS_BY_PROVIDER_ID } from "@agentario/llms"
 
 export interface OAuthCredentials {
 	accessToken?: string

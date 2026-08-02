@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
 import { describe, expect, it } from "vitest"
 import {
 	BUTTON_CONFIGS,

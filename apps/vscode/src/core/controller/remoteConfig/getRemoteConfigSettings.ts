@@ -1,4 +1,4 @@
-﻿import { Controller } from "@/sdk"
+import { Controller } from "@/sdk"
 import { Empty, RemoteConfigSetting, RemoteConfigSettingsResponse, RemoteConfigType } from "@/shared/proto/index.agentario"
 
 export async function getRemoteConfigSettings(controller: Controller, _request: Empty): Promise<RemoteConfigSettingsResponse> {

@@ -1,4 +1,4 @@
-﻿import { formatUserCommandBlock } from "@agentario/shared";
+import { formatUserCommandBlock } from "@agentario/shared";
 import type { InteractiveSlashCommand } from "../interactive-welcome";
 
 export type SlashCommandSource =

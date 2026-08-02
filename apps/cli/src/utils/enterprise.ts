@@ -1,4 +1,4 @@
-﻿import {
+import {
 	buildRemoteConfigSessionBlobUploadMetadata,
 	ClineAccountService,
 	type ClineCoreStartInput,

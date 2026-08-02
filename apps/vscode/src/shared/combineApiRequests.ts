@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "./ExtensionMessage"
+import { AgentarioMessage } from "./ExtensionMessage"
 
 /**
  * Combines API request start and finish messages in an array of agentarioMessages.

@@ -1,4 +1,4 @@
-﻿import { BannerAction, BannerCardData } from "@shared/agentario/banner"
+import { BannerAction, BannerCardData } from "@shared/agentario/banner"
 import { DynamicIcon } from "lucide-react/dynamic"
 import React from "react"
 import { BannerData } from "@/components/common/BannerCarousel"

@@ -1,4 +1,4 @@
-﻿import type { AgentarioRecommendedModel, OpenRouterModelInfo } from "@shared/proto/agentario/models"
+import type { AgentarioRecommendedModel, OpenRouterModelInfo } from "@shared/proto/agentario/models"
 import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/agentario/state"
 
 export const CLINEPASS_GROUP = "agentario-pass"

@@ -1,4 +1,4 @@
-﻿import { name, publisher, version } from "../package.json"
+import { name, publisher, version } from "../package.json"
 import { HostProvider } from "./hosts/host-provider"
 
 const prefix = "agentario"

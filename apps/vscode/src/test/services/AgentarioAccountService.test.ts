@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, it } from "bun:test"
+import { afterEach, beforeEach, describe, it } from "bun:test"
 import * as assert from "assert"
 import sinon from "sinon"
 import { AgentarioAccountService } from "@/services/account/AgentarioAccountService"

@@ -1,4 +1,4 @@
-﻿import { spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import type { ProviderSettingsManager } from "@agentario/core";
 import { describe, expect, it, vi } from "vitest";

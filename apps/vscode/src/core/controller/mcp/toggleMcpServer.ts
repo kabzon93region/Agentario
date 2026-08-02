@@ -1,4 +1,4 @@
-﻿import type { ToggleMcpServerRequest } from "@shared/proto/agentario/mcp"
+import type { ToggleMcpServerRequest } from "@shared/proto/agentario/mcp"
 import { McpServers } from "@shared/proto/agentario/mcp"
 import { Logger } from "@/shared/services/Logger"
 import { convertMcpServersToProtoMcpServers } from "../../../shared/proto-conversions/mcp/mcp-server-conversion"

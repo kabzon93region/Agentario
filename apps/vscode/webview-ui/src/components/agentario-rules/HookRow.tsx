@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { DeleteHookRequest, HooksToggles } from "@shared/proto/agentario/file"
 import { PenIcon, Trash2Icon } from "lucide-react"
 import { Button } from "@/components/ui/button"

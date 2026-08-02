@@ -1,4 +1,4 @@
-﻿import { openAiModelInfoSafeDefaults } from "@shared/api"
+import { openAiModelInfoSafeDefaults } from "@shared/api"
 import { AGENTARIO_RECOMMENDED_MODELS_FALLBACK } from "@shared/agentario/recommended-models"
 import { EmptyRequest, StringRequest } from "@shared/proto/agentario/common"
 import { type AgentarioRecommendedModel, AgentarioRecommendedModelsResponse } from "@shared/proto/agentario/models"

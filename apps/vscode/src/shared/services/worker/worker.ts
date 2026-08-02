@@ -1,4 +1,4 @@
-﻿import { Logger } from "@/shared/services/Logger"
+import { Logger } from "@/shared/services/Logger"
 import { BlobStoreSettings, blobStorage } from "../../storage/AgentarioBlobStorage"
 
 import { SyncQueue, SyncQueueItem } from "./queue"

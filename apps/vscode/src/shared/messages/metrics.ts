@@ -1,4 +1,4 @@
-﻿import { Mode } from "../storage/types"
+import { Mode } from "../storage/types"
 
 export interface AgentarioMessageModelInfo {
 	modelId: string

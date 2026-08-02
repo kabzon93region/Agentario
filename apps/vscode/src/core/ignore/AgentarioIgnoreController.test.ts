@@ -1,4 +1,4 @@
-﻿import { after, beforeEach, describe, it } from "mocha"
+import { after, beforeEach, describe, it } from "mocha"
 import fs from "fs/promises"
 import os from "os"
 import path from "path"

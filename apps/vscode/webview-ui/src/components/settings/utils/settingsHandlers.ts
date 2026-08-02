@@ -1,4 +1,4 @@
-﻿import { McpDisplayMode, UpdateSettingsRequest } from "@shared/proto/agentario/state"
+import { McpDisplayMode, UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { StateServiceClient } from "@/services/grpc-client"
 
 /**

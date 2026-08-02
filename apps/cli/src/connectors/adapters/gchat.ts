@@ -1,4 +1,4 @@
-﻿import { createGoogleChatAdapter } from "@chat-adapter/gchat";
+import { createGoogleChatAdapter } from "@chat-adapter/gchat";
 import type { ChatStartSessionRequest } from "@agentario/core";
 import {
 	createUserInstructionConfigService,

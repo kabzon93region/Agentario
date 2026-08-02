@@ -1,4 +1,4 @@
-﻿import { diagnosticsToProblemsString } from "@integrations/diagnostics"
+import { diagnosticsToProblemsString } from "@integrations/diagnostics"
 import { extractTextFromFile } from "@integrations/misc/extract-text"
 import { openFile } from "@integrations/misc/open-file"
 import { UrlContentFetcher } from "@services/browser/UrlContentFetcher"

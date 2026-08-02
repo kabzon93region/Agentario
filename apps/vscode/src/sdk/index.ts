@@ -1,4 +1,4 @@
-﻿// SDK Adapter Layer
+// SDK Adapter Layer
 // Replaces classic src/core/controller/ (see origin/main)
 //
 // This module provides the SDK-backed Controller and related adapters.

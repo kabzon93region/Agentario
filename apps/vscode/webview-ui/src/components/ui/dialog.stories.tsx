@@ -1,4 +1,4 @@
-﻿import type { Meta, StoryObj } from "@storybook/react-vite"
+import type { Meta, StoryObj } from "@storybook/react-vite"
 import AgentarioLogoWhite from "@/assets/AgentarioLogoWhite"
 import { Button } from "./button"
 import {

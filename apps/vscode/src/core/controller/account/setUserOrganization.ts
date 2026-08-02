@@ -1,4 +1,4 @@
-﻿import { UserOrganizationUpdateRequest } from "@shared/proto/agentario/account"
+import { UserOrganizationUpdateRequest } from "@shared/proto/agentario/account"
 import { Empty } from "@shared/proto/agentario/common"
 import { fetchRemoteConfig } from "@/core/storage/remote-config/fetch"
 import type { Controller } from "../index"

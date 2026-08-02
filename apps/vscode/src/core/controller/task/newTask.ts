@@ -1,4 +1,4 @@
-﻿import { String } from "@shared/proto/agentario/common"
+import { String } from "@shared/proto/agentario/common"
 import { PlanActMode } from "@shared/proto/agentario/state"
 import { NewTaskRequest } from "@shared/proto/agentario/task"
 import { Settings } from "@shared/storage/state-keys"

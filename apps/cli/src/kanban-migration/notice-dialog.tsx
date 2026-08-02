@@ -1,4 +1,4 @@
-﻿// @jsxImportSource @opentui/react
+// @jsxImportSource @opentui/react
 import type { ChoiceContext } from "@opentui-ui/dialog";
 import { useDialogKeyboard } from "@opentui-ui/dialog/react";
 import open from "open";

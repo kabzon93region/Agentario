@@ -1,4 +1,4 @@
-﻿export {
+export {
 	ClineAccountService,
 	type ClineAccountServiceOptions,
 } from "./agentario-account-service";

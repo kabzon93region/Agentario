@@ -1,4 +1,4 @@
-﻿/**
+/**
  * A Copy of the Type Definition for Visual Studio Code 1.84 Extension API
  * See https://code.visualstudio.com/api for more information
  */

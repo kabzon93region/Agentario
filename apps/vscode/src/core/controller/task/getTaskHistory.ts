@@ -1,4 +1,4 @@
-﻿import { GetTaskHistoryRequest, TaskHistoryArray } from "@shared/proto/agentario/task"
+import { GetTaskHistoryRequest, TaskHistoryArray } from "@shared/proto/agentario/task"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."
 

@@ -1,4 +1,4 @@
-﻿import type { AgentEvent, TeamEvent } from "@agentario/core";
+import type { AgentEvent, TeamEvent } from "@agentario/core";
 import { formatToolInput, formatToolOutput, truncate } from "./helpers";
 import {
 	c,

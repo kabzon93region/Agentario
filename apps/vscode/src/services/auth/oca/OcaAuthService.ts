@@ -1,4 +1,4 @@
-﻿import { type EmptyRequest, String as ProtoString } from "@shared/proto/agentario/common"
+import { type EmptyRequest, String as ProtoString } from "@shared/proto/agentario/common"
 import { OcaAuthState, OcaUserInfo } from "@shared/proto/agentario/oca_account"
 import type { Controller } from "@/core/controller"
 import { getRequestRegistry, type StreamingResponseHandler } from "@/core/controller/grpc-handler"

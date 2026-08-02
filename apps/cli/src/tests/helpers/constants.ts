@@ -1,4 +1,4 @@
-﻿// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Shared constants for all test files.
 //
 // tui-test workers run with a minimal PATH, so we resolve the binary

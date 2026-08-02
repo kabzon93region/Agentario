@@ -1,4 +1,4 @@
-﻿import type { ApiConfiguration, ApiProvider, ModelInfo } from "@shared/api"
+import type { ApiConfiguration, ApiProvider, ModelInfo } from "@shared/api"
 import type { Mode } from "@shared/storage/types"
 import * as reasoningSupport from "@shared/utils/reasoning-support"
 

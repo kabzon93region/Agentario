@@ -1,4 +1,4 @@
-﻿import {
+import {
 	captureProviderConfigured,
 	getLocalProviderModels,
 	getProviderConfigFields,

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	resolveDefaultMcpSettingsPath,
 	setMcpServerDisabled,
 } from "@agentario/core";

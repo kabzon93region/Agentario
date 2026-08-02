@@ -1,4 +1,4 @@
-﻿import {
+import {
 	LiteLLMModelInfo,
 	OpenAiCompatibleModelInfo,
 	OpenRouterModelInfo,

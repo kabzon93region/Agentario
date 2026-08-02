@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage, AgentarioSayTool, TurnState } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, AgentarioSayTool, TurnState } from "@shared/ExtensionMessage"
 import { isApiReqComplete } from "@shared/message-display"
 import type { Mode } from "@shared/storage/types"
 

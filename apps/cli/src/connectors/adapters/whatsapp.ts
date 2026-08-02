@@ -1,4 +1,4 @@
-﻿import { createWhatsAppAdapter } from "@chat-adapter/whatsapp";
+import { createWhatsAppAdapter } from "@chat-adapter/whatsapp";
 import type { ChatStartSessionRequest } from "@agentario/core";
 import {
 	createUserInstructionConfigService,

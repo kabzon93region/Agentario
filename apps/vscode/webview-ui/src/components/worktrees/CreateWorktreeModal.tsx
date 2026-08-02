@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { CreateWorktreeRequest, SwitchWorktreeRequest } from "@shared/proto/agentario/worktree"
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { AlertCircle, AlertTriangle, Loader2, X } from "lucide-react"

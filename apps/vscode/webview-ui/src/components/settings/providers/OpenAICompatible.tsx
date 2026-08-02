@@ -1,4 +1,4 @@
-﻿import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
+import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
 import {
 	azureOpenAiDefaultApiVersion,
 	type ModelInfo,

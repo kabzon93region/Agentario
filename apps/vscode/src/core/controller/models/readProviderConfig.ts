@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@/shared/proto/agentario/common"
+import { StringRequest } from "@/shared/proto/agentario/common"
 import { ProviderConfigResponse } from "@/shared/proto/agentario/models"
 import { type ProviderCatalogController, parseProviderIdRequest, toRedactedProviderConfigResponse } from "./providerCatalogShared"
 

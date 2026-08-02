@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import type { Mode } from "@shared/storage/types"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import Fuse from "fuse.js"

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	getCurrentContextSize,
 	type ProviderSettings,
 	ProviderSettingsManager,

@@ -1,4 +1,4 @@
-﻿import { runSubprocessEvent } from "@agentario/core";
+import { runSubprocessEvent } from "@agentario/core";
 import type {
 	ConnectorAuthorizationDecision,
 	ConnectorAuthorizationRequest,

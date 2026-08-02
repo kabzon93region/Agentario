@@ -1,4 +1,4 @@
-﻿import { SapAiCoreModelDeployment, SapAiCoreModelsRequest } from "@shared/proto/index.agentario"
+import { SapAiCoreModelDeployment, SapAiCoreModelsRequest } from "@shared/proto/index.agentario"
 import { Mode } from "@shared/storage/types"
 import { VSCodeCheckbox, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { useCallback, useEffect, useState } from "react"

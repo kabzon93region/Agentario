@@ -1,4 +1,4 @@
-﻿import { setSkillDisabledInFrontmatter } from "@core/context/instructions/user-instructions/skills"
+import { setSkillDisabledInFrontmatter } from "@core/context/instructions/user-instructions/skills"
 import { SkillsToggles, ToggleSkillRequest } from "@shared/proto/agentario/file"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."

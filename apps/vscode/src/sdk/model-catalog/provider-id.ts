@@ -1,4 +1,4 @@
-﻿import type { ApiProvider } from "@shared/api"
+import type { ApiProvider } from "@shared/api"
 import { Logger } from "../../shared/services/Logger"
 import type { KnownProviderId, ProviderId } from "./contracts"
 

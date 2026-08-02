@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { WorktreeDefaults } from "@shared/proto/agentario/worktree"
 import { getWorkspacePath } from "@utils/path"
 import path from "path"

@@ -93,7 +93,30 @@ export async function activate(context: vscode.ExtensionContext) {
 	// 3. One-time export of VSCode's native storage to shared file-backed stores.
 	// After this, all platforms (VSCode, CLI, JetBrains) read from ~/.cline/data/.
 	const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
-	const storageContext = createStorageContext({ workspacePath })
+
+	// Resolve clineDir early so storage context uses the correct profile.
+	// Priority: CLINE_DIR env > labClineDir setting > AGENTARIO_API_PORT implies lab > default
+	const resolvedClineDir = (() => {
+		const fromEnv = process.env.CLINE_DIR?.trim()
+		if (fromEnv) return fromEnv
+		// Try reading labClineDir from existing settings files (before storage context exists)
+		const candidates = [
+			path.join(os.homedir(), ".agentario-lab", "data", "globalState.json"),
+			path.join(os.homedir(), ".agentario", "data", "globalState.json"),
+		]
+		for (const f of candidates) {
+			try {
+				if (fs.existsSync(f)) {
+					const raw = JSON.parse(fs.readFileSync(f, "utf-8"))
+					if (raw?.labClineDir) return raw.labClineDir as string
+				}
+			} catch {}
+		}
+		// If API port is set (lab mode), default to .agentario-lab
+		if (process.env.AGENTARIO_API_PORT) return path.join(os.homedir(), ".agentario-lab")
+		return undefined // let resolveClineDir() use its own defaults
+	})()
+	const storageContext = createStorageContext({ workspacePath, clineDir: resolvedClineDir })
 	await exportVSCodeStorageToSharedFiles(context, storageContext)
 
 	// 4. Register services and perform common initialization
@@ -176,7 +199,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand(commands.AccountButton, () => {
 			if (isAgentarioStandaloneMode()) {
 				void vscode.window.showInformationMessage(
-					"Agentario СЂР°Р±РѕС‚Р°РµС‚ Р°РІС‚РѕРЅРѕРјРЅРѕ. РђРєРєР°СѓРЅС‚ Cline РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ вЂ” РІС‹Р±РµСЂРёС‚Рµ РїСЂРѕРІР°Р№РґРµСЂР° РІ Settings (LM Studio, Xiaomi MiMo Рё РґСЂСѓРіРёРµ OpenAI-compatible API).",
+					"Agentario работает автономно. Аккаунт Cline не используется — выберите провайдера в Settings (LM Studio, Xiaomi MiMo и другие OpenAI-compatible API)."
 				)
 				return
 			}

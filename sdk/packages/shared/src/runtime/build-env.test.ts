@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	augmentNodeCommandForDebug,
 	CLINE_BUILD_ENV_ENV,

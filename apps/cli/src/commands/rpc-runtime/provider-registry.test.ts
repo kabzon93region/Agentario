@@ -1,4 +1,4 @@
-﻿import type { SaveProviderSettingsActionRequest } from "@agentario/core";
+import type { SaveProviderSettingsActionRequest } from "@agentario/core";
 import {
 	type ProviderSettingsManager,
 	saveLocalProviderSettings,

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type DetachedHubResolution,
 	ensureDetachedHubServer,
 	type HubEndpointOverrides,

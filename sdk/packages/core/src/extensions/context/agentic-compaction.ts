@@ -476,6 +476,8 @@ export async function runAgenticCompaction(options: {
 	mode?: "auto" | "manual";
 	/** Agentario: callback for status updates in UI */
 	statusCallback?: (message: string) => void;
+	/** Agentario: EMA scale for aligning char-based estimates with provider tokens */
+	providerScale?: number;
 }): Promise<CoreCompactionResult | undefined> {
 	const messages = options.context.messages;
 	if (messages.length < 2) {
@@ -490,7 +492,7 @@ export async function runAgenticCompaction(options: {
 	options.logger?.log?.(`Agentic compaction: messages.length=${messages.length}, user=${userMsgCount}, assistant=${assistantMsgCount}, preserveRecentTokens=${options.preserveRecentTokens}, compactionMode=${options.compactionMode || "context"}`, { severity: "info" });
 	
 	// Agentario: статус в UI
-	options.statusCallback?.(`Суммаризация: ${messages.length} сообщений (user: ${userMsgCount}, assistant: ${assistantMsgCount}), режим: ${isFullMode ? "полный чат" : "контекст"}`)
+	options.statusCallback?.(`🔄 Суммаризация: ${messages.length} сообщений (user: ${userMsgCount}, assistant: ${assistantMsgCount}), режим: ${isFullMode ? "полный чат" : "контекст"}`)
 
 	// Agentario: для full режима отключаем защиту preserveRecentTokens
 	const effectivePreserveRecentTokens = isFullMode ? 0 : options.preserveRecentTokens;
@@ -502,19 +504,20 @@ export async function runAgenticCompaction(options: {
 	);
 	options.logger?.log?.(`Agentic compaction: cutIndex=${cutIndex}`, { severity: "info" });
 	
-	// Agentario: статус в UI с разбивкой по категориям
-	const totalTokens = messages.reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
-	const foldTokens = messages.slice(0, cutIndex).reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
-	const pinnedTokens = messages.slice(cutIndex).reduce((sum, m) => sum + options.estimateMessageTokens(m), 0);
+	// Agentario: статус в UI с разбивкой по категориям (с учётом providerScale для согласования с UI)
+	const scale = options.providerScale ?? 1;
+	const totalTokens = Math.round(messages.reduce((sum, m) => sum + options.estimateMessageTokens(m), 0) * scale);
+	const foldTokens = Math.round(messages.slice(0, cutIndex).reduce((sum, m) => sum + options.estimateMessageTokens(m), 0) * scale);
+	const pinnedTokens = Math.round(messages.slice(cutIndex).reduce((sum, m) => sum + options.estimateMessageTokens(m), 0) * scale);
 	const foldableCount = cutIndex;
 	const preservedCount = messages.length - cutIndex;
 	options.statusCallback?.(
-		`Расчёт: ${totalTokens.toLocaleString()} ток. диалога, на суммаризацию: ${foldTokens.toLocaleString()} ток. (${foldableCount} сообщ.), сохранено: ${pinnedTokens.toLocaleString()} ток. (${preservedCount} сообщ.)`
+		`🔄 Расчёт: ${totalTokens.toLocaleString()} ток. диалога (≈${scale.toFixed(2)}x), на суммаризацию: ${foldTokens.toLocaleString()} ток. (${foldableCount} сообщ.), сохранено: ${pinnedTokens.toLocaleString()} ток. (${preservedCount} сообщ.)`
 	)
 	
 	if (cutIndex <= 0) {
 		options.logger?.log?.(`Agentic compaction: cutIndex check failed (cutIndex=${cutIndex}, len=${messages.length})`, { severity: "warn" });
-		options.statusCallback?.(`Ошибка: cutIndex=${cutIndex} некорректен`)
+		options.statusCallback?.(`❌ Ошибка: cutIndex=${cutIndex} некорректен`)
 		return undefined;
 	}
 
@@ -529,7 +532,7 @@ export async function runAgenticCompaction(options: {
 		const wrapRange = findWrapUpRange(messages);
 		if (wrapRange) {
 			options.logger?.log?.(`Agentic compaction: wrap-up mode active: preserveFirst=${wrapRange.preserveFirst}, preserveLast=${wrapRange.preserveLast}, fold=[${wrapRange.foldStart}..${wrapRange.foldEnd})`, { severity: "info" });
-			options.statusCallback?.(`Wrap-up: задание=[${wrapRange.preserveFirst}], ответ=[${wrapRange.preserveLast}], fold=${wrapRange.foldEnd - wrapRange.foldStart} сообщ.`);
+			options.statusCallback?.(`🔄 Wrap-up: задание=[${wrapRange.preserveFirst}], ответ=[${wrapRange.preserveLast}], fold=${wrapRange.foldEnd - wrapRange.foldStart} сообщ.`);
 
 			const foldMessages = messages.slice(wrapRange.foldStart, wrapRange.foldEnd);
 			if (foldMessages.length === 0) {
@@ -580,7 +583,7 @@ export async function runAgenticCompaction(options: {
 							fileOps: i === 0 ? foldFileOps : { readFiles: [], modifiedFiles: [] },
 							wrapUp: true,
 						});
-						options.statusCallback?.(`Wrap-up чанк ${i + 1}/${packedTexts.length}: ~${chunkTokens.toLocaleString()} ток. на входе`);
+						options.statusCallback?.(`🔄 Wrap-up чанк ${i + 1}/${packedTexts.length}: ~${chunkTokens.toLocaleString()} ток. на входе`);
 						const chunkSummary = await generateSummary({
 							providerConfig: summarizerProviderConfig,
 							request: chunkRequest,
@@ -590,7 +593,7 @@ export async function runAgenticCompaction(options: {
 						if (chunkSummary.trim()) {
 							intermediateSummaries.push(chunkSummary.trim());
 							const summaryTokens = estimateTokens(chunkSummary.length);
-							options.statusCallback?.(`Wrap-up чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
+							options.statusCallback?.(`🔄 Wrap-up чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
 						}
 					}
 					if (intermediateSummaries.length === 0) {
@@ -602,7 +605,7 @@ export async function runAgenticCompaction(options: {
 			} catch (error) {
 				const errMsg = error instanceof Error ? error.message : String(error);
 				options.logger?.log?.(`Agentic compaction: wrap-up generateSummary failed: ${errMsg}`, { severity: "error" });
-				options.statusCallback?.(`Wrap-up ошибка: ${errMsg.substring(0, 200)}`);
+				options.statusCallback?.(`❌ Wrap-up ошибка: ${errMsg.substring(0, 200)}`);
 				return { messages, skipReason: `summary_error: ${errMsg.substring(0, 100)}` };
 			}
 
@@ -630,7 +633,7 @@ export async function runAgenticCompaction(options: {
 			);
 
 			options.logger?.log?.(`Agentic compaction: wrap-up complete: ${messages.length} → ${resultMessages.length} messages, tokens ${tokensBefore} → ${tokensAfter}`, { severity: "info" });
-			options.statusCallback?.(`Wrap-up завершён: ${tokensBefore.toLocaleString()} → ${tokensAfter.toLocaleString()} ток.`);
+			options.statusCallback?.(`✅ Wrap-up завершён: ${tokensBefore.toLocaleString()} → ${tokensAfter.toLocaleString()} ток.`);
 
 			return { messages: resultMessages };
 		}
@@ -728,6 +731,10 @@ export async function runAgenticCompaction(options: {
 			chunkSizeTokens: chunkSize,
 			modelContextTokens,
 		});
+		const totalChunkTokens = packedTexts.reduce((sum, t) => sum + estimateTokens(t.length), 0);
+		options.statusCallback?.(
+			`🔄 Map-reduce: ${packedTexts.length} чанк(ов), ~${totalChunkTokens.toLocaleString()} ток. на входе, модель: ${summarizerProviderConfig.modelId}`
+		);
 		for (let i = 0; i < packedTexts.length; i++) {
 			options.logger?.log?.(
 				`Agentic compaction: packedChunk[${i}] chars=${packedTexts[i].length}, tokens≈${estimateTokens(packedTexts[i].length)}`,
@@ -747,7 +754,7 @@ export async function runAgenticCompaction(options: {
 			});
 
 			options.statusCallback?.(
-				`Чанк ${i + 1}/${packedTexts.length}: ~${chunkTokens.toLocaleString()} ток. на входе`,
+				`🔄 Чанк ${i + 1}/${packedTexts.length}: ~${chunkTokens.toLocaleString()} ток. на входе`,
 			);
 
 			options.logger?.debug(`Compaction map phase chunk ${i + 1}/${packedTexts.length}`, {
@@ -762,7 +769,7 @@ export async function runAgenticCompaction(options: {
 			if (chunkSummary.trim()) {
 				intermediateSummaries.push(chunkSummary.trim());
 				const summaryTokens = estimateTokens(chunkSummary.length);
-				options.statusCallback?.(`Чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
+				options.statusCallback?.(`🔄 Чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
 			}
 		}
 

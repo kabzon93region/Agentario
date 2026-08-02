@@ -1,4 +1,4 @@
-﻿// MCP OAuth state is stored in the shared MCP settings file
+// MCP OAuth state is stored in the shared MCP settings file
 // (~/.cline/data/settings/cline_mcp_settings.json) under each server's `oauth`
 // key, in the format @agentario/core (CLI, JetBrains) reads and writes:
 //

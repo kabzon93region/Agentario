@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bun
+#!/usr/bin/env bun
 
 import { isMainThread } from "node:worker_threads";
 import { disposeAll, initVcr, isHubDaemonProcess } from "@agentario/shared";

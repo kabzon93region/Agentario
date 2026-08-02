@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Telemetry adapter interface for the @agentario/core SDK.
  *
  * This is the SDK-side counterpart to the extension's ITelemetryProvider.

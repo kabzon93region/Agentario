@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Adapter from the new `AgentRuntimeEvent` union (13 variants, defined
  * in `@agentario/shared/src/agent.ts`) to the legacy `AgentEvent` union
  * (9 top-level types, defined in

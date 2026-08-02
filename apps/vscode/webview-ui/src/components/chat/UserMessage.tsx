@@ -1,4 +1,4 @@
-﻿import { EditMessageAndRegenerateRequest } from "@shared/proto/agentario/task"
+import { EditMessageAndRegenerateRequest } from "@shared/proto/agentario/task"
 import type React from "react"
 import { useMemo, useState } from "react"
 import Thumbnails from "@/components/common/Thumbnails"

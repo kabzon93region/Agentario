@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import * as vscode from "vscode"
 import { ExtensionRegistryInfo } from "@/registry"
 import { AgentarioClient } from "@/shared/agentario"

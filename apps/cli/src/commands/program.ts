@@ -1,4 +1,4 @@
-﻿import { Command, CommanderError, Option } from "commander";
+import { Command, CommanderError, Option } from "commander";
 import { version } from "../../package.json";
 import {
 	CLI_COMPACTION_MODE_OPTION_DESCRIPTION,

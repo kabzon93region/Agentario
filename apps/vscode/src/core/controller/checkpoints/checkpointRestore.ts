@@ -1,4 +1,4 @@
-﻿import { CheckpointRestoreRequest } from "@shared/proto/agentario/checkpoints"
+import { CheckpointRestoreRequest } from "@shared/proto/agentario/checkpoints"
 import { Empty } from "@shared/proto/agentario/common"
 import { AgentarioCheckpointRestore } from "../../../shared/WebviewMessage"
 import { Controller } from ".."

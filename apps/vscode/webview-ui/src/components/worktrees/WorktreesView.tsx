@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { NewTaskRequest } from "@shared/proto/agentario/task"
 import type { MergeWorktreeResult, Worktree as WorktreeProto } from "@shared/proto/agentario/worktree"
 import {

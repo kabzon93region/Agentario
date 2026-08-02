@@ -1,4 +1,4 @@
-﻿import { describe, it } from "bun:test"
+import { describe, it } from "bun:test"
 import { getProviderCollectionSync } from "@agentario/llms"
 import { expect } from "chai"
 import { getProviderDefaultModelId, getProviderModelIdKey } from "../provider-keys"

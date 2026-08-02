@@ -1,4 +1,4 @@
-﻿import type { AgentMode } from "@agentario/core";
+import type { AgentMode } from "@agentario/core";
 import type { ToolApprovalRequest, ToolApprovalResult } from "@agentario/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RuntimeToolInteraction, TuiProps } from "../types";

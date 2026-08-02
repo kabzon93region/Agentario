@@ -1,4 +1,4 @@
-﻿/**
+/**
  * # Network Support for Cline
  *
  * ## Development Guidelines

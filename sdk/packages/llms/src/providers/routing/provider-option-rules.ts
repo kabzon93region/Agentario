@@ -1,4 +1,4 @@
-﻿import { isAgentarioCloudProvider } from "@agentario/shared";
+import { isAgentarioCloudProvider } from "@agentario/shared";
 import {
 	isDeepSeekFamily,
 	isGemini3Model,

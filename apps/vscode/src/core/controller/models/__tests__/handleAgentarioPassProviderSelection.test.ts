@@ -1,4 +1,4 @@
-﻿import * as assert from "assert"
+import * as assert from "assert"
 import { afterEach, beforeEach, describe, it } from "mocha"
 import sinon from "sinon"
 import { Logger } from "@/shared/services/Logger"

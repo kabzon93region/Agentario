@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AgentRuntime contract types (ported from clinee `@agentario/shared`).
  *
  * These are the canonical type definitions consumed by `AgentRuntime`.

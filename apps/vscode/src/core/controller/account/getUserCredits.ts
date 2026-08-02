@@ -1,4 +1,4 @@
-﻿import { UserCreditsData } from "@shared/proto/agentario/account"
+import { UserCreditsData } from "@shared/proto/agentario/account"
 import type { EmptyRequest } from "@shared/proto/agentario/common"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"

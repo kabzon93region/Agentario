@@ -1,4 +1,4 @@
-﻿import { parseYamlFrontmatter } from "@core/context/instructions/user-instructions/frontmatter"
+import { parseYamlFrontmatter } from "@core/context/instructions/user-instructions/frontmatter"
 import { StateManager } from "@core/storage/StateManager"
 import { openFile as openFileIntegration } from "@integrations/misc/open-file"
 import { Empty, StringRequest } from "@shared/proto/agentario/common"

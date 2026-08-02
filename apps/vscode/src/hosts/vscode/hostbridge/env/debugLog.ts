@@ -1,4 +1,4 @@
-﻿import { Empty, StringRequest } from "@shared/proto/agentario/common"
+import { Empty, StringRequest } from "@shared/proto/agentario/common"
 import * as vscode from "vscode"
 
 const CLINE_OUTPUT_CHANNEL = vscode.window.createOutputChannel("Agentario")

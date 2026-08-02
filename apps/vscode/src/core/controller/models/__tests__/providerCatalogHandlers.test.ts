@@ -1,4 +1,4 @@
-﻿import type { ApiConfiguration } from "@shared/api"
+import type { ApiConfiguration } from "@shared/api"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import type { EffectiveProviderConfig, ProviderCatalog, ProviderConfigStore } from "@/sdk/model-catalog/contracts"
 import { computeConfigFingerprint } from "@/sdk/model-catalog/fingerprint"

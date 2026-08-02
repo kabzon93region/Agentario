@@ -1,4 +1,4 @@
-﻿import type { ProviderListing } from "@shared/proto/agentario/models"
+import type { ProviderListing } from "@shared/proto/agentario/models"
 import { describe, expect, it } from "vitest"
 import {
 	getFallbackGenericProviderSettings,

@@ -1,4 +1,4 @@
-﻿import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/agentario/state"
+import type { OnboardingModel, OnboardingModelGroup } from "@shared/proto/agentario/state"
 import { describe, expect, it } from "vitest"
 import {
 	CLINEPASS_GROUP,

@@ -1,4 +1,4 @@
-﻿import deepEqual from "fast-deep-equal"
+import deepEqual from "fast-deep-equal"
 import * as path from "path"
 import { Diagnostic, DiagnosticSeverity, FileDiagnostics } from "@/shared/proto/index.agentario"
 import { Logger } from "@/shared/services/Logger"

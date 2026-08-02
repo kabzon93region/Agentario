@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { ApiFormat, OcaCompatibleModelInfo, OcaModelInfo } from "@shared/proto/agentario/models"
 import axios from "axios"
 import { HostProvider } from "@/hosts/host-provider"

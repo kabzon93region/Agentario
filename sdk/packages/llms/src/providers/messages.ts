@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Message Types — re-exported from @agentario/shared
  */
 export type {

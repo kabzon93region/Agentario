@@ -1,4 +1,4 @@
-﻿import { openFile as openFileIntegration } from "@integrations/misc/open-file"
+import { openFile as openFileIntegration } from "@integrations/misc/open-file"
 import { telemetryService } from "../../../services/telemetry"
 import { Empty, StringRequest } from "../../../shared/proto/agentario/common"
 import { ensureFocusChainFile, extractFocusChainListFromText } from "../../task/focus-chain/file-utils"

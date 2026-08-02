@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { TaskResponse } from "@shared/proto/agentario/task"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."

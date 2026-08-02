@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import debounce from "debounce"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useEvent } from "react-use"

@@ -1,4 +1,4 @@
-﻿import React from "react"
+import React from "react"
 import { AgentarioError, AgentarioErrorType } from "../../../../src/services/error/AgentarioError"
 import { ProgressIndicator } from "./ChatRow"
 

@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { memo } from "react"
 import { AgentarioAuthStatus } from "@/components/account/AgentarioAuthStatus"
 import CreditLimitError from "@/components/chat/CreditLimitError"

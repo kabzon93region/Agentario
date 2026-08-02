@@ -1,4 +1,4 @@
-﻿import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
+import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
 import { AutoApprovalSettingsRequest } from "@shared/proto/agentario/state"
 import { describe, expect, it, vi } from "vitest"
 import type { Controller } from ".."

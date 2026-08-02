@@ -1,4 +1,4 @@
-﻿import * as vscode from "vscode"
+import * as vscode from "vscode"
 import { ErrorSettings } from "@/services/error"
 import { EmptyRequest } from "@/shared/proto/index.agentario"
 import { GetTelemetrySettingsResponse, Setting } from "@/shared/proto/index.host"

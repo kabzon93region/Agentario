@@ -1,4 +1,4 @@
-﻿import { buildAgentarioSystemPrompt } from "@agentario/shared";
+import { buildAgentarioSystemPrompt } from "@agentario/shared";
 import type { DelegatedAgentRuntimeConfig } from "./delegated-agent";
 
 export function buildTeammateSystemPrompt(

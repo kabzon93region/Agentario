@@ -1,4 +1,4 @@
-﻿import { CLINE_ENVIRONMENT_ENV, CLINE_ENVIRONMENTS } from "@agentario/shared";
+import { CLINE_ENVIRONMENT_ENV, CLINE_ENVIRONMENTS } from "@agentario/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { BUILTIN_SPECS } from "./builtins";
 import { getModelsForProvider, getProvider } from "./model-registry";

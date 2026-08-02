@@ -1,4 +1,4 @@
-﻿import { createTelegramAdapter } from "@chat-adapter/telegram";
+import { createTelegramAdapter } from "@chat-adapter/telegram";
 import type { ChatStartSessionRequest } from "@agentario/core";
 import {
 	createUserInstructionConfigService,

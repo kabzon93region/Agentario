@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import type React from "react"
 import { useMemo } from "react"
 import BrowserSessionRow from "@/components/chat/BrowserSessionRow"

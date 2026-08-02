@@ -1,4 +1,4 @@
-﻿import type { Boolean, EmptyRequest } from "@shared/proto/agentario/common"
+import type { Boolean, EmptyRequest } from "@shared/proto/agentario/common"
 import { useCallback, useEffect } from "react"
 import AccountView from "./components/account/AccountView"
 import ChatView from "./components/chat/ChatView"

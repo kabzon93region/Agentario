@@ -1,4 +1,4 @@
-﻿import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { ensureParentDir } from "@agentario/core";
 import type { Lock, QueueEntry, StateAdapter } from "chat";
 

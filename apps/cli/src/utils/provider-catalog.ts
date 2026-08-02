@@ -1,4 +1,4 @@
-﻿import {
+import {
 	listLocalProviders as internalListLocalProviders,
 	type ProviderSettingsManager,
 } from "@agentario/core";

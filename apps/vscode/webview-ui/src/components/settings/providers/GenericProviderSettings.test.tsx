@@ -1,4 +1,4 @@
-﻿import type { ProviderConfigResponse } from "@shared/proto/agentario/models"
+import type { ProviderConfigResponse } from "@shared/proto/agentario/models"
 import { ApiFormat } from "@shared/proto/agentario/models"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { ChangeEventHandler, ReactNode } from "react"

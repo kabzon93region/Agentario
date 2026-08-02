@@ -1,4 +1,4 @@
-﻿import { DeleteSkillRequest, SkillsToggles } from "@shared/proto/agentario/file"
+import { DeleteSkillRequest, SkillsToggles } from "@shared/proto/agentario/file"
 import fs from "fs/promises"
 import path from "path"
 import { Logger } from "@/shared/services/Logger"

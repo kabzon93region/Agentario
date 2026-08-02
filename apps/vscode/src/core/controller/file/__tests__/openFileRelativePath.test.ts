@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, it, mock } from "bun:test"
 import { Controller } from "@core/controller"
 import * as actualOpenFileIntegration from "@integrations/misc/open-file"
 import { Empty, StringRequest } from "@shared/proto/agentario/common"

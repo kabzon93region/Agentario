@@ -1,4 +1,4 @@
-﻿import { Empty, Int64Request } from "@shared/proto/agentario/common"
+import { Empty, Int64Request } from "@shared/proto/agentario/common"
 import { Controller } from ".."
 
 /**

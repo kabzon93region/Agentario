@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { describe, expect, it } from "vitest"
 import { canRestoreWorkspaceFromMessage, filterVisibleMessages, groupLowStakesTools, isToolGroup } from "./messageUtils"
 

@@ -1,4 +1,4 @@
-﻿import { describe, it } from "bun:test"
+import { describe, it } from "bun:test"
 import assert from "node:assert/strict"
 import { EventEmitter } from "events"
 import { orchestrateCommandExecution } from "../CommandOrchestrator"

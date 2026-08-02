@@ -1,4 +1,4 @@
-﻿import {
+import {
 	clearHubDiscovery,
 	ensureDetachedHubServer,
 	probeHubServer,

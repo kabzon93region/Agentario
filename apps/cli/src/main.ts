@@ -1,4 +1,4 @@
-﻿import { fstatSync } from "node:fs";
+import { fstatSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename } from "node:path";
 import type { ToolPolicy } from "@agentario/core";

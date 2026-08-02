@@ -1,4 +1,4 @@
-﻿import { createGateway, type GatewayProviderSettings } from "@agentario/llms";
+import { createGateway, type GatewayProviderSettings } from "@agentario/llms";
 import type {
 	AgentAfterToolResult,
 	AgentBeforeModelResult,

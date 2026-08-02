@@ -1,4 +1,4 @@
-﻿import { KeyValuePair, StringRequest } from "@shared/proto/agentario/common"
+import { KeyValuePair, StringRequest } from "@shared/proto/agentario/common"
 import { Controller } from ".."
 
 /**

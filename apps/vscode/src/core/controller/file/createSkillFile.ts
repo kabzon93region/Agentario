@@ -1,4 +1,4 @@
-﻿import { ensureAgentSkillsDirectoryExists } from "@core/storage/disk"
+import { ensureAgentSkillsDirectoryExists } from "@core/storage/disk"
 import { CreateSkillRequest, SkillsToggles } from "@shared/proto/agentario/file"
 import fs from "fs/promises"
 import path from "path"

@@ -1,4 +1,4 @@
-﻿import type { Message } from "@agentario/shared";
+import type { Message } from "@agentario/shared";
 import { describe, expect, it } from "vitest";
 import { deriveForkSessionTitle } from "./title";
 

@@ -1,4 +1,4 @@
-﻿import type { EmptyRequest } from "@shared/proto/agentario/common"
+import type { EmptyRequest } from "@shared/proto/agentario/common"
 import type { CodebaseIndex } from "@shared/proto/agentario/indexing"
 import { CodebaseIndexService } from "@/services/indexing/CodebaseIndexService"
 import type { Controller } from "../index"

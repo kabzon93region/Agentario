@@ -1,4 +1,4 @@
-﻿import { describe, it } from "bun:test"
+import { describe, it } from "bun:test"
 import { ApiFormat } from "@shared/proto/agentario/models"
 import * as assert from "assert"
 import type { ITelemetryProvider, TelemetryProperties, TelemetrySettings } from "../providers/ITelemetryProvider"

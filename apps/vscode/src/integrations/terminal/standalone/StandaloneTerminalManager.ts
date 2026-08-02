@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StandaloneTerminalManager - Main terminal manager for standalone environments.
  *
  * This class provides the same interface as VSCode's TerminalManager but works

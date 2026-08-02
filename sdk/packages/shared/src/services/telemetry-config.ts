@@ -1,4 +1,4 @@
-﻿import { parseKeyPairsIntoRecord } from "../parse/headers/utils";
+import { parseKeyPairsIntoRecord } from "../parse/headers/utils";
 import type { OpenTelemetryClientConfig, TelemetryMetadata } from "./telemetry";
 
 export interface AgentarioTelemetryServiceConfig extends OpenTelemetryClientConfig {

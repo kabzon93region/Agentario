@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Model Schema Definitions
  *
  * Re-exports model info types from @agentario/shared (canonical source)

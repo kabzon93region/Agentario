@@ -1,4 +1,4 @@
-﻿import type { UsageTransaction as ClineAccountUsageTransaction } from "@shared/AgentarioAccount"
+import type { UsageTransaction as ClineAccountUsageTransaction } from "@shared/AgentarioAccount"
 import type { UsageTransaction as ProtoUsageTransaction, UserOrganization } from "@shared/proto/agentario/account"
 
 export const getMainRole = (roles?: string[]) => {

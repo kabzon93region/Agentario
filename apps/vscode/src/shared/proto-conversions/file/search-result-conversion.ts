@@ -1,4 +1,4 @@
-﻿import { FileInfo } from "@shared/proto/agentario/file"
+import { FileInfo } from "@shared/proto/agentario/file"
 
 /**
  * Converts domain search result objects to proto FileInfo objects

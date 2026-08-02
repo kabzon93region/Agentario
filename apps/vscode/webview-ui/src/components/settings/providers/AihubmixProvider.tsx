@@ -1,4 +1,4 @@
-﻿import { ModelInfo } from "@shared/api"
+import { ModelInfo } from "@shared/api"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { Mode } from "@shared/storage/types"
 import { useEffect, useState } from "react"

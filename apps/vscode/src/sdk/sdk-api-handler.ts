@@ -1,4 +1,4 @@
-﻿// Replaces classic src/core/api buildApiHandler (see origin/main).
+// Replaces classic src/core/api buildApiHandler (see origin/main).
 //
 // Builds an SDK ApiHandler (from `@agentario/llms`) directly from the extension's
 // legacy ApiConfiguration. This is the single inference path: the main task

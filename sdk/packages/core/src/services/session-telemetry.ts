@@ -1,4 +1,4 @@
-﻿import type { ITelemetryService } from "@agentario/shared";
+import type { ITelemetryService } from "@agentario/shared";
 import { resolveDocumentsExtensionPath } from "@agentario/shared/storage";
 import { listHookConfigFiles } from "../hooks/hook-file-config";
 import type { CoreSessionConfig } from "../types/config";

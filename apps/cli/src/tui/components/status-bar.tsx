@@ -1,4 +1,4 @@
-﻿import type { AgentMode } from "@agentario/core";
+import type { AgentMode } from "@agentario/core";
 import { useTerminalDimensions } from "@opentui/react";
 import {
 	shouldShowCliUsageCost,

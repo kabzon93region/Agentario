@@ -1,4 +1,4 @@
-﻿import { ClineEndpoint } from "@/config"
+import { ClineEndpoint } from "@/config"
 import type { ApiConfiguration } from "@shared/api"
 import type { StateManager } from "@/core/storage/StateManager"
 

@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { CodebaseIndex, IndexedFile, IndexedFileStatus } from "@shared/proto/agentario/indexing"
 import { VSCodeButton, VSCodeDropdown, VSCodeOption, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"

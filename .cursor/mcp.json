@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "C:\\Users\\Admin\\.MCP\\memory\\Agentario\\start.cmd",
+      "args": []
+    },
+    "cocoindex-code": {
+      "command": "C:\\Users\\Admin\\.MCP\\cocoindex-code\\Agentario\\ccc-mcp.cmd",
+      "args": [],
+      "cwd": "Z:\\T\\Agentario",
+      "env": {
+        "COCOINDEX_CODE_ROOT_PATH": "Z:\\T\\Agentario",
+        "COCOINDEX_CCC": "C:\\Users\\Admin\\.local\\bin\\ccc.exe",
+        "COCOINDEX_CODE_DB_PATH_MAPPING": "Z:\\T\\Agentario=C:\\Users\\Admin\\.MCP\\cocoindex-code\\Agentario\\db"
+      }
+    },
+    "agentario-search": {
+      "command": "C:\\Users\\Admin\\.MCP\\agentario-search\\Agentario\\start.cmd",
+      "args": []
+    }
+  }
+}

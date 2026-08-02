@@ -1,4 +1,4 @@
-﻿import {
+import {
 	getProviderConfigFields,
 	type ProviderConfig,
 	type ProviderSettings,

@@ -1,4 +1,4 @@
-﻿import type { ChatRunTurnRequest, HubSessionClient } from "@agentario/core";
+import type { ChatRunTurnRequest, HubSessionClient } from "@agentario/core";
 import type { CliLoggerAdapter } from "../logging/adapter";
 
 export type PendingConnectorApproval = {

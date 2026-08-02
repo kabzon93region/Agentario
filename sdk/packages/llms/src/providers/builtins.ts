@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type GatewayModelCapability,
 	type GatewayModelDefinition,
 	type GatewayProviderManifest,

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * StandaloneTerminalProcess - Manages command execution in standalone environments.
  *
  * This class handles subprocess management for terminal commands when running

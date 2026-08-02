@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Vertex global-endpoint allowlist.
  *
  * Google Vertex AI's `location: "global"` value routes requests to the

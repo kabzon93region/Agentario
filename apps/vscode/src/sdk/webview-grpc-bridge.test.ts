@@ -1,4 +1,4 @@
-﻿import type { ExtensionState } from "@shared/ExtensionMessage"
+import type { ExtensionState } from "@shared/ExtensionMessage"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MessageTranslatorState } from "./message-translator"
 import { pushMessageToWebview, WebviewGrpcBridge } from "./webview-grpc-bridge"

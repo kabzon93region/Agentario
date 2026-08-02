@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Unit tests for `RuntimeEventAdapter` and `toLegacyAgentEvent`.
  *
  * Covers every one of the 13 `AgentRuntimeEvent` variants enumerated

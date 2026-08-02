@@ -1,4 +1,4 @@
-﻿import type { ProviderListing } from "@shared/proto/agentario/models"
+import type { ProviderListing } from "@shared/proto/agentario/models"
 import type { GenericProviderSettingsProps } from "./GenericProviderSettings"
 
 type GenericProviderSettingsConfig = Omit<GenericProviderSettingsProps, "currentMode" | "isPopup" | "showModelOptions">

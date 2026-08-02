@@ -1,4 +1,4 @@
-﻿// Registers the VS Code Language Model handler with the Cline SDK.
+// Registers the VS Code Language Model handler with the Cline SDK.
 //
 // The SDK's `@agentario/llms` factory registry (registerHandler) exists for
 // providers that need host-only dependencies — here, the `vscode` module /

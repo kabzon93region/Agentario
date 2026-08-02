@@ -1,4 +1,4 @@
-﻿// VscodeSessionHost — wraps AgentarioCore with VSCode-specific customizations
+// VscodeSessionHost — wraps AgentarioCore with VSCode-specific customizations
 //
 // Uses AgentarioCore.create() so the SDK owns session input normalization,
 // lifecycle bootstrapping, and host selection while the VSCode extension

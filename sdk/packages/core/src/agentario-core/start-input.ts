@@ -1,4 +1,4 @@
-﻿import type { ExtensionContext } from "@agentario/shared";
+import type { ExtensionContext } from "@agentario/shared";
 import type { RuntimeCapabilities } from "../runtime/capabilities";
 import { normalizeRuntimeCapabilities } from "../runtime/capabilities";
 import type {

@@ -1,4 +1,4 @@
-﻿import { Controller } from "@core/controller"
+import { Controller } from "@core/controller"
 import { AgentarioMessage } from "@shared/ExtensionMessage"
 import { HistoryItem } from "@shared/HistoryItem"
 import * as fs from "fs/promises"

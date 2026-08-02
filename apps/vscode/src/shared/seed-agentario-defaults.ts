@@ -1,4 +1,4 @@
-﻿import * as fs from "node:fs/promises"
+import * as fs from "node:fs/promises"
 import * as path from "node:path"
 import { GLOBAL_RULES_EXCLUDED_FILENAMES } from "@/core/context/instructions/user-instructions/rule-helpers"
 import { ensureRulesDirectoryExists } from "@/core/storage/disk"

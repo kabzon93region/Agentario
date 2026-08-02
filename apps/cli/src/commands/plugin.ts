@@ -1,4 +1,4 @@
-﻿import {
+import {
 	installPlugin,
 	type PluginInstallOptions,
 	type PluginInstallResult,

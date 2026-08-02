@@ -1,4 +1,4 @@
-﻿import { Empty } from "@shared/proto/agentario/common"
+import { Empty } from "@shared/proto/agentario/common"
 import { ResetStateRequest } from "@shared/proto/agentario/state"
 import { resetGlobalState, resetWorkspaceState } from "@/core/storage/utils/state-helpers"
 import { HostProvider } from "@/hosts/host-provider"

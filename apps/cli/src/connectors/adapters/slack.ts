@@ -1,4 +1,4 @@
-﻿import { createSlackAdapter, type SlackAdapter } from "@chat-adapter/slack";
+import { createSlackAdapter, type SlackAdapter } from "@chat-adapter/slack";
 import type { ChatStartSessionRequest } from "@agentario/core";
 import {
 	createUserInstructionConfigService,

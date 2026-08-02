@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
 import { act, renderHook } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 

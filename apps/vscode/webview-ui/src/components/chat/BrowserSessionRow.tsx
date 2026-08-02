@@ -1,4 +1,4 @@
-﻿import { BROWSER_VIEWPORT_PRESETS } from "@shared/BrowserSettings"
+import { BROWSER_VIEWPORT_PRESETS } from "@shared/BrowserSettings"
 import { BrowserAction, BrowserActionResult, AgentarioMessage, AgentarioSayBrowserAction } from "@shared/ExtensionMessage"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"

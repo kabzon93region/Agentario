@@ -1,4 +1,4 @@
-﻿// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
+// Replaces classic message streaming from src/core/task/index.ts (see origin/main)
 //
 // Bridges SDK session events to the webview's gRPC streaming subscriptions.
 // When the SDK emits session events (text chunks, tool calls, etc.), this

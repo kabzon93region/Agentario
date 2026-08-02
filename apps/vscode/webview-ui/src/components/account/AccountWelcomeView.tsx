@@ -1,4 +1,4 @@
-﻿import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { AgentarioAuthStatus } from "@/components/account/AgentarioAuthStatus"
 import { useClineSignIn } from "@/context/AgentarioAuthContext"
 import { useExtensionState } from "@/context/ExtensionStateContext"

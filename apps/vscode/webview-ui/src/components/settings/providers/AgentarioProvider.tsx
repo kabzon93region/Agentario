@@ -1,4 +1,4 @@
-﻿import { Mode } from "@shared/storage/types"
+import { Mode } from "@shared/storage/types"
 import { AgentarioAccountInfoCard } from "../AgentarioAccountInfoCard"
 import AgentarioModelPicker from "../AgentarioModelPicker"
 

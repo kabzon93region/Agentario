@@ -1,4 +1,4 @@
-﻿import {
+import {
 	formatProviderOAuthApiKey,
 	getPersistedProviderApiKey as getCorePersistedProviderApiKey,
 	isOAuthProvider,

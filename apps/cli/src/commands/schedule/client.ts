@@ -1,4 +1,4 @@
-﻿import {
+import {
 	createLocalHubScheduleRuntimeHandlers,
 	HubScheduleCommandService,
 	HubScheduleService,

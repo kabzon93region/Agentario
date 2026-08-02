@@ -1,4 +1,4 @@
-﻿/** biome-ignore-all lint/style/noNonNullAssertion: static */
+/** biome-ignore-all lint/style/noNonNullAssertion: static */
 
 import * as Llms from "@agentario/llms";
 import {

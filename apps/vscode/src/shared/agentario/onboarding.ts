@@ -1,4 +1,4 @@
-﻿import type { OnboardingModel } from "../proto/agentario/state"
+import type { OnboardingModel } from "../proto/agentario/state"
 
 /**
  * The list of models available to new users during the onboarding flow.

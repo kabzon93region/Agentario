@@ -1,4 +1,4 @@
-﻿import { GrpcPostRecordHook, GrpcRequestFilter } from "@core/controller/grpc-recorder/types"
+import { GrpcPostRecordHook, GrpcRequestFilter } from "@core/controller/grpc-recorder/types"
 import { Controller } from "@/core/controller"
 import { GrpcRecorder, GrpcRecorderNoops, IRecorder } from "@/core/controller/grpc-recorder/grpc-recorder"
 import { LogFileHandler, LogFileHandlerNoops } from "@/core/controller/grpc-recorder/log-file-handler"

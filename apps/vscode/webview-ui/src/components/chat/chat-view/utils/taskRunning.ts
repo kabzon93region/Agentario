@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
 import { isApiReqComplete } from "@shared/message-display"
 
 /** True while the agent is actively working and the user may want to interrupt. */

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	completeClineDeviceAuth,
 	getProviderConfigFields,
 	isOAuthProvider,

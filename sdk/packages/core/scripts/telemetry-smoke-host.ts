@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Host-level telemetry smoke test for ENG-1902.
  *
  * Exercises the CLI memoized activation helper and the VS Code shared

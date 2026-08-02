@@ -1,4 +1,4 @@
-﻿import { BANNER_DATA, BannerAction, BannerActionType, BannerCardData } from "@shared/agentario/banner"
+import { BANNER_DATA, BannerAction, BannerActionType, BannerCardData } from "@shared/agentario/banner"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import type { Worktree } from "@shared/proto/agentario/worktree"
 import { TrackWorktreeViewOpenedRequest } from "@shared/proto/agentario/worktree"

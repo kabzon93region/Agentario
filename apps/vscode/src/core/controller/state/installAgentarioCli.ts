@@ -1,4 +1,4 @@
-﻿import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
+import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
 import { ShowMessageType } from "@shared/proto/host/window"
 import { ExecuteCommandInTerminalRequest } from "@shared/proto/host/workspace"
 import { HostProvider } from "@/hosts/host-provider"

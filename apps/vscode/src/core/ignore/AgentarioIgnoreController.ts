@@ -1,4 +1,4 @@
-﻿import { fileExistsAtPath } from "@utils/fs"
+import { fileExistsAtPath } from "@utils/fs"
 import chokidar, { FSWatcher } from "chokidar"
 import fs from "fs/promises"
 import ignore, { Ignore } from "ignore"

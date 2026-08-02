@@ -1,4 +1,4 @@
-﻿import { after, describe, it } from "mocha"
+import { after, describe, it } from "mocha"
 import { readFile } from "fs/promises"
 import path from "path"
 import "should"

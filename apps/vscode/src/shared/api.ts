@@ -1,4 +1,4 @@
-﻿import { ApiFormat } from "./proto/agentario/models"
+import { ApiFormat } from "./proto/agentario/models"
 import type { ApiHandlerSettings } from "./storage/state-keys"
 
 export type ApiProvider =

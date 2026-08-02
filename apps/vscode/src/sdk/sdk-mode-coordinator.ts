@@ -1,4 +1,4 @@
-﻿import { getProviderAuthStorageId } from "@agentario/core"
+import { getProviderAuthStorageId } from "@agentario/core"
 import type { ChatContent } from "@shared/ChatContent"
 import type { AgentarioMessage, TurnPhase } from "@shared/ExtensionMessage"
 import type { Mode } from "@shared/storage/types"

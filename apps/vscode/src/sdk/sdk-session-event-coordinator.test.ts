@@ -1,4 +1,4 @@
-﻿import type { CoreSessionEvent } from "@agentario/core"
+import type { CoreSessionEvent } from "@agentario/core"
 import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MessageTranslatorState } from "./message-translator"

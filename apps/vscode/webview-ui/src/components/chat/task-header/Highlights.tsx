@@ -1,4 +1,4 @@
-﻿import { mentionRegexGlobal } from "@shared/context-mentions"
+import { mentionRegexGlobal } from "@shared/context-mentions"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { FileServiceClient } from "@/services/grpc-client"
 import { validateSlashCommand } from "@/utils/slash-commands"

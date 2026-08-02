@@ -1,4 +1,4 @@
-﻿import type { ModelInfo } from "@shared/api"
+import type { ModelInfo } from "@shared/api"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import type {
 	EffectiveProviderConfig,

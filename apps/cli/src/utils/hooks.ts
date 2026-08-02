@@ -1,4 +1,4 @@
-﻿import type { AgentHooks, HookEventPayload } from "@agentario/core";
+import type { AgentHooks, HookEventPayload } from "@agentario/core";
 import { closeInlineStreamIfNeeded } from "./events";
 import {
 	c,

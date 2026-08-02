@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import {
 	type AwsProviderConfig,
 	CommitModelSelectionRequest,

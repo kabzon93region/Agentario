@@ -1,4 +1,4 @@
-﻿import * as fs from "fs/promises"
+import * as fs from "fs/promises"
 import * as vscode from "vscode"
 import { sanitizeCellForLLM } from "@/integrations/misc/notebook-utils"
 import { ExtensionRegistryInfo } from "@/registry"

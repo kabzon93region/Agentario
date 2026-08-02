@@ -1,4 +1,4 @@
-﻿import type { ModelProfilePreset } from "@shared/model-profile-presets"
+import type { ModelProfilePreset } from "@shared/model-profile-presets"
 import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { ChevronDownIcon, PencilIcon, Trash2Icon } from "lucide-react"

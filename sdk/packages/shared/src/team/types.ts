@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Team data types and interfaces.
  *
  * These are the pure data-shape contracts for the multi-agent team system.

@@ -1,4 +1,4 @@
-﻿import type { OcaModelInfo } from "@shared/api"
+import type { OcaModelInfo } from "@shared/api"
 import type { OcaAuthState, OcaUserInfo } from "@shared/proto/index.agentario"
 import { EmptyRequest, StringRequest } from "@shared/proto/index.agentario"
 import { Mode } from "@shared/storage/types"

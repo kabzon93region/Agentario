@@ -1,4 +1,4 @@
-﻿import type { EmptyRequest } from "@shared/proto/agentario/common"
+import type { EmptyRequest } from "@shared/proto/agentario/common"
 import type { MarketplaceCatalog } from "@shared/proto/agentario/marketplace"
 import type { Controller } from "../index"
 import { fetchMarketplaceCatalog } from "./marketplace-helpers"

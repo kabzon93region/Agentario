@@ -1,4 +1,4 @@
-﻿import { strict as assert } from "node:assert"
+import { strict as assert } from "node:assert"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { describe, it, vi } from "vitest"
 import type { Controller } from ".."

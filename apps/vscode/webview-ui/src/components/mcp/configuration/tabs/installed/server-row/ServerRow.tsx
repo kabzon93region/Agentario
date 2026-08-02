@@ -1,4 +1,4 @@
-﻿import { DEFAULT_MCP_TIMEOUT_SECONDS, McpServer } from "@shared/mcp"
+import { DEFAULT_MCP_TIMEOUT_SECONDS, McpServer } from "@shared/mcp"
 import { StringRequest } from "@shared/proto/agentario/common"
 import {
 	McpServers,

@@ -1,4 +1,4 @@
-﻿import { refreshAgentarioRulesToggles } from "@core/context/instructions/user-instructions/agentario-rules"
+import { refreshAgentarioRulesToggles } from "@core/context/instructions/user-instructions/agentario-rules"
 import { refreshExternalRulesToggles } from "@core/context/instructions/user-instructions/external-rules"
 import { refreshWorkflowToggles } from "@core/context/instructions/user-instructions/workflows"
 import { EmptyRequest } from "@shared/proto/agentario/common"

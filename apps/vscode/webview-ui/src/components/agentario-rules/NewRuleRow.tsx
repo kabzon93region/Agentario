@@ -1,4 +1,4 @@
-﻿import { EmptyRequest, StringRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest, StringRequest } from "@shared/proto/agentario/common"
 import { RefreshedRules } from "@shared/proto/agentario/file"
 import { CreateHookRequest, CreateSkillRequest, RuleFileRequest } from "@shared/proto/index.agentario"
 import { PlusIcon } from "lucide-react"

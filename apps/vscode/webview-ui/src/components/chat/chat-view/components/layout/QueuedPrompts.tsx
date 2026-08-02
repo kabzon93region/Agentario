@@ -1,4 +1,4 @@
-﻿import type { QueuedPrompt } from "@shared/ExtensionMessage"
+import type { QueuedPrompt } from "@shared/ExtensionMessage"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { useState } from "react"
 import { TaskServiceClient } from "@/services/grpc-client"

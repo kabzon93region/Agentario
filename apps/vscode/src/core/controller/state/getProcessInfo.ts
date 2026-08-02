@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { ProcessInfo } from "@shared/proto/agentario/state"
 import { Controller } from ".."
 

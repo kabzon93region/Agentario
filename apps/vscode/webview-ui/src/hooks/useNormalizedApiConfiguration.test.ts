@@ -1,4 +1,4 @@
-﻿import { ApiFormat, ResolveModelInfoResponse } from "@shared/proto/agentario/models"
+import { ApiFormat, ResolveModelInfoResponse } from "@shared/proto/agentario/models"
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useExtensionState } from "@/context/ExtensionStateContext"

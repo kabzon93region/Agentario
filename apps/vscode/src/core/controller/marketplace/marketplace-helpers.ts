@@ -1,4 +1,4 @@
-﻿import { spawn } from "node:child_process"
+import { spawn } from "node:child_process"
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync } from "node:fs"
 import { homedir, platform } from "node:os"

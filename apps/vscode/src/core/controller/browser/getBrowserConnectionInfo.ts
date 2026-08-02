@@ -1,4 +1,4 @@
-﻿import { BrowserConnectionInfo } from "@shared/proto/agentario/browser"
+import { BrowserConnectionInfo } from "@shared/proto/agentario/browser"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from "../index"

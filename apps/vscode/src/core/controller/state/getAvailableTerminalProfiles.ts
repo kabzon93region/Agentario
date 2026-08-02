@@ -1,4 +1,4 @@
-﻿import * as proto from "@/shared/proto"
+import * as proto from "@/shared/proto"
 import { getAvailableTerminalProfiles as getTerminalProfilesFromShell } from "../../../utils/shell"
 import { Controller } from "../index"
 

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	completeClineDeviceAuth,
 	type ITelemetryService,
 	isOAuthProvider,

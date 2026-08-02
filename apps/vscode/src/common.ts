@@ -1,4 +1,4 @@
-﻿import { WebviewProvider } from "./core/webview"
+import { WebviewProvider } from "./core/webview"
 import "./utils/path" // necessary to have access to String.prototype.toPosix
 
 import { HostProvider } from "@/hosts/host-provider"

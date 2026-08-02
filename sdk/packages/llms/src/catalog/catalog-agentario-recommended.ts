@@ -1,4 +1,4 @@
-﻿import { getAgentarioEnvironmentConfig } from "@agentario/shared";
+import { getAgentarioEnvironmentConfig } from "@agentario/shared";
 import type { ModelInfo } from "./types";
 
 export interface ClineRecommendedModelEntry {

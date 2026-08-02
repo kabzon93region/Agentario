@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { describe, expect, it, vi } from "vitest"
 import { MessageIdMinter } from "./message-id-minter"
 import { SdkMessageCoordinator } from "./sdk-message-coordinator"

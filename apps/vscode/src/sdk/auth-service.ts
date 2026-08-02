@@ -1,4 +1,4 @@
-﻿// Replaces classic src/services/auth/AuthService.ts (see origin/main)
+// Replaces classic src/services/auth/AuthService.ts (see origin/main)
 //
 // SDK-backed authentication service. Uses @agentario/core OAuth functions
 // for login flows and ProviderSettingsManager (providers.json) as the

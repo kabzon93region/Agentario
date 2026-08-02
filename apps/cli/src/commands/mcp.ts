@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type McpInstallOptions as CoreMcpInstallOptions,
 	installMcpServer,
 	type McpInstallResult,

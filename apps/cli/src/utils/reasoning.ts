@@ -1,4 +1,4 @@
-﻿import type { ProviderSettings } from "@agentario/core";
+import type { ProviderSettings } from "@agentario/core";
 import type { CliReasoningEffort } from "./types";
 
 type ActiveCliReasoningEffort = Exclude<CliReasoningEffort, "none">;

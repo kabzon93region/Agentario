@@ -1,4 +1,4 @@
-﻿import { machineId } from "node-machine-id"
+import { machineId } from "node-machine-id"
 import { v4 as uuidv4 } from "uuid"
 import { HostRegistryInfo } from "@/registry"
 import { Logger } from "@/shared/services/Logger"

@@ -1,4 +1,4 @@
-﻿import type { RemoteConfigBundle } from "@agentario/shared"
+import type { RemoteConfigBundle } from "@agentario/shared"
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
 import { ClineEnv } from "@/config"
 import { AgentarioAccountService } from "@/services/account/AgentarioAccountService"

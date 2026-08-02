@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type ContentBlock,
 	type MessageWithMetadata,
 	normalizeUserInput,

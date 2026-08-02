@@ -1,4 +1,4 @@
-﻿import { execFile } from "node:child_process";
+import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { access, mkdir, rm } from "node:fs/promises";
 import * as path from "node:path";

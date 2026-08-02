@@ -1,4 +1,4 @@
-﻿import { Controller } from "@/sdk"
+import { Controller } from "@/sdk"
 import { RemoteConfigSetting, StringRequest } from "@/shared/proto/index.agentario"
 
 export async function toggleRemoteConfigSetting(_controller: Controller, _request: StringRequest): Promise<RemoteConfigSetting> {

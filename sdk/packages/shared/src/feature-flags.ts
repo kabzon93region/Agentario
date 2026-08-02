@@ -1,4 +1,4 @@
-﻿export const FeatureFlag = {
+export const FeatureFlag = {
 	/** Enables ClinePass provider/model list exposure in supported clients. */
 	CLINE_PASS: "ext-agentario-pass",
 } as const;

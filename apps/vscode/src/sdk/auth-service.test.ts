@@ -1,4 +1,4 @@
-﻿// Tests for the SDK-backed AuthService (Step 6: Auth & Account Flows)
+// Tests for the SDK-backed AuthService (Step 6: Auth & Account Flows)
 //
 // These tests verify the auth service's core logic:
 // - Token persistence (read/write/clear from secrets)

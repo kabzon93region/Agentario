@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { AgentarioRecommendedModel, AgentarioRecommendedModelsResponse } from "@shared/proto/agentario/models"
 import type { Controller } from "../index"
 import { refreshAgentarioRecommendedModels } from "./refreshAgentarioRecommendedModels"

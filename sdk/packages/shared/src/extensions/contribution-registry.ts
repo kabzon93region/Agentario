@@ -1,4 +1,4 @@
-﻿import type { AgentRuntimeHooks, AgentTool } from "../agent";
+import type { AgentRuntimeHooks, AgentTool } from "../agent";
 import type { AutomationEventEnvelope } from "../cron";
 import type { BasicLogger } from "../logging/logger";
 import type { ITelemetryService } from "../services/telemetry";

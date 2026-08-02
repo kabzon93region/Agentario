@@ -1,4 +1,4 @@
-﻿import { Empty } from "@shared/proto/agentario/common"
+import { Empty } from "@shared/proto/agentario/common"
 import { PlanActMode, UpdateSettingsRequestCli } from "@shared/proto/agentario/state"
 import { convertProtoToApiProvider } from "@shared/proto-conversions/models/api-configuration-conversion"
 import { Settings } from "@shared/storage/state-keys"

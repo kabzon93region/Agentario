@@ -1,3 +1,3 @@
-﻿export function isAgentarioProvider(provider: string | undefined) {
+export function isAgentarioProvider(provider: string | undefined) {
 	return provider === "cline" || provider === "agentario-pass"
 }

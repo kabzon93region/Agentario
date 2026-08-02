@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 /**
  * Zod schemas for automation spec frontmatter. Used by the parser in

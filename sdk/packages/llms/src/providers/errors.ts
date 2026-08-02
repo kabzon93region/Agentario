@@ -1,4 +1,4 @@
-﻿import { getAgentarioEnvironmentConfig } from "@agentario/shared";
+import { getAgentarioEnvironmentConfig } from "@agentario/shared";
 
 export const CLINE_NOT_SUBSCRIBED_RESPONSE_MESSAGE =
 	"the user is not subscribed to required model plan";

@@ -1,4 +1,4 @@
-﻿import type { Anthropic } from "@anthropic-ai/sdk"
+import type { Anthropic } from "@anthropic-ai/sdk"
 import type { AgentarioMessageMetricsInfo, AgentarioMessageModelInfo } from "./metrics"
 
 export type ClinePromptInputContent = string

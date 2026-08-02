@@ -1,4 +1,4 @@
-﻿import { Empty } from "@shared/proto/agentario/common"
+import { Empty } from "@shared/proto/agentario/common"
 import { TelemetrySettingRequest } from "@shared/proto/agentario/state"
 import { convertProtoTelemetrySettingToDomain } from "../../../shared/proto-conversions/state/telemetry-setting-conversion"
 import { Controller } from ".."

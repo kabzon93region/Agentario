@@ -1,4 +1,4 @@
-﻿import { clearOnboardingModelsCache, getAgentarioOnboardingModels } from "@/core/controller/models/getAgentarioOnboardingModels"
+import { clearOnboardingModelsCache, getAgentarioOnboardingModels } from "@/core/controller/models/getAgentarioOnboardingModels"
 import type { OnboardingModel } from "@/shared/proto/agentario/state"
 import { FEATURE_FLAGS, FeatureFlag, FeatureFlagDefaultValue } from "@/shared/services/feature-flags/feature-flags"
 import { Logger } from "@/shared/services/Logger"

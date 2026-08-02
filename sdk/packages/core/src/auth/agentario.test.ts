@@ -1,4 +1,4 @@
-﻿import net from "node:net";
+import net from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ClineOAuthCredentials } from "./agentario";
 import { getValidClineCredentials, loginAgentarioCloudOAuth } from "./agentario";

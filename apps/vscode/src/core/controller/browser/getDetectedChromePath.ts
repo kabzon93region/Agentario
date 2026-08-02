@@ -1,4 +1,4 @@
-﻿import { ChromePath } from "@shared/proto/agentario/browser"
+import { ChromePath } from "@shared/proto/agentario/browser"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { Logger } from "@/shared/services/Logger"
 import { BrowserSession } from "../../../services/browser/BrowserSession"

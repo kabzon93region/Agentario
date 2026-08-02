@@ -1,4 +1,4 @@
-﻿// Map providers to their specific model ID keys
+// Map providers to their specific model ID keys
 
 import { getProviderCollectionSync } from "@agentario/llms"
 import { SettingsKey } from "@shared/storage/state-keys"

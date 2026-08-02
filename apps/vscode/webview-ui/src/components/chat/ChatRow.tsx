@@ -1152,15 +1152,17 @@ export const ChatRowContent = memo(
 					case "info": {
 						// Agentario: специальная обработка для сообщений компакции
 						const text = message.text || ""
-						const isCompacting = text.includes("auto-compacting") || text.includes("compacting")
-						const isCompactionResult = text.includes("✅ Компакция завершена")
-						const isContextStats = text.includes("📊 Контекст:")
+						const isCompacting = text.includes("auto-compacting") || text.includes("compacting") || text.includes("Полная суммаризация") || text.includes("Сжатие контекста")
+						const isCompactionResult = text.includes("✅ Компакция завершена") || text.startsWith("✅")
+						const isContextStats = text.includes("📊 Контекст:") || text.startsWith("\U0001f4ca")
+						const isProgress = text.startsWith("🔄")
+						const isError = text.startsWith("❌")
 						
 						if (isCompacting) {
 							return (
 								<div className="flex items-center gap-2 py-1.5 px-2 text-sm text-foreground opacity-80">
 									<span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-									<span className="font-medium">Сжатие контекста...</span>
+									<span className="font-medium">{text}</span>
 									<span className="inline-flex gap-0.5">
 										<span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
 										<span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
@@ -1175,6 +1177,24 @@ export const ChatRowContent = memo(
 								<div className="flex items-center gap-2 py-1.5 px-2 text-sm text-green-400 bg-green-400/10 rounded-sm">
 									<span>✅</span>
 									<span>{text.replace("✅ ", "")}</span>
+								</div>
+							)
+						}
+						
+						if (isError) {
+							return (
+								<div className="flex items-center gap-2 py-1.5 px-2 text-sm text-red-400 bg-red-400/10 rounded-sm">
+									<span>❌</span>
+									<span>{text.replace("❌ ", "")}</span>
+								</div>
+							)
+						}
+						
+						if (isProgress) {
+							return (
+								<div className="flex items-center gap-2 py-1 px-2 text-xs text-foreground/60">
+									<span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+									<span>{text.replace("🔄 ", "")}</span>
 								</div>
 							)
 						}

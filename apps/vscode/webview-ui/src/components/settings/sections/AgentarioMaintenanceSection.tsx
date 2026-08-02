@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { Button } from "@/components/ui/button"
 import { isStandaloneEnvironment } from "@/constants/standalone"
 import { useExtensionState } from "@/context/ExtensionStateContext"

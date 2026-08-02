@@ -1,4 +1,4 @@
-﻿import { OcaAuthState, OcaUserInfo } from "@shared/proto/agentario/oca_account"
+import { OcaAuthState, OcaUserInfo } from "@shared/proto/agentario/oca_account"
 import axios from "axios"
 import { jwtDecode } from "jwt-decode"
 import { Controller } from "@/core/controller"

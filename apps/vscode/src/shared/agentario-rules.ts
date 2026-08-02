@@ -1,1 +1,1 @@
-﻿export type AgentarioRulesToggles = Record<string, boolean> // filepath -> enabled/disabled
+export type AgentarioRulesToggles = Record<string, boolean> // filepath -> enabled/disabled

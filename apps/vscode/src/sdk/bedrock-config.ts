@@ -1,4 +1,4 @@
-﻿// Maps the extension's legacy Bedrock ApiConfiguration onto the SDK's
+// Maps the extension's legacy Bedrock ApiConfiguration onto the SDK's
 // structured AWS provider options (region + aws block).
 //
 // Both inference paths need this:

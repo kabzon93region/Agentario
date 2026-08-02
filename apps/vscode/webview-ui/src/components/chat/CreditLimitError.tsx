@@ -1,4 +1,4 @@
-﻿import { AskResponseRequest } from "@shared/proto/agentario/task"
+import { AskResponseRequest } from "@shared/proto/agentario/task"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import React, { useEffect, useMemo, useState } from "react"
 import VSCodeButtonLink from "@/components/common/VSCodeButtonLink"

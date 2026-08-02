@@ -1,4 +1,4 @@
-﻿import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
+import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
 import { fetchRemoteConfig } from "@/core/storage/remote-config/fetch"
 import { Controller } from ".."
 

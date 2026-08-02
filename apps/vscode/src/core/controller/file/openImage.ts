@@ -1,4 +1,4 @@
-﻿import { openImage as openImageIntegration } from "@integrations/misc/open-file"
+import { openImage as openImageIntegration } from "@integrations/misc/open-file"
 import { Empty, StringRequest } from "@shared/proto/agentario/common"
 import { Controller } from ".."
 

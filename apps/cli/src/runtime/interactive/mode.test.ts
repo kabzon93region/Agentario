@@ -1,4 +1,4 @@
-﻿import { createTool } from "@agentario/shared";
+import { createTool } from "@agentario/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Config } from "../../utils/types";
 import { resolveSystemPrompt } from "../prompt";

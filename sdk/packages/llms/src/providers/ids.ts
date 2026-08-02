@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Built-in provider IDs
  *
  * Single source of truth for all built-in provider identifiers.

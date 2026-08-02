@@ -1,4 +1,4 @@
-﻿import type { UsageTransaction as ClineAccountUsageTransaction, PaymentTransaction } from "@shared/AgentarioAccount"
+import type { UsageTransaction as ClineAccountUsageTransaction, PaymentTransaction } from "@shared/AgentarioAccount"
 import { isClineInternalTester } from "@shared/internal/account"
 import type { UserOrganization } from "@shared/proto/agentario/account"
 import { EmptyRequest } from "@shared/proto/agentario/common"

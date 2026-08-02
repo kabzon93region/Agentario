@@ -1,4 +1,4 @@
-﻿import { Controller } from "@core/controller"
+import { Controller } from "@core/controller"
 import { sendChatButtonClickedEvent } from "@core/controller/ui/subscribeToChatButtonClicked"
 import { Logger } from "@/shared/services/Logger"
 import { ClineAPI } from "./agentario"

@@ -1,4 +1,4 @@
-﻿import { McpViewTab } from "@shared/mcp"
+import { McpViewTab } from "@shared/mcp"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { McpServers } from "@shared/proto/agentario/mcp"
 import { convertProtoMcpServersToMcpServers } from "@shared/proto-conversions/mcp/mcp-server-conversion"

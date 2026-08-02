@@ -1,4 +1,4 @@
-﻿import type { Meta } from "@storybook/react-vite"
+import type { Meta } from "@storybook/react-vite"
 import AgentarioLogoWhite from "@/assets/AgentarioLogoWhite"
 import { Alert, AlertDescription } from "./alert"
 

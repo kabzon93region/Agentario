@@ -1,4 +1,4 @@
-﻿import {
+import {
 	getFileIndex,
 	type ProviderSettings,
 	type UserInstructionConfigService,

@@ -1,4 +1,4 @@
-﻿import { Empty, StringRequest } from "@shared/proto/agentario/common"
+import { Empty, StringRequest } from "@shared/proto/agentario/common"
 import { Controller } from ".."
 
 /**

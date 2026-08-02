@@ -1,4 +1,4 @@
-﻿import { BooleanRequest, KeyValuePair } from "@shared/proto/agentario/common"
+import { BooleanRequest, KeyValuePair } from "@shared/proto/agentario/common"
 import { Controller } from ".."
 
 /**

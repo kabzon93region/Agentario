@@ -1,4 +1,4 @@
-﻿import type { BasicLogger, ITelemetryService } from "@agentario/shared";
+import type { BasicLogger, ITelemetryService } from "@agentario/shared";
 import {
 	AgentarioCoreAutomationController,
 	createAgentarioCoreAutomationExtensionContext,

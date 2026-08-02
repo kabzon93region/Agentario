@@ -1,4 +1,4 @@
-﻿import type { ProviderSettings } from "@agentario/core";
+import type { ProviderSettings } from "@agentario/core";
 import { describe, expect, it } from "vitest";
 import { isProviderConfigured } from "./provider-auth";
 

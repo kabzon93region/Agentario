@@ -1,4 +1,4 @@
-﻿import type { ApiConfiguration, ModelInfo } from "@shared/api"
+import type { ApiConfiguration, ModelInfo } from "@shared/api"
 import type {
 	EffectiveProviderConfig,
 	Mode,

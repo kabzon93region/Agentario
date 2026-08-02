@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "./ExtensionMessage"
+import { AgentarioMessage } from "./ExtensionMessage"
 
 /**
  * Combines sequences of command and command_output messages in an array of agentarioMessages.

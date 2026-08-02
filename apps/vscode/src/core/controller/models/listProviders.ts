@@ -1,4 +1,4 @@
-﻿import { Empty } from "@/shared/proto/agentario/common"
+import { Empty } from "@/shared/proto/agentario/common"
 import { ProviderListingsResponse } from "@/shared/proto/agentario/models"
 import { type ProviderCatalogController, toProviderListingProto } from "./providerCatalogShared"
 

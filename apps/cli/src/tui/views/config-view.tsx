@@ -1,4 +1,4 @@
-﻿import { readGlobalSettings, setAutoUpdateEnabledGlobally } from "@agentario/core";
+import { readGlobalSettings, setAutoUpdateEnabledGlobally } from "@agentario/core";
 import { useTerminalDimensions } from "@opentui/react";
 import type { ChoiceContext } from "@opentui-ui/dialog";
 import { useDialogKeyboard } from "@opentui-ui/dialog/react";

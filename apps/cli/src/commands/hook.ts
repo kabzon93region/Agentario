@@ -1,4 +1,4 @@
-﻿import type { HookEventPayload } from "@agentario/core";
+import type { HookEventPayload } from "@agentario/core";
 import { handleSessionHookEvent } from "../session/session";
 import {
 	appendHookAudit,

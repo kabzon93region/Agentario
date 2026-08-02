@@ -1,4 +1,4 @@
-﻿import { Empty, StringRequest } from "@shared/proto/agentario/common"
+import { Empty, StringRequest } from "@shared/proto/agentario/common"
 import { appendAgentarioUiLog } from "@/shared/agentario-file-logger"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from ".."

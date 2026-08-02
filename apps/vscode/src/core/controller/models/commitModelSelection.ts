@@ -1,4 +1,4 @@
-﻿import { toLegacyApiProvider } from "@/shared/model-catalog/provider-helpers"
+import { toLegacyApiProvider } from "@/shared/model-catalog/provider-helpers"
 import { Empty } from "@/shared/proto/agentario/common"
 import { CommitModelSelectionRequest } from "@/shared/proto/agentario/models"
 import { Logger } from "@/shared/services/Logger"

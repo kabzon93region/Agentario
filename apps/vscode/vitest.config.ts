@@ -1,4 +1,4 @@
-﻿import path from "node:path"
+import path from "node:path"
 import { defineConfig } from "vitest/config"
 
 // Vitest config for the VSCode extension's SDK-adapter and model-catalog

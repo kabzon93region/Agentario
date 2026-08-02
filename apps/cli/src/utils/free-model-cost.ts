@@ -1,4 +1,4 @@
-﻿import type { AgentEvent } from "@agentario/core";
+import type { AgentEvent } from "@agentario/core";
 import { getClineEnvironmentConfig } from "@agentario/shared";
 import type { Config } from "./types";
 

@@ -1,4 +1,4 @@
-﻿interface AgentarioRecommendedModel {
+interface AgentarioRecommendedModel {
 	id: string
 	name: string
 	description: string

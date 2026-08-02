@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { VsCodeLmModelsArray } from "@shared/proto/agentario/models"
 import * as vscode from "vscode"
 import { Logger } from "@/shared/services/Logger"

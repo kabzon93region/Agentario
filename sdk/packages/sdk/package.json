@@ -1,4 +1,4 @@
-﻿{
+{
 	"name": "@agentario/sdk",
 	"description": "Agentario SDK - user-facing alias for @agentario/core",
 	"version": "0.0.55",

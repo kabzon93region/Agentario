@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import type { Meta, StoryObj } from "@storybook/react-vite"
 import { useMemo } from "react"
 import { expect, userEvent, within } from "storybook/test"

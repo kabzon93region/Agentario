@@ -1,4 +1,4 @@
-﻿import { openAiModelInfoSafeDefaults, openRouterDefaultModelId } from "@shared/api"
+import { openAiModelInfoSafeDefaults, openRouterDefaultModelId } from "@shared/api"
 import { StringRequest } from "@shared/proto/agentario/common"
 import type { Mode } from "@shared/storage/types"
 import { isClaudeOpusAdaptiveThinkingModel, resolveClaudeOpusAdaptiveThinking } from "@shared/utils/reasoning-support"

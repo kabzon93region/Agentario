@@ -1,4 +1,4 @@
-﻿import type { Message } from "@agentario/llms";
+import type { Message } from "@agentario/llms";
 import type {
 	AgentConfig,
 	AutomationEventEnvelope,

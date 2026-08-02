@@ -1,4 +1,4 @@
-﻿import { Empty } from "@shared/proto/agentario/common"
+import { Empty } from "@shared/proto/agentario/common"
 import type { ProviderListing } from "@shared/proto/agentario/models"
 import { useCallback, useEffect, useState } from "react"
 import { ModelsServiceClient } from "@/services/grpc-client"

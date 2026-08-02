@@ -1,4 +1,4 @@
-﻿import { registerDisposable } from "@agentario/shared";
+import { registerDisposable } from "@agentario/shared";
 import { nowIso } from "./helpers";
 import type { ActiveCliSession, CliOutputMode } from "./types";
 

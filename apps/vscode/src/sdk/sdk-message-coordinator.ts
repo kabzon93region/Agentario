@@ -1,4 +1,4 @@
-﻿import type { CoreSessionEvent } from "@agentario/core"
+import type { CoreSessionEvent } from "@agentario/core"
 import type { AgentarioApiReqInfo, AgentarioMessage } from "@shared/ExtensionMessage"
 import { isApiReqComplete } from "@shared/message-display"
 import { Logger } from "@/shared/services/Logger"

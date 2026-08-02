@@ -1,4 +1,4 @@
-﻿import {
+import {
 	chmodSync,
 	existsSync,
 	mkdirSync,

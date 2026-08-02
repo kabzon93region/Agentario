@@ -1,4 +1,4 @@
-﻿import type { ModelInfo } from "@shared/api"
+import type { ModelInfo } from "@shared/api"
 import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useState } from "react"
 import styled from "styled-components"

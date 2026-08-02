@@ -1,4 +1,4 @@
-﻿import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { basename } from "node:path";
 import {
 	augmentNodeCommandForDebug,

@@ -1,1 +1,1 @@
-﻿export { AgentarioTempManager } from "./AgentarioTempManager"
+export { AgentarioTempManager } from "./AgentarioTempManager"

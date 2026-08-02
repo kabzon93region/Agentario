@@ -1,4 +1,4 @@
-﻿import { isOpenAICodexCliProvider } from "../../../utils/codex-cli";
+import { isOpenAICodexCliProvider } from "../../../utils/codex-cli";
 import { isOAuthProvider } from "../../../utils/provider-auth";
 
 export type OnboardingStep =

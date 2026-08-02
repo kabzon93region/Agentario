@@ -1,4 +1,4 @@
-﻿import type { SessionHistoryRecord } from "@agentario/core";
+import type { SessionHistoryRecord } from "@agentario/core";
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import React from "react";

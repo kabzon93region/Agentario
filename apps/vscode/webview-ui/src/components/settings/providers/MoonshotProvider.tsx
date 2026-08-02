@@ -1,4 +1,4 @@
-﻿import { UpdateApiConfigurationRequestNew } from "@shared/proto/index.agentario"
+import { UpdateApiConfigurationRequestNew } from "@shared/proto/index.agentario"
 import { Mode } from "@shared/storage/types"
 import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useExtensionState } from "@/context/ExtensionStateContext"

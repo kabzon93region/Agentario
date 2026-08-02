@@ -1,4 +1,4 @@
-﻿import { AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/AgentarioAccount"
+import { AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/AgentarioAccount"
 import type { AgentarioMessage, TurnPhase } from "@shared/ExtensionMessage"
 import type { Mode } from "@shared/storage/types"
 import type { AgentarioAskResponse } from "@shared/WebviewMessage"

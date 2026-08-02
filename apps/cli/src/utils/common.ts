@@ -1,4 +1,4 @@
-﻿import * as os from "node:os";
+import * as os from "node:os";
 import type { RuntimeEnv } from "@agentario/shared";
 import { displayName, version } from "../../package.json";
 

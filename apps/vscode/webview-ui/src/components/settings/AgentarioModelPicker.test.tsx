@@ -1,4 +1,4 @@
-﻿import { toProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
+import { toProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useExtensionState } from "@/context/ExtensionStateContext"

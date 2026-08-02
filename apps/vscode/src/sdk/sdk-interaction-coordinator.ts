@@ -1,4 +1,4 @@
-﻿import type { ConsecutiveMistakeLimitContext, ConsecutiveMistakeLimitDecision } from "@agentario/shared"
+import type { ConsecutiveMistakeLimitContext, ConsecutiveMistakeLimitDecision } from "@agentario/shared"
 import type { AgentarioAskQuestion, AgentarioMessage, TurnPhase } from "@shared/ExtensionMessage"
 import type { AgentarioAskResponse } from "@shared/WebviewMessage"
 import { Logger } from "@/shared/services/Logger"

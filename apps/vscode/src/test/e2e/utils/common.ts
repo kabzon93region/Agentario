@@ -1,4 +1,4 @@
-﻿import type { Page } from "@playwright/test"
+import type { Page } from "@playwright/test"
 
 export const openTab = async (_page: Page, tabName: string) => {
 	await _page

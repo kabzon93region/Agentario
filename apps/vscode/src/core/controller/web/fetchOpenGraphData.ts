@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { OpenGraphData } from "@shared/proto/agentario/web"
 import { Logger } from "@/shared/services/Logger"
 import { fetchOpenGraphData as fetchOGData } from "../../../integrations/misc/link-preview"

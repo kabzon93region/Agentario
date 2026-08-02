@@ -4,7 +4,7 @@ import path from "node:path"
 import os from "node:os"
 import { estimateTokens } from "@agentario/shared"
 
-const VERSION = "0.14.76"
+const VERSION = "0.14.82"
 
 export interface ApiServerOptions {
 	port: number
@@ -648,15 +648,31 @@ async function handleRequest(
 }
 
 function sendJson(res: http.ServerResponse, status: number, data: any): void {
-	res.writeHead(status, { "Content-Type": "application/json" })
+	// Always declare charset=utf-8 so clients (especially PowerShell 5.1)
+	// decode the response correctly and don't interpret as system codepage.
+	res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" })
 	res.end(JSON.stringify(data))
 }
 
 function readBody(req: http.IncomingMessage): Promise<string> {
 	return new Promise((resolve, reject) => {
-		let body = ""
-		req.on("data", (chunk: Buffer) => (body += chunk.toString()))
-		req.on("end", () => resolve(body))
+		const chunks: Buffer[] = []
+		req.on("data", (chunk: Buffer) => chunks.push(chunk))
+		req.on("end", () => {
+			const buf = Buffer.concat(chunks)
+			// Detect charset from Content-Type header; default to UTF-8.
+			// PowerShell 5.1 sends body in system default encoding (e.g. cp1251),
+			// so we must honour the declared charset to avoid garbling Cyrillic.
+			const contentType = req.headers["content-type"] || ""
+			const charsetMatch = contentType.match(/charset=([^\s;]+)/i)
+			const charset = (charsetMatch?.[1] || "utf-8") as BufferEncoding
+			try {
+				resolve(buf.toString(charset))
+			} catch {
+				// Fallback: try UTF-8 then Latin-1 (lossless byte round-trip)
+				resolve(buf.toString("utf-8"))
+			}
+		})
 		req.on("error", reject)
 	})
 }

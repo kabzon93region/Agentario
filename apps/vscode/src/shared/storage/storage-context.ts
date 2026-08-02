@@ -1,4 +1,4 @@
-﻿import fsSync from "node:fs"
+import fsSync from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { resolveClineDir } from "@agentario/shared/storage"

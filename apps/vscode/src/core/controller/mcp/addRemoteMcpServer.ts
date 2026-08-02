@@ -1,4 +1,4 @@
-﻿import type { AddRemoteMcpServerRequest } from "@shared/proto/agentario/mcp"
+import type { AddRemoteMcpServerRequest } from "@shared/proto/agentario/mcp"
 import { McpServers } from "@shared/proto/agentario/mcp"
 import { convertMcpServersToProtoMcpServers } from "@/shared/proto-conversions/mcp/mcp-server-conversion"
 import { Logger } from "@/shared/services/Logger"

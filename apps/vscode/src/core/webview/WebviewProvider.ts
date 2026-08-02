@@ -1,4 +1,4 @@
-﻿import path from "node:path"
+import path from "node:path"
 import { Controller } from "@core/controller/index"
 import axios from "axios"
 import { readFile } from "fs/promises"

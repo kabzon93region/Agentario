@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Model Information Types
  *
  * Zod schemas and inferred types for model capabilities, pricing,

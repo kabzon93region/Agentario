@@ -1,4 +1,4 @@
-﻿import {
+import {
 	closeSync,
 	existsSync,
 	mkdirSync,

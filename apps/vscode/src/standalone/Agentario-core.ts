@@ -1,4 +1,4 @@
-﻿// Side-effect import: in the standalone (JetBrains/CLI) build (IS_STANDALONE==="true"),
+// Side-effect import: in the standalone (JetBrains/CLI) build (IS_STANDALONE==="true"),
 // loading @/shared/net installs the undici EnvHttpProxyAgent as the global dispatcher
 // so all HTTP/inference honors proxy/CA configuration. It must run before any network
 // I/O, so KEEP IT FIRST: do not add an import above this line that performs network

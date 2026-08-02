@@ -1,4 +1,4 @@
-﻿import { describe, it } from "bun:test"
+import { describe, it } from "bun:test"
 import "should"
 import { AgentarioError, AgentarioErrorType } from "../AgentarioError"
 

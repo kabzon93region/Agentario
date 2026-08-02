@@ -1,4 +1,4 @@
-﻿// @jsxImportSource @opentui/react
+// @jsxImportSource @opentui/react
 import type { ClineAccountOrganization } from "@agentario/core";
 import type { ChoiceContext } from "@opentui-ui/dialog";
 import { useDialogKeyboard } from "@opentui-ui/dialog/react";

@@ -1,4 +1,4 @@
-﻿import { SessionSource } from "@agentario/core";
+import { SessionSource } from "@agentario/core";
 import type { Message } from "@agentario/shared";
 import { deriveForkSessionTitle } from "./title";
 

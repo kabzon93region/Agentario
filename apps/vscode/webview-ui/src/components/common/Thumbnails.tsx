@@ -1,4 +1,4 @@
-﻿import { cn } from "@heroui/react"
+import { cn } from "@heroui/react"
 import { StringRequest } from "@shared/proto/agentario/common"
 import React, { memo, useLayoutEffect, useRef, useState } from "react"
 import { useWindowSize } from "react-use"

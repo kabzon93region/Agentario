@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { createTaskProxy, MessageStateHandler } from "./task-proxy"
 
 describe("MessageStateHandler", () => {

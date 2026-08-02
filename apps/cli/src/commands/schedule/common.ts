@@ -1,4 +1,4 @@
-﻿import type { Command } from "commander";
+import type { Command } from "commander";
 import type { CommandIo } from "./types";
 
 export function parseList(raw: string | undefined): string[] | undefined {

@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "./ExtensionMessage"
+import { AgentarioMessage } from "./ExtensionMessage"
 
 /**
  * Hook metadata extracted from hook message text.

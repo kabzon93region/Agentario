@@ -1,4 +1,4 @@
-﻿export {
+export {
 	ClineNotSubscribedError,
 	ClineOrgIndividualInferenceSubscriptionError,
 	getClineOrgIndividualInferenceSubscriptionMessage,

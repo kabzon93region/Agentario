@@ -1,4 +1,4 @@
-﻿import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	listLocalProviders: vi.fn(async () => ({ providers: [], settingsPath: "" })),

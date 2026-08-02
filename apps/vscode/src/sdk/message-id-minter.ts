@@ -1,4 +1,4 @@
-﻿// Single source of truth for AgentarioMessage identity (`id`), update freshness (`seq`),
+// Single source of truth for AgentarioMessage identity (`id`), update freshness (`seq`),
 // and the conversation/replica fence (`epoch`).
 //
 // Rationale (why this exists):

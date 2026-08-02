@@ -1,4 +1,4 @@
-﻿import type { ModelProfilePreset } from "@shared/model-profile-presets"
+import type { ModelProfilePreset } from "@shared/model-profile-presets"
 import { UpdateSettingsRequest } from "@shared/proto/agentario/state"
 import { VSCodeButton, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { useMemo, useState } from "react"

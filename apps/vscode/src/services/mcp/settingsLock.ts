@@ -1,4 +1,4 @@
-﻿import { setTimeout as delay } from "node:timers/promises"
+import { setTimeout as delay } from "node:timers/promises"
 import { randomUUID } from "node:crypto"
 import {
 	existsSync,

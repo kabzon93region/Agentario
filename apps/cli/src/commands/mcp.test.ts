@@ -1,4 +1,4 @@
-﻿import { installMcpServer } from "@agentario/core";
+import { installMcpServer } from "@agentario/core";
 import { describe, expect, it, vi } from "vitest";
 import {
 	buildMcpInstallDefaults,

@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 
 export function isVisibleCheckpointUserMessage(message: AgentarioMessage): boolean {
 	return message.type === "say" && (message.say === "task" || message.say === "user_feedback")

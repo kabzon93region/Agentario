@@ -1,4 +1,4 @@
-﻿import type { UserOrganization } from "@shared/proto/agentario/account"
+import type { UserOrganization } from "@shared/proto/agentario/account"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import deepEqual from "fast-deep-equal"
 import type React from "react"

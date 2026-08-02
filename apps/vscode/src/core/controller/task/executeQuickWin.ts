@@ -1,4 +1,4 @@
-﻿import { Empty } from "@shared/proto/agentario/common"
+import { Empty } from "@shared/proto/agentario/common"
 import { ExecuteQuickWinRequest } from "@shared/proto/agentario/task"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"

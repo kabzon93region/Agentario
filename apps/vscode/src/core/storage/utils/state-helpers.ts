@@ -1,4 +1,4 @@
-﻿import { ApiProvider } from "@shared/api"
+import { ApiProvider } from "@shared/api"
 import type { AgentarioFileStorage } from "@shared/storage/AgentarioFileStorage"
 import {
 	applyTransform,

@@ -1,4 +1,4 @@
-﻿export {
+export {
 	CoreSettingsService,
 	createCoreSettingsService,
 } from "./settings-service";

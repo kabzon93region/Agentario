@@ -128,7 +128,11 @@ export function formatMessageStatsLine(info: AgentarioApiReqInfo): string | unde
 		return undefined
 	}
 
+	// Agentario: don't show stats line when all token counts are zero
 	const total = (tokensIn ?? 0) + (tokensOut ?? 0)
+	if (total === 0 && info.cost == null && info.durationMs == null) {
+		return undefined
+	}
 	const parts: string[] = []
 	if (tokensIn != null) {
 		parts.push(`in: ${tokensIn}`)

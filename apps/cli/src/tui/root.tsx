@@ -1,4 +1,4 @@
-﻿import { getCurrentContextSize, summarizeUsageFromMessages } from "@agentario/core";
+import { getCurrentContextSize, summarizeUsageFromMessages } from "@agentario/core";
 import type { Message } from "@agentario/shared";
 import { formatDisplayUserInput, truncateStr } from "@agentario/shared";
 import type { KeyEvent } from "@opentui/core";

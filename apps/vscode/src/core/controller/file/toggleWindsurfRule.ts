@@ -1,4 +1,4 @@
-﻿import type { ToggleWindsurfRuleRequest } from "@shared/proto/agentario/file"
+import type { ToggleWindsurfRuleRequest } from "@shared/proto/agentario/file"
 import { AgentarioRulesToggles } from "@shared/proto/agentario/file"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"

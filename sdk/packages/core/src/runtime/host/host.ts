@@ -1,4 +1,4 @@
-﻿import { captureSdkError } from "@agentario/shared";
+import { captureSdkError } from "@agentario/shared";
 import type { AgentarioCoreOptions } from "../../agentario-core/types";
 import {
 	ensureCompatibleLocalHubUrl,

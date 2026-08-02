@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tests for BannerService
  * Tests API fetching, caching, auth updates, and rate limit backoff
  */

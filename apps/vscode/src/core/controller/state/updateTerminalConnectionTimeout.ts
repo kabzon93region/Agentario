@@ -1,4 +1,4 @@
-﻿import { UpdateTerminalConnectionTimeoutRequest, UpdateTerminalConnectionTimeoutResponse } from "@shared/proto/agentario/state"
+import { UpdateTerminalConnectionTimeoutRequest, UpdateTerminalConnectionTimeoutResponse } from "@shared/proto/agentario/state"
 import { Controller } from "../index"
 
 export async function updateTerminalConnectionTimeout(

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared types and interfaces for the chat view components
  */
 

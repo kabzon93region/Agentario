@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"
+import { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"
 import { isApiReqComplete } from "@shared/message-display"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { memo, useCallback, useMemo, useState } from "react"

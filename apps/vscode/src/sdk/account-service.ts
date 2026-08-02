@@ -1,4 +1,4 @@
-﻿// Replaces classic src/services/account/AgentarioAccountService.ts (see origin/main)
+// Replaces classic src/services/account/AgentarioAccountService.ts (see origin/main)
 //
 // SDK-backed account service. Handles credits, organizations, and user data
 // by making authenticated requests to the Cline API.

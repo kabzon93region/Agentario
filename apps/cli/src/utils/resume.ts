@@ -1,4 +1,4 @@
-﻿import type { ClineCore } from "@agentario/core";
+import type { ClineCore } from "@agentario/core";
 import type { Message } from "@agentario/shared";
 
 export async function loadInteractiveResumeMessages(

@@ -1,4 +1,4 @@
-﻿import { createTeamName } from "@agentario/core";
+import { createTeamName } from "@agentario/core";
 import { formatUserCommandBlock } from "@agentario/shared";
 import type { Config } from "./types";
 

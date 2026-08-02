@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ChatState, PendingUserMessage } from "../types/chatTypes"
 

@@ -1,4 +1,4 @@
-﻿import type { ProviderConfigFieldKey } from "@agentario/core";
+import type { ProviderConfigFieldKey } from "@agentario/core";
 import { useKeyboard } from "@opentui/react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ClineModelPickerEntry } from "../../components/model-selector/agentario-model-picker";

@@ -1,4 +1,4 @@
-﻿import type { TeamProgressProjectionEvent } from "@agentario/shared";
+import type { TeamProgressProjectionEvent } from "@agentario/shared";
 import { describe, expect, it } from "vitest";
 import {
 	createTaskUpdateFingerprint,

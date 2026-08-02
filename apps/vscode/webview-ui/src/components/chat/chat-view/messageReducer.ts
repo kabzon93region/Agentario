@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, TurnState } from "@shared/ExtensionMessage"
 
 // Convergent-replica reducer for the webview's agentarioMessages transcript.
 //

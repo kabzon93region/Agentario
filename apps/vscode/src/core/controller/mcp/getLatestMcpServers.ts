@@ -1,4 +1,4 @@
-﻿import type { Empty } from "@shared/proto/agentario/common"
+import type { Empty } from "@shared/proto/agentario/common"
 import { McpServers } from "@shared/proto/agentario/mcp"
 import { convertMcpServersToProtoMcpServers } from "@/shared/proto-conversions/mcp/mcp-server-conversion"
 import { Logger } from "@/shared/services/Logger"

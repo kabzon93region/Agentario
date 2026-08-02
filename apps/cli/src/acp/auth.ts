@@ -1,4 +1,4 @@
-﻿import type { ProviderSettingsManager } from "@agentario/core";
+import type { ProviderSettingsManager } from "@agentario/core";
 import { loginAndSaveProviderOAuthCredentials } from "@agentario/core";
 import { getPersistedProviderApiKey } from "../commands/auth";
 import { writeDiagnostic } from "../utils/output";

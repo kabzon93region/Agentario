@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Agent Types and Zod Schemas
  *
  * Canonical type definitions for agent configuration, events, hooks,

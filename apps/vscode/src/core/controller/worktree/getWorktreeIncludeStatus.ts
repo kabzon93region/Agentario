@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { WorktreeIncludeStatus } from "@shared/proto/agentario/worktree"
 import { getWorkspacePath } from "@utils/path"
 import * as fs from "fs/promises"

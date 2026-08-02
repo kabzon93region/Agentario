@@ -1,4 +1,4 @@
-﻿import { AskResponseRequest } from "@shared/proto/agentario/task"
+import { AskResponseRequest } from "@shared/proto/agentario/task"
 import { useState } from "react"
 import styled from "styled-components"
 import { CODE_BLOCK_BG_COLOR } from "@/components/common/CodeBlock"

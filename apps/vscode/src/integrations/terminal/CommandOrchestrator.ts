@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CommandOrchestrator - Shared command execution orchestration logic.
  *
  * This module contains the common orchestration logic for command execution

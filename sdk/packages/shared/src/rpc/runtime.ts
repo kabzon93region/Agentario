@@ -1,4 +1,4 @@
-﻿import z from "zod";
+import z from "zod";
 import type { HubToolExecutorName } from "../hub";
 import type {
 	RuntimeConfigExtensionKind,

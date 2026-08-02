@@ -1,4 +1,4 @@
-﻿import { GlobalFileNames } from "@core/storage/disk"
+import { GlobalFileNames } from "@core/storage/disk"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { OpenRouterCompatibleModelInfo, OpenRouterModelInfo } from "@shared/proto/agentario/models"
 import axios from "axios"

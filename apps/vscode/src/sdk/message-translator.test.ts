@@ -1,4 +1,4 @@
-﻿import type { CoreSessionEvent } from "@agentario/core"
+import type { CoreSessionEvent } from "@agentario/core"
 import type { AgentEvent } from "@agentario/shared"
 import type { AgentarioAskUseMcpServer } from "@shared/ExtensionMessage"
 import { describe, expect, it } from "vitest"

@@ -1,4 +1,4 @@
-﻿import { ResolveProviderModelsRequest } from "@shared/proto/agentario/models"
+import { ResolveProviderModelsRequest } from "@shared/proto/agentario/models"
 import { useCallback, useEffect } from "react"
 import { type ProviderId, useExtensionState } from "@/context/ExtensionStateContext"
 import { ModelsServiceClient } from "@/services/grpc-client"

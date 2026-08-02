@@ -1,4 +1,4 @@
-﻿import { describe, it } from "mocha"
+import { describe, it } from "mocha"
 import type { AgentarioMessage } from "./ExtensionMessage"
 import "should"
 import { combineHookSequences } from "./combineHookSequences"

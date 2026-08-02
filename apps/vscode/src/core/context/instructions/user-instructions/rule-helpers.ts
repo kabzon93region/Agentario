@@ -1,4 +1,4 @@
-﻿import { AgentarioRulesToggles } from "@shared/Agentario-rules"
+import { AgentarioRulesToggles } from "@shared/Agentario-rules"
 import { GlobalInstructionsFile } from "@shared/remote-config/schema"
 import { resolveLocalRulesDirectory } from "@core/storage/disk"
 import { fileExistsAtPath, isDirectory } from "@utils/fs"

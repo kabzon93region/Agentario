@@ -1,4 +1,4 @@
-﻿import { mentionRegex, mentionRegexGlobal } from "@shared/context-mentions"
+import { mentionRegex, mentionRegexGlobal } from "@shared/context-mentions"
 import { StringRequest } from "@shared/proto/agentario/common"
 import { FileSearchRequest, FileSearchType, RelativePathsRequest } from "@shared/proto/agentario/file"
 import { PlanActMode, TogglePlanActModeRequest } from "@shared/proto/agentario/state"

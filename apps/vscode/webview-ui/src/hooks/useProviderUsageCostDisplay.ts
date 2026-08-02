@@ -1,4 +1,4 @@
-﻿import { useMemo } from "react"
+import { useMemo } from "react"
 import { useProviderListings } from "./useProviderListings"
 
 /**

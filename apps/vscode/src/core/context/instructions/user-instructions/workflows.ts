@@ -1,4 +1,4 @@
-﻿import { synchronizeRuleToggles } from "@core/context/instructions/user-instructions/rule-helpers"
+import { synchronizeRuleToggles } from "@core/context/instructions/user-instructions/rule-helpers"
 import { ensureWorkflowsDirectoryExists, GlobalFileNames } from "@core/storage/disk"
 import { AgentarioRulesToggles } from "@shared/Agentario-rules"
 import path from "path"

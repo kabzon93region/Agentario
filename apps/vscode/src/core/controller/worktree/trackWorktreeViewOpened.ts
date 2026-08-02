@@ -1,4 +1,4 @@
-﻿import { Empty } from "@shared/proto/agentario/common"
+import { Empty } from "@shared/proto/agentario/common"
 import { TrackWorktreeViewOpenedRequest } from "@shared/proto/agentario/worktree"
 import { telemetryService } from "@/services/telemetry"
 import { Controller } from ".."

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AgentarioTempManager - Manages temporary files for Cline with automatic cleanup.
  *
  * Simple approach:

@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 // Hoist the spy so vi.mock's factory can reference it without TDZ errors.
 const hoisted = vi.hoisted(() => ({

@@ -1,4 +1,4 @@
-﻿import * as path from "path"
+import * as path from "path"
 import * as vscode from "vscode"
 import { Controller } from "@/core/controller"
 import { HostProvider } from "@/hosts/host-provider"

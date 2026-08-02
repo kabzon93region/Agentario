@@ -1,4 +1,4 @@
-﻿import { BannerService } from "@/services/banner/BannerService"
+import { BannerService } from "@/services/banner/BannerService"
 import { Empty } from "@/shared/proto/agentario/common"
 import type { TrackBannerEventRequest } from "@/shared/proto/agentario/state"
 import { Logger } from "@/shared/services/Logger"

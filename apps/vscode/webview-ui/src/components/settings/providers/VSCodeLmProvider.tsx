@@ -1,4 +1,4 @@
-﻿import { openAiModelInfoSafeDefaults } from "@shared/api"
+import { openAiModelInfoSafeDefaults } from "@shared/api"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import type { Mode } from "@shared/storage/types"
 import { parseVsCodeLmModelSelector, stringifyVsCodeLmModelSelector } from "@shared/vsCodeSelectorUtils"

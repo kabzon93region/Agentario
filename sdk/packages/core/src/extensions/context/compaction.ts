@@ -65,6 +65,8 @@ type BuiltinCompactionStrategyOptions = {
 	compactionMode?: "context" | "full";
 	/** Agentario: callback for status updates in UI */
 	statusCallback?: (message: string) => void;
+	/** Agentario: EMA scale for aligning char-based estimates with provider tokens */
+	providerScale?: number;
 };
 
 type BuiltinCompactionStrategyRunner = (
@@ -83,6 +85,8 @@ export interface ContextCompactionPrepareTurnOptions {
 	compactionMode?: "context" | "full";
 	/** Agentario: callback for status updates in UI */
 	statusCallback?: (message: string) => void;
+	/** Agentario: EMA scale for aligning char-based estimates with provider tokens */
+	providerScale?: number;
 }
 
 function isPositiveFiniteNumber(value: unknown): value is number {
@@ -143,6 +147,7 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 		logger,
 		compactionMode,
 		statusCallback,
+		providerScale,
 	}) =>
 		runAgenticCompaction({
 			context,
@@ -163,6 +168,7 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 			mode, // Agentario: auto vs manual
 			compactionMode, // Agentario: передаём режим суммаризации
 			statusCallback, // Agentario: callback для статусов в UI
+			providerScale, // Agentario: EMA scale для согласования токенов с UI
 		}),
 } satisfies Record<CoreCompactionStrategy, BuiltinCompactionStrategyRunner>;
 
@@ -618,6 +624,7 @@ export function createContextCompactionPrepareTurn(
 					logger: config.logger,
 					compactionMode: options.compactionMode, // Agentario: передаём режим суммаризации
 					statusCallback: options.statusCallback, // Agentario: callback для статусов в UI
+					providerScale: options.providerScale, // Agentario: EMA scale для согласования токенов с UI
 				});
 
 		const durationMs = Date.now() - startedAt;

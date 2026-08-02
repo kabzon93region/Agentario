@@ -1,4 +1,4 @@
-﻿import type { UserInstructionConfigService } from "@agentario/core";
+import type { UserInstructionConfigService } from "@agentario/core";
 import { HubSessionClient } from "@agentario/core";
 import type { ChatStartSessionRequest } from "@agentario/shared";
 import { resolveCliSessionMetadata } from "../utils/enterprise";

@@ -1,4 +1,4 @@
-﻿import type { UserInstructionConfigService } from "../extensions/config";
+import type { UserInstructionConfigService } from "../extensions/config";
 import type { BuiltinToolAvailabilityContext } from "../extensions/tools";
 
 export type CoreSettingsType =

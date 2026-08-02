@@ -1,4 +1,4 @@
-﻿import { resolveAgentarioBuildEnv } from "@agentario/shared";
+import { resolveAgentarioBuildEnv } from "@agentario/shared";
 import { resolveHubEndpointOptions } from "../discovery/defaults";
 import {
 	resolveProductionHubOwnerContext,

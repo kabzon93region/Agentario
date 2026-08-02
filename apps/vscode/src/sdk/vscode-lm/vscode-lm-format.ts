@@ -1,4 +1,4 @@
-﻿// Converts Cline SDK messages (@agentario/llms `Message`) into VS Code Language
+// Converts Cline SDK messages (@agentario/llms `Message`) into VS Code Language
 // Model API messages (`vscode.LanguageModelChatMessage`).
 //
 // SDK content blocks (text / image / tool_use / tool_result) map onto VS Code LM

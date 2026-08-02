@@ -1,4 +1,4 @@
-﻿import type { AgentEvent, TeamEvent } from "@agentario/core";
+import type { AgentEvent, TeamEvent } from "@agentario/core";
 import type React from "react";
 import { createContext, useEffect, useRef } from "react";
 import type {

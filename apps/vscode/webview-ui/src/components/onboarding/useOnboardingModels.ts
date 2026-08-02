@@ -1,4 +1,4 @@
-﻿import { buildModelInfoNameMap, type ModelInfo, resolveClinePassModelInfo } from "@shared/api"
+import { buildModelInfoNameMap, type ModelInfo, resolveClinePassModelInfo } from "@shared/api"
 import { AGENTARIO_ONBOARDING_MODELS } from "@shared/agentario/onboarding"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import type { AgentarioRecommendedModel } from "@shared/proto/agentario/models"

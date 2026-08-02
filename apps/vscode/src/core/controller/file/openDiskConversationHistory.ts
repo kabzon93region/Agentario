@@ -1,4 +1,4 @@
-﻿import { openFile as openFileIntegration } from "@integrations/misc/open-file"
+import { openFile as openFileIntegration } from "@integrations/misc/open-file"
 import { Empty, StringRequest } from "@shared/proto/agentario/common"
 import path from "path"
 import { HostProvider } from "@/hosts/host-provider"

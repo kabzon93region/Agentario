@@ -1,4 +1,4 @@
-﻿import { userInfo } from "os"
+import { userInfo } from "os"
 import * as vscode from "vscode"
 
 export const WINDOWS_POWERSHELL_7_PATH = "C:\\Program Files\\PowerShell\\7\\pwsh.exe"

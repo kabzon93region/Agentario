@@ -1,4 +1,4 @@
-﻿// Integration-style tests for the plan/act mode toggle flow.
+// Integration-style tests for the plan/act mode toggle flow.
 //
 // These tests verify the Controller → gRPC handler boundary for mode toggling:
 // 1. togglePlanActModeProto correctly decodes the PlanActMode enum to "plan"/"act"

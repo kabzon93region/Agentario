@@ -1,4 +1,4 @@
-﻿import { getFileMentionFromPath } from "@/core/mentions"
+import { getFileMentionFromPath } from "@/core/mentions"
 import { HostProvider } from "@/hosts/host-provider"
 import { telemetryService } from "@/services/telemetry"
 import { CommandContext, Empty } from "@/shared/proto/index.agentario"

@@ -1,4 +1,4 @@
-﻿import type { MarketplaceEntry, MarketplaceLocalInstalledEntry } from "@shared/proto/agentario/marketplace"
+import type { MarketplaceEntry, MarketplaceLocalInstalledEntry } from "@shared/proto/agentario/marketplace"
 
 function installArgs(entry: MarketplaceEntry): string[] {
 	return entry.install?.args ?? []

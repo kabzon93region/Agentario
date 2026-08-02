@@ -1,4 +1,4 @@
-﻿import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
+import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { useState } from "react";
 import { AccountServiceClient } from "@/services/grpc-client";
 

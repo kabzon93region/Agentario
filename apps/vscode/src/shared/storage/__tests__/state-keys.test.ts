@@ -1,4 +1,4 @@
-﻿/**
+/**
  * State Keys Type Safety Tests
  *
  * This test suite validates the type safety guarantees of the state-keys module,

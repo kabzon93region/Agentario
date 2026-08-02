@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Adapter: wrap a custom `ApiHandler` (from the `@agentario/llms` handler registry)
  * as an `AgentModel` for the agent runtime.
  *

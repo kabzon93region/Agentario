@@ -1,4 +1,4 @@
-﻿import { HeroUIProvider } from "@heroui/react"
+import { HeroUIProvider } from "@heroui/react"
 import { type ReactNode } from "react"
 import { CustomPostHogProvider } from "./CustomPostHogProvider"
 import { ClineAuthProvider } from "./context/AgentarioAuthContext"

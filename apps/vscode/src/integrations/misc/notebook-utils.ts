@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared utilities for processing Jupyter notebooks for LLM context.
  * Used by both the context menu commands (addToAgentario, etc.) and file reading (extract-text.ts).
  */

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Interface for telemetry providers
  * Allows switching between different analytics providers (PostHog, etc.)
  */

@@ -1,4 +1,4 @@
-﻿import { StringArray, type StringRequest } from "@shared/proto/agentario/common"
+import { StringArray, type StringRequest } from "@shared/proto/agentario/common"
 import { fetchLmStudioModels } from "@agentario/shared"
 import { fetch } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"

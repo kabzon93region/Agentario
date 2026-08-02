@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { memo, useMemo, useState } from "react"
 import { TaskServiceClient } from "@/services/grpc-client"

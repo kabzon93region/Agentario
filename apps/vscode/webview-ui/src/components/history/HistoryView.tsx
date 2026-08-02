@@ -1,4 +1,4 @@
-﻿import { EmptyRequest, StringArrayRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest, StringArrayRequest } from "@shared/proto/agentario/common"
 import { GetTaskHistoryRequest, TaskFavoriteRequest, type TaskItem } from "@shared/proto/agentario/task"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import Fuse, { FuseResult } from "fuse.js"

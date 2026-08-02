@@ -1,4 +1,4 @@
-﻿import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
+import { Empty, EmptyRequest } from "@shared/proto/agentario/common"
 
 export async function shutdown(request: EmptyRequest): Promise<Empty> {
 	// VSCode extensions cannot shutdown the host process (VSCode itself)

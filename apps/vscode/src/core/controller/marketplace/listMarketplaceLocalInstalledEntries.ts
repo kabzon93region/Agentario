@@ -1,4 +1,4 @@
-﻿import type { EmptyRequest } from "@shared/proto/agentario/common"
+import type { EmptyRequest } from "@shared/proto/agentario/common"
 import type { MarketplaceLocalInstalledEntries } from "@shared/proto/agentario/marketplace"
 import type { Controller } from "../index"
 import { listLocalMarketplaceInstalledEntries } from "./marketplace-helpers"

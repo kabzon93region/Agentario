@@ -1,4 +1,4 @@
-﻿import { existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { isAbsolute, resolve as resolvePath } from "node:path";
 import { augmentNodeCommandForDebug, type ClineDebugRole } from "@agentario/shared";
 

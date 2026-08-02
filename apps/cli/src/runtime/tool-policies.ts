@@ -1,4 +1,4 @@
-﻿import type { ToolPolicy } from "@agentario/core";
+import type { ToolPolicy } from "@agentario/core";
 
 const SAFE_AUTO_APPROVE_TOOL_NAMES = [
 	"ask_followup_question",

@@ -1,4 +1,4 @@
-﻿// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Process-level helpers for headless / contract-style CLI tests.
 //
 // These helpers spawn cline as a child process and return stdout, stderr,

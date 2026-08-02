@@ -1,4 +1,4 @@
-﻿// Preload for `bun test` (registered via bunfig.toml [test] preload). It makes
+// Preload for `bun test` (registered via bunfig.toml [test] preload). It makes
 // the SDK-adapter and model-catalog unit tests — written against vitest's `vi`
 // API and module aliases — run under `bun test`.
 //

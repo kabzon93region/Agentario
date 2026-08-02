@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Sync module - provides queue-based syncing to S3/R2 storage.
  *
  * This module coordinates the SyncQueue and SyncWorker for robust

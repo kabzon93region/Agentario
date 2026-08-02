@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shell argument construction for the standalone terminal.
  *
  * Extracted into a pure module so the quoting/flag logic is unit-testable

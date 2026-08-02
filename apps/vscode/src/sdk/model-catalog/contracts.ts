@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SDK-backed Model Catalog — Contracts
  *
  * This file is the type-level contract for the model catalog system. Every

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	formatDisplayUserInput,
 	type Message,
 	normalizeUserInput,

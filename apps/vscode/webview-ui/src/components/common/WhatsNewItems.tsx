@@ -1,4 +1,4 @@
-﻿import type { BannerAction, BannerCardData } from "@shared/agentario/banner"
+import type { BannerAction, BannerCardData } from "@shared/agentario/banner"
 import React from "react"
 import Markdown from "react-markdown"
 

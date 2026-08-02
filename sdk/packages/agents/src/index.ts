@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @agentario/agents
  *
  * Browser-safe agent runtime for the next-generation Cline SDK.

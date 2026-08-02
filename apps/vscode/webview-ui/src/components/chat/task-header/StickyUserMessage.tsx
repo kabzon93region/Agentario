@@ -1,4 +1,4 @@
-﻿import { AgentarioMessage } from "@shared/ExtensionMessage"
+import { AgentarioMessage } from "@shared/ExtensionMessage"
 import React, { memo, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { highlightText } from "./Highlights"

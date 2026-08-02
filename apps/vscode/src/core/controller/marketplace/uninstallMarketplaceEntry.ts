@@ -1,4 +1,4 @@
-﻿import { type MarketplaceEntryRequest, MarketplaceInstallResult } from "@shared/proto/agentario/marketplace"
+import { type MarketplaceEntryRequest, MarketplaceInstallResult } from "@shared/proto/agentario/marketplace"
 import type { Controller } from "../index"
 import { uninstallMarketplaceEntryFromCatalog } from "./marketplace-helpers"
 

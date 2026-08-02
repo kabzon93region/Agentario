@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Bootstrap script for the plugin sandbox subprocess.
  *
  * This file runs inside an isolated Node.js child process spawned by

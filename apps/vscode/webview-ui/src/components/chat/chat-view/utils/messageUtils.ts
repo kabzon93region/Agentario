@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Utility functions for message filtering, grouping, and manipulation
  */
 

@@ -1,4 +1,4 @@
-﻿import * as proto from "@/shared/proto"
+import * as proto from "@/shared/proto"
 import { Controller } from "../index"
 
 export async function updateTerminalReuseEnabled(

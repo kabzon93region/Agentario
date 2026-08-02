@@ -1,4 +1,4 @@
-﻿import { EmptyRequest, String as StringMessage } from "@shared/proto/agentario/common"
+import { EmptyRequest, String as StringMessage } from "@shared/proto/agentario/common"
 import { BrowserSession } from "../../../services/browser/BrowserSession"
 import { Controller } from "../index"
 

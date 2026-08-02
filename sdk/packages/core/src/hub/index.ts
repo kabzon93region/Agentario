@@ -1,4 +1,4 @@
-﻿export type { ITelemetryService } from "@agentario/shared";
+export type { ITelemetryService } from "@agentario/shared";
 export { HubScheduleCommandService } from "../cron/service/schedule-command-service";
 export { HubScheduleService } from "../cron/service/schedule-service";
 /**

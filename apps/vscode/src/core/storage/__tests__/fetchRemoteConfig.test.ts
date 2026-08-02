@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, it, mock } from "bun:test"
 import * as actualDiskStorage from "@core/storage/disk"
 import * as actualRemoteConfigUtils from "@core/storage/remote-config/utils"
 import * as assert from "assert"

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type AgentEvent,
 	type AgentHooks,
 	type CheckpointEntry,

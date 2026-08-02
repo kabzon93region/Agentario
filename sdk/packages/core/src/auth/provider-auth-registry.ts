@@ -1,4 +1,4 @@
-﻿import {
+import {
 	getAgentarioEnvironmentConfig,
 	type ITelemetryService,
 } from "@agentario/shared";

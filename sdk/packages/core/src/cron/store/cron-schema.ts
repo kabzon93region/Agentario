@@ -1,4 +1,4 @@
-﻿import type { SqliteDb } from "@agentario/shared/db";
+import type { SqliteDb } from "@agentario/shared/db";
 
 /**
  * Bootstrap the dedicated cron.db schema. Unlike @agentario/shared's

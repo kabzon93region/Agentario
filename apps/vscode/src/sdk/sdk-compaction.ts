@@ -34,6 +34,8 @@ export interface CompactSessionMessagesInput {
 	compactionMode?: "context" | "full"
 	/** Agentario: callback for status updates in UI */
 	statusCallback?: (message: string) => void
+	/** Agentario: EMA scale for aligning char-based estimates with provider tokens */
+	providerScale?: number
 }
 
 export interface CompactSessionMessagesResult {
@@ -84,7 +86,7 @@ export async function compactSessionMessages(input: CompactSessionMessagesInput)
 			telemetry: input.config.telemetry,
 			sessionId: input.sessionId,
 		},
-		{ mode: "manual", compactionMode: input.compactionMode, statusCallback: input.statusCallback }, // Agentario: передаём режим и callback
+		{ mode: "manual", compactionMode: input.compactionMode, statusCallback: input.statusCallback, providerScale: input.providerScale }, // Agentario: передаём режим, callback и providerScale
 	)
 	if (!compact) {
 		Logger.warn("[SdkCompaction] Compaction prepareTurn unavailable; skipping manual compaction")

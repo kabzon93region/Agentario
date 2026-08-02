@@ -1,4 +1,4 @@
-﻿import {
+import {
 	CONNECTOR_PLATFORMS,
 	shouldIncludeConnectorField,
 } from "@agentario/shared";

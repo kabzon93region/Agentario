@@ -1,4 +1,4 @@
-﻿import type { ModelInfo } from "@shared/api"
+import type { ModelInfo } from "@shared/api"
 import { OpenRouterCompatibleModelInfo } from "@shared/proto/agentario/models"
 import { StateManager } from "@/core/storage/StateManager"
 import { parseProviderId } from "@/sdk/model-catalog/provider-id"

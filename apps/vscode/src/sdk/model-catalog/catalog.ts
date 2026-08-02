@@ -1,4 +1,4 @@
-﻿import { listLocalProviders, type ModelCatalogConfig, resolveProviderConfig } from "@agentario/core"
+import { listLocalProviders, type ModelCatalogConfig, resolveProviderConfig } from "@agentario/core"
 import { type ProviderConfig, resolveProviderUsageCostDisplay } from "@agentario/llms"
 import { type ProviderListItem } from "@agentario/shared"
 import { getFeatureFlagsService } from "@/services/feature-flags"

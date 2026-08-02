@@ -1,4 +1,4 @@
-﻿import type { SessionHistoryRecord } from "@agentario/core";
+import type { SessionHistoryRecord } from "@agentario/core";
 import { formatDisplayUserInput, truncateStr } from "@agentario/shared";
 import { formatUsd } from "./output";
 import { shouldShowCliUsageCost } from "./usage-cost-display";

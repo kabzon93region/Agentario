@@ -1,4 +1,4 @@
-﻿import type { ChatStartSessionRequest } from "@agentario/core";
+import type { ChatStartSessionRequest } from "@agentario/core";
 import {
 	createUserInstructionConfigService,
 	HubSessionClient,

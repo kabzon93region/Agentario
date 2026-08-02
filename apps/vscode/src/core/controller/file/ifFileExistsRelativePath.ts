@@ -1,4 +1,4 @@
-﻿import { workspaceResolver } from "@core/workspace"
+import { workspaceResolver } from "@core/workspace"
 import { BooleanResponse, StringRequest } from "@shared/proto/agentario/common"
 import { getWorkspacePath } from "@utils/path"
 import * as fs from "fs"

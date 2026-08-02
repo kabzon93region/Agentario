@@ -1,4 +1,4 @@
-﻿import { featureFlagsService } from "@/services/feature-flags"
+import { featureFlagsService } from "@/services/feature-flags"
 import { AGENTARIO_ONBOARDING_MODELS } from "@/shared/agentario/onboarding"
 import { OnboardingModel, OnboardingModelGroup } from "@/shared/proto/agentario/state"
 

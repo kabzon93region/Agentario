@@ -1,4 +1,4 @@
-﻿import { EmptyRequest } from "@shared/proto/agentario/common"
+import { EmptyRequest } from "@shared/proto/agentario/common"
 import { OpenRouterCompatibleModelInfo } from "@shared/proto/agentario/models"
 import { toProtobufModels } from "../../../shared/proto-conversions/models/typeConversion"
 import { Controller } from ".."

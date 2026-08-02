@@ -1,4 +1,4 @@
-﻿import * as vscode from "vscode"
+import * as vscode from "vscode"
 import { GetDiagnosticsRequest, GetDiagnosticsResponse } from "@/shared/proto/host/workspace"
 import { Diagnostic, DiagnosticSeverity, FileDiagnostics } from "@/shared/proto/index.agentario"
 import "@/utils/path" // for String.prototype.toPosix

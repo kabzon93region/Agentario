@@ -1,4 +1,4 @@
-﻿import { synchronizeRuleToggles } from "@core/context/instructions/user-instructions/rule-helpers"
+import { synchronizeRuleToggles } from "@core/context/instructions/user-instructions/rule-helpers"
 import {
 	ensureRulesDirectoryExists,
 	LOCAL_RULES_EXCLUDED_SUBPATHS,

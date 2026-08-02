@@ -1,3 +1,0 @@
-$env:AGENTARIO_API_PORT="19231"
-$env:CLINE_DIR="C:\Users\Admin\.agentario-lab"
-code "S:\temo"

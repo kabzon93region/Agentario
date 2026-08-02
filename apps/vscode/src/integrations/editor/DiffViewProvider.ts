@@ -1,4 +1,4 @@
-﻿import { formatResponse } from "@core/prompts/responses"
+import { formatResponse } from "@core/prompts/responses"
 import { workspaceResolver } from "@core/workspace"
 import { createDirectoriesForFile } from "@utils/fs"
 import { getCwd } from "@utils/path"

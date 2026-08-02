@@ -1,4 +1,4 @@
-﻿// @jsxImportSource @opentui/react
+// @jsxImportSource @opentui/react
 
 import {
 	type ClineRecommendedModel,

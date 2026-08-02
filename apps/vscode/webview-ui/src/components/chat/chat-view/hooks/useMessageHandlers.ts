@@ -1,4 +1,4 @@
-﻿import type { AgentarioMessage } from "@shared/ExtensionMessage"
+import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { EmptyRequest, StringRequest } from "@shared/proto/agentario/common"
 import { AskResponseRequest, NewTaskRequest } from "@shared/proto/agentario/task"
 import { useCallback, useRef } from "react"

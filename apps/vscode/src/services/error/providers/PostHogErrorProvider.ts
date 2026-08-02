@@ -1,4 +1,4 @@
-﻿import { PostHog } from "posthog-node"
+import { PostHog } from "posthog-node"
 import { StateManager } from "@/core/storage/StateManager"
 import { HostProvider } from "@/hosts/host-provider"
 import { getDistinctId } from "@/services/logging/distinctId"

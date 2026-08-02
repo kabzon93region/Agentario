@@ -1,4 +1,4 @@
-﻿import { StringRequest } from "@shared/proto/agentario/common"
+import { StringRequest } from "@shared/proto/agentario/common"
 import { UiServiceClient } from "@/services/grpc-client"
 
 // ClinePass subscription signup page in the dashboard (requires auth).

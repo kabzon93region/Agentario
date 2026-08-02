@@ -1,4 +1,4 @@
-﻿import { ApiConfiguration } from "@shared/api"
+import { ApiConfiguration } from "@shared/api"
 import { UpdateApiConfigurationPartialRequest } from "@shared/proto/agentario/models"
 import { convertApiConfigurationToProto } from "@shared/proto-conversions/models/api-configuration-conversion"
 import { Mode } from "@shared/storage/types"

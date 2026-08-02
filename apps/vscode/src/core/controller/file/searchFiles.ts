@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type FileSearchSource,
 	RipgrepError,
 	type SearchWorkspaceFilesResult,

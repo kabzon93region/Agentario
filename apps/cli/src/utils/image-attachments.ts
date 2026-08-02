@@ -1,4 +1,4 @@
-﻿import { readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolveExistingFilePath } from "@agentario/shared/storage";
 
 const IMAGE_EXTENSIONS = new Set([

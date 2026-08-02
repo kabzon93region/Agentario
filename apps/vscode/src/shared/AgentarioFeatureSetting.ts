@@ -1,4 +1,4 @@
-﻿export interface AgentarioFeatureSetting {
+export interface AgentarioFeatureSetting {
 	// Setting is enabled or disabled by user
 	user: boolean
 	// Setting is enabled or disabled by feature flag

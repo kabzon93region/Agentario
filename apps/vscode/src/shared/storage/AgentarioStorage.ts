@@ -1,4 +1,4 @@
-﻿import { Logger } from "../services/Logger"
+import { Logger } from "../services/Logger"
 
 interface ClineStorageChangeEvent {
 	readonly key: string

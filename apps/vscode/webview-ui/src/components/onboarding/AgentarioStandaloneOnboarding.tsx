@@ -1,4 +1,4 @@
-﻿import { BooleanRequest } from "@shared/proto/agentario/common"
+import { BooleanRequest } from "@shared/proto/agentario/common"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { memo, useEffect, useState } from "react"
 import AgentarioLogoWhite from "@/assets/AgentarioLogoWhite"

@@ -1,4 +1,4 @@
-﻿import type { ApiConfiguration } from "@shared/api"
+import type { ApiConfiguration } from "@shared/api"
 import { Logger } from "@/shared/services/Logger"
 import type { Controller } from "../index"
 

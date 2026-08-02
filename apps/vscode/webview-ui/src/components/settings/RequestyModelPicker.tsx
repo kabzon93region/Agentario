@@ -1,4 +1,4 @@
-﻿import { requestyDefaultModelId, requestyDefaultModelInfo } from "@shared/api"
+import { requestyDefaultModelId, requestyDefaultModelInfo } from "@shared/api"
 import { toRequestyServiceUrl } from "@shared/clients/requesty"
 import { EmptyRequest } from "@shared/proto/agentario/common"
 import { Mode } from "@shared/storage/types"

@@ -1,4 +1,4 @@
-﻿import { AgentarioRulesToggles, RuleScope, ToggleWorkflowRequest } from "@shared/proto/agentario/file"
+import { AgentarioRulesToggles, RuleScope, ToggleWorkflowRequest } from "@shared/proto/agentario/file"
 import { Logger } from "@/shared/services/Logger"
 import { Controller } from ".."
 

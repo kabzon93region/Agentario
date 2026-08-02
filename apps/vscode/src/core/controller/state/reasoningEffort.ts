@@ -1,4 +1,4 @@
-﻿import { OpenaiReasoningEffort as ProtoOpenaiReasoningEffort } from "@shared/proto/agentario/state"
+import { OpenaiReasoningEffort as ProtoOpenaiReasoningEffort } from "@shared/proto/agentario/state"
 import {
 	isOpenaiReasoningEffort,
 	normalizeOpenaiReasoningEffort as normalizeOpenaiReasoningEffortString,

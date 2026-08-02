@@ -1,4 +1,4 @@
-﻿import { getTaskMetadata, saveTaskMetadata } from "@core/storage/disk"
+import { getTaskMetadata, saveTaskMetadata } from "@core/storage/disk"
 import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import chokidar, { FSWatcher } from "chokidar"
 import * as path from "path"

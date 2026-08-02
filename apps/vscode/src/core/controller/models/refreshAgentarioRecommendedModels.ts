@@ -1,4 +1,4 @@
-﻿import { ClineEnv } from "@/config"
+import { ClineEnv } from "@/config"
 import { isAgentarioStandaloneMode } from "@/shared/agentario-standalone"
 import { FALLBACK_CLINE_RECOMMENDED_MODELS, fetchAgentarioRecommendedModels } from "@agentario/core"
 import { fetch } from "@/shared/net"

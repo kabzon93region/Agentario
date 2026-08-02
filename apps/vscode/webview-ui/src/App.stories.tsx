@@ -1,4 +1,4 @@
-﻿import { HeroUIProvider } from "@heroui/react"
+import { HeroUIProvider } from "@heroui/react"
 import { DEFAULT_AUTO_APPROVAL_SETTINGS } from "@shared/AutoApprovalSettings"
 import type { ApiConfiguration, ModelInfo } from "@shared/api"
 import type { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"

@@ -1,4 +1,4 @@
-﻿import { getProviderAuthStorageId } from "@agentario/core"
+import { getProviderAuthStorageId } from "@agentario/core"
 import { createSessionId } from "@agentario/shared"
 import { AGENTARIO_ACCOUNT_AUTH_ERROR_MESSAGE } from "@shared/AgentarioAccount"
 import type { AgentarioMessage } from "@shared/ExtensionMessage"

@@ -1,4 +1,4 @@
-﻿import { formatMessageTimestamp, getMessageBubbleRole } from "@shared/message-display"
+import { formatMessageTimestamp, getMessageBubbleRole } from "@shared/message-display"
 import type { AgentarioMessage } from "@shared/ExtensionMessage"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 

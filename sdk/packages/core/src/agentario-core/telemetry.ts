@@ -1,4 +1,4 @@
-﻿import type { ITelemetryService } from "@agentario/shared";
+import type { ITelemetryService } from "@agentario/shared";
 import { CORE_TELEMETRY_EVENTS } from "../services/telemetry/core-events";
 import { SessionSource } from "../types/common";
 import type { AgentarioCoreStartInput } from "./types";

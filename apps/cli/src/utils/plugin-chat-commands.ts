@@ -1,4 +1,4 @@
-﻿import {
+import {
 	type AgentExtensionCommand,
 	type AgentExtensionCommandResult,
 	type BasicLogger,

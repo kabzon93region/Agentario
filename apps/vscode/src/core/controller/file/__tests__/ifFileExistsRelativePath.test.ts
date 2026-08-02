@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, it, mock } from "bun:test"
 import { Controller } from "@core/controller"
 import { BooleanResponse, StringRequest } from "@shared/proto/agentario/common"
 import * as actualPathUtils from "@utils/path"

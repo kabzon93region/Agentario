@@ -1,4 +1,4 @@
-﻿import { UpdateSettingsRequest, UserOrganization } from "@shared/proto/index.agentario"
+import { UpdateSettingsRequest, UserOrganization } from "@shared/proto/index.agentario"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { useRef } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"

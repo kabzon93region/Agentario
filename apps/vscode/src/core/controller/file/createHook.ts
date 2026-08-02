@@ -1,4 +1,4 @@
-﻿import { CreateHookRequest, CreateHookResponse } from "@shared/proto/agentario/file"
+import { CreateHookRequest, CreateHookResponse } from "@shared/proto/agentario/file"
 import fs from "fs/promises"
 import path from "path"
 import { HookDiscoveryCache } from "../../hooks/HookDiscoveryCache"

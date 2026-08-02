@@ -1,4 +1,4 @@
-﻿import { createInterface } from "node:readline";
+import { createInterface } from "node:readline";
 import type { ToolApprovalRequest, ToolApprovalResult } from "@agentario/shared";
 import { truncate } from "./helpers";
 import { c, getActiveCliSession, write } from "./output";

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shape adapter: translates SDK-shaped model metadata into the extension's
  * {@link ModelInfo} shape. This is a boundary translation layer — it does
  * NOT import any SDK runtime (no `@agentario/core` imports). It validates

@@ -1,4 +1,4 @@
-﻿import {
+import {
 	createSessionId,
 	type HubClientRegistration,
 	type HubCommandEnvelope,

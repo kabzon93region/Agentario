@@ -1,4 +1,4 @@
-﻿import type { AgentConfig, AgentModel, ITelemetryService } from "@agentario/shared";
+import type { AgentConfig, AgentModel, ITelemetryService } from "@agentario/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const gatewayMock = vi.hoisted(() => {

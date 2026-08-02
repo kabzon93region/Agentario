@@ -1,4 +1,4 @@
-﻿import type { AgentEvent } from "@agentario/shared"
+import type { AgentEvent } from "@agentario/shared"
 import { describe, expect, it, vi } from "vitest"
 import { MessageTranslatorState, translateSessionEvent } from "./message-translator"
 import { SdkInteractionCoordinator } from "./sdk-interaction-coordinator"

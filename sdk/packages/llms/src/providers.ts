@@ -1,4 +1,4 @@
-﻿export {
+export {
 	type ApiHandler,
 	BUILT_IN_PROVIDER,
 	BUILT_IN_PROVIDER_IDS,

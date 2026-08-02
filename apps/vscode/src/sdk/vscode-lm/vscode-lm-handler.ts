@@ -1,4 +1,4 @@
-﻿// Cline SDK `ApiHandler` (from `@agentario/llms`) backed by the VS Code Language
+// Cline SDK `ApiHandler` (from `@agentario/llms`) backed by the VS Code Language
 // Model API (`vscode.lm`). Registered via `registerHandler("vscode-lm", ...)`
 // (see ./register-vscode-lm.ts) so the SDK routes "vscode-lm" inference here.
 //

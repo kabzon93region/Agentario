@@ -1,4 +1,4 @@
-﻿// Replaces classic src/core/task/index.ts task object (see origin/main)
+// Replaces classic src/core/task/index.ts task object (see origin/main)
 //
 // When handlers call controller.task.handleWebviewAskResponse(), controller.task.ulid,
 // controller.task.abortTask(), etc., this proxy delegates to the SdkController's

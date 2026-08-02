@@ -1,4 +1,4 @@
-﻿import type { ChatStartSessionRequest, RuntimeLoggerConfig } from "@agentario/core";
+import type { ChatStartSessionRequest, RuntimeLoggerConfig } from "@agentario/core";
 import {
 	CoreSessionService,
 	HubSessionClient,

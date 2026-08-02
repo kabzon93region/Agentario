@@ -1,4 +1,4 @@
-﻿import { UserOrganization, UserOrganizationsResponse } from "@shared/proto/agentario/account"
+import { UserOrganization, UserOrganizationsResponse } from "@shared/proto/agentario/account"
 import type { EmptyRequest } from "@shared/proto/agentario/common"
 import type { Controller } from "../index"
 

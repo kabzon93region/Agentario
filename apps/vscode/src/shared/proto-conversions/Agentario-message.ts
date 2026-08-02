@@ -1,4 +1,4 @@
-﻿import { AgentarioAsk as AppAgentarioAsk, AgentarioMessage as AppAgentarioMessage, AgentarioSay as AppAgentarioSay } from "@shared/ExtensionMessage"
+import { AgentarioAsk as AppAgentarioAsk, AgentarioMessage as AppAgentarioMessage, AgentarioSay as AppAgentarioSay } from "@shared/ExtensionMessage"
 import { AgentarioAsk, AgentarioMessageType, AgentarioSay, AgentarioMessage as ProtoAgentarioMessage } from "@shared/proto/agentario/ui"
 
 // Helper function to convert AgentarioAsk string to enum

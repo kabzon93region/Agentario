@@ -1,4 +1,4 @@
-﻿import { AccountServiceClient } from "@cline-grpc/account"
+import { AccountServiceClient } from "@cline-grpc/account"
 import { BrowserServiceClient } from "@cline-grpc/browser"
 import { CheckpointsServiceClient } from "@cline-grpc/checkpoints"
 import { CommandsServiceClient } from "@cline-grpc/commands"

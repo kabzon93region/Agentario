@@ -1,4 +1,4 @@
-﻿import type {
+import type {
 	MarketplaceLocalInstalledEntries,
 	ToggleMarketplaceLocalInstalledEntryRequest,
 } from "@shared/proto/agentario/marketplace"
