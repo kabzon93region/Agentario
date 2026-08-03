@@ -4,7 +4,7 @@ import path from "node:path"
 import os from "node:os"
 import { estimateTokens } from "@agentario/shared"
 
-const VERSION = "0.14.82"
+const VERSION = "0.14.83"
 
 export interface ApiServerOptions {
 	port: number

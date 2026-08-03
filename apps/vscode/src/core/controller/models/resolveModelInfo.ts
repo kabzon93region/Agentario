@@ -52,9 +52,12 @@ export async function resolveModelInfo(
 
 	// Agentario: для LM Studio запрашиваем live context window из API,
 	// чтобы UI показывал реальное значение, а не stale из globalState/preset.
+	// preferredModelId исключает embedding-модели (часто 2048 tok).
 	let liveContextWindow: number | undefined
 	if (providerId === "lmstudio") {
-		liveContextWindow = await fetchLmStudioContextWindowLive(apiConfiguration?.lmStudioBaseUrl)
+		liveContextWindow = await fetchLmStudioContextWindowLive(apiConfiguration?.lmStudioBaseUrl, {
+			preferredModelId: requestedModelId || undefined,
+		})
 	}
 
 	const finalize = (

@@ -157,7 +157,6 @@ Requirements: `gh auth login`, Git remote `origin` → `kabzon93region/Agentario
 
 | Сервер | Путь | Wrapper |
 |--------|------|---------|
-| cocoindex-code | `C:\Users\Admin\.MCP\cocoindex-code\Agentario\` | `ccc-mcp.cmd` |
 | memory | `C:\Users\Admin\.MCP\memory\Agentario\` | `start.cmd` |
 | agentario-search | `C:\Users\Admin\.MCP\agentario-search\Agentario\` | `start.cmd` |
 
@@ -178,7 +177,7 @@ Requirements: `gh auth login`, Git remote `origin` → `kabzon93region/Agentario
 ```bash
 # Загрузить профиль (ПЕРЕД началом работы)
 house-mcp-manager profile load agentario-minimal   # context7, memory, sequential-thinking
-house-mcp-manager profile load agentario-dev        # + cocoindex-code, agentario-search
+house-mcp-manager profile load agentario-dev        # + agentario-search
 house-mcp-manager profile load agentario-full       # все серверы
 
 # Проверить текущий статус
@@ -190,7 +189,7 @@ house-mcp-manager status
 | Тип задачи | Профиль | Почему |
 |------------|---------|--------|
 | Вопросы, простые правки, документация | agentario-minimal | Экономия токенов (~9K) |
-| Разработка расширения (UI, SDK, proto, build) | agentario-dev | Нужен cocoindex, agentario-search |
+| Разработка расширения (UI, SDK, proto, build) | agentario-dev | agentario-search |
 | Сложная задача с browser automation + GitHub PR | agentario-full | Всё включено |
 
 ### Always Active (use proactively)
@@ -205,7 +204,6 @@ house-mcp-manager status
 
 | MCP | Триггер | Примеры |
 |-----|---------|---------|
-| **cocoindex-code** | Индексация и поиск по кодовой базе | "Найди все использования функции X", "Покажи вызовы класса Y" |
 | **agentario-search** | Быстрый поиск по файлам проекта | "Найди файл с функцией init", "Покажи содержимое config.ts" |
 
 ### Important Notes

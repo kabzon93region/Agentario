@@ -1,7 +1,7 @@
-# Все текстовые файлы — LF в репозитории
+# All text files use LF in the repository
 * text=auto eol=lf
 
-# Специфичные типы файлов, которые должны оставаться как есть (бинарные)
+# Binary assets
 *.png binary
 *.jpg binary
 *.gif binary
@@ -10,28 +10,28 @@
 *.woff2 binary
 *.ttf binary
 *.eot binary
+*.vsix binary
+*.pb binary
+*.icns binary
 
-# Windows-скрипты — CRLF (требование Windows)
+# Windows batch scripts require CRLF
 *.cmd text eol=crlf
 *.bat text eol=crlf
 
-# Python-код — LF
-*.py text eol=lf
+# PowerShell scripts require CRLF for Windows PowerShell parser
+*.ps1 text eol=crlf
 
-# JavaScript/TypeScript — LF
+# Source / docs / configs — LF
+*.py text eol=lf
 *.js text eol=lf
 *.ts text eol=lf
 *.tsx text eol=lf
 *.jsx text eol=lf
-
-# Docker и конфиги — LF
 *.yml text eol=lf
 *.yaml text eol=lf
 *.json text eol=lf
 *.toml text eol=lf
 *.md text eol=lf
 *.sql text eol=lf
-
-# HTML/CSS — LF
 *.html text eol=lf
 *.css text eol=lf

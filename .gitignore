@@ -88,5 +88,3 @@ apps/vscode/webview-ui/src/**/*.js.map
 .cline/**/managed.json
 .cline/**/bundle.json
 apps/vscode/tsconfig.test.generated.json
-# CocoIndex Code (ccc)
-/.cocoindex_code/

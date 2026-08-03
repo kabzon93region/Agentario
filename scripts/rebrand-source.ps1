@@ -1,4 +1,4 @@
-# Apply rebrand changes to SOURCE directory (Z:\T\Agentario)
+﻿# Apply rebrand changes to SOURCE directory (Z:\T\Agentario)
 $ErrorActionPreference = "Continue"
 $src = "Z:\T\Agentario"
 

@@ -65,6 +65,18 @@ function readProviderContextWindow(stateManager: StateManager, providerId: strin
 	return undefined
 }
 
+function readPreferredLmStudioModelId(stateManager: StateManager): string | undefined {
+	const apiConfig = stateManager.getApiConfiguration()
+	const mode = stateManager.getGlobalSettingsKey("mode")
+	const fromMode =
+		mode === "plan"
+			? apiConfig?.planModeLmStudioModelId
+			: apiConfig?.actModeLmStudioModelId
+	const candidate = fromMode ?? apiConfig?.lmStudioModelId
+	const trimmed = typeof candidate === "string" ? candidate.trim() : ""
+	return trimmed || undefined
+}
+
 /**
  * Построить конфигурацию компакции контекста.
  *
@@ -112,20 +124,24 @@ async function resolveDynamicContextWindow(
 	stateManager: StateManager,
 	activeProviderId: string | undefined,
 	providerContextWindow: number | undefined,
+	preferredModelId?: string,
 ): Promise<number | undefined> {
 	// Always refresh LM Studio from the runtime so mid-session context reloads
 	// (e.g. user lowered n_ctx) match compaction + the chat progress bar.
 	if (activeProviderId === "lmstudio" || activeProviderId === "openai-compatible") {
 		const apiConfig = stateManager.getApiConfiguration()
-		const liveWindow = await fetchLmStudioContextWindowLive(apiConfig?.lmStudioBaseUrl, { force: true })
+		const liveWindow = await fetchLmStudioContextWindowLive(apiConfig?.lmStudioBaseUrl, {
+			force: true,
+			preferredModelId,
+		})
 		if (typeof liveWindow === "number" && liveWindow > 0) {
 			stateManager.setGlobalState("lmStudioMaxTokens", String(liveWindow))
-			setCachedLmStudioContextWindow(liveWindow)
-			Logger.log(`[CompactionSettings] live LM Studio context window=${liveWindow}`)
+			setCachedLmStudioContextWindow(liveWindow, preferredModelId)
+			Logger.log(`[CompactionSettings] live LM Studio context window=${liveWindow} (model=${preferredModelId ?? "any"})`)
 			return liveWindow
 		}
 	}
-	const dynamicWindow = readProviderContextWindow(stateManager, activeProviderId)
+	const dynamicWindow = readProviderContextWindow(stateManager, activeProviderId ?? "")
 	if (typeof dynamicWindow === "number" && dynamicWindow > 0) {
 		return dynamicWindow
 	}
@@ -148,7 +164,12 @@ async function resolveDynamicContextWindow(
 		maxInputTokensResolver: async () => {
 			const explicit = stateManager.getGlobalSettingsKey("compactionMaxInputTokens")
 			if (typeof explicit === "number" && explicit > 0) return explicit
-			return resolveDynamicContextWindow(stateManager, activeProviderId, providerContextWindow)
+			return resolveDynamicContextWindow(
+				stateManager,
+				activeProviderId,
+				providerContextWindow,
+				readPreferredLmStudioModelId(stateManager),
+			)
 		},
 		// Agentario: динамический резолвер reserveTokens (async).
 		// Если пользователь задал явное значение — используем его.
@@ -156,7 +177,12 @@ async function resolveDynamicContextWindow(
 		reserveTokensResolver: async () => {
 			const explicit = stateManager.getGlobalSettingsKey("compactionReserveTokens")
 			if (typeof explicit === "number" && explicit > 0) return explicit
-			const window = await resolveDynamicContextWindow(stateManager, activeProviderId, providerContextWindow)
+			const window = await resolveDynamicContextWindow(
+				stateManager,
+				activeProviderId,
+				providerContextWindow,
+				readPreferredLmStudioModelId(stateManager),
+			)
 			return computeAdaptiveReserveTokens(window)
 		},
 		...(promptTemplateBefore ? { promptTemplateBefore } : {}),

@@ -1,4 +1,4 @@
-$content = Get-Content CHANGELOG.md -Raw
+﻿$content = Get-Content CHANGELOG.md -Raw
 $newEntry = @"
 
 ## [0.14.15] — 2026-07-26

@@ -1,4 +1,4 @@
-# Agentario — publish to GitHub + GitHub Release with VSIX asset
+﻿# Agentario — publish to GitHub + GitHub Release with VSIX asset
 # Called from publish-release.cmd
 
 $ErrorActionPreference = "Stop"
@@ -206,6 +206,15 @@ try {
 		}
 
 		if (-not $SkipGit) {
+			Write-Step "Normalizing line endings before git add"
+			$normScript = Join-Path $RepoRoot "scripts\normalize_line_endings.ps1"
+			if (Test-Path $normScript) {
+				& $normScript
+				Write-Ok "Line endings normalized"
+			} else {
+				Write-Warn "normalize_line_endings.ps1 not found — skipping"
+			}
+
 			Write-Step "Staging and committing changes"
 			git add -A
 			$exportsPath = Join-Path $RepoRoot "Exports"
@@ -265,7 +274,8 @@ try {
 		if (-not (Test-Path $VsixPath)) {
 			throw "VSIX still missing after build: $VsixPath"
 		}
-		Write-Ok "VSIX: $VsixPath ($([math]::Round((Get-Item $VsixPath).Length / 1MB, 2)) MB)"
+		$vsixSizeMB = [math]::Round((Get-Item $VsixPath).Length / 1MB, 2)
+		Write-Ok ("VSIX: " + $VsixPath + " (" + $vsixSizeMB + " MB)")
 
 		Write-Step "Publishing GitHub Release $Tag"
 		if (Test-GhReleaseExists -TagName $Tag -Repo $GhRepo) {

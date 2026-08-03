@@ -1,4 +1,4 @@
-# Agentario Windows build
+﻿# Agentario Windows build
 # Source may be a local path, mapped drive (Z:), or UNC (\\SERVANT\reZerv\T\Agentario).
 # bun install/build on network shares fails — sources are synced to C: first.
 

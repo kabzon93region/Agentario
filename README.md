@@ -20,7 +20,7 @@ Autonomous coding agent for VS Code вЂ” **Р°РІС‚РѕРЅРѕРјРЅ�
 
 <p align="center">
 
-<strong>Версия расширения: 0.14.79</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
+<strong>Версия расширения: 0.14.83</strong> · <a href="CHANGELOG.md">Changelog</a> · <a href="VERSIONING.md">Схема версий</a>
 
 </p>
 
@@ -60,7 +60,7 @@ Autonomous coding agent for VS Code вЂ” **Р°РІС‚РѕРЅРѕРјРЅ�
 
 
 
-1. РЎРѕР±РµСЂРёС‚Рµ РёР»Рё СЃРєР°С‡Р°Р№С‚Рµ VSIX: `release/agentario-0.14.48.vsix` (СЃР±РѕСЂРєР°: `build.cmd` РЅР° Windows).
+1. РЎРѕР±РµСЂРёС‚Рµ РёР»Рё СЃРєР°С‡Р°Р№С‚Рµ VSIX: `release/agentario-0.14.83.vsix` (СЃР±РѕСЂРєР°: `build.cmd` РЅР° Windows).
 
 2. VS Code в†’ Extensions в†’ `...` в†’ **Install from VSIX**.
 

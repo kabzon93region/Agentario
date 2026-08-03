@@ -563,10 +563,17 @@ export function resolveVertexProviderConfig(config: ApiConfiguration): Pick<Prov
 /**
  * Agentario: live context window из LM Studio при создании сессии
  * (force — не зависеть от stale UI-кэша / persisted lmStudioMaxTokens).
+ * preferredModelId — чтобы не взять embedding (часто 2048) вместо чат-модели.
  */
-async function fetchLmStudioContextWindow(apiConfig: ApiConfiguration): Promise<number | undefined> {
+async function fetchLmStudioContextWindow(
+	apiConfig: ApiConfiguration,
+	preferredModelId?: string,
+): Promise<number | undefined> {
 	const { fetchLmStudioContextWindowLive } = await import("./lm-studio-live-context")
-	return fetchLmStudioContextWindowLive(apiConfig.lmStudioBaseUrl, { force: true })
+	return fetchLmStudioContextWindowLive(apiConfig.lmStudioBaseUrl, {
+		force: true,
+		preferredModelId,
+	})
 }
 
 export function resolveBaseUrl(providerId: string, config: ApiConfiguration): string | undefined {
@@ -820,12 +827,12 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	// затем fallback на persisted lmStudioMaxTokens.
 	let providerContextWindow: number | undefined
 	if (providerId === "lmstudio") {
-		providerContextWindow = await fetchLmStudioContextWindow(apiConfig)
+		providerContextWindow = await fetchLmStudioContextWindow(apiConfig, modelId)
 		if (providerContextWindow && providerContextWindow > 0) {
 			// Persist + shared cache so the webview resolver and progress bar match compaction.
 			stateManager.setGlobalState("lmStudioMaxTokens", String(providerContextWindow))
 			const { setCachedLmStudioContextWindow } = await import("./lm-studio-live-context")
-			setCachedLmStudioContextWindow(providerContextWindow)
+			setCachedLmStudioContextWindow(providerContextWindow, modelId)
 		}
 		if (!providerContextWindow && apiConfig?.lmStudioMaxTokens) {
 			const parsed = Number.parseInt(String(apiConfig.lmStudioMaxTokens).trim(), 10)
