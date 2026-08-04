@@ -31,7 +31,11 @@ export async function createSemanticSearchExecutor(
 
 	const totalEmbeddings = meta.files.reduce((sum, f) => sum + (f.embeddingCount ?? 0), 0)
 	if (totalEmbeddings === 0) {
-		Logger.log("[SemanticSearchExecutor] Index has no embeddings, skipping")
+		Logger.log(
+			"[SemanticSearchExecutor] Index has no embeddings, skipping. " +
+				"To enable semantic search, set codebaseIndexMode to 'local-ai' or 'remote-ai' in settings " +
+				"and ensure an embedding model is loaded in LM Studio / Ollama.",
+		)
 		return undefined
 	}
 

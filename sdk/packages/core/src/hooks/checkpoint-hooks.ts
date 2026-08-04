@@ -167,7 +167,22 @@ export function createCheckpointHooks(
 				"rev-parse",
 				"--is-inside-work-tree",
 			]);
-			repoSupported = result.stdout === "true";
+			if (result.stdout !== "true") {
+				repoSupported = false;
+				return false;
+			}
+			// Reject repos with no commits — stash create and rev-parse HEAD
+			// both fail on empty repos, producing noisy warnings.
+			try {
+				await runGit(options.cwd, ["rev-parse", "--verify", "HEAD"]);
+				repoSupported = true;
+			} catch {
+				warn(
+					options.logger,
+					"Checkpoint skipped: git repository has no commits yet",
+				);
+				repoSupported = false;
+			}
 		} catch {
 			repoSupported = false;
 		}

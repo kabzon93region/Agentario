@@ -111,6 +111,76 @@ function normalizeErrorForReshape(value: unknown): { message: string } {
 }
 
 // ---------------------------------------------------------------------------
+// Cycle detection — detects when agent loops on same thinking or ENOENT errors
+// ---------------------------------------------------------------------------
+
+/**
+ * Detects repetitive agent behavior:
+ * - Consecutive ENOENT errors (file not found)
+ * - Consecutive identical thinking patterns
+ *
+ * Logs warnings when thresholds are exceeded.
+ */
+export class CycleDetector {
+	private consecutiveEofErrors = 0
+	private consecutiveIdenticalThinking = 0
+	private lastThinkingHash = ""
+	private cycleDetected = false
+
+	/** Call when a tool result contains ENOENT or similar "not found" errors. */
+	onFileNotFound(): void {
+		this.consecutiveEofErrors++
+		if (this.consecutiveEofErrors >= 5) {
+			Logger.warn(`[CycleDetector] ${this.consecutiveEofErrors} consecutive ENOENT errors detected — agent may be looping`)
+			this.cycleDetected = true
+		}
+	}
+
+	/** Call when a tool result is successful (resets ENOENT counter). */
+	onToolSuccess(): void {
+		this.consecutiveEofErrors = 0
+	}
+
+	/** Call when a thinking/reasoning block is received. */
+	onThinking(thinkingText: string): void {
+		// Normalize: trim, collapse whitespace, take first 200 chars as hash
+		const normalized = thinkingText.trim().replace(/\s+/g, " ").substring(0, 200)
+		if (normalized === this.lastThinkingHash) {
+			this.consecutiveIdenticalThinking++
+			if (this.consecutiveIdenticalThinking >= 3) {
+				Logger.warn(`[CycleDetector] ${this.consecutiveIdenticalThinking} consecutive identical thinking blocks detected — agent may be in a loop`)
+				this.cycleDetected = true
+			}
+		} else {
+			this.consecutiveIdenticalThinking = 1
+			this.lastThinkingHash = normalized
+		}
+	}
+
+	/** Whether a cycle has been detected. */
+	isCycleDetected(): boolean {
+		return this.cycleDetected
+	}
+
+	/** Get current counters for reporting. */
+	getStats(): { consecutiveEofErrors: number; consecutiveIdenticalThinking: number; cycleDetected: boolean } {
+		return {
+			consecutiveEofErrors: this.consecutiveEofErrors,
+			consecutiveIdenticalThinking: this.consecutiveIdenticalThinking,
+			cycleDetected: this.cycleDetected,
+		}
+	}
+
+	/** Reset all counters (e.g., on new iteration). */
+	reset(): void {
+		this.consecutiveEofErrors = 0
+		this.consecutiveIdenticalThinking = 0
+		this.lastThinkingHash = ""
+		this.cycleDetected = false
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Translation result
 // ---------------------------------------------------------------------------
 
@@ -277,6 +347,8 @@ export class MessageTranslatorState {
 	 * rendering so that message ids never collide across generators. See message-id-minter.ts.
 	 */
 	private readonly minter: MessageIdMinter
+	/** Cycle detector for identifying repetitive agent behavior. */
+	readonly cycleDetector = new CycleDetector()
 
 	constructor(
 		minter: MessageIdMinter = new MessageIdMinter(),
@@ -608,6 +680,7 @@ export class MessageTranslatorState {
 		this.clearApprovedToolMessageTs()
 		this.deniedToolApprovalsByCallId.clear()
 		this.clearSpawnAgents()
+		this.cycleDetector.reset()
 	}
 
 	/**
@@ -1377,6 +1450,10 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 				case "reasoning": {
 					const ts = state.clearStreamingReasoning()
 					const reasoning = event.reasoning ?? ""
+					// Track thinking patterns for cycle detection
+					if (reasoning.trim()) {
+						state.cycleDetector.onThinking(reasoning)
+					}
 					messages.push({
 						ts,
 						type: "say",
@@ -1611,6 +1688,12 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 							text: errorText,
 							partial: false,
 						})
+						// Track ENOENT errors for cycle detection
+						if (errorText.includes("ENOENT") || errorText.includes("no such file")) {
+							state.cycleDetector.onFileNotFound()
+						} else {
+							state.cycleDetector.onToolSuccess()
+						}
 					} else {
 						messages.push({
 							ts,
@@ -1619,6 +1702,8 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 							text: JSON.stringify(sayTool),
 							partial: false,
 						})
+						// Reset ENOENT counter on successful tool call
+						state.cycleDetector.onToolSuccess()
 					}
 					break
 				}

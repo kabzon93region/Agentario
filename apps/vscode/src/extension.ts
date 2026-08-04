@@ -86,7 +86,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	setupHostProvider(context)
 
 	// 2. Clean up legacy data patterns within VSCode's native storage.
-	// Moves workspaceв†’global keys, task historyв†’file, custom instructionsв†’rules, etc.
+	// Moves workspace→global keys, task history→file, custom instructions→rules, etc.
 	// Must run BEFORE the file export so we copy clean state.
 	await cleanupLegacyVSCodeStorage(context)
 
@@ -774,7 +774,7 @@ async function getBinaryLocation(name: string): Promise<string> {
 
 	// VS Code 1.122.0 (microsoft/vscode#317978 et al.) migrated from @vscode/ripgrep
 	// to @vscode/ripgrep-universal, which ships per-platform/arch subdirectories.
-	// Probe the new layout first; fall back to the legacy paths for в‰¤1.121.x.
+	// Probe the new layout first; fall back to the legacy paths for ≤1.121.x.
 	const platformArch = `${process.platform}-${process.arch}`
 	const binPath =
 		(await checkPath(`node_modules/@vscode/ripgrep-universal/bin/${platformArch}/`)) ||

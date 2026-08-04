@@ -273,4 +273,33 @@ describe("createCheckpointHooks", () => {
 			runCount: 3,
 		});
 	});
+
+	it("skips checkpoint gracefully for a repo with no commits", async () => {
+		const cwd = await mkdtemp(join(tmpdir(), "core-checkpoint-empty-"));
+		let metadata: Record<string, unknown> | undefined;
+		let writes = 0;
+		try {
+			await runGit(cwd, "init");
+			await writeFile(join(cwd, "note.txt"), "new\n", "utf8");
+			await runGit(cwd, "add", "note.txt");
+
+			const hooks = createCheckpointHooks({
+				cwd,
+				sessionId: "sess_empty",
+				readSessionMetadata: async () => metadata,
+				writeSessionMetadata: async (next) => {
+					metadata = next;
+					writes += 1;
+				},
+			});
+
+			await runCheckpointHooks(hooks);
+
+			// No checkpoint should be created for an empty repo
+			expect(writes).toBe(0);
+			expect(metadata?.checkpoint).toBeUndefined();
+		} finally {
+			await rm(cwd, { recursive: true, force: true });
+		}
+	});
 });

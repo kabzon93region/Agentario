@@ -435,14 +435,16 @@ export const ChatRowContent = memo(
 				/>
 			)
 
+			let toolContent: React.ReactNode = null
+			const content = tool?.content || ""
+			const isApplyingPatch = content?.startsWith("%%bash") && !content.endsWith("*** End Patch\nEOF")
+			const editToolTitle = isApplyingPatch
+				? "Agentario is creating patches to edit this file:"
+				: "Agentario wants to edit this file:"
+
 			switch (tool.tool) {
 				case "editedExistingFile":
-					const content = tool?.content || ""
-					const isApplyingPatch = content?.startsWith("%%bash") && !content.endsWith("*** End Patch\nEOF")
-					const editToolTitle = isApplyingPatch
-						? "Agentario is creating patches to edit this file:"
-						: "Agentario wants to edit this file:"
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<PencilIcon className="size-2" />
@@ -468,8 +470,9 @@ export const ChatRowContent = memo(
 							)}
 						</div>
 					)
+					break
 				case "fileDeleted":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<SquareMinusIcon className="size-2" />
@@ -486,8 +489,9 @@ export const ChatRowContent = memo(
 							/>
 						</div>
 					)
+					break
 				case "newFileCreated":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<FilePlus2Icon className="size-2" />
@@ -508,9 +512,10 @@ export const ChatRowContent = memo(
 							)}
 						</div>
 					)
-				case "readFile":
+					break
+				case "readFile": {
 					const isImage = isImageFile(tool.path || "")
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								{isImage ? <ImageUpIcon className="size-2" /> : <FileCode2Icon className="size-2" />}
@@ -559,8 +564,10 @@ export const ChatRowContent = memo(
 							) : null}
 						</div>
 					)
+					break
+				}
 				case "listFilesTopLevel":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								{toolIcon("folder-opened")}
@@ -581,8 +588,9 @@ export const ChatRowContent = memo(
 							/>
 						</div>
 					)
+					break
 				case "listFilesRecursive":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								{toolIcon("folder-opened")}
@@ -603,8 +611,9 @@ export const ChatRowContent = memo(
 							/>
 						</div>
 					)
+					break
 				case "listCodeDefinitionNames":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								{toolIcon("file-code")}
@@ -624,8 +633,9 @@ export const ChatRowContent = memo(
 							/>
 						</div>
 					)
+					break
 				case "searchFiles":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								{toolIcon("search")}
@@ -644,8 +654,9 @@ export const ChatRowContent = memo(
 							/>
 						</div>
 					)
+					break
 				case "summarizeTask":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<FoldVerticalIcon className="size-2" />
@@ -685,8 +696,9 @@ export const ChatRowContent = memo(
 							</div>
 						</div>
 					)
+					break
 				case "webFetch":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<Link2Icon className="size-2" />
@@ -714,8 +726,9 @@ export const ChatRowContent = memo(
 							</div>
 						</div>
 					)
+					break
 				case "webSearch":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<SearchIcon className="size-2 rotate-90" />
@@ -734,8 +747,9 @@ export const ChatRowContent = memo(
 							</div>
 						</div>
 					)
+					break
 				case "useSkill":
-					return (
+					toolContent = (
 						<div>
 							<div className={HEADER_CLASSNAMES}>
 								<LightbulbIcon className="size-2" />
@@ -746,11 +760,12 @@ export const ChatRowContent = memo(
 							</div>
 						</div>
 					)
+					break
 				default: {
 					// Collapsed diagnostic for unknown/legacy tools (e.g. persisted semantic_search).
 					const toolName = String(tool.tool || "?")
 					const summary = `[tool · ${toolName}${tool.path ? ` · ${tool.path}` : ""}${tool.regex ? ` · ${tool.regex}` : ""}]`
-					return (
+					toolContent = (
 						<details className="group/diag ml-1 text-[11px] leading-tight text-description/80 font-mono select-text">
 							<summary className="cursor-pointer list-none flex items-center gap-1 min-h-0 py-0.5 opacity-80 hover:opacity-100 [&::-webkit-details-marker]:hidden">
 								<span
@@ -764,8 +779,15 @@ export const ChatRowContent = memo(
 							</pre>
 						</details>
 					)
+					break
 				}
 			}
+			return (
+				<div>
+					{toolContent}
+					<MessageStatsFooter stats={messageApiStats} />
+				</div>
+			)
 		}
 
 		// Reset output expansion state when command stops (completes or is cancelled)
@@ -794,19 +816,22 @@ export const ChatRowContent = memo(
 
 		if (message.ask === "command" || message.say === "command") {
 			return (
-				<CommandOutputRow
-					icon={icon}
-					isBackgroundExec={vscodeTerminalExecutionMode === "backgroundExec"}
-					isCommandCompleted={isCommandCompleted}
-					isCommandExecuting={isCommandExecuting}
-					isCommandPending={isCommandPending}
-					isOutputFullyExpanded={isOutputFullyExpanded}
-					message={message}
-					onCancelCommand={onCancelCommand}
-					onOutputChange={onLastRowContentChange}
-					setIsOutputFullyExpanded={setIsOutputFullyExpanded}
-					title={title}
-				/>
+				<div>
+					<CommandOutputRow
+						icon={icon}
+						isBackgroundExec={vscodeTerminalExecutionMode === "backgroundExec"}
+						isCommandCompleted={isCommandCompleted}
+						isCommandExecuting={isCommandExecuting}
+						isCommandPending={isCommandPending}
+						isOutputFullyExpanded={isOutputFullyExpanded}
+						message={message}
+						onCancelCommand={onCancelCommand}
+						onOutputChange={onLastRowContentChange}
+						setIsOutputFullyExpanded={setIsOutputFullyExpanded}
+						title={title}
+					/>
+					<MessageStatsFooter stats={messageApiStats} />
+				</div>
 			)
 		}
 

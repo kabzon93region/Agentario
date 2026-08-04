@@ -1,1211 +1,1120 @@
-## [0.14.83] - 2026-08-02
+# Changelog — Agentario
+
+Схема версий: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
+
+
+## [0.14.88] - 2026-08-04
+
+### Added
+- **Stats для tool/command сообщений в UI** — `MessageStatsFooter` теперь отображается для всех типов сообщений (tool, command, readFile, и т.д.), а не только для text/reasoning/completion_result
 
 ### Fixed
-- **LM Studio context 2k**: live context window больше не берётся у embedding-модели (часто 2048). Выбор идёт по выбранной chat-модели, embedding пропускаются; суммаризация и полоска контекста используют реальное окно (например 56k/66k)
-- **EOL нормализатор**: 
-elease/notes/*.md больше не исключаются; .ps1 нормализуется в LF (как в .gitattributes), а не в CRLF; перед git add в publish-release.ps1 вызывается нормализатор — предупреждения CRLF при публикации исчезают
-- .gitattributes: явно задано *.ps1 text eol=lf; бинарные .vsix/.node/.pb исключены из нормализации
+- **Stats в экспорте чата** — `findStatsForMessage` теперь ищет ближайший stats во всех направлениях (forward + backward), а не только forward, что исправляет неправильную привязку stats к сообщениям
+- **Timezone консистентность** — экспорт чата и SUMMARY.txt теперь используют локальный часовой пояс (`toLocaleString("ru-RU")`) вместо UTC (`toISOString()`), консистентно с UI
+- **Качество суммаризации** — улучшены промпт-шаблоны: обязательное указание содержимого прочитанных файлов, запрет дублирования формулировок, сокращение повторяющихся thinking-блоков
 
----
-## [0.14.82] - 2026-08-02
 
-### Fixed
-- **Критическое исправление кодировки**: `readBody` теперь определяет charset из заголовка `Content-Type` запроса — PowerShell 5.1 отправляет тело в кодировке системы (cp1251), а Node.js читал как UTF-8, из-за чего кириллица в заданиях превращалась в `???` и модель получала невалидный промпт
-- `sendJson` теперь всегда указывает `charset=utf-8` в ответе, чтобы клиенты (особенно PowerShell 5.1) корректно декодировали ответ
-- **CLINE_DIR изолирует профили**: `createStorageContext` теперь получает `clineDir` из env / настроек / lab-режима — лабораторные сессии больше не попадают в основной `~/.agentario`
-- VERSION в API-сервере обновлён до 0.14.82
+## [0.14.87] - 2026-08-04
 
-## [0.14.81] - 2026-08-01
+### Added
+- **Lab API: `/api/save_run`** — полный экспорт результатов тестового чата в `Exports/lab-run-{timestamp}/` с автоматическим анализом качества (ENOENT циклы, повторяющиеся thinking, рекомендации)
+- **Lab API: `/api/messages` metrics** — endpoint теперь возвращает `metrics` (inputTokens, outputTokens) для каждого сообщения
+- **Stats в экспорте чата** — `chat-export.md` теперь содержит stats строку (`in: X · out: Y · time: Zs · N tok/s`) после каждого блока Thinking/Tool/Agent
+- **Детекция циклов агента** — `CycleDetector` в message-translator отслеживает ENOENT ошибки подряд (порог: 5) и одинаковые thinking patterns (порог: 3), логирует WARNING
+- **LAB_TESTING_RULES.mdc** — упрощённый пайплайн с `/api/save_run`, обновлена документация
 
 ### Fixed
-- emitInfo теперь пушит postStateToWebview немедленно для первого сообщения, а не ждёт debounce — прогресс суммаризации гарантированно виден в UI чата сразу после начала компакции
-- Предыдущая версия (0.14.80) имела баг: debounce timer сбрасывался при каждом вызове emitInfo, из-за чего postStateToWebview никогда не срабатывал до завершения компакции
+- **Экспорт чата: stats для каждого сообщения** — ранее stats типа "in: 32950 · out: 1081" были только у последнего сообщения, теперь у каждого
 
-## [0.14.80] - 2026-08-01
 
-### Fixed
-- emitInfo в sdk-compaction-coordinator теперь пушит debounced postStateToWebview (150ms) — промежуточные статусы суммаризации гарантированно видны в UI чата
-- Monotonic ts для info-сообщений: несколько статусов за одну миллисекунду больше не сливаются
-- ChatRow: расширен isCompacting — теперь матчит русские строки «Полная суммаризация», «Сжатие контекста» (а не только английские "compacting")
-- ChatRow: при компакции отображается реальный текст сообщения вместо захардкоженного «Сжатие контекста...»
-- formatMessageStatsLine: скрывает in:0/out:0/total:0 когда нет реальных токенов, стоимости или длительности
-- Все statusCallback в agentic-compaction унифицированы с эмодзи-префиксами (включая map-reduce сводку)
-
-## [0.14.79] - 2026-08-01
+## [0.14.86] - 2026-07-31
 
 ### Fixed
-- Compaction progress visibility: все промежуточные статусы суммаризации теперь отображаются в UI чата с эмодзи-префиксами (🔄 прогресс, ✅ результат, ❌ ошибка, 📊 статистика)
-- ChatRow info rendering: добавлена специальная обработка для промежуточных сообщений компакции в UI — они отображаются как компактные строки с индикацией прогресса
-- filterCompactionInfoMessages: обновлён фильтр — теперь сохраняет ВСЕ компакция-сообщения (🔄, ✅, ❌, 📊) при сохранении истории, а не только финальный результат
+- **Сборка webview: BOM в package.json** — критическая ошибка Vite 7.3.5: `postcss-load-config` искал PostCSS-конфиг в родительских директориях и находил `apps/vscode/package.json` с UTF-8 BOM, что ломало `JSON.parse()` и падало на `[vite:css] Failed to load PostCSS config`. Источник: скрипт нормализации не удалял BOM из `.mjs`/`.mdx` файлов, а `package.json` получил BOM при каком-то предыдущем запуске
+- **Нормализатор кодировки**: добавлены `.mjs`, `.cjs`, `.mts`, `.cts`, `.mdx` в список расширений без BOM (`$utf8NoBomExts`). Удалены BOM из 40 файлов проекта
 
-## [0.14.78] - 2026-08-01
 
-### Fixed
-- Mojibake: исправлены кракозябры в UI-строках компакции (emitInfo, diagnoseCompactionFailure, formatCompactionStatus) — все русские строки теперь корректно кодируются в UTF-8
-
-## [0.14.77] - 2026-08-01
+## [0.14.85] - 2026-07-31
 
 ### Fixed
-- Token alignment: `providerScale` теперь применяется ко ВСЕМ расчётам токенов в compaction (status message, coordinator, agentic-compaction) — цифры согласованы с UI
-- Summarization quality: улучшен промпт суммаризации — добавлены правила сохранения фактов, выводов и последовательности действий агента
-- Compression aggressiveness: снижена агрессивность сжатия с "в 2 раза" до "в 1.5-2 раза" для лучшего сохранения контекста
+- **Lab API: автоопределение кодировки запросов** — `readBody()` теперь обнаруживает заменяющие символы (U+FFFD) при UTF-8 декодировании и автоматически переключается на `windows-1251`. Решает проблему PowerShell 5.1, который отправляет тела запросов в системной кодировке (cp1251) без объявления charset — кириллические промпты больше не превращаются в мусор
+- **Lab API: workspace** — добавлена документация про тестовый workspace `S:\temo` для отладки
+- **LAB_TESTING_RULES.mdc** — все примеры PowerShell теперь отправляют UTF-8 байты явно; добавлены секции workspace и troubleshooting
 
-## [0.14.76] - 2026-08-01
 
-### Fixed
-- Summarization format: wrap-up mode (секция "Находки из файлов") теперь активируется ТОЛЬКО для legacy manual compact без заданного `compactionMode`. Context/full compaction через `/api/compact` используют стандартный диалоговый формат суммаризации (`[User]: ... [Agent]: ...`) вместо wrap-up блока
-
-## [0.14.75] - 2026-08-01
+## [0.14.84] - 2026-07-31
 
 ### Fixed
-- Токены компакции: масштабирование `providerScale` (EMA) теперь применяется ко всем расчётам токенов в компакции (`tokensBefore`, `chatTokens`, `/api/compact`) — цифры соответствуют методу подсчёта провайдера (BPE), а не сырому `chars/3`
-- Контекстный бюджет: `providerScale` теперь передаётся в метаданных `CONTEXT_BUDGET_NOTICE` из оркестратора и сохраняется в `MessageTranslatorState` для использования координатором компакции и API
-- `compaction_already_in_progress`: вместо немедленного отклонения координатор теперь ждёт завершения текущей компакции (polling до 120с). Добавлен `lastCompactCompletedAt` для отслеживания завершения и метод `buildPostCompactionResult()` с причиной `compaction_just_completed`
+- **Git checkpoint на пустом репозитории**: checkpoint hooks теперь проверяют наличие коммитов перед попыткой stash/HEAD. Репозитории без коммитов больше не генерируют warnings — checkpoint просто пропускается
+- **Semantic search: улучшен лог**: если embeddings не сгенерированы (режим `local`), выводится подсказка как включить semantic search
 
-## [0.14.74] - 2026-08-01
 
-### Fixed
-- Token estimator: `createTokenEstimator("compaction")` теперь считает `tool_result` без лимита 2k (как `buildSummarizationUnits`) — цифры токенов совпадают с реальным содержимым чанков
-- Расчёт токенов: сообщение "Расчёт" теперь показывает общее количество токенов диалога, сколько отдано на суммаризацию и сколько сохранено
+## [0.14.83] - 2026-07-31
+
+
+## [0.14.82] - 2026-07-31
+
+
+## [0.14.81] - 2026-07-31
+
+
+## [0.14.80] - 2026-07-31
+
+
+## [0.14.79] - 2026-07-31
+
+
+## [0.14.78] - 2026-07-31
+
+
+## [0.14.77] - 2026-07-31
+
+
+## [0.14.76] - 2026-07-31
+
+
+## [0.14.75] - 2026-07-31
+
+
+## [0.14.74] - 2026-07-31
+
 
 ## [0.14.73] - 2026-07-31
 
-### Fixed
-- Метрики компакции: единый метод подсчёта токенов через `createTokenEstimator()` вместо `estimateTokens(JSON.stringify(...))` — цифры в статусе компакции теперь отражают реальные токены чата (с кэпами thinking/tool_result), а не сырой JSON
-- Метрики компакции: слово "сохранено" заменено на "освобождено" в статусе сжатия
-- Per-chunk статистика: каждый чанк теперь показывает токены на входе и на выходе (wrap-up и стандартные чанки)
-- Lab API: `/api/compact` теперь возвращает `contextTokens` (оценка токенов) alongside `contextChars`
 
 ## [0.14.72] - 2026-07-31
 
-### Fixed
-- Суммаризация: full-компакция (`compactionMode=full`) теперь использует стандартный подход (хронология `[User]: ... [Agent]: ...`) вместо wrap-up (схлопывание в один блок). Wrap-up — только для `mode=manual` (завершённые задачи)
-- Суммаризация: для продолжения работы в чате модель получает структурированный диалог, а не плоский итог
 
 ## [0.14.71] - 2026-07-31
 
-### Fixed
-- Суммаризация: увеличен output budget с 4096 до 16384 токенов — reasoning-модели (qwen, deepseek) теперь успевают и "подумать", и выдать текст суммаризации
-- Суммаризация: retry с `/no_think` при reasoning-only ошибке — если модель тратит все output-токены на thinking, автоматически повторяет запрос с запретом reasoning
 
 ## [0.14.70] - 2026-07-31
 
-### Added
-- Forced wrap-up compaction: при ручном/принудительном сжатии (`mode: "manual"`) используется `findWrapUpRange` — сохраняет первый user-turn (задание) и последний substantive assistant text (ответ), сжимает промежуточную работу (tools, thinking, файлы) в summary
-- Wrap-up промпт: `WRAP_UP_PROMPT_BEFORE` / `WRAP_UP_PROMPT_AFTER` с секцией "Находки из файлов" — суммаризатор получает запрос на краткий итог + список найденных фактов по файлам
-- `findLastSubstantiveAssistantIndex(messages)` — ищет последний assistant с текстовым блоком (не только tool_use)
-- `findWrapUpRange(messages)` — вычисляет диапазон fold/preserve для wrap-up: `[firstTask, foldableMiddle, lastAnswer]`
-- `CoreCompactionResult.skipReason?: string` — специфичная причина пропуска сжатия (пробрасывается через SDK → coordinator → API)
-
-### Changed
-- `buildSummaryRequest()` принимает `wrapUp?: boolean` — для wrap-up режима использует специальный промпт вместо стандартного
-- `sdk-compaction.ts`: `CompactSessionMessagesResult.reason` пробрасывает `skipReason` из SDK-результата
-- `sdk-compaction-coordinator.ts`: `diagnoseCompactionFailure` теперь fallback — приоритет у `result.reason` от SDK (конкретные причины: `no_foldable_middle`, `empty_summary`, `summary_error`)
 
 ## [0.14.69] - 2026-07-31
 
-### Fixed
-- Lab API: `/api/compact` теперь возвращает `compacted: boolean`, `reason`, `contextChars` (до/после), `contextReduction` (% сжатия). Поле `ok` отражает реальный результат сжатия
-- Pipeline: валидация суммаризации проверяет `compacted` поле а не только `ok`; различает skip (короткий чат) и failure (ошибка модели)
-- Compaction coordinator: `compactTask()` возвращает `CompactTaskResult` с `compacted`, `reason`, `messagesBefore/After`
 
 ## [0.14.68] - 2026-07-31
 
-### Fixed
-- Итоговый ответ без `attempt_completion` промоутится в `say:completion_result` (зелёная подсветка Task Completed)
-- System prompt сделан универсальным (не заточен под TEMO/convert.py); акцент на `attempt_completion` для любой задачи
 
-### Added
-- Lab API: `POST /api/compact` для теста суммаризации (context/full)
 ## [0.14.67] - 2026-07-31
 
-### Fixed
-- Agent: отклонение `search_codebase` с префиксом `semantic:`; sync prompt когда semantic_search недоступен
-- Agent: overview workflow короче; повторный полный read_files того же пути блокируется с 1-го раза
-- Agent: phase=`completed` после итогового text даже после mistake_limit/error
-- Lab API: `/api/context` читает session `.messages.json` из `.agentario`/`.agentario-lab`; busy → deferred
-- Lab API: timestamps в markdown не показывают 1970 для MessageId; `/api/status`/`wait_idle` с `verdict`
-- Lab API: логи ищутся во всех профилях; collect копирует session dir + outcome.json
+
 ## [0.14.66] - 2026-07-31
 
-### Added
-- Lab API: `/api/stop` (кнопка Stop + ожидание остановки генерации), `/api/clear` (закрыть чат → домашняя), `/api/delete_task` (удалить чат без модалки)
 
-### Changed
-- Lab API: `/api/new_task` по умолчанию делает fresh-старт: stop → delete → home → новый чат
-- Lab API: `/api/status` и `/api/wait_idle` определяют idle по turnPhase/sessionRunning, а не только по age сообщений
 ## [0.14.65] - 2026-07-31
 
-### Fixed
-- Lab API: повторный acquireVsCodeApi заменён на PLATFORM_CONFIG.postMessage
-- Lab API: кириллица в UI через i18n вместо сырых \uXXXX escape-последовательностей
+
 ## [0.14.64] - 2026-07-31
 
-### Fixed
-- Lab API: webview fetch replaced with extension host proxy to bypass VS Code CSP/Electron restrictions
+
 ## [0.14.63] - 2026-07-31
 
-### Fixed
-- Lab API: webview CSP blocked fetch to localhost -- added http://127.0.0.1:* to connect-src
+
 ## [0.14.62] - 2026-07-31
 
-### Fixed
-- Lab API server: changed dynamic import() to static import for CJS bundle compatibility
+
 ## [0.14.61] - 2026-07-31
 
-### Fixed
-- Lab API server now starts from settings (labApiEnabled) without requiring AGENTARIO_API_PORT env var
+
 ## [0.14.60] - 2026-07-31
 
-### Fixed
-- Lab API settings: added lab_api_enabled, lab_api_port, lab_cline_dir fields to UpdateSettingsRequest proto
-- Lab API settings: toggle now properly persists via gRPC
+
 ## [0.14.59] - 2026-07-31
 
-### Fixed
-- Lab API settings: onboarding tab translations not loaded
-- Lab API settings: labApiEnabled/labApiPort/labClineDir not included in webview state
-## [0.14.59] - 2026-07-31
 
-### Fixed
-- Lab API settings: onboarding tab translations not loaded
-- Lab API settings: labApiEnabled/labApiPort/labClineDir not included in webview state
 ## [0.14.58] - 2026-07-31
 
-### Added
-- Панель настроек Lab API Server в настройках Agentario (вкладка "Lab API")
-  - Включение/выключение API сервера
-  - Настройка порта (по умолчанию 19231)
-  - Настройка пути к изолированному профилю CLINE_DIR
-  - Автозапуск API сервера при старте Agentario
-  - Кнопка проверки соединения с API
-- API сервер теперь может запускаться автоматически из настроек (без переменных окружения)
-- Обратная совместимость: старый подход с AGENTARIO_API_PORT env var по-прежнему работает
 
 ## [0.14.57] - 2026-07-31
 
-### Fixed
-- РСЃРїСЂР°РІР»РµРЅ REST API: РІСЃРµ СЌРЅРґРїРѕРёРЅС‚С‹ С‚РµРїРµСЂСЊ С‡РёС‚Р°СЋС‚ РґР°РЅРЅС‹Рµ РёР· РєРѕРЅС‚СЂРѕР»Р»РµСЂР° (in-memory) РІРјРµСЃС‚Рѕ С„Р°Р№Р»РѕРІ `tasks/`
-  - `/api/status` вЂ” РёСЃРїРѕР»СЊР·СѓРµС‚ `controller.task.messageStateHandler.getagentarioMessages()`
-  - `/api/messages` вЂ” РёСЃРїРѕР»СЊР·СѓРµС‚ `controller.task.messageStateHandler.getagentarioMessages()`
-  - `/api/context` вЂ” РёСЃРїРѕР»СЊР·СѓРµС‚ `controller.captureModelContext()` СЃ fallback РЅР° С„Р°Р№Р»РѕРІСѓСЋ СЃРёСЃС‚РµРјСѓ
-  - `/api/export_chat` вЂ” РёСЃРїРѕР»СЊР·СѓРµС‚ `controller.task.messageStateHandler.getagentarioMessages()`
-  - `/api/wait_idle` вЂ” РѕРїСЂРѕСЃ РєРѕРЅС‚СЂРѕР»Р»РµСЂР° РІРјРµСЃС‚Рѕ С‡С‚РµРЅРёСЏ С„Р°Р№Р»РѕРІ
-  - `/api/collect` вЂ” СЃР±РѕСЂ РґР°РЅРЅС‹С… РёР· РєРѕРЅС‚СЂРѕР»Р»РµСЂР° (СЃРѕРѕР±С‰РµРЅРёСЏ, РєРѕРЅС‚РµРєСЃС‚, Р»РѕРіРё, compaction)
-- РЈРґР°Р»РµРЅР° Р·Р°РІРёСЃРёРјРѕСЃС‚СЊ РѕС‚ `findNewestTaskDir` (SDK СЃРµСЃСЃРёРё С…СЂР°РЅСЏС‚ РґР°РЅРЅС‹Рµ РІ Р‘Р”, РЅРµ РІ `tasks/`)
 
 ## [0.14.56] - 2026-07-31
 
-### Added
-- РќРѕРІС‹Рµ REST API endpoints РґР»СЏ РїРѕР»РЅРѕРіРѕ С‚РµСЃС‚РѕРІРѕРіРѕ РїР°Р№РїР»Р°Р№РЅР°:
-  - `GET /api/logs` вЂ” С‡С‚РµРЅРёРµ Р»РѕРіРѕРІ СЂР°СЃС€РёСЂРµРЅРёСЏ (РїРѕ РґР°С‚Рµ, СЃ РїР°РіРёРЅР°С†РёРµР№)
-  - `GET /api/compaction_files` вЂ” СЃРїРёСЃРѕРє Рё С‡С‚РµРЅРёРµ compaction-С„Р°Р№Р»РѕРІ (СЃ С„РёР»СЊС‚СЂР°С†РёРµР№ РїРѕ phase/chunk)
-  - `GET /api/collect` вЂ” СЃР±РѕСЂ СЃРµСЃСЃРёРѕРЅРЅС‹С… С„Р°Р№Р»РѕРІ (ui_messages.json, api_conversation_history.json, Р»РѕРіРё, compaction)
-  - `POST /api/install_vsix` вЂ” СѓСЃС‚Р°РЅРѕРІРєР° VSIX С‡РµСЂРµР· `code --install-extension`
-  - `POST /api/restart` вЂ” РїРµСЂРµР·Р°РїСѓСЃРє VS Code РѕРєРЅР° С‡РµСЂРµР· `reloadWindow`
 
 ## [0.14.55] - 2026-07-31
 
-### Added
-- РќР°С‚РёРІРЅС‹Р№ REST API РІРЅСѓС‚СЂРё СЂР°СЃС€РёСЂРµРЅРёСЏ Agentario РґР»СЏ Р°РІС‚РѕРјР°С‚РёР·Р°С†РёРё Р»Р°Р±РѕСЂР°С‚РѕСЂРЅС‹С… С‚РµСЃС‚РѕРІ
-  - Endpoints: `/health`, `/api/new_task`, `/api/followup`, `/api/cancel`, `/api/status`, `/api/messages`, `/api/context`, `/api/export_chat`, `/api/wait_idle`
-  - РђРєС‚РёРІРёСЂСѓРµС‚СЃСЏ РїРµСЂРµРјРµРЅРЅРѕР№ РѕРєСЂСѓР¶РµРЅРёСЏ `AGENTARIO_API_PORT` (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 19231)
-- CLI `agentario-lab.cmd` С‚РµРїРµСЂСЊ РѕР±СЂР°С‰Р°РµС‚СЃСЏ РЅР°РїСЂСЏРјСѓСЋ Рє REST API СЂР°СЃС€РёСЂРµРЅРёСЏ (port 19231) СЃ fallback РЅР° harness (port 19229)
-- РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕРїСЂРµРґРµР»РµРЅРёРµ РґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё REST API Рё РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РјРµР¶РґСѓ harness Рё РїСЂСЏРјС‹Рј API
 
-### Changed
-- Harness `lab.*` РјРµС‚РѕРґС‹ (`labNewTask`, `labFollowup`, `labWaitIdle`, `labGetMessages`, `labExportChat`, `labExportContext`) С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓСЋС‚ REST API СЂР°СЃС€РёСЂРµРЅРёСЏ РІРјРµСЃС‚Рѕ CDP bridge
-- CLI РєРѕРјР°РЅРґР° `connect` СѓРґР°Р»РµРЅР° (РЅРµ С‚СЂРµР±СѓРµС‚СЃСЏ вЂ” СЂР°СЃС€РёСЂРµРЅРёРµ СЃР°РјРѕ СЃР»СѓС€Р°РµС‚ REST API)
-- Harness РїРµСЂРµРґР°С‘С‚ `AGENTARIO_API_PORT` Рё `CLINE_DIR` РІ environment РїСЂРё Р·Р°РїСѓСЃРєРµ VS Code
-
-### Removed
-- `globalThis.agentario` bridge РёР· `extension.ts` (Р·Р°РјРµРЅС‘РЅ REST API)
-- `labCallBridge` РёР· harness (Р·Р°РјРµРЅС‘РЅ `labApiFetch`)
-- `labConnect` РёР· harness (РЅРµ С‚СЂРµР±СѓРµС‚СЃСЏ СЃ REST API)
-
-# Changelog вЂ” Agentario
-
-РЎС…РµРјР° РІРµСЂСЃРёР№: [VERSIONING.md](VERSIONING.md) (`MAJOR.MINOR.PATCH`).
-
-## [0.14.54] вЂ” 2026-07-30
+## [0.14.54] — 2026-07-30
 
 ### Added
-- globalThis.agentario bridge РІ extension host РґР»СЏ CDP-СѓРїСЂР°РІР»РµРЅРёСЏ Р±РµР· UI-РєР»РёРєРѕРІ (gated CLINE_DEBUG_HARNESS_PORT).
-- labCallBridge helper вЂ” РѕР¶РёРґР°РЅРёРµ Р±СЂРёРґР¶Р° Рё РІС‹Р·РѕРІ С„СѓРЅРєС†РёР№ С‡РµСЂРµР· Runtime.evaluate.
-- Р¤Р»Р°Рі --visible РґР»СЏ harness (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ VS Code Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ СЃРєСЂС‹С‚Рѕ off-screen).
+- globalThis.agentario bridge в extension host для CDP-управления без UI-кликов (gated CLINE_DEBUG_HARNESS_PORT).
+- labCallBridge helper — ожидание бриджа и вызов функций через Runtime.evaluate.
+- Флаг --visible для harness (по умолчанию VS Code запускается скрыто off-screen).
 
 ### Changed
-- lab.new_task / lab.followup / lab.export_context / lab.run РїРµСЂРµРїРёСЃР°РЅС‹ РЅР° CDP bridge вЂ” **Р±РµР· Playwright РєР»РёРєРѕРІ** (uiOpenSidebar, keyboard, mouse).
-- VS Code РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ СЃ --window-position=-32000,-32000 (СЃРєСЂС‹С‚ Р·Р° СЌРєСЂР°РЅРѕРј).
-- lab.run РґРµР»Р°РµС‚ screenshot С‚РѕР»СЊРєРѕ РїСЂРё СЏРІРЅРѕРј screenshot: true.
+- lab.new_task / lab.followup / lab.export_context / lab.run переписаны на CDP bridge — **без Playwright кликов** (uiOpenSidebar, keyboard, mouse).
+- VS Code по умолчанию запускается с --window-position=-32000,-32000 (скрыт за экраном).
+- lab.run делает screenshot только при явном screenshot: true.
 
 ### Fixed
-- lab.followup РѕС‚РїСЂР°РІР»СЏР» РЅРµРІР°Р»РёРґРЅС‹Р№ 
-esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ РЅР° "messageResponse".
-- РњС‘СЂС‚РІС‹Р№ fallback globalThis.agentario?.exportContextText РІ labExportContext С‚РµРїРµСЂСЊ СЂР°Р±РѕС‚Р°РµС‚ С‡РµСЂРµР· СЂР°Р±РѕС‡РёР№ bridge.
+- lab.followup отправлял невалидный 
+esponseType: "user_response" — исправлено на "messageResponse".
+- Мёртвый fallback globalThis.agentario?.exportContextText в labExportContext теперь работает через рабочий bridge.
 
-## [0.14.53] вЂ” 2026-07-30
+## [0.14.53] — 2026-07-30
 
 ### Added
-- РџРѕР»РЅС‹Р№ СЌРєСЃРїРѕСЂС‚ С‡Р°С‚Р° С‡РµСЂРµР· `lab.export_chat` вЂ” С‚РµРїРµСЂСЊ РІРєР»СЋС‡Р°РµС‚ thinking-Р±Р»РѕРєРё, tool calls/results, info-СЃРѕРѕР±С‰РµРЅРёСЏ, С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРЅС‹Рµ РєРѕРјР°РЅРґС‹ СЃ РІС‹РІРѕРґРѕРј.
-- `lab.export_context` вЂ” СЌРєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РјРѕРґРµР»Рё (system prompt + messages) РёР· `api_conversation_history.json`.
-- `lab.collect_session_files` вЂ” СЃР±РѕСЂ РІСЃРµС… С„Р°Р№Р»РѕРІ СЃРµСЃСЃРёРё: ui_messages.json, api_conversation_history.json, extension.log, compaction debug С„Р°Р№Р»С‹.
-- `lab.run` вЂ” РѕСЂРєРµСЃС‚СЂР°С†РёСЏ РїРѕР»РЅРѕРіРѕ С†РёРєР»Р°: launch в†’ new_task в†’ wait_idle в†’ export_chat в†’ export_context в†’ collect_files в†’ screenshot.
-- CLI РєРѕРјР°РЅРґС‹: `run`, `export-context`, `collect`.
-- Standalone `export-utils.ts` РґР»СЏ harness (СЌРєСЃРїРѕСЂС‚ Р±РµР· РёРјРїРѕСЂС‚РѕРІ РёР· extension).
+- Полный экспорт чата через `lab.export_chat` — теперь включает thinking-блоки, tool calls/results, info-сообщения, форматированные команды с выводом.
+- `lab.export_context` — экспорт контекста модели (system prompt + messages) из `api_conversation_history.json`.
+- `lab.collect_session_files` — сбор всех файлов сессии: ui_messages.json, api_conversation_history.json, extension.log, compaction debug файлы.
+- `lab.run` — оркестрация полного цикла: launch → new_task → wait_idle → export_chat → export_context → collect_files → screenshot.
+- CLI команды: `run`, `export-context`, `collect`.
+- Standalone `export-utils.ts` для harness (экспорт без импортов из extension).
 
 ### Changed
-- `labExportChat` РёСЃРїРѕР»СЊР·СѓРµС‚ РїРѕР»РЅСѓСЋ Р»РѕРіРёРєСѓ `exportChatToMarkdown` РІРјРµСЃС‚Рѕ СѓРїСЂРѕС‰С‘РЅРЅРѕРіРѕ builder.
+- `labExportChat` использует полную логику `exportChatToMarkdown` вместо упрощённого builder.
 
-## [0.14.52] вЂ” 2026-07-30
+## [0.14.52] — 2026-07-30
 
 ### Added
-- **Agentario Lab** вЂ” Р°РІС‚РѕРјР°С‚РёР·РёСЂРѕРІР°РЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ С‚РµСЃС‚РѕРІС‹Рј VS Code РґР»СЏ end-to-end С‚РµСЃС‚РѕРІ.
+- **Agentario Lab** — автоматизированное управление тестовым VS Code для end-to-end тестов.
 - High-level API: `lab.status`, `lab.new_task`, `lab.followup`, `lab.wait_idle`, `lab.get_messages`, `lab.export_chat`, `lab.screenshot`.
-- CLI-РѕР±С‘СЂС‚РєР° `scripts/agentario-lab.cmd` РґР»СЏ Windows.
-- TypeScript HTTP-РєР»РёРµРЅС‚ `lab-client.ts` РґР»СЏ РїСЂРѕРіСЂР°РјРјРЅРѕРіРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ.
-- Р РµР¶РёРј `--vsix PATH` РґР»СЏ Р·Р°РїСѓСЃРєР° СЃ release VSIX (Р±РµР· dev extension).
-- РџСЂРѕС„РёР»СЊ РёР·РѕР»СЏС†РёРё: `~/.agentario-lab` РІРјРµСЃС‚Рѕ `~/.cline2`.
-- РљСЂРѕСЃСЃ-РїР»Р°С‚С„РѕСЂРјРµРЅРЅС‹Рµ РїСѓС‚Рё (Windows: `os.tmpdir()`).
+- CLI-обёртка `scripts/agentario-lab.cmd` для Windows.
+- TypeScript HTTP-клиент `lab-client.ts` для программного использования.
+- Режим `--vsix PATH` для запуска с release VSIX (без dev extension).
+- Профиль изоляции: `~/.agentario-lab` вместо `~/.cline2`.
+- Кросс-платформенные пути (Windows: `os.tmpdir()`).
 - Cursor skill `.agents/skills/agentario-lab/SKILL.md`.
 
 ### Changed
-- РџСѓС‚Рё harness РѕР±РЅРѕРІР»РµРЅС‹: СЃРєСЂРёРЅС€РѕС‚С‹ РІ `agentario-lab-debug`, workspace РІ `agentario-lab-workspace`.
-- Command palette РёСЃРїРѕР»СЊР·СѓРµС‚ `Control+Shift+p` РЅР° Windows (РІРјРµСЃС‚Рѕ `Meta+Shift+p`).
-- Sidebar РёС‰РµС‚ РІРєР»Р°РґРєСѓ `Agentario|Cline` (РІРјРµСЃС‚Рѕ С‚РѕР»СЊРєРѕ `Cline`).
-- РћР±РЅРѕРІР»С‘РЅ README debug-harness: СЃРЅСЏС‚ В«macOS onlyВ», РґРѕР±Р°РІР»РµРЅР° РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ Lab API.
+- Пути harness обновлены: скриншоты в `agentario-lab-debug`, workspace в `agentario-lab-workspace`.
+- Command palette использует `Control+Shift+p` на Windows (вместо `Meta+Shift+p`).
+- Sidebar ищет вкладку `Agentario|Cline` (вместо только `Cline`).
+- Обновлён README debug-harness: снят «macOS only», добавлена документация Lab API.
 
-## [0.14.51] вЂ” 2026-07-30
+## [0.14.51] — 2026-07-30
 
 ### Fixed
-- Р­РєСЃРїРѕСЂС‚ С‡Р°С‚Р°: Р·Р°РґР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (task) С‚РµРїРµСЂСЊ РІСЃРµРіРґР° РІ РЅР°С‡Р°Р»Рµ СЌРєСЃРїРѕСЂС‚Р°, Р° РЅРµ РІ РєРѕРЅС†Рµ РёР·-Р·Р° СЂР°Р·РЅС‹С… СЃРёСЃС‚РµРј timestamps.
-- `completion_result` СЃРѕРѕР±С‰РµРЅРёСЏ С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°СЋС‚ СЃС‚Р°С‚РёСЃС‚РёРєСѓ С‚РѕРєРµРЅРѕРІ (РёС‰РµС‚СЃСЏ Рё РЅР°Р·Р°Рґ, Р° РЅРµ С‚РѕР»СЊРєРѕ РІРїРµСЂС‘Рґ).
+- Экспорт чата: задание пользователя (task) теперь всегда в начале экспорта, а не в конце из-за разных систем timestamps.
+- `completion_result` сообщения теперь показывают статистику токенов (ищется и назад, а не только вперёд).
 
 ### Changed
-- РЎРєСЂРѕР»Р»Р±Р°СЂ РІ Р»РµРЅС‚Рµ С‡Р°С‚Р° С‚РµРїРµСЂСЊ РІРёРґРµРЅ (Р±С‹Р» СЃРєСЂС‹С‚ С‡РµСЂРµР· CSS).
+- Скроллбар в ленте чата теперь виден (был скрыт через CSS).
 
-## [0.14.50] вЂ” 2026-07-30
+## [0.14.50] — 2026-07-30
 
 ### Fixed
-- Р”Р»РёРЅРЅС‹Рµ thinking-Р±Р»РѕРєРё РІ РµРґРёРЅРёС†Р°С… СЃСѓРјРјР°СЂРёР·Р°С†РёРё С‚РµРїРµСЂСЊ РѕР±СЂРµР·Р°СЋС‚СЃСЏ РґРѕ 2000 СЃРёРјРІРѕР»РѕРІ. Р Р°РЅРµРµ РїРѕР»РЅС‹Р№ С‚РµРєСЃС‚ СЂР°Р·РјС‹С€Р»РµРЅРёР№ РјРѕРґРµР»Рё РѕС‚РїСЂР°РІР»СЏР»СЃСЏ РІ summarizer, СЂР°Р·РґСѓРІР°СЏ Р·Р°РїСЂРѕСЃ.
+- Длинные thinking-блоки в единицах суммаризации теперь обрезаются до 2000 символов. Ранее полный текст размышлений модели отправлялся в summarizer, раздувая запрос.
 
 ### Changed
-- РЎС‚Р°С‚СѓСЃ РєРѕРјРїР°РєС†РёРё С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚ СЂР°Р·Р±РёРІРєСѓ РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј: foldable (СЃРѕРѕР±С‰РµРЅРёСЏ РґР»СЏ СЃСѓРјРјР°СЂРёР·Р°С†РёРё), pinned (СЃРѕС…СЂР°РЅСЏРµРјС‹Рµ recent), units, С‚РѕРєРµРЅС‹.
-- РЈР»СѓС‡С€РµРЅС‹ СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєР°С… РїСЂРё РѕС‚РєР»РѕРЅРµРЅРёРё СЂР°Р·РґСѓС‚РѕР№ СЃСѓРјРјР°СЂРёР·Р°С†РёРё.
+- Статус компакции теперь показывает разбивку по категориям: foldable (сообщения для суммаризации), pinned (сохраняемые recent), units, токены.
+- Улучшены сообщения об ошибках при отклонении раздутой суммаризации.
 
-## [0.14.49] вЂ” 2026-07-30
+## [0.14.49] — 2026-07-30
 
 ### Fixed
-- `read_files` СЂРµР·РѕР»РІРёР» РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рµ РїСѓС‚Рё РІ РїР°РїРєСѓ СѓСЃС‚Р°РЅРѕРІРєРё VS Code (`process.cwd()`) РІРјРµСЃС‚Рѕ СЂР°Р±РѕС‡РµР№ РїР°РїРєРё РїСЂРѕРµРєС‚Р°. РўРµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ session cwd С‡РµСЂРµР· `FileReadExecutorOptions.cwd` Рё `context.metadata.cwd`.
-- РЎСѓРјРјР°СЂРёР·Р°С†РёСЏ СЂР°Р·РґСѓРІР°Р»Р° РєРѕРЅС‚РµРєСЃС‚: РµСЃР»Рё РјРѕРґРµР»СЊ РѕС‚РІРµС‡Р°Р»Р° С‚РѕР»СЊРєРѕ reasoning-РєР°РЅР°Р»РѕРј (Р±РµР· С‚РµРєСЃС‚Р°), РІРµСЃСЊ reasoning (РґРѕ 78k С‚РѕРєРµРЅРѕРІ) РїСЂРёРЅРёРјР°Р»СЃСЏ РєР°Рє summary. РўРµРїРµСЂСЊ reasoning РѕРіСЂР°РЅРёС‡РµРЅ, РїСЂРѕРІРµСЂСЏРµС‚СЃСЏ СЃРѕРѕС‚РЅРѕС€РµРЅРёРµ output/input, summary > 90% input РѕС‚РєР»РѕРЅСЏРµС‚СЃСЏ.
-- `search_codebase` РЅРµ Р±Р»РѕРєРёСЂРѕРІР°Р» РїРѕРІС‚РѕСЂРЅС‹Рµ РѕРґРёРЅР°РєРѕРІС‹Рµ Р·Р°РїСЂРѕСЃС‹ (РєР°Рє `semantic_search`). РўРµРїРµСЂСЊ РїРѕРІС‚РѕСЂРЅС‹Р№ РёРґРµРЅС‚РёС‡РЅС‹Р№ query РѕС‚РєР»РѕРЅСЏРµС‚СЃСЏ РјРіРЅРѕРІРµРЅРЅРѕ.
+- `read_files` резолвил относительные пути в папку установки VS Code (`process.cwd()`) вместо рабочей папки проекта. Теперь используется session cwd через `FileReadExecutorOptions.cwd` и `context.metadata.cwd`.
+- Суммаризация раздувала контекст: если модель отвечала только reasoning-каналом (без текста), весь reasoning (до 78k токенов) принимался как summary. Теперь reasoning ограничен, проверяется соотношение output/input, summary > 90% input отклоняется.
+- `search_codebase` не блокировал повторные одинаковые запросы (как `semantic_search`). Теперь повторный идентичный query отклоняется мгновенно.
 
 ### Changed
-- `read_files` description РѕР±РЅРѕРІР»С‘РЅ: Р±РѕР»СЊС€РёРµ С„Р°Р№Р»С‹ Р±РµР· start/end РґР°СЋС‚ FILE SUMMARY + РїСЂРµРІСЊСЋ РІРјРµСЃС‚Рѕ РїРѕР»РЅРѕРіРѕ СЃРѕРґРµСЂР¶РёРјРѕРіРѕ.
-- РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚: РґРѕР±Р°РІР»РµРЅРѕ РѕРїРёСЃР°РЅРёРµ FILE SUMMARY РґР»СЏ Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ Рё fallback РїСЂРё РЅРµРґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё `semantic_search`.
-- `DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS` = 4096 (Р±С‹Р» 0 = Р±РµР· Р»РёРјРёС‚Р°).
+- `read_files` description обновлён: большие файлы без start/end дают FILE SUMMARY + превью вместо полного содержимого.
+- Системный промпт: добавлено описание FILE SUMMARY для больших файлов и fallback при недоступности `semantic_search`.
+- `DEFAULT_SUMMARY_MAX_OUTPUT_TOKENS` = 4096 (был 0 = без лимита).
 
-## [0.14.48] вЂ” 2026-07-29
+## [0.14.48] — 2026-07-29
 
 ### Fixed
-- `displayInputTokens` РїРѕРєР°Р·С‹РІР°Р» ~44k РІРјРµСЃС‚Рѕ ~27k: С‚РµРїРµСЂСЊ РЅРµ РІРєР»СЋС‡Р°РµС‚ `toolTokens` (schemas РёРЅСЃС‚СЂСѓРјРµРЅС‚РѕРІ), РєРѕС‚РѕСЂС‹Рµ РЅРµ СЏРІР»СЏСЋС‚СЃСЏ С‡Р°СЃС‚СЊСЋ chat-РєРѕРЅС‚РµРєСЃС‚Р°. Р—РЅР°С‡РµРЅРёРµ СЃРѕРІРїР°РґР°РµС‚ СЃ progress bar (`tokensIn` РёР· API).
-- РџРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РєРѕРјРїР°РєС†РёРё (Р±РµР· РїРµСЂРµР·Р°С…РѕРґР° РІ С‡Р°С‚): РїРѕСЃР»Рµ `compaction_result` СЌРјРёС‚РёС‚СЃСЏ `context_stats` СЃ РїРѕСЃС‚-РєРѕРјРїР°РєС†РёРѕРЅРЅС‹РјРё Р·РЅР°С‡РµРЅРёСЏРјРё.
-- Р—РµР»С‘РЅР°СЏ РїРѕРґСЃРІРµС‚РєР° completed: РґР»СЏ Р»РѕРєР°Р»СЊРЅС‹С… РјРѕРґРµР»РµР№ Р±РµР· `attempt_completion` вЂ” РµСЃР»Рё РјРѕРґРµР»СЊ РґР°Р»Р° С‚РµРєСЃС‚РѕРІС‹Р№ РѕС‚РІРµС‚, С„Р°Р·Р° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃС‚Р°РІРёС‚СЃСЏ РІ `completed`.
+- `displayInputTokens` показывал ~44k вместо ~27k: теперь не включает `toolTokens` (schemas инструментов), которые не являются частью chat-контекста. Значение совпадает с progress bar (`tokensIn` из API).
+- Полоска контекста обновляется сразу после компакции (без перезахода в чат): после `compaction_result` эмитится `context_stats` с пост-компакционными значениями.
+- Зелёная подсветка completed: для локальных моделей без `attempt_completion` — если модель дала текстовый ответ, фаза автоматически ставится в `completed`.
 
 ### Changed
-- РЎС‚Р°С‚СѓСЃРЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ С‡Р°РЅРєРѕРІ: РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РїРѕР»РЅС‹Р№ СЂР°Р·РјРµСЂ Р·Р°РїСЂРѕСЃР° РІ СЃРёРјРІРѕР»Р°С… Рё С‚РѕРєРµРЅР°С…, СѓР±СЂР°РЅР° РЅРµСЂРµР»РµРІР°РЅС‚РЅР°СЏ С‡Р°СЃС‚СЊ В«(РґРёР°Р»РѕРі: N)В».
+- Статусные сообщения чанков: отображается полный размер запроса в символах и токенах, убрана нерелевантная часть «(диалог: N)».
 
-## [0.14.47] вЂ” 2026-07-29
+## [0.14.47] — 2026-07-29
 
 ### Fixed
-- РџРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° РЅРµ РѕР±РЅРѕРІР»СЏР»Р°СЃСЊ РїРѕСЃР»Рµ РєРѕРјРїР°РєС†РёРё: `getContextWindowUsage` С‚РµРїРµСЂСЊ СЃСЂР°РІРЅРёРІР°РµС‚ **РЅРѕРІРµР№С€РёРµ** Р·РЅР°С‡РµРЅРёСЏ measured Рё estimated РїРѕ РїРѕР·РёС†РёРё РІ РјР°СЃСЃРёРІРµ СЃРѕРѕР±С‰РµРЅРёР№, Р° РЅРµ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РЅР° РїРµСЂРІРѕРј РЅР°Р№РґРµРЅРЅРѕРј. РџРѕСЃР»Рµ СЂСѓС‡РЅРѕР№ РєРѕРјРїР°РєС†РёРё (РіРґРµ `contextBudget` СЃ `tokensIn=0` РёРґС‘С‚ РїРѕСЃР»Рµ СЃС‚Р°СЂРѕРіРѕ `api_req_started` СЃ Р±РѕР»СЊС€РёРј `tokensIn`) С‚РµРїРµСЂСЊ РєРѕСЂСЂРµРєС‚РЅРѕ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ СЃРІРµР¶Р°СЏ РѕС†РµРЅРєР°.
-- Р Р°Р·РјРµСЂС‹ С‡Р°РЅРєРѕРІ СЃСѓРјРјР°СЂРёР·Р°С†РёРё РІ С‡Р°С‚Рµ: С‚РµРїРµСЂСЊ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РїРѕР»РЅС‹Р№ СЂР°Р·РјРµСЂ Р·Р°РїСЂРѕСЃР° Рє РјРѕРґРµР»Рё (prompt template + РґРёР°Р»РѕРі), Р° РЅРµ С‚РѕР»СЊРєРѕ С‚РµРєСЃС‚Р° РґРёР°Р»РѕРіР°.
+- Полоска контекста не обновлялась после компакции: `getContextWindowUsage` теперь сравнивает **новейшие** значения measured и estimated по позиции в массиве сообщений, а не останавливается на первом найденном. После ручной компакции (где `contextBudget` с `tokensIn=0` идёт после старого `api_req_started` с большим `tokensIn`) теперь корректно используется свежая оценка.
+- Размеры чанков суммаризации в чате: теперь отображается полный размер запроса к модели (prompt template + диалог), а не только текста диалога.
 
 ### Changed
-- Р—РµР»С‘РЅР°СЏ РїРѕРґСЃРІРµС‚РєР° РѕС‚РІРµС‚Р°: РїРѕРґСЃРІРµС‚РєР° Р·Р°РІРёСЃРёС‚ РѕС‚ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ РёРЅСЃС‚СЂСѓРјРµРЅС‚Р° `attempt_completion` РјРѕРґРµР»СЊСЋ вЂ” РµСЃР»Рё РјРѕРґРµР»СЊ РѕС‚РІРµС‡Р°РµС‚ С‚РµРєСЃС‚РѕРј Р±РµР· РІС‹Р·РѕРІР° СЌС‚РѕРіРѕ РёРЅСЃС‚СЂСѓРјРµРЅС‚Р°, РїРѕРґСЃРІРµС‚РєР° РЅРµ РїРѕСЏРІР»СЏРµС‚СЃСЏ (РѕР¶РёРґР°РµРјРѕРµ РїРѕРІРµРґРµРЅРёРµ РґР»СЏ Р»РѕРєР°Р»СЊРЅС‹С… РјРѕРґРµР»РµР№).
+- Зелёная подсветка ответа: подсветка зависит от использования инструмента `attempt_completion` моделью — если модель отвечает текстом без вызова этого инструмента, подсветка не появляется (ожидаемое поведение для локальных моделей).
 
-## [0.14.46] вЂ” 2026-07-29
+## [0.14.46] — 2026-07-29
 
 ### Fixed
-- РЎСѓРјРјР°СЂРёР·Р°С†РёСЏ: РѕР±СЂР°Р±РѕС‚РєР° `<think>`/`</think>` РІ text-РєР°РЅР°Р»Рµ вЂ” РјРѕРґРµР»СЊ РјРѕР¶РµС‚ РЅР°С‡Р°С‚СЊ СЂР°Р·РјС‹С€Р»РµРЅРёСЏ РІ reasoning-РєР°РЅР°Р»Рµ, РїСЂРѕРґРѕР»Р¶РёС‚СЊ РІ text-РєР°РЅР°Р»Рµ Рё Р·Р°РєСЂС‹С‚СЊ `</think>` С‚Р°Рј. РўРµРїРµСЂСЊ РѕСЃРёСЂРѕС‚РµРІС€РёРµ С‚РµРіРё РјС‹СЃР»РµР№ РєРѕСЂСЂРµРєС‚РЅРѕ СѓРґР°Р»СЏСЋС‚СЃСЏ РёР· С„РёРЅР°Р»СЊРЅРѕРіРѕ С‚РµРєСЃС‚Р° СЃСѓРјРјР°СЂРёР·Р°С†РёРё.
+- Суммаризация: обработка `<think>`/`</think>` в text-канале — модель может начать размышления в reasoning-канале, продолжить в text-канале и закрыть `</think>` там. Теперь осиротевшие теги мыслей корректно удаляются из финального текста суммаризации.
 
 ### Changed
-- РћС‚Р»Р°РґРѕС‡РЅС‹Рµ С„Р°Р№Р»С‹ СЃСѓРјРјР°СЂРёР·Р°С†РёРё: РґРѕР±Р°РІР»РµРЅС‹ `PAYLOAD_*.json` (РїРѕР»РЅС‹Р№ JSON-Р·Р°РїСЂРѕСЃ Рє РјРѕРґРµР»Рё: messages array + provider config) Рё `RAW_CHUNKS_JSON_*.json` (РїРѕР»РЅС‹Р№ СЃС‹СЂРѕР№ JSON РєР°Р¶РґРѕРіРѕ С‡Р°РЅРєР° РѕС‚ РјРѕРґРµР»Рё).
+- Отладочные файлы суммаризации: добавлены `PAYLOAD_*.json` (полный JSON-запрос к модели: messages array + provider config) и `RAW_CHUNKS_JSON_*.json` (полный сырой JSON каждого чанка от модели).
 
-## [0.14.45] вЂ” 2026-07-29
-
-### Fixed
-- Р Р°СЃСЃРёРЅС…СЂРѕРЅ РїРѕР»РѕСЃРєРё РєРѕРЅС‚РµРєСЃС‚Р° Рё Р°РІС‚РѕРєРѕРјРїР°РєС†РёРё РїРѕСЃР»Рµ СЃРјРµРЅС‹ РѕРєРЅР° LM Studio mid-session: live `loaded_context_length` С„РѕСЂСЃРёС‚СЃСЏ РїСЂРё РєРѕРјРїР°РєС†РёРё/СЃРµСЃСЃРёРё Рё РѕР±РЅРѕРІР»СЏРµС‚ РѕР±С‰РёР№ РєСЌС€ + `lmStudioMaxTokens`.
-- Webview РїРµСЂРµС‡РёС‚С‹РІР°РµС‚ РјРѕРґРµР»СЊ РїСЂРё РёР·РјРµРЅРµРЅРёРё `lmStudioMaxTokens` / Ollama ctx; Р·РЅР°РјРµРЅР°С‚РµР»СЊ РїРѕР»РѕСЃРєРё Р±РµСЂС‘С‚ `contextBudget.contextWindow`, РµСЃР»Рё РѕРЅ СѓР¶Рµ РїСЂРёС€С‘Р» РёР· СЃРµСЃСЃРёРё.
-- Р§РёСЃР»РёС‚РµР»СЊ РїРѕР»РѕСЃРєРё: РµСЃР»Рё РЅРѕРІР°СЏ РѕС†РµРЅРєР° РєРѕРЅС‚РµРєСЃС‚Р° РІС‹С€Рµ СѓСЃС‚Р°СЂРµРІС€РµРіРѕ `tokensIn`, РїРѕРєР°Р·С‹РІР°РµРј РѕС†РµРЅРєСѓ (РєР°Рє РІ В«рџ“Љ РљРѕРЅС‚РµРєСЃС‚В»); Р±РѕР»РµРµ РЅРёР·РєР°СЏ РѕС†РµРЅРєР° РїРѕ-РїСЂРµР¶РЅРµРјСѓ РЅРµ СЃР±РёРІР°РµС‚ measured usage.
-- РЎРѕР±С‹С‚РёРµ `context_stats` РїРµСЂРµРґ РєРѕРјРїР°РєС†РёРµР№ РїРёС€РµС‚ `api_req_started` СЃ `contextBudget`, С‡С‚РѕР±С‹ РїРѕР»РѕСЃРєР° СЃСЂР°Р·Сѓ СЃРѕРІРїР°Р»Р° СЃ С‚РµРєСЃС‚РѕРј РєРѕРјРїР°РєС†РёРё.
-
-## [0.14.44] вЂ” 2026-07-29
+## [0.14.45] — 2026-07-29
 
 ### Fixed
-- РћР±Р·РѕСЂ РїСЂРѕРµРєС‚Р°: СѓР±СЂР°РЅРѕ РїСЂРѕС‚РёРІРѕСЂРµС‡РёРµ РІ РїСЂР°РІРёР»Р°С… (СЂР°РЅСЊС€Рµ `agentario-global-rules` СЃРѕРІРµС‚РѕРІР°Р» `Get-ChildItem -Depth`, Р° shell СЌС‚Рѕ Р±Р»РѕРєРёСЂРѕРІР°Р») вЂ” Р»РёСЃС‚РёРЅРі С‡РµСЂРµР· shell Р·Р°РїСЂРµС‰С‘РЅ СЏРІРЅРѕ.
-- РџСЂРѕРјРїС‚/РѕРїРёСЃР°РЅРёРµ `run_commands`/РѕС€РёР±РєР° bypass: СЃС‚Р°СЂС‚ РѕР±Р·РѕСЂР° С‚РѕР»СЊРєРѕ СЃ `git status` (Р±РµР· С†РµРїРѕС‡РєРё listing), РґР°Р»СЊС€Рµ `read_files` РёР»Рё `semantic_search`.
+- Рассинхрон полоски контекста и автокомпакции после смены окна LM Studio mid-session: live `loaded_context_length` форсится при компакции/сессии и обновляет общий кэш + `lmStudioMaxTokens`.
+- Webview перечитывает модель при изменении `lmStudioMaxTokens` / Ollama ctx; знаменатель полоски берёт `contextBudget.contextWindow`, если он уже пришёл из сессии.
+- Числитель полоски: если новая оценка контекста выше устаревшего `tokensIn`, показываем оценку (как в «📊 Контекст»); более низкая оценка по-прежнему не сбивает measured usage.
+- Событие `context_stats` перед компакцией пишет `api_req_started` с `contextBudget`, чтобы полоска сразу совпала с текстом компакции.
 
-## [0.14.43] вЂ” 2026-07-29
+## [0.14.44] — 2026-07-29
+
+### Fixed
+- Обзор проекта: убрано противоречие в правилах (раньше `agentario-global-rules` советовал `Get-ChildItem -Depth`, а shell это блокировал) — листинг через shell запрещён явно.
+- Промпт/описание `run_commands`/ошибка bypass: старт обзора только с `git status` (без цепочки listing), дальше `read_files` или `semantic_search`.
+
+## [0.14.43] — 2026-07-29
 
 ### Changed
-- РРЅРґРµРєСЃР°С†РёСЏ: СѓР±СЂР°РЅ Р»РёРјРёС‚ В«РїРµСЂРІС‹Рµ 2 MBВ» вЂ” РІСЃРµ С„Р°Р№Р»С‹ РёР· whitelist/basename С‡РёС‚Р°СЋС‚СЃСЏ Рё РёРЅРґРµРєСЃРёСЂСѓСЋС‚СЃСЏ С†РµР»РёРєРѕРј, Р±РµР· СЃС‚Р°С‚СѓСЃР° `partial` РёР·вЂ‘Р·Р° РѕР±СЂРµР·РєРё С‡С‚РµРЅРёСЏ.
+- Индексация: убран лимит «первые 2 MB» — все файлы из whitelist/basename читаются и индексируются целиком, без статуса `partial` из‑за обрезки чтения.
 
-## [0.14.42] вЂ” 2026-07-29
-
-### Fixed
-- **MCP РїРѕСЃР»Рµ РїРµСЂРµР·Р°РїСѓСЃРєР° / РІРєР»СЋС‡РµРЅРёСЏ:** РѕС‡РµСЂРµРґСЊ РїРѕРґРєР»СЋС‡РµРЅРёР№ РІ `McpHub` СЃРµСЂРёР°Р»РёР·СѓРµС‚ init, watcher, seed reload Рё toggle вЂ” Р±РѕР»СЊС€Рµ РЅРµ С‚РµСЂСЏСЋС‚СЃСЏ СЃРµСЂРІРµСЂС‹ РёР·вЂ‘Р·Р° РіРѕРЅРѕРє.
-- РЎРµСЃСЃРёСЏ Р¶РґС‘С‚ `waitUntilConnectionsSettled` РїРµСЂРµРґ СЃРЅРёРјРєРѕРј MCP tools вЂ” РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹ РґРѕСЃС‚СѓРїРЅС‹ СЃСЂР°Р·Сѓ, Р° РЅРµ РїРѕСЃР»Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ СЂРµСЃС‚Р°СЂС‚Р° СЃРµСЃСЃРёРё.
-- Seed MCP: Р°С‚РѕРјР°СЂРЅР°СЏ Р·Р°РїРёСЃСЊ С‡РµСЂРµР· settings lock; РІСЃРµРіРґР° reload РїРѕСЃР»Рµ seed; РїРѕС‡РёРЅРєР° `npx`/PATH РЅР° Windows РґР»СЏ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… СЃРµСЂРІРµСЂРѕРІ; РїСѓСЃС‚РѕР№ primary settings Р±РѕР»СЊС€Рµ РЅРµ РїРµСЂРµРєСЂС‹РІР°РµС‚ legacy-РєРѕРЅС„РёРі Р±РµР· merge.
-
-## [0.14.41] вЂ” 2026-07-29
+## [0.14.42] — 2026-07-29
 
 ### Fixed
-- РЎР±РѕСЂРєР° `@agentario/core`: РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ РёРјРїРѕСЂС‚ `MessageWithMetadata`; `DEFAULT_FILE_READ_OPTIONS` СЃРѕРІРјРµСЃС‚РёРј СЃ РѕРїС†РёРѕРЅР°Р»СЊРЅС‹Рј `summarizeLargeFile`.
+- **MCP после перезапуска / включения:** очередь подключений в `McpHub` сериализует init, watcher, seed reload и toggle — больше не теряются серверы из‑за гонок.
+- Сессия ждёт `waitUntilConnectionsSettled` перед снимком MCP tools — инструменты доступны сразу, а не после следующего рестарта сессии.
+- Seed MCP: атомарная запись через settings lock; всегда reload после seed; починка `npx`/PATH на Windows для уже существующих серверов; пустой primary settings больше не перекрывает legacy-конфиг без merge.
 
-## [0.14.40] вЂ” 2026-07-29
+## [0.14.41] — 2026-07-29
+
+### Fixed
+- Сборка `@agentario/core`: неиспользуемый импорт `MessageWithMetadata`; `DEFAULT_FILE_READ_OPTIONS` совместим с опциональным `summarizeLargeFile`.
+
+## [0.14.40] — 2026-07-29
 
 ### Added
-- Р‘РѕР»СЊС€РёРµ С„Р°Р№Р»С‹ (`read_files` Р±РµР· РґРёР°РїР°Р·РѕРЅР° СЃС‚СЂРѕРє): Р±Р»РѕРє `=== FILE SUMMARY ===` вЂ” LLM-СЃР°РјРјР°СЂРё (РµСЃР»Рё РґРѕСЃС‚СѓРїРµРЅ РїСЂРѕРІР°Р№РґРµСЂ) РёР»Рё outline-based fallback; Р·Р°С‚РµРј РїСЂРµРІСЊСЋ РїРµСЂРІС‹С… 200 СЃС‚СЂРѕРє Рё РЅР°РІРёРіР°С†РёРѕРЅРЅР°СЏ РїРѕРґСЃРєР°Р·РєР°.
-- UI С‡Р°С‚Р°: СЃР°РјРјР°СЂРё Р±РѕР»СЊС€РѕРіРѕ С„Р°Р№Р»Р° РІ СЂР°СЃРєСЂС‹РІР°СЋС‰РµРјСЃСЏ Р°РєРєРѕСЂРґРµРѕРЅРµ В«РЎР°РјРјР°СЂРё С„Р°Р№Р»Р°В»; РґРёР°РїР°Р·РѕРЅ СЃС‚СЂРѕРє РёР· Р·Р°РіРѕР»РѕРІРєР° `PREVIEW`.
-- `MessageBuilder`: РїСЂРё СѓСЃРµС‡РµРЅРёРё tool result СЃРµРєС†РёСЏ FILE SUMMARY СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ, СЂРµР¶РµС‚СЃСЏ РїСЂРµРІСЊСЋ/outline.
+- Большие файлы (`read_files` без диапазона строк): блок `=== FILE SUMMARY ===` — LLM-саммари (если доступен провайдер) или outline-based fallback; затем превью первых 200 строк и навигационная подсказка.
+- UI чата: саммари большого файла в раскрывающемся аккордеоне «Саммари файла»; диапазон строк из заголовка `PREVIEW`.
+- `MessageBuilder`: при усечении tool result секция FILE SUMMARY сохраняется, режется превью/outline.
 
 ### Changed
-- `CoreSessionConfig.toolContextMetadata` РїСЂРѕРєРёРґС‹РІР°РµС‚СЃСЏ РІ `AgentConfig` Рё РґР°Р»РµРµ РІ `AgentToolContext.metadata` (summarizeLargeFile РёР· session-factory).
-- РРЅРґРµРєСЃР°С†РёСЏ РєРѕРґРѕРІРѕР№ Р±Р°Р·С‹: `isIndexing=true` СЃСЂР°Р·Сѓ РїСЂРё СЃС‚Р°СЂС‚Рµ `build()`, РґРѕ РѕР±С…РѕРґР° С„Р°Р№Р»РѕРІ Рё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё embeddings.
-- UI РёРЅРґРµРєСЃР°С†РёРё: progress bar `N / M` РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ РїРѕ С…РѕРґСѓ (poll РєР°Р¶РґС‹Рµ 0.5 СЃ РІРѕ РІСЂРµРјСЏ СЂР°Р±РѕС‚С‹), Р° РЅРµ С‚РѕР»СЊРєРѕ СЃРїРёРЅРЅРµСЂ РґРѕ РїРѕР»РЅРѕРіРѕ Р·Р°РІРµСЂС€РµРЅРёСЏ.
+- `CoreSessionConfig.toolContextMetadata` прокидывается в `AgentConfig` и далее в `AgentToolContext.metadata` (summarizeLargeFile из session-factory).
+- Индексация кодовой базы: `isIndexing=true` сразу при старте `build()`, до обхода файлов и инициализации embeddings.
+- UI индексации: progress bar `N / M` обновляется по ходу (poll каждые 0.5 с во время работы), а не только спиннер до полного завершения.
 
-## [0.14.39] вЂ” 2026-07-29
-
-### Changed
-- РЎСѓРјРјР°СЂРёР·Р°С†РёСЏ (agentic): СѓР±СЂР°РЅС‹ `/no_think`, `thinking: false` Рё РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅС‹Р№ `maxOutputTokens=chunkГ—2` вЂ” РЅРµ Р»РѕРјР°СЋС‚ Р±СЋРґР¶РµС‚ СЂР°Р·РјС‹С€Р»РµРЅРёР№ LM Studio.
-- Р§Р°РЅРєРё СЃСѓРјРјР°СЂРёР·Р°С†РёРё: `tool_result` / thinking Р±РѕР»СЊС€Рµ РЅРµ РѕР±СЂРµР·Р°СЋС‚СЃСЏ РґРѕ 2k; РєСЂСѓРїРЅС‹Рµ Р±Р»РѕРєРё СѓС…РѕРґСЏС‚ РІ РѕС‚РґРµР»СЊРЅС‹Рµ СЃРѕР»Рѕ-С‡Р°РЅРєРё СЂР°Р·РјРµСЂРѕРј РґРѕ 90% РѕРєРЅР° РјРѕРґРµР»Рё; РїСЂРё СЂР°Р·Р±РёРµРЅРёРё СЃР»РµРґСѓСЋС‰РµРіРѕ РєСѓСЃРєР° РґРѕР±Р°РІР»СЏРµС‚СЃСЏ РјРµС‚РєР° `[РџСЂРѕРґРѕР»Р¶РµРЅРёРµ: вЂ¦]`.
-- РЎС‹СЂРѕРµ СЃРѕРґРµСЂР¶РёРјРѕРµ Р±Р»РѕРєРѕРІ `file` РІ С‡Р°РЅРєРё СЃСѓРјРјР°СЂРёР·Р°С†РёРё С‡Р°С‚Р° РЅРµ РїРµСЂРµРґР°С‘С‚СЃСЏ (С‚РѕР»СЊРєРѕ РїСѓС‚СЊ-Р·Р°РіР»СѓС€РєР°) вЂ” РїРѕР»РЅРѕРµ С‚РµР»Рѕ С„Р°Р№Р»Р° РґРѕР»Р¶РЅРѕ Р¶РёС‚СЊ РІ СЃР°РјРјР°СЂРё С„Р°Р№Р»Р° (РѕС‚РґРµР»СЊРЅС‹Р№ РїР°Р№РїР»Р°Р№РЅ).
-
-## [0.14.38] вЂ” 2026-07-29
+## [0.14.39] — 2026-07-29
 
 ### Changed
-- Р Р°Р·РјС‹С€Р»РµРЅРёСЏ РІ Р»РµРЅС‚Рµ: РІРѕ РІСЂРµРјСЏ СЃС‚СЂРёРјРёРЅРіР° СЂР°СЃРєСЂС‹РІР°С€РєР° РѕС‚РєСЂС‹С‚Р° СЃ РїРѕР»РЅС‹Рј С‚РµРєСЃС‚РѕРј (Р±РµР· РїСЂРµРІСЊСЋ В«РїРѕСЃР»РµРґРЅРёРµ 5 СЃР»РѕРІВ»); РїРѕ РѕРєРѕРЅС‡Р°РЅРёРё СЃРІРѕСЂР°С‡РёРІР°РµС‚СЃСЏ.
-- Р Р°СЃРєСЂС‹С‚С‹Р№ Р±Р»РѕРє reasoning Р±РµР· `max-height`/РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ СЃРєСЂРѕР»Р»Р° вЂ” РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РІРµСЃСЊ С‚РµРєСЃС‚; РєРЅРѕРїРєР° В«Р Р°Р·РјС‹С€Р»РµРЅРёРµВ» sticky Рє РІРµСЂС…Сѓ Р»РµРЅС‚С‹ РїСЂРё РґР»РёРЅРЅРѕРј СЃРѕРґРµСЂР¶РёРјРѕРј.
-- РЎС‚Р°С‚РёСЃС‚РёРєР° `in/out` РїРѕРґ СЂР°Р·РјС‹С€Р»РµРЅРёРµРј РЅРµ РґСѓР±Р»РёСЂСѓРµС‚СЃСЏ, РµСЃР»Рё СЃР»РµРґРѕРј РµСЃС‚СЊ РѕР±С‹С‡РЅС‹Р№ С‚РµРєСЃС‚РѕРІС‹Р№ РѕС‚РІРµС‚ вЂ” СЃС‚СЂРѕРєР° stats РѕСЃС‚Р°С‘С‚СЃСЏ РїРѕРґ РѕС‚РІРµС‚РѕРј.
+- Суммаризация (agentic): убраны `/no_think`, `thinking: false` и принудительный `maxOutputTokens=chunk×2` — не ломают бюджет размышлений LM Studio.
+- Чанки суммаризации: `tool_result` / thinking больше не обрезаются до 2k; крупные блоки уходят в отдельные соло-чанки размером до 90% окна модели; при разбиении следующего куска добавляется метка `[Продолжение: …]`.
+- Сырое содержимое блоков `file` в чанки суммаризации чата не передаётся (только путь-заглушка) — полное тело файла должно жить в саммари файла (отдельный пайплайн).
 
-## [0.14.37] вЂ” 2026-07-29
+## [0.14.38] — 2026-07-29
+
+### Changed
+- Размышления в ленте: во время стриминга раскрывашка открыта с полным текстом (без превью «последние 5 слов»); по окончании сворачивается.
+- Раскрытый блок reasoning без `max-height`/внутреннего скролла — показывается весь текст; кнопка «Размышление» sticky к верху ленты при длинном содержимом.
+- Статистика `in/out` под размышлением не дублируется, если следом есть обычный текстовый ответ — строка stats остаётся под ответом.
+
+## [0.14.37] — 2026-07-29
 
 ### Fixed
-- `tsconfig.app.json` webview-ui: СѓР±СЂР°РЅС‹ `vitest/globals` Рё `@testing-library/jest-dom` РёР· `types` вЂ” СЌС‚Рё С‚РёРїС‹ РЅСѓР¶РЅС‹ С‚РѕР»СЊРєРѕ РґР»СЏ С‚РµСЃС‚РѕРІ, Р° С‚РµСЃС‚-С„Р°Р№Р»С‹ РёСЃРєР»СЋС‡РµРЅС‹ РёР· СЌС‚РѕРіРѕ РєРѕРЅС„РёРіР°. РЈСЃС‚СЂР°РЅРµРЅР° РѕС€РёР±РєР° В«Cannot find type definition fileВ».
+- `tsconfig.app.json` webview-ui: убраны `vitest/globals` и `@testing-library/jest-dom` из `types` — эти типы нужны только для тестов, а тест-файлы исключены из этого конфига. Устранена ошибка «Cannot find type definition file».
 
-## [0.14.36] вЂ” 2026-07-29
+## [0.14.36] — 2026-07-29
 
 ### Fixed
-- UI РїРѕР»РѕСЃРєРё РєРѕРЅС‚РµРєСЃС‚Р°: СЂР°Р·РґРµР»РµРЅС‹ В«Р’ С‚РµРєСѓС‰РµРј Р·Р°РїСЂРѕСЃРµВ» (Р·Р°РїРѕР»РЅРµРЅРёРµ РѕРєРЅР°) Рё В«РЎСѓРјРјР° Р·Р° РІРµСЃСЊ С‚Р°СЃРєВ» (РЅР°РєРѕРїР»РµРЅРЅС‹Рµ prompt/completion); в‰€ С‚РѕР»СЊРєРѕ РґР»СЏ РѕС†РµРЅРєРё.
-- LM Studio/Ollama: СЏРІРЅС‹Р№ `maxTokensPerTurn=4096` (РёРЅР°С‡Рµ СЃРµСЂРІРµСЂ С‡Р°СЃС‚Рѕ СЂРµР¶РµС‚ РѕС‚РІРµС‚ РЅР° 512 С‚РѕРєРµРЅРѕРІ вЂ” РѕР±СЂС‹РІ РѕС‚С‡С‘С‚Р°).
-- `attempt_completion`: РјР°РїРїРёРЅРі summary/textв†’result; РѕС‚РєР°Р· РЅР° РїСѓСЃС‚РѕРј `{}` СЃ РїРѕРЅСЏС‚РЅРѕР№ РѕС€РёР±РєРѕР№.
+- UI полоски контекста: разделены «В текущем запросе» (заполнение окна) и «Сумма за весь таск» (накопленные prompt/completion); ≈ только для оценки.
+- LM Studio/Ollama: явный `maxTokensPerTurn=4096` (иначе сервер часто режет ответ на 512 токенов — обрыв отчёта).
+- `attempt_completion`: маппинг summary/text→result; отказ на пустом `{}` с понятной ошибкой.
 
 ### Docs
-- README: thinking budget в‰  max tokens РІ LM Studio; `release/notes/v0.14.36.md` РґР»СЏ GitHub Release (РЅР°РєРѕРїРёС‚РµР»СЊРЅРѕ СЃ 0.14.33).
+- README: thinking budget ≠ max tokens в LM Studio; `release/notes/v0.14.36.md` для GitHub Release (накопительно с 0.14.33).
 
-## [0.14.35] вЂ” 2026-07-29
-
-### Fixed
-- `totalEstimated` / РїРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р°: РѕС†РµРЅРєР° С‡Р°С‚Р° Р±РѕР»СЊС€Рµ РЅРµ СЂРµР¶РµС‚ tool_result РґРѕ 2k (РєР°Рє compaction) вЂ” СЃС‡РёС‚Р°РµС‚ С‚РµР»Рѕ РєР°Рє Сѓ API (MessageBuilder); EMA-РєР°Р»РёР±СЂРѕРІРєР° РїРѕ `tokensIn` РїСЂРѕРІР°Р№РґРµСЂР°.
-- РџСЂРѕРјРїС‚ РѕР±Р·РѕСЂР°: СЃС‚Р°СЂС‚ СЃ `git status` + РєРѕСЂРЅРµРІС‹Рµ `read_files`, Р° РЅРµ СЃ 2вЂ“3 РїСѓСЃС‚С‹С… `semantic_search`.
-
-## [0.14.34] вЂ” 2026-07-29
+## [0.14.35] — 2026-07-29
 
 ### Fixed
-- РџРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° РЅР° РїР»Р°С€РєРµ С‚Р°СЃРєР°: РїРѕСЃР»Рµ РѕС‚РІРµС‚Р° РјРѕРґРµР»Рё Р±РѕР»СЊС€Рµ РЅРµ РїСЂС‹РіР°РµС‚ РІРІРµСЂС… РїРѕ `tokensIn`, Р° Р·Р°С‚РµРј РІРЅРёР· РЅР° Р·Р°РЅРёР¶РµРЅРЅС‹Р№ `contextBudget.totalEstimated` РїСЂРё СЃС‚Р°СЂС‚Рµ СЃР»РµРґСѓСЋС‰РµРіРѕ С…РѕРґР°. РџСЂРµРґРїРѕС‡РёС‚Р°РµС‚СЃСЏ РїРѕСЃР»РµРґРЅРµРµ РёР·РјРµСЂРµРЅРЅРѕРµ usage РїСЂРѕРІР°Р№РґРµСЂР°; `в‰€` РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РґР»СЏ РѕС†РµРЅРєРё РґРѕ РїРµСЂРІРѕРіРѕ usage.
+- `totalEstimated` / полоска контекста: оценка чата больше не режет tool_result до 2k (как compaction) — считает тело как у API (MessageBuilder); EMA-калибровка по `tokensIn` провайдера.
+- Промпт обзора: старт с `git status` + корневые `read_files`, а не с 2–3 пустых `semantic_search`.
 
-## [0.14.33] вЂ” 2026-07-28
+## [0.14.34] — 2026-07-29
+
+### Fixed
+- Полоска контекста на плашке таска: после ответа модели больше не прыгает вверх по `tokensIn`, а затем вниз на заниженный `contextBudget.totalEstimated` при старте следующего хода. Предпочитается последнее измеренное usage провайдера; `≈` показывается только для оценки до первого usage.
+
+## [0.14.33] — 2026-07-28
 
 ### Fixed
 - Agent21: block re-reading same path after 2 read_files; unwrap quoted shell cmds; stronger listing reject hints; && blocked in bypass.
 
-## [0.14.32] вЂ” 2026-07-26
+## [0.14.32] — 2026-07-26
 
 ### Fixed
-- **РђРіРµРЅС‚20-Р»СѓРїС‹**: РїРѕРІС‚РѕСЂ РѕРґРёРЅР°РєРѕРІС‹С… `run_commands` (РЅР°РїСЂРёРјРµСЂ git log) РѕС‚РєР»РѕРЅСЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ; loop-detection РґР»СЏ shell СѓР¶РµСЃС‚РѕС‡С‘РЅ (hard РЅР° 2-Рј).
-- `&&` РІ PowerShell Р±Р»РѕРєРёСЂСѓРµС‚СЃСЏ Рё РґР»СЏ structured command objects.
-- VS Code `semantic_search`: РїРѕРІС‚РѕСЂ query + demote vendor paths (`llama-cpp-src` Рё С‚.Рї.), РїСЂРёРѕСЂРёС‚РµС‚ РєРѕСЂРЅРµРІС‹С… С„Р°Р№Р»РѕРІ cwd.
-- РџСЂРѕРјРїС‚: РѕР±Р·РѕСЂ СЃ РєРѕСЂРЅСЏ (rules.md/convert.py), РЅРµ nested vendor; Р±С‹СЃС‚СЂРµРµ `attempt_completion`.
+- **Агент20-лупы**: повтор одинаковых `run_commands` (например git log) отклоняется сразу; loop-detection для shell ужесточён (hard на 2-м).
+- `&&` в PowerShell блокируется и для structured command objects.
+- VS Code `semantic_search`: повтор query + demote vendor paths (`llama-cpp-src` и т.п.), приоритет корневых файлов cwd.
+- Промпт: обзор с корня (rules.md/convert.py), не nested vendor; быстрее `attempt_completion`.
 
-## [0.14.31] вЂ” 2026-07-26
+## [0.14.31] — 2026-07-26
 
 ### Fixed
-- Р­РєСЂР°РЅС‹ В«Р§РµРј РјРѕРіСѓ РїРѕРјРѕС‡СЊ?В» / welcome / account: React-Р»РѕРіРѕС‚РёРїС‹ AgentarioLogo* Р·Р°РјРµРЅРµРЅС‹ СЃ СЂРѕР±РѕС‚Р° Cline РЅР° mark Agentario.
-- Activity bar: РјРѕРЅРѕС…СЂРѕРјРЅС‹Р№ icon.svg (#C5C5C5) РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РѕС‚СЂРёСЃРѕРІРєРё РІРєР»Р°РґРєРё РІ IDE.
+- Экраны «Чем могу помочь?» / welcome / account: React-логотипы AgentarioLogo* заменены с робота Cline на mark Agentario.
+- Activity bar: монохромный icon.svg (#C5C5C5) для корректной отрисовки вкладки в IDE.
 
-## [0.14.30] вЂ” 2026-07-26
+## [0.14.30] — 2026-07-26
 
 ### Changed
-- **РџРѕР»РЅС‹Р№ СЂРµР±СЂРµРЅРґРёРЅРі Cline в†’ Agentario** (UI, marketplace README, About/СЃСЃС‹Р»РєРё, С‚РµСЂРјРёРЅР°Р»С‹, MCP client name, walkthrough, РѕС€РёР±РєРё).
-- РђСЃСЃРµС‚С‹: СѓР±СЂР°РЅС‹ `cline-bot.*` / `sleepy-cline.svg`; РёРєРѕРЅРєРё `icon.svg`/`icon.png`/`agentario-icon.*`/`robot_panel_*` РЅР° РЅРѕРІРѕРј Р»РѕРіРѕС‚РёРїРµ.
-- `package.json`: author Agentario, keyword `agentario`, `AgentarioWalkthrough`, `$(rocket)` РІРјРµСЃС‚Рѕ `cline-icon`, context `agentario.isGeneratingCommit`.
-- ClinePass в†’ AgentarioPass РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… СЃС‚СЂРѕРєР°С…; CSS variant `--color-agentario`.
+- **Полный ребрендинг Cline → Agentario** (UI, marketplace README, About/ссылки, терминалы, MCP client name, walkthrough, ошибки).
+- Ассеты: убраны `cline-bot.*` / `sleepy-cline.svg`; иконки `icon.svg`/`icon.png`/`agentario-icon.*`/`robot_panel_*` на новом логотипе.
+- `package.json`: author Agentario, keyword `agentario`, `AgentarioWalkthrough`, `$(rocket)` вместо `cline-icon`, context `agentario.isGeneratingCommit`.
+- ClinePass → AgentarioPass в пользовательских строках; CSS variant `--color-agentario`.
 
 ### Notes
-- Extension ID `claude-dev` Рё view IDs `claude-dev-*` СЃРѕС…СЂР°РЅРµРЅС‹ РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё СѓСЃС‚Р°РЅРѕРІРєРё.
-- Provider id `cline` РІ РЅР°СЃС‚СЂРѕР№РєР°С… СЃРѕС…СЂР°РЅС‘РЅ (state/migration).
+- Extension ID `claude-dev` и view IDs `claude-dev-*` сохранены для совместимости установки.
+- Provider id `cline` в настройках сохранён (state/migration).
 
-## [0.14.29] вЂ” 2026-07-26
-
-### Changed
-- РќРѕРІС‹Р№ Р»РѕРіРѕС‚РёРї Agentario: `assets/icons/icon.svg` / `icon.png` (РёР· `new_icon.svg`); activity bar Рё marketplace icon РѕР±РЅРѕРІР»РµРЅС‹.
-
-## [0.14.28] вЂ” 2026-07-26
-
-### Fixed
-- **Р›РёСЃС‚РёРЅРі С‡РµСЂРµР· С‚РµСЂРјРёРЅР°Р»**: `Get-ChildItem`/`ls`/`dir` Рё `Get-Content`/`cat` РїРѕ РёСЃС…РѕРґРЅРёРєР°Рј/docs Р±Р»РѕРєРёСЂСѓСЋС‚СЃСЏ РІ `run_commands` СЃ РїРѕРґСЃРєР°Р·РєРѕР№ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РёРЅРґРµРєСЃ (`semantic_search`/`search_codebase`) Рё `read_files`.
-- **Р—Р°С†РёРєР»РёРІР°РЅРёРµ semantic_search**: РїРѕРІС‚РѕСЂ С‚РѕРіРѕ Р¶Рµ query РѕС‚РєР»РѕРЅСЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ; loop-detection РґР»СЏ search СѓР¶РµСЃС‚РѕС‡С‘РЅ (hard РЅР° 2-Рј РѕРґРёРЅР°РєРѕРІРѕРј РІС‹Р·РѕРІРµ).
-- РџСЂРѕРјРїС‚: РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ вЂ” `*.md`; РµСЃР»Рё docs РЅРµС‚ вЂ” С‡РёС‚Р°С‚СЊ РєРѕРґ Рё Р·Р°РІРµСЂС€Р°С‚СЊ; РЅРµ В«РїРµСЂРµРёРЅРґРµРєСЃРёСЂРѕРІР°С‚СЊВ» С‡РµСЂРµР· shell.
-
-## [0.14.27] вЂ” 2026-07-26
-
-### Fixed
-- **Р›РѕР¶РЅС‹Р№ С‚СЂРёРіРіРµСЂ Р°РІС‚РѕРєРѕРјРїР°РєС†РёРё**: РІ `prepareTurn` СѓС…РѕРґРёР»Р° **СЃСѓРјРјР°** `inputTokens` Р·Р° РІРµСЃСЊ run (26k), Р° РЅРµ С‚РѕРєРµРЅС‹ РїРѕСЃР»РµРґРЅРµРіРѕ Р·Р°РїСЂРѕСЃР° (~10k). РўРµРїРµСЂСЊ РїРµСЂРµРґР°С‘С‚СЃСЏ delta РёС‚РµСЂР°С†РёРё; Р·РЅР°С‡РµРЅРёСЏ СЃРёР»СЊРЅРѕ РІС‹С€Рµ estimate РѕС‚Р±СЂР°СЃС‹РІР°СЋС‚СЃСЏ.
-- РќРµ РєРѕРјРїР°РєС‚РёСЂРѕРІР°С‚СЊ, РїРѕРєР° `chat` < 12% РѕРєРЅР° (pinned system/tools/MCP РЅРµ СЃСѓРјРјР°СЂРёР·РёСЂСѓСЋС‚СЃСЏ Рё РЅРµ РґРѕР»Р¶РЅС‹ РґР°РІРёС‚СЊ РЅР° С‚СЂРёРіРіРµСЂ).
-- Р”Р°РјРїС‹ С‡Р°РЅРєРѕРІ СЃСѓРјРјР°СЂРёР·Р°С†РёРё СЃРЅРѕРІР° РїРёС€СѓС‚СЃСЏ РІ `Y:\Documents\agentario-compaction-debug` (РѕС‚РєР»СЋС‡РёС‚СЊ: `AGENTARIO_COMPACTION_DEBUG=0`).
-- Markdown-СЌРєСЃРїРѕСЂС‚ С‡Р°С‚Р°: С…СЂРѕРЅРѕР»РѕРіРёС‡РµСЃРєРёР№ РїРѕСЂСЏРґРѕРє РїРѕ `ts`, tools РїРѕ РѕС‚РґРµР»СЊРЅРѕСЃС‚Рё, system/compaction info СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ.
+## [0.14.29] — 2026-07-26
 
 ### Changed
-- РџРѕРґСЃРєР°Р·РєР° local models: РїСЂРё semantic_search СЃРЅР°С‡Р°Р»Р° РєРѕСЂРЅРµРІС‹Рµ С„Р°Р№Р»С‹ cwd, РЅРµ РїРµСЂРІС‹Рµ hits РёР· РІР»РѕР¶РµРЅРЅРѕРіРѕ llama.cpp/vendor.
+- Новый логотип Agentario: `assets/icons/icon.svg` / `icon.png` (из `new_icon.svg`); activity bar и marketplace icon обновлены.
 
-## [0.14.26] вЂ” 2026-07-26
+## [0.14.28] — 2026-07-26
 
 ### Fixed
-- **РђРІС‚РѕРєРѕРјРїР°РєС†РёСЏ cutIndex=0**: РїРѕСЃР»Рµ snap Рє РіСЂР°РЅРёС†Рµ turn Р±РѕР»СЊС€Рµ РЅРµ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ 0 (РїСѓСЃС‚РѕРµ `slice` в†’ В«cutIndex=0 РЅРµРєРѕСЂСЂРµРєС‚РµРЅВ» Рё РјРіРЅРѕРІРµРЅРЅС‹Р№ basic Р±РµР· С‡Р°РЅРєРѕРІ). Р РµР¶РµРј РїРµСЂРµРґ С‚РµРєСѓС‰РёРј user-turn.
-- **Р›РѕР¶РЅС‹Р№ СЂР°РЅРЅРёР№ С‚СЂРёРіРіРµСЂ**: РґР»СЏ РїРѕСЂРѕРіР° Р±РµСЂС‘Рј usage РјРѕРґРµР»Рё (+РґРѕ 25% estimate), Р° РЅРµ `max(usage, Р·Р°РІС‹С€РµРЅРЅР°СЏ char-РѕС†РµРЅРєР°)`; reserve СЃРЅРёР¶РµРЅ 25%в†’15% (С‚СЂРёРіРіРµСЂ ~85% РЅР° 32k).
-- РџСЂРё РїР°РґРµРЅРёРё agentic РІ UI СЏРІРЅРѕ РїРёС€РµС‚СЃСЏ fallback РЅР° basic.
+- **Листинг через терминал**: `Get-ChildItem`/`ls`/`dir` и `Get-Content`/`cat` по исходникам/docs блокируются в `run_commands` с подсказкой использовать индекс (`semantic_search`/`search_codebase`) и `read_files`.
+- **Зацикливание semantic_search**: повтор того же query отклоняется сразу; loop-detection для search ужесточён (hard на 2-м одинаковом вызове).
+- Промпт: документация по умолчанию — `*.md`; если docs нет — читать код и завершать; не «переиндексировать» через shell.
 
-## [0.14.25] вЂ” 2026-07-26
+## [0.14.27] — 2026-07-26
+
+### Fixed
+- **Ложный триггер автокомпакции**: в `prepareTurn` уходила **сумма** `inputTokens` за весь run (26k), а не токены последнего запроса (~10k). Теперь передаётся delta итерации; значения сильно выше estimate отбрасываются.
+- Не компактировать, пока `chat` < 12% окна (pinned system/tools/MCP не суммаризируются и не должны давить на триггер).
+- Дампы чанков суммаризации снова пишутся в `Y:\Documents\agentario-compaction-debug` (отключить: `AGENTARIO_COMPACTION_DEBUG=0`).
+- Markdown-экспорт чата: хронологический порядок по `ts`, tools по отдельности, system/compaction info сохраняется.
 
 ### Changed
-- Р”РёР°РіРЅРѕСЃС‚РёРєР° РЅРµРёР·РІРµСЃС‚РЅС‹С… tool (РЅР°РїСЂ. legacy `semantic_search` РІ РёСЃС‚РѕСЂРёРё): СЃРІС‘СЂРЅСѓС‚Р°СЏ СЂР°СЃРєСЂС‹РІР°С€РєР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ, С€СЂРёС„С‚ РЅР° С€Р°Рі РјРµРЅСЊС€Рµ.
+- Подсказка local models: при semantic_search сначала корневые файлы cwd, не первые hits из вложенного llama.cpp/vendor.
 
-## [0.14.24] вЂ” 2026-07-26
+## [0.14.26] — 2026-07-26
 
 ### Fixed
-- **РџСѓСЃС‚С‹Рµ Р°СЂС‚РµС„Р°РєС‚С‹ РїРѕСЃР»Рµ api_req**: `semantic_search` РЅРµ Р±С‹Р» РІ UI-РјР°РїРїРёРЅРіРµ Рё СЂРµРЅРґРµСЂРёР»СЃСЏ РєР°Рє `InvisibleSpacer` + `pt-2.5` (СЃРїР»СЋСЃРЅСѓС‚Р°СЏ СЃС‚СЂРѕРєР°). РўРµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РєР°Рє search (`semantic: вЂ¦`); РЅРµРёР·РІРµСЃС‚РЅС‹Рµ tool Р±РѕР»СЊС€Рµ РЅРµ РїСЂСЏС‡СѓС‚СЃСЏ РІ spacer.
-- РЎРЅРѕРІР° СЃРєСЂС‹С‚С‹ С€СѓРјРѕРІС‹Рµ `api_req_started` (iteration/budget/usage) вЂ” РѕРЅРё Р·Р°СЃРѕСЂСЏР»Рё Р»РµРЅС‚Сѓ РІ РґРёР°РіРЅРѕСЃС‚РёРєРµ 0.14.23.
+- **Автокомпакция cutIndex=0**: после snap к границе turn больше не возвращается 0 (пустое `slice` → «cutIndex=0 некорректен» и мгновенный basic без чанков). Режем перед текущим user-turn.
+- **Ложный ранний триггер**: для порога берём usage модели (+до 25% estimate), а не `max(usage, завышенная char-оценка)`; reserve снижен 25%→15% (триггер ~85% на 32k).
+- При падении agentic в UI явно пишется fallback на basic.
 
-## [0.14.23] вЂ” 2026-07-26
+## [0.14.25] — 2026-07-26
 
 ### Changed
-- **Р”РёР°РіРЅРѕСЃС‚РёРєР° Р»РµРЅС‚С‹**: Р±РѕР»СЊС€Рµ РЅРµ СЃРєСЂС‹РІР°РµРј РїСѓСЃС‚С‹Рµ reasoning/text/tool Рё `api_req_started` вЂ” РІРјРµСЃС‚Рѕ В«СЃРїР»СЋСЃРЅСѓС‚С‹С…В» Р°СЂС‚РµС„Р°РєС‚РѕРІ РІРёРґРЅС‹ РјРµС‚РєРё `[say=вЂ¦]`. РџСѓСЃС‚РѕР№ read РїРѕРєР°Р·С‹РІР°РµС‚ `вљ  read Р±РµР· path`.
-- **РџСЂРѕРјРїС‚ Р°РіРµРЅС‚Р°**: СЏРІРЅРѕ вЂ” РІС‹ Рё РµСЃС‚СЊ Р°РіРµРЅС‚; tools СЌС‚Рѕ API, РЅРµ РґСЂСѓРіРёРµ РјРѕРґРµР»Рё. Р’ `semantic_search` РЅРµР»СЊР·СЏ РІСЃС‚Р°РІР»СЏС‚СЊ С‚РµРєСЃС‚ Р·Р°РґР°РЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.
+- Диагностика неизвестных tool (напр. legacy `semantic_search` в истории): свёрнутая раскрывашка по умолчанию, шрифт на шаг меньше.
+
+## [0.14.24] — 2026-07-26
 
 ### Fixed
-- **semantic_search / read_files**: РѕС‚РєР»РѕРЅСЏСЋС‚СЃСЏ query/path РІРёРґР° В«РѕР·РЅР°РєРѕРјСЊСЃСЏвЂ¦В» / В«РїСЂРѕР°РЅР°Р»РёР·РёСЂСѓР№вЂ¦В» (РјРѕРґРµР»СЊ СЃР»Р°Р»Р° Р·Р°РґР°РЅРёРµ РІ tool РєР°Рє Р±СѓРґС‚Рѕ СЌС‚Рѕ СЃСѓР±Р°РіРµРЅС‚).
-- РћР±РЅРѕРІР»РµРЅС‹ `agentario-system-prompt.md` Рё local tools hint РїРѕРґ РєРѕСЂСЂРµРєС‚РЅС‹Р№ workflow (РєРѕСЂРѕС‚РєР°СЏ С‚РµРјР° в†’ РїСѓС‚СЊ в†’ С„Р°РєС‚С‹).
+- **Пустые артефакты после api_req**: `semantic_search` не был в UI-маппинге и рендерился как `InvisibleSpacer` + `pt-2.5` (сплюснутая строка). Теперь показывается как search (`semantic: …`); неизвестные tool больше не прячутся в spacer.
+- Снова скрыты шумовые `api_req_started` (iteration/budget/usage) — они засоряли ленту в диагностике 0.14.23.
 
-## [0.14.22] вЂ” 2026-07-26
-
-### Fixed
-- **Р—Р°С†РёРєР»РёРІР°РЅРёРµ Task Completed**: `attempt_completion` С‚РµРїРµСЂСЊ Р·Р°РІРµСЂС€Р°РµС‚ run (`lifecycle.completesRun`). Р Р°РЅСЊС€Рµ UI РїРѕРєР°Р·С‹РІР°Р» В«Task CompletedВ», Р° Р°РіРµРЅС‚ РїСЂРѕРґРѕР»Р¶Р°Р» С†РёРєР» Рё С‚СЂРµР±РѕРІР°Р» `submit_and_exit` вЂ” РјР°Р»С‹Рµ РјРѕРґРµР»Рё СЃРЅРѕРІР° РІС‹Р·С‹РІР°Р»Рё completion СЃ С‚РµРј Р¶Рµ С‚РµРєСЃС‚РѕРј.
-- **РџРѕРІС‚РѕСЂ completion**: РёРґРµРЅС‚РёС‡РЅС‹Рµ `attempt_completion` / `submit_and_exit` Р¶С‘СЃС‚РєРѕ СЃС‚РѕРїР°СЋС‚СЃСЏ СЃРѕ 2-РіРѕ СЂР°Р·Р°.
-- **РџСѓСЃС‚Р°СЏ СЃС‚СЂРѕРєР° РїРѕСЃР»Рµ РѕР¶РёРґР°РЅРёСЏ**: РїСѓСЃС‚РѕР№ partial reasoning Р±РѕР»СЊС€Рµ РЅРµ РѕСЃС‚Р°С‘С‚СЃСЏ РІ Р»РµРЅС‚Рµ СЃ `pt-2.5`/С€РµРІСЂРѕРЅРѕРј (СЃРїР»СЋСЃРЅСѓС‚С‹Р№ Р°СЂС‚РµС„Р°РєС‚).
+## [0.14.23] — 2026-07-26
 
 ### Changed
-- РџРѕРґСЃРєР°Р·РєРё РґР»СЏ local models: РЅРµ Р·Р°РІРµСЂС€Р°С‚СЊ РїРѕСЃР»Рµ РѕРґРЅРѕРіРѕ С„Р°Р№Р»Р° РЅР° Р·Р°РґР°РЅРёСЏС… В«РѕР·РЅР°РєРѕРјСЊСЃСЏ/РїСЂРѕР°РЅР°Р»РёР·РёСЂСѓР№В»; Р±РµР· С€Р°Р±Р»РѕРЅРЅС‹С… РѕС‚РІРµС‚РѕРІ Р±РµР· С„Р°РєС‚РѕРІ.
-
-## [0.14.21] вЂ” 2026-07-26
-
-### Fixed
-- **Thinking / РїСѓСЃС‚С‹Рµ СЃС‚СЂРѕРєРё**: РѕР¶РёРґР°РЅРёРµ РјРѕРґРµР»Рё вЂ” РѕРґРЅР° ephemeral-СЃС‚СЂРѕРєР° В«РћР¶РёРґР°РЅРёРµ РѕС‚РІРµС‚Р° РјРѕРґРµР»РёвЂ¦ NСЃВ» (РЅРµ РїРёС€РµС‚СЃСЏ РІ РёСЃС‚РѕСЂРёСЋ); СѓР±СЂР°РЅС‹ РґСѓР±Р»Рё Thinking+ThinkingвЂ¦ Рё СЃРїР»СЋСЃРЅСѓС‚С‹Р№ СЂСЏРґ СЃ С€РµРІСЂРѕРЅРѕРј РїРѕСЃР»Рµ РѕС‚РІРµС‚Р°.
-- **attempt_completion + command:null**: null/РїСѓСЃС‚РѕР№ command СѓРґР°Р»СЏРµС‚СЃСЏ РґРѕ РІР°Р»РёРґР°С†РёРё (Р»РѕРєР°Р»СЊРЅС‹Рµ РјРѕРґРµР»Рё Р±РѕР»СЊС€Рµ РЅРµ РІР°Р»СЏС‚ completion).
-- **Р­С…Рѕ Р·Р°РґР°РЅРёСЏ**: СѓСЃРёР»РµРЅС‹ РёРЅСЃС‚СЂСѓРєС†РёРё РґР»СЏ local models Рё РѕРїРёСЃР°РЅРёРµ attempt_completion вЂ” РЅРµ РєРѕРїРёСЂРѕРІР°С‚СЊ С‚РµРєСЃС‚ Р·Р°РїСЂРѕСЃР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РІ result/С„Р°Р№Р»С‹.
-
-## [0.14.20] вЂ” 2026-07-26
+- **Диагностика ленты**: больше не скрываем пустые reasoning/text/tool и `api_req_started` — вместо «сплюснутых» артефактов видны метки `[say=…]`. Пустой read показывает `⚠ read без path`.
+- **Промпт агента**: явно — вы и есть агент; tools это API, не другие модели. В `semantic_search` нельзя вставлять текст задания пользователя.
 
 ### Fixed
-- **РљРѕРЅС‚РµРєСЃС‚ 266k РЅР° РѕРєРЅРµ 32k**: РґР»СЏ РїРѕР»РѕСЃРєРё Рё tok/s СЃРЅРѕРІР° Р±РµСЂСѓС‚СЃСЏ per-request deltas (`inputTokens`/`outputTokens`), Р° РЅРµ session-СЃСѓРјРјР° `totalInputTokens` (СЃСѓРјРјР° РІСЃРµС… РёС‚РµСЂР°С†РёР№ Р°РіРµРЅС‚Р°).
-- **РџСѓСЃС‚С‹Рµ Thinking-СЃС‚СЂРѕРєРё**: Р·Р°РІРµСЂС€С‘РЅРЅС‹Р№ reasoning Р±РµР· С‚РµРєСЃС‚Р° РЅРµ СЂРµРЅРґРµСЂРёС‚СЃСЏ Рё С„РёР»СЊС‚СЂСѓРµС‚СЃСЏ РёР· Р»РµРЅС‚С‹.
-- **РРЅРґРµРєСЃР°С†РёСЏ**: `semantic_search` СЃРЅРѕРІР° РґРѕСЃС‚СѓРїРµРЅ РјР°Р»С‹Рј local-РјРѕРґРµР»СЏРј; `search_codebase` РѕС‚РєР»РѕРЅСЏРµС‚ NL-С„СЂР°Р·С‹ СЃ РїРѕРґСЃРєР°Р·РєРѕР№ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ semantic_search (РёРЅР°С‡Рµ РјРѕРґРµР»СЊ РіР°Р»Р»СЋС†РёРЅРёСЂРѕРІР°Р»Р° `home/user/project/docs/...`).
+- **semantic_search / read_files**: отклоняются query/path вида «ознакомься…» / «проанализируй…» (модель слала задание в tool как будто это субагент).
+- Обновлены `agentario-system-prompt.md` и local tools hint под корректный workflow (короткая тема → путь → факты).
 
-## [0.14.19] вЂ” 2026-07-26
-
-### Fixed
-- **read_files / search_codebase validation**: stringified arrays СЃ `end_line:EOF` Рё Windows-РїСѓС‚СЏРјРё (`\\t`/`\\r` в†’ TAB/CR) РЅРѕСЂРјР°Р»РёР·СѓСЋС‚СЃСЏ РґРѕ РІС‹РїРѕР»РЅРµРЅРёСЏ; `search_codebase.queries` С‚РѕР¶Рµ.
-- **РџСѓСЃС‚С‹Рµ СЃС‚СЂРѕРєРё РІ Р»РµРЅС‚Рµ**: С„РёР»СЊС‚СЂ ZWSP/control chars Рё tool-СЃРѕРѕР±С‰РµРЅРёР№ Р±РµР· РїСѓС‚Рё.
-- **РџРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р°**: С€РёСЂРёРЅР° СЃРµРіРјРµРЅС‚РѕРІ СЃР»РµРґСѓРµС‚ Р·Р° live `totalUsed`, Р° РЅРµ С‚РѕР»СЊРєРѕ Р·Р° СѓСЃС‚Р°СЂРµРІС€РёРј contextBudget.
-
-## [0.14.18] вЂ” 2026-07-26
+## [0.14.22] — 2026-07-26
 
 ### Fixed
-- **LM Studio peg-native 500**: РґР»СЏ local models РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ `parallel_tool_calls: false`, РІ РїСЂРѕРјРїС‚Рµ вЂ” СЂРѕРІРЅРѕ РѕРґРёРЅ tool call Р·Р° С…РѕРґ (РїР°СЂР°Р»Р»РµР»СЊРЅС‹Рµ РІС‹Р·РѕРІС‹ Р»РѕРјР°Р»Рё peg-parser Сѓ Llama 8B).
-- **РњР°Р»С‹Рµ local-РјРѕРґРµР»Рё**: РґР»СЏ llama-3.2-8b Рё Р°РЅР°Р»РѕРіРѕРІ РѕС‚РєР»СЋС‡Р°СЋС‚СЃСЏ `semantic_search` / skills / web / ask_question; РѕСЃС‚Р°СЋС‚СЃСЏ read/search/bash/editor. РРЅРґРµРєСЃР°С†РёСЏ С‡РµСЂРµР· `search_codebase`.
-- **РЎРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ**: РІРјРµСЃС‚Рѕ СЃС‹СЂРѕРіРѕ `peg-native format` вЂ” РїРѕРЅСЏС‚РЅРѕРµ РѕР±СЉСЏСЃРЅРµРЅРёРµ Рё С‡С‚Рѕ РґРµР»Р°С‚СЊ.
+- **Зацикливание Task Completed**: `attempt_completion` теперь завершает run (`lifecycle.completesRun`). Раньше UI показывал «Task Completed», а агент продолжал цикл и требовал `submit_and_exit` — малые модели снова вызывали completion с тем же текстом.
+- **Повтор completion**: идентичные `attempt_completion` / `submit_and_exit` жёстко стопаются со 2-го раза.
+- **Пустая строка после ожидания**: пустой partial reasoning больше не остаётся в ленте с `pt-2.5`/шевроном (сплюснутый артефакт).
 
 ### Changed
-- LM Studio / Ollama: СѓРєРѕСЂРѕС‡РµРЅРЅС‹Рµ РѕРїРёСЃР°РЅРёСЏ С‚СѓР»РѕРІ РЅР° wire; СѓР±СЂР°РЅС‹ РёРЅСЃС‚СЂСѓРєС†РёРё РїСЂРѕ parallel tools РёР· system prompt.
+- Подсказки для local models: не завершать после одного файла на заданиях «ознакомься/проанализируй»; без шаблонных ответов без фактов.
 
-## [0.14.17] вЂ” 2026-07-26
+## [0.14.21] — 2026-07-26
 
 ### Fixed
-- **Reasoning Р±РµР· РїРѕРґРґРµСЂР¶РєРё РјРѕРґРµР»Рё**: РґР»СЏ LM Studio / openai-compatible Р±РѕР»СЊС€Рµ РЅРµ РѕС‚РїСЂР°РІР»СЏРµС‚СЃСЏ `reasoning.effort` (РЅР°РїСЂРёРјРµСЂ `medium`), РµСЃР»Рё Сѓ РјРѕРґРµР»Рё РЅРµС‚ capability `reasoning`. РЈР±РёСЂР°РµС‚ WARN LM Studio Рё Р»РёС€РЅРёР№ KV РґР»СЏ Llama Instruct.
-- **Р—Р°С†РёРєР»РёРІР°РЅРёРµ tool calls**: РґРµС‚РµРєС‚ С‡РµСЂРµРґРѕРІР°РЅРёСЏ Aв†”B (read_files в†” search_codebase); soft=2 / hard=3 РІ VS Code. Р Р°РЅСЊС€Рµ СЃС‡С‘С‚С‡РёРє СЃР±СЂР°СЃС‹РІР°Р»СЃСЏ РїСЂРё СЃРјРµРЅРµ РёРјРµРЅРё С‚СѓР»Р°.
-- **РџСЃРµРІРґРѕ-Р·Р°РїСЂРѕСЃС‹ `file:1-EOF`**: `search_codebase` / `semantic_search` РѕС‚РєР»РѕРЅСЏСЋС‚ С‚Р°РєРёРµ СЃС‚СЂРѕРєРё СЃ РїРѕРґСЃРєР°Р·РєРѕР№ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `read_files`.
+- **Thinking / пустые строки**: ожидание модели — одна ephemeral-строка «Ожидание ответа модели… Nс» (не пишется в историю); убраны дубли Thinking+Thinking… и сплюснутый ряд с шевроном после ответа.
+- **attempt_completion + command:null**: null/пустой command удаляется до валидации (локальные модели больше не валят completion).
+- **Эхо задания**: усилены инструкции для local models и описание attempt_completion — не копировать текст запроса пользователя в result/файлы.
+
+## [0.14.20] — 2026-07-26
+
+### Fixed
+- **Контекст 266k на окне 32k**: для полоски и tok/s снова берутся per-request deltas (`inputTokens`/`outputTokens`), а не session-сумма `totalInputTokens` (сумма всех итераций агента).
+- **Пустые Thinking-строки**: завершённый reasoning без текста не рендерится и фильтруется из ленты.
+- **Индексация**: `semantic_search` снова доступен малым local-моделям; `search_codebase` отклоняет NL-фразы с подсказкой использовать semantic_search (иначе модель галлюцинировала `home/user/project/docs/...`).
+
+## [0.14.19] — 2026-07-26
+
+### Fixed
+- **read_files / search_codebase validation**: stringified arrays с `end_line:EOF` и Windows-путями (`\\t`/`\\r` → TAB/CR) нормализуются до выполнения; `search_codebase.queries` тоже.
+- **Пустые строки в ленте**: фильтр ZWSP/control chars и tool-сообщений без пути.
+- **Полоска контекста**: ширина сегментов следует за live `totalUsed`, а не только за устаревшим contextBudget.
+
+## [0.14.18] — 2026-07-26
+
+### Fixed
+- **LM Studio peg-native 500**: для local models принудительно `parallel_tool_calls: false`, в промпте — ровно один tool call за ход (параллельные вызовы ломали peg-parser у Llama 8B).
+- **Малые local-модели**: для llama-3.2-8b и аналогов отключаются `semantic_search` / skills / web / ask_question; остаются read/search/bash/editor. Индексация через `search_codebase`.
+- **Сообщение об ошибке**: вместо сырого `peg-native format` — понятное объяснение и что делать.
 
 ### Changed
-- РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚: СЏРІРЅС‹Р№ Р·Р°РїСЂРµС‚ `path:1-EOF` Рё С†РёРєР» readв†”search; РѕРїРёСЃР°РЅРёСЏ С‚СѓР»РѕРІ СѓС‚РѕС‡РЅРµРЅС‹ РїРѕРґ РёРЅРґРµРєСЃР°С†РёСЋ.
+- LM Studio / Ollama: укороченные описания тулов на wire; убраны инструкции про parallel tools из system prompt.
 
-## [0.14.16] вЂ” 2026-07-26
+## [0.14.17] — 2026-07-26
 
 ### Fixed
-- **Р‘РµР·РѕРїР°СЃРЅРѕСЃС‚СЊ РєРѕРјРїР°РєС†РёРё**: debug-РґР°РјРїС‹ Р·Р°РїСЂРѕСЃРѕРІ/РѕС‚РІРµС‚РѕРІ РјРѕРґРµР»Рё РІ `~/Documents/agentario-compaction-debug/` РїРёС€СѓС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё `AGENTARIO_COMPACTION_DEBUG=1`.
-- **Shell injection РІ cd**: `buildCdCommand()` СЌРєСЂР°РЅРёСЂСѓРµС‚ РєР°РІС‹С‡РєРё РІ РїСѓС‚Рё РїРµСЂРµРґ `cd` РІ terminal managers.
-- **semantic_search**: РґРѕР±Р°РІР»РµРЅ РІ `ALL_DEFAULT_TOOL_NAMES`; РІР°Р»РёРґР°С†РёСЏ РІС…РѕРґР° С‡РµСЂРµР· Zod (`SemanticSearchInputSchema`).
-- **РџРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° / silent catches**: Р»РѕРіРёСЂРѕРІР°РЅРёРµ РѕС€РёР±РѕРє РІРјРµСЃС‚Рѕ РїСѓСЃС‚С‹С… `.catch(() => {})` РІ SdkController Рё message coordinator.
+- **Reasoning без поддержки модели**: для LM Studio / openai-compatible больше не отправляется `reasoning.effort` (например `medium`), если у модели нет capability `reasoning`. Убирает WARN LM Studio и лишний KV для Llama Instruct.
+- **Зацикливание tool calls**: детект чередования A↔B (read_files ↔ search_codebase); soft=2 / hard=3 в VS Code. Раньше счётчик сбрасывался при смене имени тула.
+- **Псевдо-запросы `file:1-EOF`**: `search_codebase` / `semantic_search` отклоняют такие строки с подсказкой использовать `read_files`.
 
 ### Changed
-- **ExtensionStateContext**: `contextValue` РѕР±С‘СЂРЅСѓС‚ РІ `useMemo`; РЅР°РІРёРіР°С†РёСЏ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅР° С‡РµСЂРµР· `closeAllSecondaryViews`; СѓРґР°Р»РµРЅС‹ DEBUG console.log.
-- **isRecord**: РІС‹РЅРµСЃРµРЅ РІ `shared/parse/object.ts` (СѓР±СЂР°РЅС‹ РґСѓР±Р»РёРєР°С‚С‹).
-- **compaction**: РёР·РІР»РµС‡С‘РЅ `estimatePrepareTurnTokens`; СѓРґР°Р»С‘РЅ РјС‘СЂС‚РІС‹Р№ РїР°СЂР°РјРµС‚СЂ `doubleSummarization` РёР· agentic compaction; РґРµРґСѓРїР»РёРєР°С†РёСЏ resolvers РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅР°.
-- **Р‘СЂРµРЅРґРёРЅРі**: СЃС‚СЂРѕРєРё "Cline" в†’ "Agentario" РІ ChatRow.
+- Системный промпт: явный запрет `path:1-EOF` и цикл read↔search; описания тулов уточнены под индексацию.
 
-## [0.14.15] вЂ” 2026-07-26
+## [0.14.16] — 2026-07-26
 
 ### Fixed
-- **РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ СЂР°Р·РјРµСЂ С‡Р°РЅРєРѕРІ СЃСѓРјРјР°СЂРёР·Р°С†РёРё**: `createTokenEstimator()` СЃС‡РёС‚Р°Р» С‚РѕРєРµРЅС‹ РїРѕ `JSON.stringify(block).length` РґР»СЏ tool_use Рё tool_result Р±Р»РѕРєРѕРІ, Р° `serializeMessage()` РѕР±СЂРµР·Р°Р» tool output РґРѕ 2000 СЃРёРјРІРѕР»РѕРІ. Р Р°СЃС…РѕР¶РґРµРЅРёРµ РґРѕ 12.5x. РСЃРїСЂР°РІР»РµРЅРѕ: estimator С‚РµРїРµСЂСЊ СЃС‡РёС‚Р°РµС‚ РїРѕ РўРћРњРЈ Р–Р• С„РѕСЂРјР°С‚Сѓ С‡С‚Рѕ Рё `serializeMessage()`.
-- **РџРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° РЅРµ РѕР±РЅРѕРІР»СЏР»Р°СЃСЊ**: `normalizeUsageEvent()` С‡РёС‚Р°Р» DELTA `inputTokens` РІРјРµСЃС‚Рѕ РєСѓРјСѓР»СЏС‚РёРІРЅРѕРіРѕ `totalInputTokens`. РСЃРїСЂР°РІР»РµРЅРѕ.
-
-## [0.14.14] вЂ” 2026-07-26
-
-### Fixed
-- **PowerShell escape-СЃРёРјРІРѕР»С‹ РІ РїСѓС‚СЏС…**: РґРѕР±Р°РІР»РµРЅР° `sanitizePowerShellCommand()` РІ `shell.ts`.
+- **Безопасность компакции**: debug-дампы запросов/ответов модели в `~/Documents/agentario-compaction-debug/` пишутся только при `AGENTARIO_COMPACTION_DEBUG=1`.
+- **Shell injection в cd**: `buildCdCommand()` экранирует кавычки в пути перед `cd` в terminal managers.
+- **semantic_search**: добавлен в `ALL_DEFAULT_TOOL_NAMES`; валидация входа через Zod (`SemanticSearchInputSchema`).
+- **Полоска контекста / silent catches**: логирование ошибок вместо пустых `.catch(() => {})` в SdkController и message coordinator.
 
 ### Changed
-- **System prompt: РёРЅСЃС‚СЂСѓРєС†РёРё РїРѕ РёРЅРґРµРєСЃР°С†РёРё**: Р·Р°РїСЂРµС‚ РЅР° `Get-ChildItem -Recurse`, РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ `semantic_search` Рё `search_codebase`.
+- **ExtensionStateContext**: `contextValue` обёрнут в `useMemo`; навигация унифицирована через `closeAllSecondaryViews`; удалены DEBUG console.log.
+- **isRecord**: вынесен в `shared/parse/object.ts` (убраны дубликаты).
+- **compaction**: извлечён `estimatePrepareTurnTokens`; удалён мёртвый параметр `doubleSummarization` из agentic compaction; дедупликация resolvers контекст-окна.
+- **Брендинг**: строки "Cline" → "Agentario" в ChatRow.
 
-## [0.14.2] вЂ” 2026-07-24
-
-### Fixed
-- **Р”РёРЅР°РјРёС‡РµСЃРєРёР№ РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅРѕ**: `maxInputTokensResolver` С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°РµС‚СЃСЏ РЅР° РєР°Р¶РґРѕР№ РїСЂРѕРІРµСЂРєРµ РєРѕРјРїР°РєС†РёРё Рё С‡РёС‚Р°РµС‚ Р°РєС‚СѓР°Р»СЊРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ РёР· РЅР°СЃС‚СЂРѕРµРє РїСЂРѕРІР°Р№РґРµСЂР° (LM Studio/Ollama). Р Р°РЅРµРµ РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅРѕ РєСЌС€РёСЂРѕРІР°Р»РѕСЃСЊ РїСЂРё СЃРѕР·РґР°РЅРёРё СЃРµСЃСЃРёРё Рё РЅРµ РѕР±РЅРѕРІР»СЏР»РѕСЃСЊ РїСЂРё РїРµСЂРµР·Р°РіСЂСѓР·РєРµ РјРѕРґРµР»Рё.
-- **РђРґР°РїС‚РёРІРЅС‹Р№ reserveTokens**: С‚РµРїРµСЂСЊ СЃРѕСЃС‚Р°РІР»СЏРµС‚ 25% РѕС‚ РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅР° (clamp [4096, 16384]) РІРјРµСЃС‚Рѕ С„РёРєСЃРёСЂРѕРІР°РЅРЅС‹С… 16384. Р”Р»СЏ РјРѕРґРµР»Рё СЃ 32k РєРѕРЅС‚РµРєСЃС‚РѕРј С‚СЂРёРіРіРµСЂ РєРѕРјРїР°РєС†РёРё СЃРјРµСЃС‚РёР»СЃСЏ СЃ 48.8% РґРѕ 75%. РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РјРѕР¶РµС‚ РїРѕ-РїСЂРµР¶РЅРµРјСѓ Р·Р°РґР°С‚СЊ СЏРІРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ РІ РЅР°СЃС‚СЂРѕР№РєР°С….
-- **read_files preprocess**: РґРѕР±Р°РІР»РµРЅ `z.preprocess` РґР»СЏ СЂР°СЃРїР°РєРѕРІРєРё СЃС‚СЂРѕРєРёС„РёС†РёСЂРѕРІР°РЅРЅС‹С… JSON-РјР°СЃСЃРёРІРѕРІ РІ РїРѕР»Рµ `files`. Р Р°РЅРµРµ РјРѕРґРµР»СЊ РѕС‚РїСЂР°РІР»СЏР»Р° `"files":"[{...}]"` (СЃС‚СЂРѕРєР°), С‡С‚Рѕ РїСЂРѕС…РѕРґРёР»Рѕ РІР°Р»РёРґР°С†РёСЋ С‡РµСЂРµР· РІРµС‚РєСѓ `{ files: z.string() }`, РЅРѕ СЃРѕР·РґР°РІР°Р»Рѕ Р±РёС‚С‹Р№ Р·Р°РїСЂРѕСЃ.
-- **РЈРґР°Р»РµРЅРёРµ С‡Р°С‚Р° РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РіРµРЅРµСЂР°С†РёСЋ**: `clearTask` Рё `showTaskWithId` С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°СЋС‚ `endActiveSession` СЃ `awaitStop: true`, РґРѕР¶РёРґР°СЏСЃСЊ Р·Р°РІРµСЂС€РµРЅРёСЏ shutdown РїРµСЂРµРґ РѕС‡РёСЃС‚РєРѕР№ UI.
-- **MIN_USEFUL_CHAT_TOKENS**: Р°РґР°РїС‚РёРІРЅС‹Р№ РїРѕСЂРѕРі вЂ” 5% РѕС‚ РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅР° (min 500). Р Р°РЅРµРµ С„РёРєСЃРёСЂРѕРІР°РЅРЅС‹Рµ 500 С‚РѕРєРµРЅРѕРІ, С‡С‚Рѕ РІС‹Р·С‹РІР°Р»Рѕ РїРѕРІС‚РѕСЂРЅС‹Рµ Р±РµСЃРїРѕР»РµР·РЅС‹Рµ РєРѕРјРїР°РєС†РёРё РЅР° Р±РѕР»СЊС€РёС… РєРѕРЅС‚РµРєСЃС‚Р°С… (32k в†’ РєРѕРјРїР°РєС†РёСЏ РїСЂРё 1.5% Р·Р°РїРѕР»РЅРµРЅРёСЏ). РўРµРїРµСЂСЊ РґР»СЏ 32k РїРѕСЂРѕРі ~1600, РґР»СЏ 24.5k ~1225.
-
-## [0.14.1] вЂ” 2026-07-24
+## [0.14.15] — 2026-07-26
 
 ### Fixed
-- **publish-release.ps1**: РёСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° `Test-GhReleaseExists` РІ Windows PowerShell 5.1. Р¤СѓРЅРєС†РёСЏ РёСЃРїРѕР»СЊР·РѕРІР°Р»Р° `$PSNativeCommandUseErrorActionPreference` (PS7+ only), С‡С‚Рѕ РїСЂРёРІРѕРґРёР»Рѕ Рє "РїСЂРѕС‚РµРєР°РЅРёСЋ" РѕС€РёР±РєРё `gh release view` РІ outer catch Р±Р»РѕРє РїСЂРё `$ErrorActionPreference = "Stop"`. Р—Р°РјРµРЅРµРЅРѕ РЅР° `try/catch` РґР»СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё СЃ PS5.
+- **Некорректный размер чанков суммаризации**: `createTokenEstimator()` считал токены по `JSON.stringify(block).length` для tool_use и tool_result блоков, а `serializeMessage()` обрезал tool output до 2000 символов. Расхождение до 12.5x. Исправлено: estimator теперь считает по ТОМУ ЖЕ формату что и `serializeMessage()`.
+- **Полоска контекста не обновлялась**: `normalizeUsageEvent()` читал DELTA `inputTokens` вместо кумулятивного `totalInputTokens`. Исправлено.
 
-## [0.14.0] вЂ” 2026-07-24
+## [0.14.14] — 2026-07-26
+
+### Fixed
+- **PowerShell escape-символы в путях**: добавлена `sanitizePowerShellCommand()` в `shell.ts`.
+
+### Changed
+- **System prompt: инструкции по индексации**: запрет на `Get-ChildItem -Recurse`, использование `semantic_search` и `search_codebase`.
+
+## [0.14.2] — 2026-07-24
+
+### Fixed
+- **Динамический контекст-окно**: `maxInputTokensResolver` теперь вызывается на каждой проверке компакции и читает актуальное значение из настроек провайдера (LM Studio/Ollama). Ранее контекст-окно кэшировалось при создании сессии и не обновлялось при перезагрузке модели.
+- **Адаптивный reserveTokens**: теперь составляет 25% от контекст-окна (clamp [4096, 16384]) вместо фиксированных 16384. Для модели с 32k контекстом триггер компакции сместился с 48.8% до 75%. Пользователь может по-прежнему задать явное значение в настройках.
+- **read_files preprocess**: добавлен `z.preprocess` для распаковки строкифицированных JSON-массивов в поле `files`. Ранее модель отправляла `"files":"[{...}]"` (строка), что проходило валидацию через ветку `{ files: z.string() }`, но создавало битый запрос.
+- **Удаление чата останавливает генерацию**: `clearTask` и `showTaskWithId` теперь вызывают `endActiveSession` с `awaitStop: true`, дожидаясь завершения shutdown перед очисткой UI.
+- **MIN_USEFUL_CHAT_TOKENS**: адаптивный порог — 5% от контекст-окна (min 500). Ранее фиксированные 500 токенов, что вызывало повторные бесполезные компакции на больших контекстах (32k → компакция при 1.5% заполнения). Теперь для 32k порог ~1600, для 24.5k ~1225.
+
+## [0.14.1] — 2026-07-24
+
+### Fixed
+- **publish-release.ps1**: исправлена ошибка `Test-GhReleaseExists` в Windows PowerShell 5.1. Функция использовала `$PSNativeCommandUseErrorActionPreference` (PS7+ only), что приводило к "протеканию" ошибки `gh release view` в outer catch блок при `$ErrorActionPreference = "Stop"`. Заменено на `try/catch` для совместимости с PS5.
+
+## [0.14.0] — 2026-07-24
 
 ### Added
-- **3-Tier Context Protection System** вЂ” Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ Р·Р°С‰РёС‚Р° РєРѕРЅС‚РµРєСЃС‚Р° РѕС‚ РїРµСЂРµРїРѕР»РЅРµРЅРёСЏ РїСЂРё С‡С‚РµРЅРёРё Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ:
-  - **Tier 1: Smart Chunked Navigation** вЂ” regex-РїР°СЂСЃРёРЅРі С„СѓРЅРєС†РёР№, РєР»Р°СЃСЃРѕРІ, РёРЅС‚РµСЂС„РµР№СЃРѕРІ Рё СЌРєСЃРїРѕСЂС‚РѕРІ РёР· С„Р°Р№Р»РѕРІ. Р’РѕР·РІСЂР°С‰Р°РµС‚ outline СЃ СЃРёРіРЅР°С‚СѓСЂР°РјРё Рё РЅРѕРјРµСЂР°РјРё СЃС‚СЂРѕРє.
-  - **Tier 2: Tool Result Truncation Proxy** вЂ” СѓРјРЅРѕРµ СЃР¶Р°С‚РёРµ Р±РѕР»СЊС€РёС… СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ: head + tail + summary РІРјРµСЃС‚Рѕ РїСЂРѕСЃС‚РѕРіРѕ РѕР±СЂРµР·Р°РЅРёСЏ РїРѕСЃРµСЂРµРґРёРЅРµ.
-  - **Tier 3: AST Navigator** вЂ” Tree-sitter (WASM) РїР°СЂСЃРёРЅРі РґР»СЏ С‚РѕС‡РЅРѕРіРѕ РёР·РІР»РµС‡РµРЅРёСЏ СЃС‚СЂСѓРєС‚СѓСЂС‹ РєРѕРґР° (TypeScript, JavaScript, Python, Rust, Go, Java).
-- **Р’РєР»Р°РґРєР° "Р—Р°С‰РёС‚Р° РєРѕРЅС‚РµРєСЃС‚Р°"** РІ РЅР°СЃС‚СЂРѕР№РєР°С… СЃ CollapsibleSection РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РІСЃРµРјРё С‚СЂРµРјСЏ СѓСЂРѕРІРЅСЏРјРё Р·Р°С‰РёС‚С‹.
-- РќР°СЃС‚СЂРѕР№РєРё: РІРєР»СЋС‡РµРЅРёРµ/РѕС‚РєР»СЋС‡РµРЅРёРµ РєР°Р¶РґРѕРіРѕ СѓСЂРѕРІРЅСЏ, РїРѕСЂРѕРіРё, СЂР°Р·РјРµСЂС‹ head/tail, Р»РёРјРёС‚ outline.
+- **3-Tier Context Protection System** — автоматическая защита контекста от переполнения при чтении больших файлов:
+  - **Tier 1: Smart Chunked Navigation** — regex-парсинг функций, классов, интерфейсов и экспортов из файлов. Возвращает outline с сигнатурами и номерами строк.
+  - **Tier 2: Tool Result Truncation Proxy** — умное сжатие больших результатов: head + tail + summary вместо простого обрезания посередине.
+  - **Tier 3: AST Navigator** — Tree-sitter (WASM) парсинг для точного извлечения структуры кода (TypeScript, JavaScript, Python, Rust, Go, Java).
+- **Вкладка "Защита контекста"** в настройках с CollapsibleSection для управления всеми тремя уровнями защиты.
+- Настройки: включение/отключение каждого уровня, пороги, размеры head/tail, лимит outline.
 
-## [0.13.18] вЂ” 2026-07-24
-
-### Fixed
-- **Context display**: СЃС‚Р°С‚РёСЃС‚РёРєР° РєРѕРЅС‚РµРєСЃС‚Р° РїРµСЂРµРґ РєРѕРјРїР°РєС†РёРµР№ С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚ `estimatedInputTokens` (СЂРµР°Р»СЊРЅР°СЏ РѕС†РµРЅРєР°), Р° РЅРµ `cappedInputTokens`. Р Р°РЅРµРµ РїРѕРєР°Р·С‹РІР°Р»Рѕ 100% РґР°Р¶Рµ РїСЂРё ~8.6k СЂРµР°Р»СЊРЅС‹С… С‚РѕРєРµРЅРѕРІ.
-
-## [0.13.17] вЂ” 2026-07-24
+## [0.13.18] — 2026-07-24
 
 ### Fixed
-- **Context compaction**: `inputTokens` С‚РµРїРµСЂСЊ capped РЅР° `maxInputTokens`. Р Р°РЅРµРµ `lastInputTokens` РѕС‚ СЃСѓРјРјР°СЂРёР·Р°С‚РѕСЂР° РјРѕРі Р±С‹С‚СЊ 30k+ Рё С‚СЂРёРіРіРµСЂРёС‚СЊ РєРѕРјРїР°РєС†РёСЋ Р±РµСЃРєРѕРЅРµС‡РЅРѕ, С…РѕС‚СЏ СЂРµР°Р»СЊРЅС‹Р№ РєРѕРЅС‚РµРєСЃС‚ ~12k.
+- **Context display**: статистика контекста перед компакцией теперь показывает `estimatedInputTokens` (реальная оценка), а не `cappedInputTokens`. Ранее показывало 100% даже при ~8.6k реальных токенов.
 
-## [0.13.16] вЂ” 2026-07-23
+## [0.13.17] — 2026-07-24
 
 ### Fixed
+- **Context compaction**: `inputTokens` теперь capped на `maxInputTokens`. Ранее `lastInputTokens` от суммаризатора мог быть 30k+ и триггерить компакцию бесконечно, хотя реальный контекст ~12k.
 
-- **Р‘РµСЃРїРѕР»РµР·РЅР°СЏ РєРѕРјРїР°РєС†РёСЏ РїРѕСЃР»Рµ РїРµСЂРІРѕР№ СЃСѓРјРјР°СЂРёР·Р°С†РёРё.** Р”РѕР±Р°РІР»РµРЅР° РјРёРЅРёРјР°Р»СЊРЅР°СЏ РїРѕР»РµР·РЅР°СЏ threshold: РµСЃР»Рё chat < 500 С‚РѕРєРµРЅРѕРІ, Р°РІС‚РѕРєРѕРјРїР°РєС†РёСЏ РїСЂРѕРїСѓСЃРєР°РµС‚СЃСЏ. Р Р°РЅСЊС€Рµ РєРѕРјРїР°РєС†РёСЏ С‚СЂРёРіРіРµСЂРёР»Р°СЃСЊ РєР°Р¶РґРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ РґР°Р¶Рµ РєРѕРіРґР° СЃР¶РёРјР°С‚СЊ Р±С‹Р»Рѕ РЅРµС‡РµРіРѕ (pinned ~9k + chat ~400 = ~9.4k, С‡С‚Рѕ РІС‹С€Рµ threshold).
-
-## [0.13.15] вЂ” 2026-07-23
+## [0.13.16] — 2026-07-23
 
 ### Fixed
 
-- **Timestamps РІ СЌРєСЃРїРѕСЂС‚Рµ РєРѕРЅС‚РµРєСЃС‚Р°.** РСЃРїСЂР°РІР»РµРЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ `msg.ts` (SDK sequence) РЅР° `msg.createdAtMs` (СЂРµР°Р»СЊРЅРѕРµ РІСЂРµРјСЏ) вЂ” С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°СЋС‚СЃСЏ РєРѕСЂСЂРµРєС‚РЅС‹Рµ timestamps.
-- **РЎРѕС…СЂР°РЅРµРЅРёРµ СЃС‚Р°С‚РёСЃС‚РёРєРё РєРѕРјРїР°РєС†РёРё РІ РёСЃС‚РѕСЂРёРё.** РЎРѕРѕР±С‰РµРЅРёСЏ рџ“Љ (РєРѕРЅС‚РµРєСЃС‚ РґРѕ) Рё вњ… (СЂРµР·СѓР»СЊС‚Р°С‚ РєРѕРјРїР°РєС†РёРё) С‚РµРїРµСЂСЊ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ РёСЃС‚РѕСЂРёСЋ С‡Р°С‚Р°, Р° РІСЂРµРјРµРЅРЅС‹Рµ РёРЅРґРёРєР°С‚РѕСЂС‹ ("auto-compacting") РїРѕ-РїСЂРµР¶РЅРµРјСѓ С„РёР»СЊС‚СЂСѓСЋС‚СЃСЏ.
+- **Бесполезная компакция после первой суммаризации.** Добавлена минимальная полезная threshold: если chat < 500 токенов, автокомпакция пропускается. Раньше компакция триггерилась каждое сообщение даже когда сжимать было нечего (pinned ~9k + chat ~400 = ~9.4k, что выше threshold).
 
-## [0.13.14] вЂ” 2026-07-23
+## [0.13.15] — 2026-07-23
+
+### Fixed
+
+- **Timestamps в экспорте контекста.** Исправлено использование `msg.ts` (SDK sequence) на `msg.createdAtMs` (реальное время) — теперь показываются корректные timestamps.
+- **Сохранение статистики компакции в истории.** Сообщения 📊 (контекст до) и ✅ (результат компакции) теперь сохраняются в историю чата, а временные индикаторы ("auto-compacting") по-прежнему фильтруются.
+
+## [0.13.14] — 2026-07-23
 
 ### Changed
 
-- **РЈР»СѓС‡С€РµРЅРЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ Р°РІС‚РѕРєРѕРјРїР°РєС†РёРё РІ С‡Р°С‚Рµ.** РўРµРїРµСЂСЊ РїРµСЂРµРґ "auto-compacting" РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ СЃС‚Р°С‚РёСЃС‚РёРєР° РєРѕРЅС‚РµРєСЃС‚Р° (рџ“Љ С‚РѕРєРµРЅС‹/РїСЂРѕС†РµРЅС‚), Р° РїРѕСЃР»Рµ Р·Р°РІРµСЂС€РµРЅРёСЏ вЂ” СЂРµР·СѓР»СЊС‚Р°С‚ (вњ… Р±С‹Р»Рѕ/СЃС‚Р°Р»Рѕ/СЃСЌРєРѕРЅРѕРјР»РµРЅРѕ). РЎР°РјРѕ "auto-compacting" РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ СЃ Р°РЅРёРјР°С†РёРµР№ (РјРёРіР°СЋС‰РёРµ С‚РѕС‡РєРё).
+- **Улучшенное отображение автокомпакции в чате.** Теперь перед "auto-compacting" показывается статистика контекста (📊 токены/процент), а после завершения — результат (✅ было/стало/сэкономлено). Само "auto-compacting" отображается с анимацией (мигающие точки).
 
-## [0.13.13] вЂ” 2026-07-23
+## [0.13.13] — 2026-07-23
 
 ### Changed
 
-- **РћРїС‚РёРјРёР·Р°С†РёСЏ СЃРёСЃС‚РµРјРЅРѕРіРѕ РїСЂРѕРјРїС‚Р°.** РЎРѕРєСЂР°С‰С‘РЅ СЃ ~3.4k РґРѕ ~1.3k С‚РѕРєРµРЅРѕРІ: СѓР±СЂР°РЅС‹ РїРѕРІС‚РѕСЂС‹,е†—дЅ™РЅС‹Рµ РїРѕСЏСЃРЅРµРЅРёСЏ, СЃР¶Р°С‚С‹ СЃРµРєС†РёРё. Р’СЃРµ РїСЂР°РІРёР»Р° СЃРѕС…СЂР°РЅРµРЅС‹ РІ РєРѕРјРїР°РєС‚РЅРѕРј РІРёРґРµ.
-- **РћРїС‚РёРјРёР·Р°С†РёСЏ AGENT_MODE_INSTRUCTIONS.** РЎРѕРєСЂР°С‰С‘РЅ СЃ ~90 РґРѕ ~30 СЃС‚СЂРѕРє вЂ” РІСЃРµ РєР»СЋС‡РµРІС‹Рµ РїСЂР°РІРёР»Р° (anti-loop, planning, self-critique, Windows) СЃРѕС…СЂР°РЅРµРЅС‹.
+- **Оптимизация системного промпта.** Сокращён с ~3.4k до ~1.3k токенов: убраны повторы,冗余ные пояснения, сжаты секции. Все правила сохранены в компактном виде.
+- **Оптимизация AGENT_MODE_INSTRUCTIONS.** Сокращён с ~90 до ~30 строк — все ключевые правила (anti-loop, planning, self-critique, Windows) сохранены.
 
-## [0.13.12] вЂ” 2026-07-23
+## [0.13.12] — 2026-07-23
 
 ### Fixed
 
-- **Infinity guard РІ compaction.ts.** Р”РѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° `Number.isFinite()` РґР»СЏ `lastInputTokens` вЂ” РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ Р±РµСЃРєРѕРЅРµС‡РЅС‹Р№ С†РёРєР» РєРѕРјРїР°РєС†РёРё РїСЂРё РѕС€РёР±РєРµ РїСЂРѕРІР°Р№РґРµСЂР°.
-- **try/catch РґР»СЏ diagnostic logging.** Р›РѕРіРёСЂРѕРІР°РЅРёРµ tool result tokens РѕР±С‘СЂРЅСѓС‚Рѕ РІ try/catch вЂ” РЅРµ РєСЂР°С€РёС‚ РєРѕРјРїР°РєС†РёСЋ РїСЂРё malformed messages.
-- **Infinity guard РІ local-runtime-host.ts.** Р”РѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° `Number.isFinite()` РґР»СЏ `compactionMaxInput` вЂ” РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ СѓСЃС‚Р°РЅРѕРІРєСѓ `contextWindow: Infinity`.
-- **РўРµСЃС‚ getApiMetrics.test.ts.** РћР±РЅРѕРІР»РµРЅРѕ РѕР¶РёРґР°РµРјРѕРµ Р·РЅР°С‡РµРЅРёРµ СЃ 23 РЅР° 16 вЂ” СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РёСЃРєР»СЋС‡РµРЅРёСЋ `tokensOut` РёР· СЂР°СЃС‡С‘С‚Р° РєРѕРЅС‚РµРєСЃС‚Р°.
-- **РљРѕРјРјРµРЅС‚Р°СЂРёР№ РІ file-read.ts.** РСЃРїСЂР°РІР»РµРЅ "~50KB вЂ” roughly 500 lines" в†’ "~50KB threshold for auto-chunking".
+- **Infinity guard в compaction.ts.** Добавлена проверка `Number.isFinite()` для `lastInputTokens` — предотвращает бесконечный цикл компакции при ошибке провайдера.
+- **try/catch для diagnostic logging.** Логирование tool result tokens обёрнуто в try/catch — не крашит компакцию при malformed messages.
+- **Infinity guard в local-runtime-host.ts.** Добавлена проверка `Number.isFinite()` для `compactionMaxInput` — предотвращает установку `contextWindow: Infinity`.
+- **Тест getApiMetrics.test.ts.** Обновлено ожидаемое значение с 23 на 16 — соответствует исключению `tokensOut` из расчёта контекста.
+- **Комментарий в file-read.ts.** Исправлен "~50KB — roughly 500 lines" → "~50KB threshold for auto-chunking".
 
-## [0.13.11] вЂ” 2026-07-23
+## [0.13.11] — 2026-07-23
 
 ### Added
 
-- **Auto-chunking РґР»СЏ Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ.** `read_files` С‚РµРїРµСЂСЊ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕРіСЂР°РЅРёС‡РёРІР°РµС‚ С‡С‚РµРЅРёРµ РїРµСЂРІС‹РјРё 200 СЃС‚СЂРѕРєР°РјРё РґР»СЏ С„Р°Р№Р»РѕРІ >50KB, РµСЃР»Рё РЅРµ СѓРєР°Р·Р°РЅ `start_line`/`end_line`. РџСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ СЂР°Р·РґСѓРІР°РЅРёРµ РєРѕРЅС‚РµРєСЃС‚Р° СЃРѕРґРµСЂР¶РёРјС‹Рј Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ.
-- **Diagnostic logging tool result tokens.** РљРѕРјРїР°РєС†РёСЏ С‚РµРїРµСЂСЊ Р»РѕРіРёСЂСѓРµС‚ СЃРєРѕР»СЊРєРѕ С‚РѕРєРµРЅРѕРІ Р·Р°РЅРёРјР°СЋС‚ tool results РІ РєРѕРЅС‚РµРєСЃС‚Рµ (Р°Р±СЃРѕР»СЋС‚РЅРѕ Рё РІ РїСЂРѕС†РµРЅС‚Р°С… РѕС‚ chat).
+- **Auto-chunking для больших файлов.** `read_files` теперь автоматически ограничивает чтение первыми 200 строками для файлов >50KB, если не указан `start_line`/`end_line`. Предотвращает раздувание контекста содержимым больших файлов.
+- **Diagnostic logging tool result tokens.** Компакция теперь логирует сколько токенов занимают tool results в контексте (абсолютно и в процентах от chat).
 
 ### Changed
 
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚: РїСЂР°РІРёР»Р° СЂР°Р±РѕС‚С‹ СЃ С„Р°Р№Р»Р°РјРё.** Р”РѕР±Р°РІР»РµРЅС‹ РѕР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ РїСЂР°РІРёР»Р°: РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `semantic_search` РџР•Р Р•Р” С‡С‚РµРЅРёРµРј С„Р°Р№Р»РѕРІ, С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РЅСѓР¶РЅС‹Рµ СЃС‚СЂРѕРєРё С‡РµСЂРµР· `start_line`/`end_line`, РЅРµ С‡РёС‚Р°С‚СЊ С„Р°Р№Р»С‹ >500 СЃС‚СЂРѕРє С†РµР»РёРєРѕРј.
-- **РћРїРёСЃР°РЅРёСЏ С‚СѓР»СЃРѕРІ `read_files` Рё `semantic_search`.** РЈСЃРёР»РµРЅС‹ РѕРїРёСЃР°РЅРёСЏ С‡С‚РѕР±С‹ РЅР°РїСЂР°РІР»СЏС‚СЊ Р°РіРµРЅС‚Р° РЅР° РїСЂР°РІРёР»СЊРЅРѕРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ (line ranges, workflow: search в†’ read в†’ edit).
+- **Системный промпт: правила работы с файлами.** Добавлены обязательные правила: использовать `semantic_search` ПЕРЕД чтением файлов, читать только нужные строки через `start_line`/`end_line`, не читать файлы >500 строк целиком.
+- **Описания тулсов `read_files` и `semantic_search`.** Усилены описания чтобы направлять агента на правильное использование (line ranges, workflow: search → read → edit).
 
 ---
 
-## [0.13.10] вЂ” 2026-07-23
+## [0.13.10] — 2026-07-23
 
 ### Fixed
 
-- **РўСЂРёРіРіРµСЂ РєРѕРјРїР°РєС†РёРё: `Math.max(estimate, lastInputTokens)`.** РџСЂРµРґС‹РґСѓС‰РёР№ С„РёРєСЃ (0.13.8) РёСЃРїРѕР»СЊР·РѕРІР°Р» `lastInputTokens` РёР· РїСЂРµРґС‹РґСѓС‰РµРіРѕ РѕС‚РІРµС‚Р° РјРѕРґРµР»Рё, С‡С‚Рѕ РїСЂРёРІРѕРґРёР»Рѕ Рє Р·Р°РЅРёР¶РµРЅРёСЋ СЂР°Р·РјРµСЂР° РєРѕРЅС‚РµРєСЃС‚Р° РїРѕСЃР»Рµ tool calls (7824 РІРјРµСЃС‚Рѕ ~16k). РўРµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РјР°РєСЃРёРјСѓРј РёР· model-reported Рё estimate, С‡С‚РѕР±С‹ РЅРµ РїСЂРѕРїСѓСЃС‚РёС‚СЊ РјРѕРјРµРЅС‚, РєРѕРіРґР° РєРѕРЅС‚РµРєСЃС‚ РїСЂРµРІС‹С€Р°РµС‚ Р»РёРјРёС‚.
+- **Триггер компакции: `Math.max(estimate, lastInputTokens)`.** Предыдущий фикс (0.13.8) использовал `lastInputTokens` из предыдущего ответа модели, что приводило к занижению размера контекста после tool calls (7824 вместо ~16k). Теперь используется максимум из model-reported и estimate, чтобы не пропустить момент, когда контекст превышает лимит.
 
 ---
 
-## [0.13.9] вЂ” 2026-07-23
+## [0.13.9] — 2026-07-23
 
 ### Fixed
 
-- **РљРѕРЅС‚РµРєСЃС‚-РѕРєРЅРѕ РїСЂРѕРІР°Р№РґРµСЂР° РІ Р±СЋРґР¶РµС‚Рµ РєРѕРЅС‚РµРєСЃС‚Р°.** `estimateContextBudget` РІ orchestrator С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ СЂРµР°Р»СЊРЅРѕРµ РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅРѕ РїСЂРѕРІР°Р№РґРµСЂР° (LM Studio/Ollama) РІРјРµСЃС‚Рѕ РґРµС„РѕР»С‚Р° 128000 РёР· РєР°С‚Р°Р»РѕРіР° РјРѕРґРµР»РµР№. `compaction.maxInputTokens` (РІС‹С‡РёСЃР»РµРЅРЅС‹Р№ РІ `buildCompactionConfig` РёР· `providerContextWindow`) РїСЂРѕР±СЂР°СЃС‹РІР°РµС‚СЃСЏ РІ `knownModels[modelId].contextWindow` РїСЂРё РїРѕСЃС‚СЂРѕРµРЅРёРё `AgentConfig` РІ `local-runtime-host.ts`. Р­С‚Рѕ РёСЃРїСЂР°РІР»СЏРµС‚: (1) РїРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° РїРѕРєР°Р·С‹РІР°РµС‚ РїСЂР°РІРёР»СЊРЅРѕРµ `contextWindow`, (2) С‚СЂРёРіРіРµСЂ Р°РІС‚Рѕ-РєРѕРјРїР°РєС†РёРё СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РѕС‚ СЂРµР°Р»СЊРЅРѕРіРѕ РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅР°, Р° РЅРµ РѕС‚ 128000.
+- **Контекст-окно провайдера в бюджете контекста.** `estimateContextBudget` в orchestrator теперь использует реальное контекст-окно провайдера (LM Studio/Ollama) вместо дефолта 128000 из каталога моделей. `compaction.maxInputTokens` (вычисленный в `buildCompactionConfig` из `providerContextWindow`) пробрасывается в `knownModels[modelId].contextWindow` при построении `AgentConfig` в `local-runtime-host.ts`. Это исправляет: (1) полоска контекста показывает правильное `contextWindow`, (2) триггер авто-компакции рассчитывается от реального контекст-окна, а не от 128000.
 
 ---
 
-## [0.13.8] вЂ” 2026-07-23
+## [0.13.8] — 2026-07-23
 
 ### Fixed
 
-- **Р•РґРёРЅС‹Р№ СЂР°СЃС‡С‘С‚ РєРѕРЅС‚РµРєСЃС‚Р°: model-reported vs estimate.** РљРѕРјРїР°РєС†РёСЏ С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ СЂРµР°Р»СЊРЅС‹Рµ `inputTokens` РѕС‚ РјРѕРґРµР»Рё (РёР· РїСЂРµРґС‹РґСѓС‰РµРіРѕ РѕС‚РІРµС‚Р°) РµСЃР»Рё РґРѕСЃС‚СѓРїРЅС‹, fallback РЅР° РѕС†РµРЅРєСѓ РїРѕ СЃРёРјРІРѕР»Р°Рј (`chars/3`). Р­С‚Рѕ РґРµР»Р°РµС‚ PATH A (compaction) Рё PATH C (model-reported) РѕРґРёРЅР°РєРѕРІС‹РјРё. `lastInputTokens` РїРµСЂРµРґР°С‘С‚СЃСЏ РёР· `session-runtime-orchestrator` РІ `ContextPipelinePrepareTurnInput`.
-- **РљРѕРЅС‚РµРєСЃС‚-Р±Р°СЂ: СѓР±СЂР°РЅ `tokensOut` РёР· `getLastApiReqTotalTokens`.** Р’С‹С…РѕРґРЅС‹Рµ С‚РѕРєРµРЅС‹ РјРѕРґРµР»Рё РЅРµ Р·Р°РЅРёРјР°СЋС‚ РєРѕРЅС‚РµРєСЃС‚ вЂ” С‚РµРїРµСЂСЊ `total` РІРєР»СЋС‡Р°РµС‚ С‚РѕР»СЊРєРѕ `tokensIn + cacheWrites + cacheReads`. Р­С‚Рѕ СѓСЃС‚СЂР°РЅСЏРµС‚ СЂР°СЃСЃРёРЅС…СЂРѕРЅ РјРµР¶РґСѓ СЃС‚Р°С‚РёСЃС‚РёРєРѕР№ `in:` Рё РїРѕР»РѕСЃРєРѕР№ РєРѕРЅС‚РµРєСЃС‚Р°.
-- **РџСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ "Invalid prompt: messages must not be empty".** Р”РѕР±Р°РІР»РµРЅС‹ guards РІ `agent-runtime.ts` (РїСЂРѕРІРµСЂРєР° `result.messages.length === 0`), `agentic-compaction.ts` Рё `basic-compaction.ts` вЂ” РµСЃР»Рё РєРѕРјРїР°РєС†РёСЏ РІРµСЂРЅСѓР»Р° РїСѓСЃС‚РѕР№ РјР°СЃСЃРёРІ, СЂРµР·СѓР»СЊС‚Р°С‚ РёРіРЅРѕСЂРёСЂСѓРµС‚СЃСЏ Рё РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РёСЃС…РѕРґРЅС‹Р№ РєРѕРЅС‚РµРєСЃС‚.
-- **РљР°СЂС‚Р° РєРѕРґР°.** РЎРѕР·РґР°РЅ `docs/CODE_MAP.md` вЂ” СЃРїСЂР°РІРѕС‡РЅРёРє РїРѕ РєР»СЋС‡РµРІС‹Рј С„Р°Р№Р»Р°Рј, С„СѓРЅРєС†РёСЏРј Рё С†РµРїРѕС‡РєР°Рј СЂР°СЃС‡С‘С‚Р° РєРѕРЅС‚РµРєСЃС‚Р°.
+- **Единый расчёт контекста: model-reported vs estimate.** Компакция теперь использует реальные `inputTokens` от модели (из предыдущего ответа) если доступны, fallback на оценку по символам (`chars/3`). Это делает PATH A (compaction) и PATH C (model-reported) одинаковыми. `lastInputTokens` передаётся из `session-runtime-orchestrator` в `ContextPipelinePrepareTurnInput`.
+- **Контекст-бар: убран `tokensOut` из `getLastApiReqTotalTokens`.** Выходные токены модели не занимают контекст — теперь `total` включает только `tokensIn + cacheWrites + cacheReads`. Это устраняет рассинхрон между статистикой `in:` и полоской контекста.
+- **Предотвращение "Invalid prompt: messages must not be empty".** Добавлены guards в `agent-runtime.ts` (проверка `result.messages.length === 0`), `agentic-compaction.ts` и `basic-compaction.ts` — если компакция вернула пустой массив, результат игнорируется и используется исходный контекст.
+- **Карта кода.** Создан `docs/CODE_MAP.md` — справочник по ключевым файлам, функциям и цепочкам расчёта контекста.
 
 ---
 
-## [0.13.7] вЂ” 2026-07-23
+## [0.13.7] — 2026-07-23
 
 ### Fixed
 
-- **`maxInputTokens` С‚РµРїРµСЂСЊ РїСЂРѕСЃС‚РѕРµ С‡РёСЃР»Рѕ, Р° РЅРµ С„СѓРЅРєС†РёСЏ-СЂРµР·РѕР»РІРµСЂ.** Р—Р°РјС‹РєР°РЅРёСЏ (С„СѓРЅРєС†РёРё) С‚РµСЂСЏР»РёСЃСЊ РїСЂРё РїРµСЂРµРґР°С‡Рµ `CoreCompactionConfig` С‡РµСЂРµР· `CoreSessionConfig` РІ SDK вЂ” `maxInputTokensResolver` РЅРµ РІС‹Р·С‹РІР°Р»СЃСЏ, `resolved=undefined`. РўРµРїРµСЂСЊ `maxInputTokens` РІС‹С‡РёСЃР»СЏРµС‚СЃСЏ РІ `buildCompactionConfig` РєР°Рє `number` Рё РїРµСЂРµРґР°С‘С‚СЃСЏ РЅР°РїСЂСЏРјСѓСЋ. РџСЂРёРѕСЂРёС‚РµС‚: (1) СЂСѓС‡РЅР°СЏ РЅР°СЃС‚СЂРѕР№РєР° `compactionMaxInputTokens`, (2) `providerContextWindow` РёР· session-factory (24576 РґР»СЏ LM Studio).
+- **`maxInputTokens` теперь простое число, а не функция-резолвер.** Замыкания (функции) терялись при передаче `CoreCompactionConfig` через `CoreSessionConfig` в SDK — `maxInputTokensResolver` не вызывался, `resolved=undefined`. Теперь `maxInputTokens` вычисляется в `buildCompactionConfig` как `number` и передаётся напрямую. Приоритет: (1) ручная настройка `compactionMaxInputTokens`, (2) `providerContextWindow` из session-factory (24576 для LM Studio).
 
 ---
 
-## [0.13.6] вЂ” 2026-07-23
+## [0.13.6] — 2026-07-23
 
 ### Fixed
 
-- **РђРІС‚Рѕ-РєРѕРјРїР°РєС†РёСЏ РёСЃРїРѕР»СЊР·СѓРµС‚ РєРѕРЅС‚РµРєСЃС‚-РѕРєРЅРѕ РїСЂРѕРІР°Р№РґРµСЂР° (LM Studio / Ollama).** `providerContextWindow` (loaded_context_length РёР· LM Studio / num_ctx РёР· Ollama) РїРµСЂРµРґР°С‘С‚СЃСЏ РёР· `Agentario-session-factory` РІ `buildCompactionConfig` РЅР°РїСЂСЏРјСѓСЋ. Р Р°РЅСЊС€Рµ РєРѕРјРїР°РєС†РёСЏ РёСЃРїРѕР»СЊР·РѕРІР°Р»Р° РґРµС„РѕР»С‚ 128000 РёР· РєР°С‚Р°Р»РѕРіР° РјРѕРґРµР»РµР№, РїРѕС‚РѕРјСѓ С‡С‚Рѕ `host-overrides` (РїРѕРґРјРµРЅСЏСЋС‰РёР№ contextWindow) РїСЂРёРјРµРЅСЏР»СЃСЏ С‚РѕР»СЊРєРѕ РІ UI, РЅРѕ РЅРµ РІ SDK-СЃРµСЃСЃРёРё. РўРµРїРµСЂСЊ `maxInputTokensResolver` РёРјРµРµС‚ С‚СЂРё РїСЂРёРѕСЂРёС‚РµС‚Р°: (1) СЂСѓС‡РЅР°СЏ РЅР°СЃС‚СЂРѕР№РєР° `compactionMaxInputTokens`, (2) `providerContextWindow` РёР· session-factory, (3) fallback РёР· `ApiConfiguration`.
+- **Авто-компакция использует контекст-окно провайдера (LM Studio / Ollama).** `providerContextWindow` (loaded_context_length из LM Studio / num_ctx из Ollama) передаётся из `Agentario-session-factory` в `buildCompactionConfig` напрямую. Раньше компакция использовала дефолт 128000 из каталога моделей, потому что `host-overrides` (подменяющий contextWindow) применялся только в UI, но не в SDK-сессии. Теперь `maxInputTokensResolver` имеет три приоритета: (1) ручная настройка `compactionMaxInputTokens`, (2) `providerContextWindow` из session-factory, (3) fallback из `ApiConfiguration`.
 
 ---
 
-## [0.13.5] вЂ” 2026-07-23
+## [0.13.5] — 2026-07-23
 
 ### Fixed
 
-- **Р”РёР°РіРЅРѕСЃС‚РёС‡РµСЃРєРѕРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ `maxInputTokensResolver` С‡РµСЂРµР· Logger.** `console.log` РЅРµ РїРѕРїР°РґР°Р» РІ Р»РѕРі СЂР°СЃС€РёСЂРµРЅРёСЏ. РўРµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `Logger.log` вЂ” СЃС‚СЂРѕРєР° `[CompactionSettings] maxInputTokensResolver:` Р±СѓРґРµС‚ РІРёРґРЅР° РІ `Exports/logs/extension/`.
+- **Диагностическое логирование `maxInputTokensResolver` через Logger.** `console.log` не попадал в лог расширения. Теперь используется `Logger.log` — строка `[CompactionSettings] maxInputTokensResolver:` будет видна в `Exports/logs/extension/`.
 
 ---
 
-## [0.13.4] вЂ” 2026-07-23
+## [0.13.4] — 2026-07-23
 
 ### Fixed
 
-- **Р”РёР°РіРЅРѕСЃС‚РёС‡РµСЃРєРѕРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ `maxInputTokensResolver`.** Р”РѕР±Р°РІР»РµРЅ `console.log` РґР»СЏ РѕС‚Р»Р°РґРєРё: РїРѕРєР°Р·С‹РІР°РµС‚ `activeProvider`, РЅР°Р»РёС‡РёРµ `apiConfig`, Р·РЅР°С‡РµРЅРёРµ `providerCtxNum` Рё `lmStudioMaxTokens`. РџРѕРјРѕР¶РµС‚ С‚РѕС‡РЅРѕ РѕРїСЂРµРґРµР»РёС‚СЊ, РїРѕС‡РµРјСѓ СЂРµР·РѕР»РІРµСЂ РІРѕР·РІСЂР°С‰Р°РµС‚ `undefined`.
+- **Диагностическое логирование `maxInputTokensResolver`.** Добавлен `console.log` для отладки: показывает `activeProvider`, наличие `apiConfig`, значение `providerCtxNum` и `lmStudioMaxTokens`. Поможет точно определить, почему резолвер возвращает `undefined`.
 
 ---
 
-## [0.13.3] вЂ” 2026-07-23
+## [0.13.3] — 2026-07-23
 
 ### Fixed
 
-- **`maxInputTokensResolver` С‡РёС‚Р°Р» РЅРµ РёР· С‚РѕРіРѕ С…СЂР°РЅРёР»РёС‰Р°.** `lmStudioMaxTokens` С…СЂР°РЅРёС‚СЃСЏ РІ ApiConfiguration, Р° РЅРµ РІ global settings. Р РµР·РѕР»РІРµСЂ С‚РµРїРµСЂСЊ С‡РёС‚Р°РµС‚ С‡РµСЂРµР· `stateManager.getApiConfiguration()`.
+- **`maxInputTokensResolver` читал не из того хранилища.** `lmStudioMaxTokens` хранится в ApiConfiguration, а не в global settings. Резолвер теперь читает через `stateManager.getApiConfiguration()`.
 
 ---
 
-## [0.13.2] вЂ” 2026-07-23
+## [0.13.2] — 2026-07-23
 
 ### Fixed
 
-- **РђРІС‚РѕСЃСѓРјРјР°СЂРёР·Р°С†РёСЏ РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Р° (РїСЂРѕРґРѕР»Р¶РµРЅРёРµ).** Р”РѕР±Р°РІР»РµРЅ `maxInputTokensResolver` вЂ” РґРёРЅР°РјРёС‡РµСЃРєРёР№ СЂРµР·РѕР»РІРµСЂ, РєРѕС‚РѕСЂС‹Р№ С‡РёС‚Р°РµС‚ `lmStudioMaxTokens` / `ollamaApiOptionsCtxNum` РёР· ApiConfiguration РїСЂРѕРІР°Р№РґРµСЂР° (СЂР°РЅРµРµ С‡РёС‚Р°Р» РёР· global settings, РіРґРµ СЌС‚РёС… Р·РЅР°С‡РµРЅРёР№ РЅРµС‚). РўР°РєР¶Рµ РґРѕР±Р°РІР»РµРЅР° UI-РЅР°СЃС‚СЂРѕР№РєР° В«РњР°РєСЃРёРјСѓРј С‚РѕРєРµРЅРѕРІ РєРѕРЅС‚РµРєСЃС‚Р° РјРѕРґРµР»РёВ» РІ СЂР°Р·РґРµР»Рµ РЎР¶Р°С‚РёРµ РґР»СЏ СЂСѓС‡РЅРѕРіРѕ РїРµСЂРµРѕРїСЂРµРґРµР»РµРЅРёСЏ. РЈР»СѓС‡С€РµРЅРѕ Р»РѕРіРёСЂРѕРІР°РЅРёРµ: С‚РµРїРµСЂСЊ РІ Р»РѕРіР°С… РІРёРґРЅС‹ РёСЃС‚РѕС‡РЅРёРєРё Р·РЅР°С‡РµРЅРёР№ (`resolved`, `config`, `modelMaxInput`, `modelCtxWindow`, `providerMaxInput`, `final`).
+- **Автосуммаризация не срабатывала (продолжение).** Добавлен `maxInputTokensResolver` — динамический резолвер, который читает `lmStudioMaxTokens` / `ollamaApiOptionsCtxNum` из ApiConfiguration провайдера (ранее читал из global settings, где этих значений нет). Также добавлена UI-настройка «Максимум токенов контекста модели» в разделе Сжатие для ручного переопределения. Улучшено логирование: теперь в логах видны источники значений (`resolved`, `config`, `modelMaxInput`, `modelCtxWindow`, `providerMaxInput`, `final`).
 
 ### Known Issues
 
-- **Jinja template РѕС€РёР±РєР° В«No user query found in messagesВ»** РїСЂРё СЃСѓРјРјР°СЂРёР·Р°С†РёРё С‡РµСЂРµР· LM Studio вЂ” РїСЂРѕР±Р»РµРјР° РЅР° СЃС‚РѕСЂРѕРЅРµ LM Studio: РјРѕРґРµР»СЊ Р·Р°РіСЂСѓР¶РµРЅР° СЃ tool-calling С‚РµРјРїР»РµР№С‚РѕРј, РєРѕС‚РѕСЂС‹Р№ РЅРµ СЃРѕРІРјРµСЃС‚РёРј СЃ Р·Р°РїСЂРѕСЃРѕРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё. Р РµС€РµРЅРёРµ: РЅР°СЃС‚СЂРѕР№С‚Рµ РѕС‚РґРµР»СЊРЅСѓСЋ РјРѕРґРµР»СЊ РґР»СЏ СЃСѓРјРјР°СЂРёР·Р°С†РёРё Р±РµР· tool-calling С‚РµРјРїР»РµР№С‚Р° (Qwen, Llama, Mistral Рё С‚.Рґ.) РІ РќР°СЃС‚СЂРѕР№РєРё в†’ РЎР¶Р°С‚РёРµ в†’ РњРѕРґРµР»СЊ СЃСѓРјРјР°СЂРёР·Р°С†РёРё.
+- **Jinja template ошибка «No user query found in messages»** при суммаризации через LM Studio — проблема на стороне LM Studio: модель загружена с tool-calling темплейтом, который не совместим с запросом суммаризации. Решение: настройте отдельную модель для суммаризации без tool-calling темплейта (Qwen, Llama, Mistral и т.д.) в Настройки → Сжатие → Модель суммаризации.
 
 ---
 
-## [0.13.1] вЂ” 2026-07-22
+## [0.13.1] — 2026-07-22
 
 ### Fixed
 
-- **РђРІС‚РѕСЃСѓРјРјР°СЂРёР·Р°С†РёСЏ РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Р° РїСЂРё РїРµСЂРµРїРѕР»РЅРµРЅРёРё РєРѕРЅС‚РµРєСЃС‚Р° (РїРѕРІС‚РѕСЂРЅРѕ).** Р•СЃР»Рё РјРѕРґРµР»СЊ LM Studio РЅРµ РЅР°Р№РґРµРЅР° РІ РєР°С‚Р°Р»РѕРіРµ `knownModels` (С‡С‚Рѕ С‡Р°СЃС‚Рѕ Р±С‹РІР°РµС‚ СЃ Р»РѕРєР°Р»СЊРЅС‹РјРё РјРѕРґРµР»СЏРјРё), `resolveMaxInputTokens` РІРѕР·РІСЂР°С‰Р°Р» РґРµС„РѕР»С‚ 200 000 С‚РѕРєРµРЅРѕРІ. РџСЂРё `reserveTokens = 16384` С‚СЂРёРіРіРµСЂ СЃСЂР°Р±Р°С‚С‹РІР°Р» РЅР° 183 616 С‚РѕРєРµРЅР°С… вЂ” СЃР»РёС€РєРѕРј РїРѕР·РґРЅРѕ. РСЃРїСЂР°РІР»РµРЅРѕ: РґРѕР±Р°РІР»РµРЅ fallback РЅР° `providerConfig.maxInputTokens` (Р·РЅР°С‡РµРЅРёРµ `contextWindow` РёР· РЅР°СЃС‚СЂРѕРµРє РїСЂРѕРІР°Р№РґРµСЂР°). РўРµРїРµСЂСЊ РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ СѓРєР°Р·Р°Р» context window РІ РЅР°СЃС‚СЂРѕР№РєР°С… LM Studio/Ollama, РѕРЅРѕ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ СЂР°СЃС‡С‘С‚Р° С‚СЂРёРіРіРµСЂР°.
-- **Jinja template РѕС€РёР±РєР° В«No user query found in messagesВ» РїСЂРё СЃСѓРјРјР°СЂРёР·Р°С†РёРё.** LM Studio РїСЂРёРјРµРЅСЏРµС‚ tool-calling С‚РµРјРїР»РµР№С‚ Рє РјРѕРґРµР»Рё, РґР°Р¶Рµ РєРѕРіРґР° Р·Р°РїСЂРѕСЃ СЃСѓРјРјР°СЂРёР·Р°С†РёРё РЅРµ СЃРѕРґРµСЂР¶РёС‚ РёРЅСЃС‚СЂСѓРјРµРЅС‚РѕРІ. РСЃРїСЂР°РІР»РµРЅРѕ: РёР· РєРѕРЅС„РёРіР° СЃСѓРјРјР°СЂРёР·Р°С‚РѕСЂР° СѓР±РёСЂР°РµС‚СЃСЏ capability `"tools"`, С‡С‚РѕР±С‹ LM Studio РёСЃРїРѕР»СЊР·РѕРІР°Р» Р±Р°Р·РѕРІС‹Р№ chat С‚РµРјРїР»РµР№С‚ РІРјРµСЃС‚Рѕ tool-calling.
+- **Автосуммаризация не срабатывала при переполнении контекста (повторно).** Если модель LM Studio не найдена в каталоге `knownModels` (что часто бывает с локальными моделями), `resolveMaxInputTokens` возвращал дефолт 200 000 токенов. При `reserveTokens = 16384` триггер срабатывал на 183 616 токенах — слишком поздно. Исправлено: добавлен fallback на `providerConfig.maxInputTokens` (значение `contextWindow` из настроек провайдера). Теперь если пользователь указал context window в настройках LM Studio/Ollama, оно используется для расчёта триггера.
+- **Jinja template ошибка «No user query found in messages» при суммаризации.** LM Studio применяет tool-calling темплейт к модели, даже когда запрос суммаризации не содержит инструментов. Исправлено: из конфига суммаризатора убирается capability `"tools"`, чтобы LM Studio использовал базовый chat темплейт вместо tool-calling.
 
 ---
 
-## [0.13.0] вЂ” 2026-07-22
+## [0.13.0] — 2026-07-22
 
 ### Added
 
-- **РЎРµРјР°РЅС‚РёС‡РµСЃРєРёР№ РїРѕРёСЃРє РґР»СЏ Р°РіРµРЅС‚Р° (`semantic_search`).** РќРѕРІС‹Р№ С‚СѓР»СЃ РїРѕР·РІРѕР»СЏРµС‚ Р°РіРµРЅС‚Сѓ РёСЃРєР°С‚СЊ РєРѕРґ РїРѕ СЃРјС‹СЃР»Сѓ, Р° РЅРµ С‚РѕР»СЊРєРѕ РїРѕ regex. РСЃРїРѕР»СЊР·СѓРµС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РёРЅРґРµРєСЃ embeddings (С‚РѕС‚ Р¶Рµ, С‡С‚Рѕ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РЅР° РІРєР»Р°РґРєРµ РёРЅРґРµРєСЃР°С†РёРё). Р РµР·СѓР»СЊС‚Р°С‚С‹ СЃРѕРґРµСЂР¶Р°С‚: РїСѓС‚СЊ Рє С„Р°Р№Р»Сѓ, СЂРµР»РµРІР°РЅС‚РЅРѕСЃС‚СЊ (score), С‚РµРєСЃС‚ РЅР°Р№РґРµРЅРЅРѕРіРѕ С‡Р°РЅРєР°. РћР±РЅРѕРІР»С‘РЅ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ вЂ” Р°РіРµРЅС‚ Р·РЅР°РµС‚, РєРѕРіРґР° РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `semantic_search` vs `search_codebase`.
+- **Семантический поиск для агента (`semantic_search`).** Новый тулс позволяет агенту искать код по смыслу, а не только по regex. Использует существующий индекс embeddings (тот же, что отображается на вкладке индексации). Результаты содержат: путь к файлу, релевантность (score), текст найденного чанка. Обновлён системный промпт — агент знает, когда использовать `semantic_search` vs `search_codebase`.
 
 ### Changed
 
-- **Р’РєР»СЋС‡РµРЅРѕ Р»РѕРіРёСЂРѕРІР°РЅРёРµ РѕС‚Р»Р°РґРѕС‡РЅС‹С… С„Р°Р№Р»РѕРІ СЃСѓРјРјР°СЂРёР·Р°С†РёРё:** С„СѓРЅРєС†РёРё `writeDebugFile`, `writeRequestFile`, `writeRawResponseFile` С‚РµРїРµСЂСЊ Р»РѕРіРёСЂСѓСЋС‚ СѓСЃРїРµС€РЅСѓСЋ Р·Р°РїРёСЃСЊ Рё РѕС€РёР±РєРё С‡РµСЂРµР· `console.log`/`console.error`. Р¤Р°Р№Р»С‹ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ `~/Documents/agentario-compaction-debug/`.
+- **Включено логирование отладочных файлов суммаризации:** функции `writeDebugFile`, `writeRequestFile`, `writeRawResponseFile` теперь логируют успешную запись и ошибки через `console.log`/`console.error`. Файлы сохраняются в `~/Documents/agentario-compaction-debug/`.
 
 ### Fixed
 
-- **РђРІС‚РѕСЃСѓРјРјР°СЂРёР·Р°С†РёСЏ РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Р° РїСЂРё РїСЂРµРІС‹С€РµРЅРёРё РїРѕСЂРѕРіР° РєРѕРЅС‚РµРєСЃС‚Р°.** РџРѕРґСЃС‡С‘С‚ С‚РѕРєРµРЅРѕРІ РґР»СЏ РїСЂРѕРІРµСЂРєРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё СЃР¶Р°С‚РёСЏ СѓС‡РёС‚С‹РІР°Р» РўРћР›Р¬РљРћ С‚РѕРєРµРЅС‹ СЃРѕРѕР±С‰РµРЅРёР№ С‡Р°С‚Р°, РЅРѕ РќР• РІРєР»СЋС‡Р°Р» С‚РѕРєРµРЅС‹ СЃРёСЃС‚РµРјРЅРѕРіРѕ РїСЂРѕРјРїС‚Р° Рё РёРЅСЃС‚СЂСѓРјРµРЅС‚РѕРІ. РСЃРїСЂР°РІР»РµРЅРѕ: С‚РµРїРµСЂСЊ `inputTokens` = chatTokens + systemPromptTokens + toolTokens, С‡С‚Рѕ С‚РѕС‡РЅРѕ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ СЂРµР°Р»СЊРЅРѕРјСѓ `in:` РѕС‚ РјРѕРґРµР»Рё.
-- **Thinking-С‚РµРіРё СЃСѓРјРјР°СЂРёР·РёСЂСѓСЋС‰РµР№ РјРѕРґРµР»Рё РІ С‡Р°С‚Рµ.** РќРµРєРѕС‚РѕСЂС‹Рµ РјРѕРґРµР»Рё (РѕСЃРѕР±РµРЅРЅРѕ С‡РµСЂРµР· LM Studio) РѕС‚РїСЂР°РІР»СЏСЋС‚ thinking РєР°Рє `text` С‡Р°РЅРєРё РІРјРµСЃС‚Рѕ `reasoning` С‡Р°РЅРєРѕРІ. Р”РѕР±Р°РІР»РµРЅРѕ РІС‹СЂРµР·Р°РЅРёРµ `<think>`, `<thinking>`, `[thinking]` С‚РµРіРѕРІ РёР· С‚РµРєСЃС‚Р° РѕС‚РІРµС‚Р° СЃСѓРјРјР°СЂРёР·Р°С†РёРё РїРµСЂРµРґ РїРѕСЃС‚РѕР±СЂР°Р±РѕС‚РєРѕР№.
+- **Автосуммаризация не срабатывала при превышении порога контекста.** Подсчёт токенов для проверки необходимости сжатия учитывал ТОЛЬКО токены сообщений чата, но НЕ включал токены системного промпта и инструментов. Исправлено: теперь `inputTokens` = chatTokens + systemPromptTokens + toolTokens, что точно соответствует реальному `in:` от модели.
+- **Thinking-теги суммаризирующей модели в чате.** Некоторые модели (особенно через LM Studio) отправляют thinking как `text` чанки вместо `reasoning` чанков. Добавлено вырезание `<think>`, `<thinking>`, `[thinking]` тегов из текста ответа суммаризации перед постобработкой.
 
 ---
 
-## [0.12.23] вЂ” 2026-07-22
+## [0.12.23] — 2026-07-22
 
 ### Changed
 
-- **РЈСЃРєРѕСЂРµРЅРёРµ СЃСѓРјРјР°СЂРёР·Р°С†РёРё: `/no_think` РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ.** Р Р°РЅРµРµ `/no_think` РґРѕР±Р°РІР»СЏР»СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё retry (РєРѕРіРґР° РјРѕРґРµР»СЊ РІС‹РґР°РІР°Р»Р° С‚РѕР»СЊРєРѕ reasoning). РўРµРїРµСЂСЊ `/no_think` РґРѕР±Р°РІР»СЏРµС‚СЃСЏ Рє Р·Р°РїСЂРѕСЃСѓ СЃСѓРјРјР°СЂРёР·Р°С†РёРё РЎР РђР—РЈ, С‡С‚РѕР±С‹ РјРѕРґРµР»СЊ РЅРµ С‚СЂР°С‚РёР»Р° РІСЂРµРјСЏ РЅР° СЂР°Р·РјС‹С€Р»РµРЅРёСЏ. Р Р°Р·РјС‹С€Р»РµРЅРёСЏ РЅРµ РЅСѓР¶РЅС‹ РґР»СЏ СЃСѓРјРјР°СЂРёР·Р°С†РёРё вЂ” С‚РѕР»СЊРєРѕ РёС‚РѕРіРѕРІС‹Р№ С‚РµРєСЃС‚. Р­С‚Рѕ СѓСЃРєРѕСЂСЏРµС‚ СЃСѓРјРјР°СЂРёР·Р°С†РёСЋ РІ 2-5 СЂР°Р·. Fallback: РµСЃР»Рё РјРѕРґРµР»СЊ РІСЃС‘ СЂР°РІРЅРѕ РІС‹РґР°С‘С‚ С‚РѕР»СЊРєРѕ reasoning вЂ” retry Р±РµР· `/no_think`.
+- **Ускорение суммаризации: `/no_think` по умолчанию.** Ранее `/no_think` добавлялся только при retry (когда модель выдавала только reasoning). Теперь `/no_think` добавляется к запросу суммаризации СРАЗУ, чтобы модель не тратила время на размышления. Размышления не нужны для суммаризации — только итоговый текст. Это ускоряет суммаризацию в 2-5 раз. Fallback: если модель всё равно выдаёт только reasoning — retry без `/no_think`.
 
 ---
 
-## [0.12.22] вЂ” 2026-07-22
+## [0.12.22] — 2026-07-22
 
 ### Fixed
 
-- **РЈР±СЂР°РЅ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ РёР· Р·Р°РїСЂРѕСЃР° СЃСѓРјРјР°СЂРёР·Р°С†РёРё:** СЂР°РЅРµРµ `collectStreamingChunks` РѕС‚РїСЂР°РІР»СЏР» СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ "You are a text summarization assistant..." РІРјРµСЃС‚Рµ СЃ Р·Р°РїСЂРѕСЃРѕРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё. Р­С‚Рѕ РІС‹Р·С‹РІР°Р»Рѕ РєРѕРЅС„Р»РёРєС‚ СЃ С‡Р°С‚-С‚РµРјРїР»РµР№С‚Р°РјРё РјРѕРґРµР»РµР№ (РѕСЃРѕР±РµРЅРЅРѕ tool-calling С‚РµРјРїР»РµР№С‚Р°РјРё РІ LM Studio), РєРѕС‚РѕСЂС‹Рµ РѕР¶РёРґР°Р»Рё С„РѕСЂРјР°С‚ СЃ РёРЅСЃС‚СЂСѓРјРµРЅС‚Р°РјРё. РўРµРїРµСЂСЊ СЃСѓРјРјР°СЂРёР·Р°С‚РѕСЂ РѕС‚РїСЂР°РІР»СЏРµС‚ РўРћР›Р¬РљРћ user-СЃРѕРѕР±С‰РµРЅРёРµ СЃ РїРѕР»РЅС‹Рј С‚РµРєСЃС‚РѕРј РїСЂРѕРјРїС‚Р° (РёРЅСЃС‚СЂСѓРєС†РёРё + РґРёР°Р»РѕРі), РїРѕР»РЅРѕСЃС‚СЊСЋ РёР·РѕР»РёСЂРѕРІР°РЅРЅРѕРµ РѕС‚ РєРѕРЅС‚РµРєСЃС‚Р° С‡Р°С‚Р°.
+- **Убран системный промпт из запроса суммаризации:** ранее `collectStreamingChunks` отправлял системный промпт "You are a text summarization assistant..." вместе с запросом суммаризации. Это вызывало конфликт с чат-темплейтами моделей (особенно tool-calling темплейтами в LM Studio), которые ожидали формат с инструментами. Теперь суммаризатор отправляет ТОЛЬКО user-сообщение с полным текстом промпта (инструкции + диалог), полностью изолированное от контекста чата.
 
 ---
 
-## [0.12.21] вЂ” 2026-07-22
+## [0.12.21] — 2026-07-22
 
 ### Fixed
 
-- **РЈР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє СЃСѓРјРјР°СЂРёР·Р°С†РёРё:** РїСЂРё РѕС€РёР±РєРµ "No user query found in messages" (РЅРµСЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ С‡Р°С‚-С‚РµРјРїР»РµР№С‚Р° РјРѕРґРµР»Рё СЃ Р·Р°РїСЂРѕСЃРѕРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё) С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РїРѕРЅСЏС‚РЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СЃ СЂРµС€РµРЅРёРµРј вЂ” РЅР°СЃС‚СЂРѕРёС‚СЊ РѕС‚РґРµР»СЊРЅСѓСЋ РјРѕРґРµР»СЊ РґР»СЏ СЃСѓРјРјР°СЂРёР·Р°С†РёРё Р±РµР· tool-calling С‚РµРјРїР»РµР№С‚Р°. РўР°РєР¶Рµ РґРѕР±Р°РІР»РµРЅС‹ СЃРїРµС†РёС„РёС‡РЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РґР»СЏ РѕС€РёР±РѕРє РїСЂРµРІС‹С€РµРЅРёСЏ РєРѕРЅС‚РµРєСЃС‚Р° Рё РїСЂРѕР±Р»РµРј СЃ РїРѕРґРєР»СЋС‡РµРЅРёРµРј.
+- **Улучшена обработка ошибок суммаризации:** при ошибке "No user query found in messages" (несовместимость чат-темплейта модели с запросом суммаризации) теперь показывается понятное сообщение с решением — настроить отдельную модель для суммаризации без tool-calling темплейта. Также добавлены специфичные сообщения для ошибок превышения контекста и проблем с подключением.
 
 ---
 
-## [0.12.20] вЂ” 2026-07-22
+## [0.12.20] — 2026-07-22
 
 ### Fixed
 
-- **РћС€РёР±РєР° СЃСѓРјРјР°СЂРёР·Р°С†РёРё "No user query found in messages":** РјРѕРґРµР»СЊ LM Studio РІРѕР·РІСЂР°С‰Р°Р»Р° JSON-РѕС€РёР±РєСѓ `{error: {code:400, message:"..."}}`, РЅРѕ `collectStreamingChunks` СЃС‚СЂРѕРєРёС„РёС†РёСЂРѕРІР°Р» РІРµСЃСЊ РѕР±СЉРµРєС‚ РІРјРµСЃС‚Рѕ РёР·РІР»РµС‡РµРЅРёСЏ `message`. РўРµРїРµСЂСЊ РёР·РІР»РµРєР°РµС‚СЃСЏ РІР»РѕР¶РµРЅРЅРѕРµ `error.error.message` РґР»СЏ РїРѕРЅСЏС‚РЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєРµ.
+- **Ошибка суммаризации "No user query found in messages":** модель LM Studio возвращала JSON-ошибку `{error: {code:400, message:"..."}}`, но `collectStreamingChunks` строкифицировал весь объект вместо извлечения `message`. Теперь извлекается вложенное `error.error.message` для понятного сообщения об ошибке.
 
 ---
 
-## [0.12.19] вЂ” 2026-07-22
+## [0.12.19] — 2026-07-22
 
 ### Changed
 
-- **РџРѕСЂСЏРґРѕРє РєР°С‚РµРіРѕСЂРёР№ РєРѕРЅС‚РµРєСЃС‚Р°:** РёР·РјРµРЅС‘РЅ РЅР° System prompt в†’ Tools в†’ Skills в†’ Rules в†’ MCP (РІРјРµСЃС‚Рѕ System prompt в†’ Rules в†’ Tools в†’ MCP в†’ Skills). РџРѕР»РѕСЃРєР° РїСЂРѕРіСЂРµСЃСЃР° Рё popup-РѕРєРЅРѕ РєРѕРЅС‚РµРєСЃС‚Р° С‚РµРїРµСЂСЊ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚ РєР°С‚РµРіРѕСЂРёРё РІ РѕРґРёРЅР°РєРѕРІРѕРј РїРѕСЂСЏРґРєРµ.
+- **Порядок категорий контекста:** изменён на System prompt → Tools → Skills → Rules → MCP (вместо System prompt → Rules → Tools → MCP → Skills). Полоска прогресса и popup-окно контекста теперь отображают категории в одинаковом порядке.
 
 ### Fixed
 
-- **Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РЅРµ СЂР°Р±РѕС‚Р°Р» Р±РµР· Р°РєС‚РёРІРЅРѕР№ СЃРµСЃСЃРёРё:** РєРЅРѕРїРєР° В«Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РІ С„Р°Р№Р»В» С‚СЂРµР±РѕРІР°Р»Р° Р°РєС‚РёРІРЅСѓСЋ SDK-СЃРµСЃСЃРёСЋ. РўРµРїРµСЂСЊ РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё Р°РєС‚РёРІРЅРѕР№ СЃРµСЃСЃРёРё СЌРєСЃРїРѕСЂС‚РёСЂСѓСЋС‚СЃСЏ display-СЃРѕРѕР±С‰РµРЅРёСЏ С‚РµРєСѓС‰РµРіРѕ С‚Р°СЃРєР° РёР· РёСЃС‚РѕСЂРёРё.
-- **`[object Object]` РїСЂРё РѕС€РёР±РєРµ РјРѕРґРµР»Рё:** `AgentarioError` РЅРµ РёР·РІР»РµРєР°Р» `message` РёР· РІР»РѕР¶РµРЅРЅРѕРіРѕ РѕР±СЉРµРєС‚Р° `{error: {code, message, type}}` вЂ” РґРѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° `error?.error?.message`.
-- **"Thinking..." Р±РµР· СЃРѕРґРµСЂР¶Р°РЅРёСЏ:** РІРјРµСЃС‚Рѕ СЃС‚Р°С‚РёС‡РЅРѕРіРѕ С‚РµРєСЃС‚Р° "Thinking..." С‚РµРїРµСЂСЊ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚СЃСЏ РїРѕСЃР»РµРґРЅРёРµ 5 СЃР»РѕРІ СЂР°Р·РјС‹С€Р»РµРЅРёР№ РјРѕРґРµР»Рё РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё.
-- **РџСЂРѕРіСЂРµСЃСЃ Р°РІС‚Рѕ-СЃСѓРјРјР°СЂРёР·Р°С†РёРё РЅРµ РѕС‚РѕР±СЂР°Р¶Р°Р»СЃСЏ:** РїСЂРё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРј СЃР¶Р°С‚РёРё РєРѕРЅС‚РµРєСЃС‚Р° РїРѕРєР°Р·С‹РІР°Р»РѕСЃСЊ С‚РѕР»СЊРєРѕ "auto-compacting". РўРµРїРµСЂСЊ С‡РµСЂРµР· `statusCallback` РїРµСЂРµРґР°СЋС‚СЃСЏ РґРµС‚Р°Р»СЊРЅС‹Рµ СЃС‚Р°С‚СѓСЃС‹ (С‡Р°РЅРєРё, С‚РѕРєРµРЅС‹, РїСЂРѕРіСЂРµСЃСЃ) РєР°Рє РїСЂРё СЂСѓС‡РЅРѕР№ СЃСѓРјРјР°СЂРёР·Р°С†РёРё.
+- **Экспорт контекста не работал без активной сессии:** кнопка «Экспорт контекста в файл» требовала активную SDK-сессию. Теперь при отсутствии активной сессии экспортируются display-сообщения текущего таска из истории.
+- **`[object Object]` при ошибке модели:** `AgentarioError` не извлекал `message` из вложенного объекта `{error: {code, message, type}}` — добавлена проверка `error?.error?.message`.
+- **"Thinking..." без содержания:** вместо статичного текста "Thinking..." теперь отображаются последние 5 слов размышлений модели в реальном времени.
+- **Прогресс авто-суммаризации не отображался:** при автоматическом сжатии контекста показывалось только "auto-compacting". Теперь через `statusCallback` передаются детальные статусы (чанки, токены, прогресс) как при ручной суммаризации.
 
 ---
 
-## [0.12.18] вЂ” 2026-07-21
+## [0.12.18] — 2026-07-21
 
 ### Fixed
 
-- **Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РЅРµ СЂР°Р±РѕС‚Р°Р» РёР· popup-РїР°РЅРµР»Рё:** РєРЅРѕРїРєР° В«Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РІ С„Р°Р№Р»В» РІ popup-РѕРєРЅРµ РєРѕРЅС‚РµРєСЃС‚Р° С‚Р°СЃРєР° РёСЃРїРѕР»СЊР·РѕРІР°Р»Р° `alert()`, РєРѕС‚РѕСЂС‹Р№ РјРѕРі Р±С‹С‚СЊ СЃРєСЂС‹С‚ Р·Р° Popover РёР»Рё РЅРµ РїРѕРєР°Р·С‹РІР°С‚СЊСЃСЏ. Р—Р°РјРµРЅРµРЅРѕ РЅР° inline-СЃС‚Р°С‚СѓСЃ-СЃРѕРѕР±С‰РµРЅРёРµ РІРЅСѓС‚СЂРё popup (Р·РµР»С‘РЅРѕРµ РїСЂРё СѓСЃРїРµС…Рµ, Р¶С‘Р»С‚РѕРµ РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё СЃРµСЃСЃРёРё, РєСЂР°СЃРЅРѕРµ РїСЂРё РѕС€РёР±РєРµ).
-- **РџСЂРµСЃРµС‚С‹ СЃР±СЂР°СЃС‹РІР°Р»РёСЃСЊ РїРѕСЃР»Рµ РїРµСЂРµР·Р°РїСѓСЃРєР°:** Р°РєС‚РёРІРЅС‹Р№ РїСЂРµСЃРµС‚ РЅРµ РїСЂРёРјРµРЅСЏР»СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРё СЃС‚Р°СЂС‚Рµ СЂР°СЃС€РёСЂРµРЅРёСЏ вЂ” `applyModelProfilePreset()` РІС‹Р·С‹РІР°Р»СЃСЏ С‚РѕР»СЊРєРѕ РїРѕ СЏРІРЅРѕРјСѓ РєР»РёРєСѓ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ. РџРѕСЃР»Рµ РїРµСЂРµР·Р°РїСѓСЃРєР° `apiConfiguration` Р·Р°РіСЂСѓР¶Р°Р»СЃСЏ РёР· `globalState.json`, РЅРѕ `providerConfigs` (modelInfo, token costs, baseUrl, apiLine, reasoning) РЅРµ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°Р»РёСЃСЊ. РСЃРїСЂР°РІР»РµРЅРѕ: РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё `SdkController` Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРёРјРµРЅСЏРµС‚СЃСЏ Р°РєС‚РёРІРЅС‹Р№ РїСЂРµСЃРµС‚ РёР· `activeModelProfilePresetId`.
+- **Экспорт контекста не работал из popup-панели:** кнопка «Экспорт контекста в файл» в popup-окне контекста таска использовала `alert()`, который мог быть скрыт за Popover или не показываться. Заменено на inline-статус-сообщение внутри popup (зелёное при успехе, жёлтое при отсутствии сессии, красное при ошибке).
+- **Пресеты сбрасывались после перезапуска:** активный пресет не применялся автоматически при старте расширения — `applyModelProfilePreset()` вызывался только по явному клику пользователя. После перезапуска `apiConfiguration` загружался из `globalState.json`, но `providerConfigs` (modelInfo, token costs, baseUrl, apiLine, reasoning) не восстанавливались. Исправлено: при инициализации `SdkController` автоматически применяется активный пресет из `activeModelProfilePresetId`.
 
 ---
 
-## [0.12.17] вЂ” 2026-07-20
+## [0.12.17] — 2026-07-20
 
 ### Fixed
 
-- **`[object Object]` РІ С‡Р°С‚Рµ РїСЂРё СЃР±РѕРµ РјРѕРґРµР»Рё (webview-СЃС‚РѕСЂРѕРЅР°):** `AgentarioError` РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РІС‹Р·С‹РІР°Р» `serializeError(raw)`, РєРѕС‚РѕСЂС‹Р№ РґР»СЏ РІР»РѕР¶РµРЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ `{error: {code, message, type}}` СЃРѕР·РґР°РІР°Р» `error.message = "[object Object]"`. Р­С‚Рѕ Р·РЅР°С‡РµРЅРёРµ РїРѕРїР°РґР°Р»Рѕ РІ `_error.message` Рё СЂРµРЅРґРµСЂРёР»РѕСЃСЊ РІ `<header>` РєР°Рє `[object Object]`. РСЃРїСЂР°РІР»РµРЅРѕ: `ErrorRow.tsx` С‚РµРїРµСЂСЊ РёР·РІР»РµРєР°РµС‚ message РёР· РІР»РѕР¶РµРЅРЅРѕРіРѕ РѕР±СЉРµРєС‚Р° Рё РѕР±РѕСЂР°С‡РёРІР°РµС‚ РІ `ensureString()`.
-- **РџСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂ РєРѕРЅС‚РµРєСЃС‚Р° РѕР±РЅРѕРІР»СЏР»СЃСЏ СЃ РѕРїРѕР·РґР°РЅРёРµРј:** `ContextWindow.tsx` С‚РµРїРµСЂСЊ РїСЂРµРґРїРѕС‡РёС‚Р°РµС‚ Р°РєС‚СѓР°Р»СЊРЅС‹Рµ СЃС‡С‘С‚С‡РёРєРё С‚РѕРєРµРЅРѕРІ (`lastApiReqTotalTokens`) РІРјРµСЃС‚Рѕ РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅРѕР№ РѕС†РµРЅРєРё РёР· `contextBudget`.
+- **`[object Object]` в чате при сбое модели (webview-сторона):** `AgentarioError` конструктор вызывал `serializeError(raw)`, который для вложенных объектов `{error: {code, message, type}}` создавал `error.message = "[object Object]"`. Это значение попадало в `_error.message` и рендерилось в `<header>` как `[object Object]`. Исправлено: `ErrorRow.tsx` теперь извлекает message из вложенного объекта и оборачивает в `ensureString()`.
+- **Прогресс-бар контекста обновлялся с опозданием:** `ContextWindow.tsx` теперь предпочитает актуальные счётчики токенов (`lastApiReqTotalTokens`) вместо предварительной оценки из `contextBudget`.
 
 ---
 
-## [0.12.13] вЂ” 2026-07-02
+## [0.12.13] — 2026-07-02
 
 ### Fixed
 
-- **РќР°СЃС‚СЂРѕР№РєР° `compactionReserveTokens` РЅРµ СЃРѕС…СЂР°РЅСЏР»Р°СЃСЊ:** РїРѕР»Рµ РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°Р»Рѕ РІ proto-СЃС…РµРјРµ `UpdateSettingsRequest` Рё `Settings`. Р”РѕР±Р°РІР»РµРЅРѕ `compaction_reserve_tokens` (field 210 / 64) вЂ” С‚РµРїРµСЂСЊ Р·РЅР°С‡РµРЅРёРµ РєРѕСЂСЂРµРєС‚РЅРѕ РїРµСЂРµРґР°С‘С‚СЃСЏ РёР· webview РІ extension Рё СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ.
-- **РђРіРµРЅС‚ РѕСЃС‚Р°РЅР°РІР»РёРІР°Р»СЃСЏ РїСЂРё СЃР±РѕРµ РєРѕРјРїР°С†РёРё:** `prepareTurnForModelRequest` С‚РµРїРµСЂСЊ Р»РѕРІРёС‚ РѕС€РёР±РєРё РєРѕРјРїР°С†РёРё Рё РїСЂРѕРїСѓСЃРєР°РµС‚ СЃР¶Р°С‚РёРµ, РїСЂРѕРґРѕР»Р¶Р°СЏ СЂР°Р±РѕС‚Сѓ Р°РіРµРЅС‚Р° СЃ РёСЃС…РѕРґРЅС‹РјРё СЃРѕРѕР±С‰РµРЅРёСЏРјРё. РђРіРµРЅС‚ РЅРµ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РёР·-Р·Р° СЃР±РѕСЏ СЃСѓРјРјР°СЂРёР·Р°С†РёРё.
+- **Настройка `compactionReserveTokens` не сохранялась:** поле отсутствовало в proto-схеме `UpdateSettingsRequest` и `Settings`. Добавлено `compaction_reserve_tokens` (field 210 / 64) — теперь значение корректно передаётся из webview в extension и сохраняется.
+- **Агент останавливался при сбое компации:** `prepareTurnForModelRequest` теперь ловит ошибки компации и пропускает сжатие, продолжая работу агента с исходными сообщениями. Агент не останавливается из-за сбоя суммаризации.
 
 ---
 
-## [0.12.12] вЂ” 2026-07-02
+## [0.12.12] — 2026-07-02
 
 ### Fixed
 
-- **РћС€РёР±РєР° `[object Object]` РІ С‡Р°С‚Рµ РїСЂРё СЃР±РѕРµ РјРѕРґРµР»Рё:** РёСЃРїСЂР°РІР»РµРЅР° РЅРѕСЂРјР°Р»РёР·Р°С†РёСЏ РѕС€РёР±РѕРє РІ `agent-runtime.ts` Рё `apihandler-agent-model-adapter.ts`. Р•СЃР»Рё РїСЂРѕРІР°Р№РґРµСЂ (LM Studio) РІРѕР·РІСЂР°С‰Р°РµС‚ РѕР±СЉРµРєС‚ РѕС€РёР±РєРё `{error: {code: 400, message: "..."}}`, С‚РµРїРµСЂСЊ РёР·РІР»РµРєР°РµС‚СЃСЏ С‡РёС‚Р°РµРјРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ РІРјРµСЃС‚Рѕ `[object Object]`.
+- **Ошибка `[object Object]` в чате при сбое модели:** исправлена нормализация ошибок в `agent-runtime.ts` и `apihandler-agent-model-adapter.ts`. Если провайдер (LM Studio) возвращает объект ошибки `{error: {code: 400, message: "..."}}`, теперь извлекается читаемое сообщение вместо `[object Object]`.
 
 ---
 
-## [0.12.11] вЂ” 2026-07-02
+## [0.12.11] — 2026-07-02
 
 ### Fixed
 
-- **РЎРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ СЃ С‡Р°С‚-С‚РµРјРїР»РµР№С‚Р°РјРё РјРѕРґРµР»РµР№:** СЃСѓРјРјР°СЂРёР·Р°С†РёСЏ С‚РµРїРµСЂСЊ РѕС‚РїСЂР°РІР»СЏРµС‚СЃСЏ СЃ РЅРµРїСѓСЃС‚С‹Рј system prompt, С‡С‚Рѕ СЂРµС€Р°РµС‚ РїСЂРѕР±Р»РµРјСѓ `"No user query found in messages"` РґР»СЏ РЅРµРєРѕС‚РѕСЂС‹С… РјРѕРґРµР»РµР№ (Qwen Рё РґСЂ.) С‡РµСЂРµР· LM Studio.
+- **Совместимость с чат-темплейтами моделей:** суммаризация теперь отправляется с непустым system prompt, что решает проблему `"No user query found in messages"` для некоторых моделей (Qwen и др.) через LM Studio.
 
 ---
 
-## [0.12.10] вЂ” 2026-07-02
+## [0.12.10] — 2026-07-02
 
 ### Fixed
 
-- **РћС€РёР±РєР° `[object Object]` РїСЂРё СЃР±РѕРµ СЃСѓРјРјР°СЂРёР·Р°С†РёРё:** РѕС€РёР±РєР° РјРѕРґРµР»Рё-СЃСѓРјРјР°СЂРёР·Р°С‚РѕСЂР° С‚РµРїРµСЂСЊ РїСЂР°РІРёР»СЊРЅРѕ СЃС‚СЂРѕРєРёС„РёС†РёСЂСѓРµС‚СЃСЏ (JSON.stringify) РІРјРµСЃС‚Рѕ `new Error(object)`. Р•СЃР»Рё РїСЂРѕРІР°Р№РґРµСЂ РІРѕР·РІСЂР°С‰Р°РµС‚ JSON-РѕС€РёР±РєСѓ (РЅР°РїСЂРёРјРµСЂ 400 РѕС‚ LM Studio), РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РІРёРґРёС‚ РїРѕРЅСЏС‚РЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ.
-- **РЎС‚Р°С‚СѓСЃ РѕС€РёР±РєРё РІ UI:** РїСЂРё СЃР±РѕРµ СЃСѓРјРјР°СЂРёР·Р°С†РёРё РІ СЃС‚СЂРѕРєСѓ СЃС‚Р°С‚СѓСЃР° РІС‹РІРѕРґРёС‚СЃСЏ РѕРїРёСЃР°РЅРёРµ РѕС€РёР±РєРё (РґРѕ 200 СЃРёРјРІРѕР»РѕРІ), Р° РЅРµ С‚РѕР»СЊРєРѕ РІ Р»РѕРі.
+- **Ошибка `[object Object]` при сбое суммаризации:** ошибка модели-суммаризатора теперь правильно строкифицируется (JSON.stringify) вместо `new Error(object)`. Если провайдер возвращает JSON-ошибку (например 400 от LM Studio), пользователь видит понятное сообщение.
+- **Статус ошибки в UI:** при сбое суммаризации в строку статуса выводится описание ошибки (до 200 символов), а не только в лог.
 
 ### Changed
 
-- **Р”РёРЅР°РјРёС‡РµСЃРєРёР№ `compactionReserveTokens` (0.12.9):** Р·РЅР°С‡РµРЅРёРµ С‚РµРїРµСЂСЊ С‡РёС‚Р°РµС‚СЃСЏ РёР· РЅР°СЃС‚СЂРѕРµРє РїСЂРё РєР°Р¶РґРѕР№ РїСЂРѕРІРµСЂРєРµ РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё СЃР¶Р°С‚РёСЏ РєРѕРЅС‚РµРєСЃС‚Р° С‡РµСЂРµР· `reserveTokensResolver` callback.
+- **Динамический `compactionReserveTokens` (0.12.9):** значение теперь читается из настроек при каждой проверке необходимости сжатия контекста через `reserveTokensResolver` callback.
 
 ---
 
-## [0.12.9] вЂ” 2026-07-02
+## [0.12.9] — 2026-07-02
 
 ### Changed
 
-- **Р”РёРЅР°РјРёС‡РµСЃРєРёР№ `compactionReserveTokens`:** Р·РЅР°С‡РµРЅРёРµ С‚РµРїРµСЂСЊ С‡РёС‚Р°РµС‚СЃСЏ РёР· РЅР°СЃС‚СЂРѕРµРє РїСЂРё РєР°Р¶РґРѕР№ РїСЂРѕРІРµСЂРєРµ РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё СЃР¶Р°С‚РёСЏ РєРѕРЅС‚РµРєСЃС‚Р°, Р° РЅРµ С‚РѕР»СЊРєРѕ РїСЂРё СЃС‚Р°СЂС‚Рµ СЃРµСЃСЃРёРё. Р”РѕР±Р°РІР»РµРЅ `reserveTokensResolver` вЂ” callback, РєРѕС‚РѕСЂС‹Р№ РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· `resolveTriggerState()` РїСЂРё РєР°Р¶РґРѕР№ РёС‚РµСЂР°С†РёРё agent-loop. РР·РјРµРЅРµРЅРёРµ РЅР°СЃС‚СЂРѕР№РєРё РІ UI РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РЅРµРјРµРґР»РµРЅРЅРѕ РІ С‚РµРєСѓС‰РµР№ СЃРµСЃСЃРёРё.
+- **Динамический `compactionReserveTokens`:** значение теперь читается из настроек при каждой проверке необходимости сжатия контекста, а не только при старте сессии. Добавлен `reserveTokensResolver` — callback, который вызывается из `resolveTriggerState()` при каждой итерации agent-loop. Изменение настройки в UI применяется немедленно в текущей сессии.
 
 ---
 
-## [0.12.8] вЂ” 2026-07-02
+## [0.12.8] — 2026-07-02
 
 ### Added
 
-- **РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ С„РёР»СЊС‚СЂ `<think>`-С‚РµРіРѕРІ:** СЃС‚СЂРёРјРёРЅРіРѕРІС‹Р№ С„РёР»СЊС‚СЂ (`createThinkTagFilter`) РїРµСЂРµС…РІР°С‚С‹РІР°РµС‚ inline reasoning-С‚РµРіРё (`<think>`, `<thinking>`, `<reasoning>`, `<reflection>`) РІ С‚РµРєСЃС‚РѕРІС‹С… chunk'Р°С… РѕС‚ РјРѕРґРµР»РµР№ (DeepSeek R1, Qwen QwQ Рё РґСЂ.) Рё РїРµСЂРµРЅР°РїСЂР°РІР»СЏРµС‚ РёС… РІ reasoning-delta РІРјРµСЃС‚Рѕ text-delta. РўРµРіРё РІС‹СЂРµР·Р°СЋС‚СЃСЏ, СЃРѕРґРµСЂР¶РёРјРѕРµ РЅРµ С‚РµСЂСЏРµС‚СЃСЏ. РџРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ С‚РµРіРё, СЂР°Р·Р±РёС‚С‹Рµ РјРµР¶РґСѓ chunk'Р°РјРё.
-- **РќР°СЃС‚СЂРѕР№РєР° `compactionReserveTokens`:** СЂРµР·РµСЂРІРЅС‹Р№ СЂР°Р·РјРµСЂ РєРѕРЅС‚РµРєСЃС‚Р° (РІ С‚РѕРєРµРЅР°С…) РґР»СЏ РЅРѕРІРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ РјРѕРґРµР»Рё. РђРІС‚Рѕ-СЃР¶Р°С‚РёРµ СЃСЂР°Р±Р°С‚С‹РІР°РµС‚, РєРѕРіРґР° РѕСЃС‚Р°РІС€РёР№СЃСЏ РєРѕРЅС‚РµРєСЃС‚ РѕРїСѓСЃРєР°РµС‚СЃСЏ РЅРёР¶Рµ СЌС‚РѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ. РџРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 16384. РќР°СЃС‚СЂРѕР№РєР° РґРѕСЃС‚СѓРїРЅР° РІ UI (РќР°СЃС‚СЂРѕР№РєРё в†’ РЎР¶Р°С‚РёРµ в†’ Р РµР·РµСЂРІРЅС‹Р№ РєРѕРЅС‚РµРєСЃС‚).
+- **Универсальный фильтр `<think>`-тегов:** стриминговый фильтр (`createThinkTagFilter`) перехватывает inline reasoning-теги (`<think>`, `<thinking>`, `<reasoning>`, `<reflection>`) в текстовых chunk'ах от моделей (DeepSeek R1, Qwen QwQ и др.) и перенаправляет их в reasoning-delta вместо text-delta. Теги вырезаются, содержимое не теряется. Поддерживаются теги, разбитые между chunk'ами.
+- **Настройка `compactionReserveTokens`:** резервный размер контекста (в токенах) для нового сообщения модели. Авто-сжатие срабатывает, когда оставшийся контекст опускается ниже этого значения. По умолчанию 16384. Настройка доступна в UI (Настройки → Сжатие → Резервный контекст).
 
 ### Changed
 
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚:** РґРѕР±Р°РІР»РµРЅС‹ РїСЂР°РІРёР»Р° РґР»СЏ Windows вЂ” Р·Р°РїСЂРµС‚ `&&` РІ PowerShell, РїСЂРµРґРїРѕС‡С‚РµРЅРёРµ PowerShell-РєРѕРјР°РЅРґР»РµС‚РѕРІ.
+- **Системный промпт:** добавлены правила для Windows — запрет `&&` в PowerShell, предпочтение PowerShell-командлетов.
 
 ---
 
-## [0.12.7] вЂ” 2026-07-02
+## [0.12.7] — 2026-07-02
 
 ### Changed
 
-- **Р”РµРґСѓРїР»РёРєР°С†РёСЏ РїСЂР°РІРёР»:** СЃРѕРґРµСЂР¶РёРјРѕРµ `agentario-global-rules.md` РїРµСЂРµРЅРµСЃРµРЅРѕ РІ РІС€РёС‚С‹Р№ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ (`DEFAULT_AGENTARIO_SYSTEM_PROMPT`). Р¤Р°Р№Р» РїСЂР°РІРёР» РѕС‡РёС‰РµРЅ РѕС‚ РґСѓР±Р»РµР№ вЂ” РѕСЃС‚Р°РІР»РµРЅС‹ С‚РѕР»СЊРєРѕ СѓР·РєРѕСЃРїРµС†РёС„РёС‡РЅС‹Рµ РґРѕРїРѕР»РЅРµРЅРёСЏ (insert_line, trueline).
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚:** РґРѕР±Р°РІР»РµРЅС‹ РїСЂР°РІРёР»Р° вЂ” РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ РґРµСЃС‚СЂСѓРєС‚РёРІРЅС‹С… РєРѕРјР°РЅРґ, РєСЂР°С‚РєРѕСЃС‚СЊ РѕС‚РІРµС‚РѕРІ (reasoning РІ thinking), СЃРѕРІРµС‚С‹ РґР»СЏ Р»РѕРєР°Р»СЊРЅС‹С… РјРѕРґРµР»РµР№ (tool calling, /compact).
-- **rulesDetail СѓР±СЂР°РЅ РёР· UI:** РїРѕРґРєР°С‚РµРіРѕСЂРёСЏ `user-instruction-watcher` Р±РѕР»СЊС€Рµ РЅРµ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РѕС‚РґРµР»СЊРЅРѕ вЂ” РѕРЅР° РґСѓР±Р»РёСЂРѕРІР°Р»Р° РєР°С‚РµРіРѕСЂРёСЋ Rules.
+- **Дедупликация правил:** содержимое `agentario-global-rules.md` перенесено в вшитый системный промпт (`DEFAULT_AGENTARIO_SYSTEM_PROMPT`). Файл правил очищен от дублей — оставлены только узкоспецифичные дополнения (insert_line, trueline).
+- **Системный промпт:** добавлены правила — подтверждение деструктивных команд, краткость ответов (reasoning в thinking), советы для локальных моделей (tool calling, /compact).
+- **rulesDetail убран из UI:** подкатегория `user-instruction-watcher` больше не отображается отдельно — она дублировала категорию Rules.
 
 ---
 
-## [0.12.6] вЂ” 2026-07-02
+## [0.12.6] — 2026-07-02
 
 ### Changed
 
-- **Context Window Summary:** РєР°С‚РµРіРѕСЂРёРё РєРѕРЅС‚РµРєСЃС‚Р° СЂР°Р·РґРµР»РµРЅС‹ РЅР° РґРІР° Р±Р»РѕРєР° вЂ” В«Р·Р°РєСЂРµРїР»С‘РЅРЅС‹РµВ» (РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚, Rules, Tools, MCP, Skills) Рё В«Р§Р°С‚ (СЃР¶РёРјР°РµС‚СЃСЏ)В». РљР°Р¶РґС‹Р№ Р±Р»РѕРє РїРѕРєР°Р·С‹РІР°РµС‚ СЃРІРѕР№ РёС‚РѕРі.
-- **РС‚РѕРіРё РєРѕРЅС‚РµРєСЃС‚Р°:** РґРѕР±Р°РІР»РµРЅС‹ СЃС‚СЂРѕРєРё В«РС‚РѕРіРѕ (Р±РµР· С‡Р°С‚Р°)В» = `pinnedEstimated` Рё В«РС‚РѕРіРѕ (РІСЃРµРіРѕ)В» = `totalEstimated`.
-- **rulesDetail:** РёСЃС‚РѕС‡РЅРёРє РїСЂР°РІРёР» `user-instruction-watcher` РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РєР°Рє В«РџСЂР°РІРёР»Р° РїСЂРѕРµРєС‚Р°В» РІРјРµСЃС‚Рѕ С‚РµС…РЅРёС‡РµСЃРєРѕРіРѕ РёРјРµРЅРё.
+- **Context Window Summary:** категории контекста разделены на два блока — «закреплённые» (Системный промпт, Rules, Tools, MCP, Skills) и «Чат (сжимается)». Каждый блок показывает свой итог.
+- **Итоги контекста:** добавлены строки «Итого (без чата)» = `pinnedEstimated` и «Итого (всего)» = `totalEstimated`.
+- **rulesDetail:** источник правил `user-instruction-watcher` отображается как «Правила проекта» вместо технического имени.
 
 ### Fixed
 
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ (Agent Mode):** РґРѕР±Р°РІР»РµРЅС‹ РїСЂР°РІРёР»Р° РґР»СЏ Windows вЂ” Р·Р°РїСЂРµС‚ `&&` РІ PowerShell (РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `;`), РїСЂРµРґРїРѕС‡С‚РµРЅРёРµ PowerShell-РєРѕРјР°РЅРґР»РµС‚РѕРІ РІРјРµСЃС‚Рѕ Linux-СѓС‚РёР»РёС‚.
+- **Системный промпт (Agent Mode):** добавлены правила для Windows — запрет `&&` в PowerShell (использовать `;`), предпочтение PowerShell-командлетов вместо Linux-утилит.
 
 ---
 
-## [0.12.5] вЂ” 2026-08-04
+## [0.12.5] — 2026-08-04
 
 ### Fixed
 
-- **Р РµР±СЂРµРЅРґРёРЅРі ~/.cline в†’ ~/.agentario:** 6 С„Р°Р№Р»РѕРІ РІСЃС‘ РµС‰С‘ РёСЃРїРѕР»СЊР·РѕРІР°Р»Рё Р·Р°С…Р°СЂРґРєРѕР¶РµРЅРЅС‹Р№ `path.join(os.homedir(), ".cline")` РІРјРµСЃС‚Рѕ `resolveClineDir()`. Р­С‚Рѕ РїСЂРёРІРѕРґРёР»Рѕ Рє СЃРѕР·РґР°РЅРёСЋ `~/.cline/data/settings/` РїСЂРё Р·Р°РїСѓСЃРєРµ СЂР°СЃС€РёСЂРµРЅРёСЏ.
-  - `mcp-settings-legacy-migration.ts` вЂ” MCP settings migration
-  - `vscode-context.ts` вЂ” standalone runtime initialization
-  - `legacy-state-reader.ts` вЂ” legacy state data dir
-  - `sdk-refresh.ts` вЂ” remote config workspace
-  - `marketplace-helpers.ts` вЂ” marketplace home dir
-  - `env.ts` вЂ” URL capture debug output
+- **Ребрендинг ~/.cline → ~/.agentario:** 6 файлов всё ещё использовали захардкоженный `path.join(os.homedir(), ".cline")` вместо `resolveClineDir()`. Это приводило к созданию `~/.cline/data/settings/` при запуске расширения.
+  - `mcp-settings-legacy-migration.ts` — MCP settings migration
+  - `vscode-context.ts` — standalone runtime initialization
+  - `legacy-state-reader.ts` — legacy state data dir
+  - `sdk-refresh.ts` — remote config workspace
+  - `marketplace-helpers.ts` — marketplace home dir
+  - `env.ts` — URL capture debug output
 
 ---
 
-## [0.12.4] вЂ” 2026-08-04
+## [0.12.4] — 2026-08-04
 
 ### Fixed
 
-- **РР·РѕР»СЏС†РёСЏ MCP РїР°РјСЏС‚Рё:** MCP СЃРµСЂРІРµСЂС‹ РїР°РјСЏС‚Рё (`memory`, `memory-slim`) С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓСЋС‚ workspace-СЃРїРµС†РёС„РёС‡РЅС‹Рµ РїСѓС‚Рё С…СЂР°РЅРµРЅРёСЏ С‡РµСЂРµР· `${env:AGENTARIO_WORKSPACE_ROOT}/.agentario/mcp-memory.json`. Р”Р°РЅРЅС‹Рµ РёР· РѕРґРЅРѕРіРѕ РїСЂРѕРµРєС‚Р° Р±РѕР»СЊС€Рµ РЅРµ Р·Р°РіСЂСЏР·РЅСЏСЋС‚ РґСЂСѓРіРѕР№.
-- **McpHub:** РїСЂРё Р·Р°РїСѓСЃРєРµ stdio MCP СЃРµСЂРІРµСЂРѕРІ РёРЅР¶РµРєС‚РёСЂСѓРµС‚СЃСЏ env-РїРµСЂРµРјРµРЅРЅР°СЏ `AGENTARIO_WORKSPACE_ROOT` вЂ” РѕСЃРЅРѕРІР° РґР»СЏ workspace-scoped С…СЂР°РЅРµРЅРёСЏ.
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚:** РґРѕР±Р°РІР»РµРЅРѕ РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ about MCP memory cross-project contamination вЂ” Р°РіРµРЅС‚ РЅРµ РґРѕР»Р¶РµРЅ РґРѕРІРµСЂСЏС‚СЊ РґР°РЅРЅС‹Рј MCP memory Р±РµР· РїСЂРѕРІРµСЂРєРё.
+- **Изоляция MCP памяти:** MCP серверы памяти (`memory`, `memory-slim`) теперь используют workspace-специфичные пути хранения через `${env:AGENTARIO_WORKSPACE_ROOT}/.agentario/mcp-memory.json`. Данные из одного проекта больше не загрязняют другой.
+- **McpHub:** при запуске stdio MCP серверов инжектируется env-переменная `AGENTARIO_WORKSPACE_ROOT` — основа для workspace-scoped хранения.
+- **Системный промпт:** добавлено предупреждение about MCP memory cross-project contamination — агент не должен доверять данным MCP memory без проверки.
 
 ---
 
-## [0.12.3] вЂ” 2026-08-04
+## [0.12.3] — 2026-08-04
 
 ### Fixed
 
-- **Popap РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РѕРєРЅР°:** РєР»РёРє РІРЅСѓС‚СЂРё popup-РѕРєРЅР° СЂР°Р·РјРµС‚РєРё РєРѕРЅС‚РµРєСЃС‚Р° Р·Р°РєСЂС‹РІР°Р» РµРіРѕ. Radix `HoverCard` Р·Р°РјРµРЅС‘РЅ РЅР° `Popover` вЂ” РєРѕРјРїРѕРЅРµРЅС‚, СЃРїРµС†РёР°Р»СЊРЅРѕ РїСЂРµРґРЅР°Р·РЅР°С‡РµРЅРЅС‹Р№ РґР»СЏ click-toggle РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёР№. РўРµРїРµСЂСЊ РїРѕРїР°Рї РѕСЃС‚Р°С‘С‚СЃСЏ РѕС‚РєСЂС‹С‚С‹Рј РїСЂРё РєР»РёРєРµ РІРЅСѓС‚СЂРё, РїРѕР·РІРѕР»СЏРµС‚ РІС‹РґРµР»СЏС‚СЊ С‚РµРєСЃС‚.
+- **Popap контекстного окна:** клик внутри popup-окна разметки контекста закрывал его. Radix `HoverCard` заменён на `Popover` — компонент, специально предназначенный для click-toggle взаимодействий. Теперь попап остаётся открытым при клике внутри, позволяет выделять текст.
 
 ### Changed
 
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ agent mode:** РґРѕР±Р°РІР»РµРЅС‹ **Project Onboarding Protocol** (РѕР±СЏР·Р°С‚РµР»СЊРЅС‹Р№ РїРѕСЂСЏРґРѕРє: СЃРЅР°С‡Р°Р»Р° СЃРїРёСЃРѕРє С„Р°Р№Р»РѕРІ в†’ РїРѕС‚РѕРј git в†’ РїРѕС‚РѕРј РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ) Рё **Anti-Loop Rules** (Р·Р°РїСЂРµС‚ РїРѕРІС‚РѕСЂРµРЅРёСЏ РєРѕРјР°РЅРґ СЃ С‚РµРјРё Р¶Рµ РѕС€РёР±РєР°РјРё, РѕСЃРѕР±РµРЅРЅРѕ git РІ РЅРµ-git РїСЂРѕРµРєС‚Р°С…).
+- **Системный промпт agent mode:** добавлены **Project Onboarding Protocol** (обязательный порядок: сначала список файлов → потом git → потом документация) и **Anti-Loop Rules** (запрет повторения команд с теми же ошибками, особенно git в не-git проектах).
 
 ---
 
-## [0.12.2] вЂ” 2026-08-03
+## [0.12.2] — 2026-08-03
 
 ### Fixed
 
-- **Workspace Root С‡РµСЂРµР· Р·Р°РјС‹РєР°РЅРёРµ:** РІСЃРµ РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹ (analyze_impact, detect_patterns, diagnose_error, suggest_tests, predict_regression) С‚РµРїРµСЂСЊ РїРѕР»СѓС‡Р°СЋС‚ `workspaceRoot` РєР°Рє РїР°СЂР°РјРµС‚СЂ С„Р°Р±СЂРёРєРё РІРјРµСЃС‚Рѕ `process.env`/`process.cwd()`. Р—РЅР°С‡РµРЅРёРµ РїРµСЂРµРґР°С‘С‚СЃСЏ РёР· `input.cwd` РІ `sdk-session-config-builder.ts`.
-- **РР·РѕР»СЏС†РёСЏ СЃРµСЃСЃРёР№:** РјРѕРґСѓР»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ `activePersona`, `toolUsageLog`, `progressSteps` РІ `adaptive-tools.ts` Р·Р°РјРµРЅРµРЅС‹ РЅР° `Map<sessionId, SessionState>`. РџР°СЂР°Р»Р»РµР»СЊРЅС‹Рµ СЃРµСЃСЃРёРё Р°РіРµРЅС‚Р° Р±РѕР»СЊС€Рµ РЅРµ РєРѕРЅС„Р»РёРєС‚СѓСЋС‚. Р”РѕР±Р°РІР»РµРЅ СЌРєСЃРїРѕСЂС‚ `clearSessionState()` РґР»СЏ РѕС‡РёСЃС‚РєРё.
-- **РђСЃРёРЅС…СЂРѕРЅРЅС‹Р№ I/O РІ DependencyGraph:** РІСЃРµ СЃРёРЅС…СЂРѕРЅРЅС‹Рµ РІС‹Р·РѕРІС‹ (`readdirSync`, `readFileSync`, `existsSync`, `statSync`) Р·Р°РјРµРЅРµРЅС‹ РЅР° Р°РЅР°Р»РѕРіРё РёР· `node:fs/promises`. Main thread VS Code Р±РѕР»СЊС€Рµ РЅРµ Р±Р»РѕРєРёСЂСѓРµС‚СЃСЏ РїСЂРё СЃРєР°РЅРёСЂРѕРІР°РЅРёРё.
-- **РЈРґР°Р»С‘РЅ РґСѓР±Р»РёСЂСѓСЋС‰РёР№ РјРµС‚РѕРґ** `normalizePathPath` РІ DependencyGraph (РёСЃРїРѕР»СЊР·РѕРІР°Р»СЃСЏ С‚РѕР»СЊРєРѕ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ).
+- **Workspace Root через замыкание:** все инструменты (analyze_impact, detect_patterns, diagnose_error, suggest_tests, predict_regression) теперь получают `workspaceRoot` как параметр фабрики вместо `process.env`/`process.cwd()`. Значение передаётся из `input.cwd` в `sdk-session-config-builder.ts`.
+- **Изоляция сессий:** модульные переменные `activePersona`, `toolUsageLog`, `progressSteps` в `adaptive-tools.ts` заменены на `Map<sessionId, SessionState>`. Параллельные сессии агента больше не конфликтуют. Добавлен экспорт `clearSessionState()` для очистки.
+- **Асинхронный I/O в DependencyGraph:** все синхронные вызовы (`readdirSync`, `readFileSync`, `existsSync`, `statSync`) заменены на аналоги из `node:fs/promises`. Main thread VS Code больше не блокируется при сканировании.
+- **Удалён дублирующий метод** `normalizePathPath` в DependencyGraph (использовался только в одном месте).
 
 ---
 
-## [0.12.1] вЂ” 2026-08-02
+## [0.12.1] — 2026-08-02
 
 ### Fixed
 
-- **РљСЂРёС‚РёС‡РµСЃРєРёР№ Р±Р°Рі СЃРёРіРЅР°С‚СѓСЂС‹ execute:** РІРѕ РІСЃРµС… 8 РёРЅСЃС‚СЂСѓРјРµРЅС‚Р°С… agent СЂРµР¶РёРјР° (analyze_impact, detect_patterns, diagnose_error, suggest_tests, predict_regression, set_persona, report_confidence, track_progress) СЃРёРіРЅР°С‚СѓСЂР° `execute({ input })` РЅРµРїСЂР°РІРёР»СЊРЅРѕ РґРµСЃС‚СЂСѓРєС‚СѓСЂРёСЂРѕРІР°Р»Р° РІС…РѕРґРЅРѕР№ РѕР±СЉРµРєС‚. SDK РїРµСЂРµРґР°С‘С‚ `(input, context)` РґРІСѓРјСЏ РїР°СЂР°РјРµС‚СЂР°РјРё, РїРѕСЌС‚РѕРјСѓ РґРµСЃС‚СЂСѓРєС‚СѓСЂРёР·Р°С†РёСЏ `.input` РІРѕР·РІСЂР°С‰Р°Р»Р° `undefined`. РСЃРїСЂР°РІР»РµРЅРѕ РЅР° `execute(input)` РІРѕ РІСЃРµС… С„Р°Р№Р»Р°С…: `agent-tools.ts`, `debug-tools.ts`, `adaptive-tools.ts`.
-- **РўРёРї РІРѕР·РІСЂР°С‚Р° `createAgentModeTools`:** РІРѕР·РІСЂР°С‰Р°Р» `AgentTool` (singular) РІРјРµСЃС‚Рѕ `AgentTool[]`.
+- **Критический баг сигнатуры execute:** во всех 8 инструментах agent режима (analyze_impact, detect_patterns, diagnose_error, suggest_tests, predict_regression, set_persona, report_confidence, track_progress) сигнатура `execute({ input })` неправильно деструктурировала входной объект. SDK передаёт `(input, context)` двумя параметрами, поэтому деструктуризация `.input` возвращала `undefined`. Исправлено на `execute(input)` во всех файлах: `agent-tools.ts`, `debug-tools.ts`, `adaptive-tools.ts`.
+- **Тип возврата `createAgentModeTools`:** возвращал `AgentTool` (singular) вместо `AgentTool[]`.
 
 ---
 
-## [0.12.0] вЂ” 2026-08-01
+## [0.12.0] — 2026-08-01
 
-### Added вЂ” Р—Р°РІРµСЂС€РµРЅРёРµ Smart Agent Roadmap (Phase 5: Adaptive Workflow)
+### Added — Завершение Smart Agent Roadmap (Phase 5: Adaptive Workflow)
 
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `set_persona`:** 6 СЂР°Р±РѕС‡РёС… РїРµСЂСЃРѕРЅ вЂ” architect, debugger, refactorer, feature_dev, reviewer, generalist. РљР°Р¶РґР°СЏ РїРµСЂСЃРѕРЅР° РѕРїСЂРµРґРµР»СЏРµС‚ РїСЂРёРѕСЂРёС‚РµС‚РЅС‹Рµ РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹, СЃС‚РёР»СЊ СЂР°Р±РѕС‚С‹ Рё С„РѕРєСѓСЃ-РѕР±Р»Р°СЃС‚Рё. РђРіРµРЅС‚ Р°РґР°РїС‚РёСЂСѓРµС‚ СЃС‚СЂР°С‚РµРіРёСЋ РїРѕРґ С‚РёРї Р·Р°РґР°С‡Рё.
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `report_confidence`:** СЃР°РјРѕРѕС†РµРЅРєР° СѓРІРµСЂРµРЅРЅРѕСЃС‚Рё РІ РїРѕРґС…РѕРґРµ (0-100). РћС‚СЃР»РµР¶РёРІР°РЅРёРµ РЅР°РґС‘Р¶РЅРѕСЃС‚Рё РёРЅСЃС‚СЂСѓРјРµРЅС‚РѕРІ РІ СЃРµСЃСЃРёРё (success rate). Р РµРєРѕРјРµРЅРґР°С†РёРё: <30 = pivot, 30-60 = РѕСЃС‚РѕСЂРѕР¶РЅРѕ, 60+ = РЅР° РїСЂР°РІРёР»СЊРЅРѕРј РїСѓС‚Рё.
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `track_progress`:** РїРѕС€РѕРіРѕРІС‹Р№ С‚СЂРµРєРµСЂ РїСЂРѕРіСЂРµСЃСЃР°. Р”РµР№СЃС‚РІРёСЏ: init (СЃРѕР·РґР°С‚СЊ С€Р°РіРё), update (РѕР±РЅРѕРІРёС‚СЊ СЃС‚Р°С‚СѓСЃ), summary (РѕС‚С‡С‘С‚). РЎС‚Р°С‚СѓСЃС‹: pending, in_progress, completed, blocked, failed. Р’РёР·СѓР°Р»СЊРЅС‹Р№ РїСЂРѕРіСЂРµСЃСЃ СЃ РїСЂРѕС†РµРЅС‚Р°РјРё.
-- **РћР±РЅРѕРІР»С‘РЅРЅС‹Р№ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚:** РґРѕР±Р°РІР»РµРЅР° СЃРµРєС†РёСЏ Adaptive Workflow СЃ РёРЅСЃС‚СЂСѓРєС†РёСЏРјРё РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РїРµСЂСЃРѕРЅ, С‚СЂРµРєРёРЅРі РїСЂРѕРіСЂРµСЃСЃР° Рё self-assessment СѓРІРµСЂРµРЅРЅРѕСЃС‚Рё.
-- **РќРѕРІС‹Р№ С„Р°Р№Р» `adaptive-tools.ts`:** 409 СЃС‚СЂРѕРє РєРѕРґР°.
+- **Инструмент `set_persona`:** 6 рабочих персон — architect, debugger, refactorer, feature_dev, reviewer, generalist. Каждая персона определяет приоритетные инструменты, стиль работы и фокус-области. Агент адаптирует стратегию под тип задачи.
+- **Инструмент `report_confidence`:** самооценка уверенности в подходе (0-100). Отслеживание надёжности инструментов в сессии (success rate). Рекомендации: <30 = pivot, 30-60 = осторожно, 60+ = на правильном пути.
+- **Инструмент `track_progress`:** пошоговый трекер прогресса. Действия: init (создать шаги), update (обновить статус), summary (отчёт). Статусы: pending, in_progress, completed, blocked, failed. Визуальный прогресс с процентами.
+- **Обновлённый системный промпт:** добавлена секция Adaptive Workflow с инструкциями использовать персон, трекинг прогресса и self-assessment уверенности.
+- **Новый файл `adaptive-tools.ts`:** 409 строк кода.
 
-### РС‚РѕРіРѕ РїРѕ Smart Agent Roadmap (Phases 1-5)
+### Итого по Smart Agent Roadmap (Phases 1-5)
 
-Р РµР¶РёРј Agent С‚РµРїРµСЂСЊ РІРєР»СЋС‡Р°РµС‚ **11 СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹С… РёРЅСЃС‚СЂСѓРјРµРЅС‚РѕРІ**:
-1. `record_decision` / `recall_decisions` вЂ” РїР°РјСЏС‚СЊ СЂРµС€РµРЅРёР№
-2. `validate_plan` вЂ” РІР°Р»РёРґР°С†РёСЏ РїР»Р°РЅР°
-3. `analyze_impact` вЂ” Р°РЅР°Р»РёР· blast radius
-4. `detect_patterns` вЂ” РґРµС‚РµРєС†РёСЏ Р°СЂС…РёС‚РµРєС‚СѓСЂРЅС‹С… РїР°С‚С‚РµСЂРЅРѕРІ
-5. `diagnose_error` вЂ” РєР»Р°СЃСЃРёС„РёРєР°С†РёСЏ Рё РґРёР°РіРЅРѕСЃС‚РёРєР° РѕС€РёР±РѕРє
-6. `suggest_tests` вЂ” РіРµРЅРµСЂР°С†РёСЏ С‚РµСЃС‚-РєРµР№СЃРѕРІ
-7. `predict_regression` вЂ” РїСЂРµРґСЃРєР°Р·Р°РЅРёРµ СЂРµРіСЂРµСЃСЃРёР№
-8. `set_persona` вЂ” РІС‹Р±РѕСЂ СЂР°Р±РѕС‡РµР№ РїРµСЂСЃРѕРЅС‹
-9. `report_confidence` вЂ” self-assessment РїРѕРґС…РѕРґР°
-10. `track_progress` вЂ” С‚СЂРµРєРёРЅРі РїСЂРѕРіСЂРµСЃСЃР° Р·Р°РґР°С‡Рё
-11. РЎРµСЂРІРёСЃ `DependencyGraph` вЂ” РіСЂР°С„ Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№ РєРѕРґРѕРІРѕР№ Р±Р°Р·С‹
+Режим Agent теперь включает **11 специализированных инструментов**:
+1. `record_decision` / `recall_decisions` — память решений
+2. `validate_plan` — валидация плана
+3. `analyze_impact` — анализ blast radius
+4. `detect_patterns` — детекция архитектурных паттернов
+5. `diagnose_error` — классификация и диагностика ошибок
+6. `suggest_tests` — генерация тест-кейсов
+7. `predict_regression` — предсказание регрессий
+8. `set_persona` — выбор рабочей персоны
+9. `report_confidence` — self-assessment подхода
+10. `track_progress` — трекинг прогресса задачи
+11. Сервис `DependencyGraph` — граф зависимостей кодовой базы
 
 ---
 
-## [0.11.3] вЂ” 2026-07-30
+## [0.11.3] — 2026-07-30
 
 ### Added
 
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `diagnose_error`:** РєР»Р°СЃСЃРёС„РёРєР°С†РёСЏ РѕС€РёР±РѕРє (null_reference, import_error, type_mismatch, syntax_error, runtime_crash, permission_denied, network_error, timeout, resource_exhausted, logic_error), РїР°СЂСЃРёРЅРі stack trace (JS/TS, Python, Go, Rust), Р°РЅР°Р»РёР· Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№ С‡РµСЂРµР· РіСЂР°С„, РїРѕРґСЃРєР°Р·РєРё РїРѕ root cause.
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `suggest_tests`:** РіРµРЅРµСЂР°С†РёСЏ С‚РµСЃС‚-РєРµР№СЃРѕРІ (unit, edge_case, integration, regression) РЅР° РѕСЃРЅРѕРІРµ Р°РЅР°Р»РёР·Р° СЌРєСЃРїРѕСЂС‚РѕРІ С„Р°Р№Р»Р°, async-РїР°С‚С‚РµСЂРЅРѕРІ Рё try/catch Р±Р»РѕРєРѕРІ.
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `predict_regression`:** РїСЂРµРґСЃРєР°Р·Р°РЅРёРµ СЂРµРіСЂРµСЃСЃРёР№ РїРµСЂРµРґ РёР·РјРµРЅРµРЅРёРµРј. РђРЅР°Р»РёР· blast radius, РїРѕРёСЃРє РєРѕРЅРєСЂРµС‚РЅС‹С… РёСЃРїРѕР»СЊР·РѕРІР°РЅРёР№ СЌРєСЃРїРѕСЂС‚РёСЂСѓРµРјРѕРіРѕ СЃРёРјРІРѕР»Р°, РѕС†РµРЅРєР° СЂРёСЃРєР° (LOW/MEDIUM/HIGH/CRITICAL) РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РёРїР° РёР·РјРµРЅРµРЅРёСЏ.
-- **РћР±РЅРѕРІР»С‘РЅРЅС‹Р№ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚:** РїСЂРѕС‚РѕРєРѕР» Error Recovery С‚РµРїРµСЂСЊ РёРЅС‚РµРіСЂРёСЂСѓРµС‚ РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹ РѕС‚Р»Р°РґРєРё вЂ” diagnose_error в†’ suggest_tests в†’ predict_regression.
-- **РќРѕРІС‹Р№ С„Р°Р№Р» `debug-tools.ts`:** 661 СЃС‚СЂРѕРє РєРѕРґР° СЃ РїР°СЂСЃРµСЂРѕРј stack trace, РєР»Р°СЃСЃРёС„РёРєР°С‚РѕСЂРѕРј РѕС€РёР±РѕРє Рё РіРµРЅРµСЂР°С‚РѕСЂРѕРј С‚РµСЃС‚-РєРµР№СЃРѕРІ.
+- **Инструмент `diagnose_error`:** классификация ошибок (null_reference, import_error, type_mismatch, syntax_error, runtime_crash, permission_denied, network_error, timeout, resource_exhausted, logic_error), парсинг stack trace (JS/TS, Python, Go, Rust), анализ зависимостей через граф, подсказки по root cause.
+- **Инструмент `suggest_tests`:** генерация тест-кейсов (unit, edge_case, integration, regression) на основе анализа экспортов файла, async-паттернов и try/catch блоков.
+- **Инструмент `predict_regression`:** предсказание регрессий перед изменением. Анализ blast radius, поиск конкретных использований экспортируемого символа, оценка риска (LOW/MEDIUM/HIGH/CRITICAL) в зависимости от типа изменения.
+- **Обновлённый системный промпт:** протокол Error Recovery теперь интегрирует инструменты отладки — diagnose_error → suggest_tests → predict_regression.
+- **Новый файл `debug-tools.ts`:** 661 строк кода с парсером stack trace, классификатором ошибок и генератором тест-кейсов.
 
 ---
 
-## [0.11.2] вЂ” 2026-07-25
+## [0.11.2] — 2026-07-25
 
 ### Added
 
-- **РЎРµСЂРІРёСЃ `DependencyGraph`:** РїРѕСЃС‚СЂРѕРµРЅРёРµ РіСЂР°С„Р° Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№ РєРѕРґРѕРІРѕР№ Р±Р°Р·С‹. РЎРєР°РЅРёСЂСѓРµС‚ РёРјРїРѕСЂС‚С‹/requires/exports РІРѕ РІСЃРµС… `.ts/.js/.py/.go/.rs/.java` С„Р°Р№Р»Р°С…, СЃС‚СЂРѕРёС‚ reverse-dependency map РґР»СЏ Р±С‹СЃС‚СЂРѕРіРѕ РїРѕРёСЃРєР° Р·Р°РІРёСЃРёРјС‹С… С„Р°Р№Р»РѕРІ. РЎРёРЅРіР»С‚РѕРЅ С‡РµСЂРµР· `getDependencyGraph()`.
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `analyze_impact`:** Р°РЅР°Р»РёР· В«blast radiusВ» РїРµСЂРµРґ РёР·РјРµРЅРµРЅРёРµРј С„Р°Р№Р»Р°. РџРѕРєР°Р·С‹РІР°РµС‚ РїСЂСЏРјС‹Рµ Рё С‚СЂР°РЅР·РёС‚РёРІРЅС‹Рµ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё, РёРјРїРѕСЂС‚С‹ С†РµР»РµРІРѕРіРѕ С„Р°Р№Р»Р°, Рё РѕС†РµРЅРєСѓ СЂРёСЃРєР° (LOW/MEDIUM/HIGH).
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `detect_patterns`:** РґРµС‚РµРєС†РёСЏ Р°СЂС…РёС‚РµРєС‚СѓСЂРЅС‹С… РїР°С‚С‚РµСЂРЅРѕРІ РїСЂРѕРµРєС‚Р° (MVC, Repository, CQRS, Monorepo, Microservices, Component-based, Hexagonal, Event-driven). Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃРїРёСЃРѕРє СЃ СѓСЂРѕРІРЅРµРј СѓРІРµСЂРµРЅРЅРѕСЃС‚Рё Рё РґРѕРєР°Р·Р°С‚РµР»СЊСЃС‚РІР°РјРё.
-- **РћР±РЅРѕРІР»С‘РЅРЅС‹Р№ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚:** РґРѕР±Р°РІР»РµРЅС‹ РёРЅСЃС‚СЂСѓРєС†РёРё РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ `detect_patterns` Рё `analyze_impact` РґР»СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂРЅРѕР№ РѕСЃРІРµРґРѕРјР»С‘РЅРЅРѕСЃС‚Рё.
+- **Сервис `DependencyGraph`:** построение графа зависимостей кодовой базы. Сканирует импорты/requires/exports во всех `.ts/.js/.py/.go/.rs/.java` файлах, строит reverse-dependency map для быстрого поиска зависимых файлов. Синглтон через `getDependencyGraph()`.
+- **Инструмент `analyze_impact`:** анализ «blast radius» перед изменением файла. Показывает прямые и транзитивные зависимости, импорты целевого файла, и оценку риска (LOW/MEDIUM/HIGH).
+- **Инструмент `detect_patterns`:** детекция архитектурных паттернов проекта (MVC, Repository, CQRS, Monorepo, Microservices, Component-based, Hexagonal, Event-driven). Возвращает список с уровнем уверенности и доказательствами.
+- **Обновлённый системный промпт:** добавлены инструкции использовать `detect_patterns` и `analyze_impact` для архитектурной осведомлённости.
 
 ---
 
-## [0.11.1] вЂ” 2026-07-18
+## [0.11.1] — 2026-07-18
 
 ### Added
 
-- **Р Р°СЃС€РёСЂРµРЅРЅС‹Р№ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ Agent СЂРµР¶РёРјР°:** РґРѕР±Р°РІР»РµРЅ РјРЅРѕРіРѕС€Р°РіРѕРІС‹Р№ РїСЂРѕС‚РѕРєРѕР» РїР»Р°РЅРёСЂРѕРІР°РЅРёСЏ (Analyze в†’ Decompose в†’ Assess risks в†’ Execute в†’ Verify в†’ Summarize), self-critique loop (РїСЂРѕРІРµСЂРєР° СЂРёСЃРєРѕРІ РїРµСЂРµРґ РєР°Р¶РґС‹Рј РґРµР№СЃС‚РІРёРµРј), Р°СЂС…РёС‚РµРєС‚СѓСЂРЅРѕРµ РјС‹С€Р»РµРЅРёРµ (SOLID/DRY/KISS, pattern detection, dependency checking), РїСЂРѕС‚РѕРєРѕР» РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ РїРѕСЃР»Рµ РѕС€РёР±РѕРє.
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `record_decision`:** Р°РіРµРЅС‚ Р·Р°РїРёСЃС‹РІР°РµС‚ РІР°Р¶РЅС‹Рµ Р°СЂС…РёС‚РµРєС‚СѓСЂРЅС‹Рµ/РґРёР·Р°Р№РЅ СЂРµС€РµРЅРёСЏ РґР»СЏ РїРѕСЃР»РµРґСѓСЋС‰РµРіРѕ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ РєРѕРЅС‚РµРєСЃС‚Р°. Persist РІ `~/.agentario/data/decisions/`.
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `recall_decisions`:** Р°РіРµРЅС‚ РёР·РІР»РµРєР°РµС‚ СЂР°РЅРµРµ Р·Р°РїРёСЃР°РЅРЅС‹Рµ СЂРµС€РµРЅРёСЏ РґР»СЏ РїРѕРґРґРµСЂР¶Р°РЅРёСЏ РєРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚Рё РІ РјРЅРѕРіРѕС€Р°РіРѕРІС‹С… СЃРµСЃСЃРёСЏС….
-- **РРЅСЃС‚СЂСѓРјРµРЅС‚ `validate_plan`:** РїСЂРѕРІРµСЂРєР° РїР»Р°РЅР° СЂРµР°Р»РёР·Р°С†РёРё РЅР° РїРѕР»РЅРѕС‚Сѓ РїРµСЂРµРґ РІС‹РїРѕР»РЅРµРЅРёРµРј. Р’РѕР·РІСЂР°С‰Р°РµС‚ score (0-100) Рё СЃРїРёСЃРѕРє РїРѕС‚РµРЅС†РёР°Р»СЊРЅС‹С… РїСЂРѕР±Р»РµРј.
-- **Р РµРіРёСЃС‚СЂР°С†РёСЏ РёРЅСЃС‚СЂСѓРјРµРЅС‚РѕРІ:** agent-РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РґРѕР±Р°РІР»СЏСЋС‚СЃСЏ Рє СЃРµСЃСЃРёРё РІ agent СЂРµР¶РёРјРµ С‡РµСЂРµР· `sdk-session-config-builder.ts`.
+- **Расширенный системный промпт Agent режима:** добавлен многошаговый протокол планирования (Analyze → Decompose → Assess risks → Execute → Verify → Summarize), self-critique loop (проверка рисков перед каждым действием), архитектурное мышление (SOLID/DRY/KISS, pattern detection, dependency checking), протокол восстановления после ошибок.
+- **Инструмент `record_decision`:** агент записывает важные архитектурные/дизайн решения для последующего восстановления контекста. Persist в `~/.agentario/data/decisions/`.
+- **Инструмент `recall_decisions`:** агент извлекает ранее записанные решения для поддержания консистентности в многошаговых сессиях.
+- **Инструмент `validate_plan`:** проверка плана реализации на полноту перед выполнением. Возвращает score (0-100) и список потенциальных проблем.
+- **Регистрация инструментов:** agent-инструменты автоматически добавляются к сессии в agent режиме через `sdk-session-config-builder.ts`.
 
 ---
 
-## [0.11.0] вЂ” 2026-07-11
+## [0.11.0] — 2026-07-11
 
 ### Added
 
-- **РќРѕРІС‹Р№ СЂРµР¶РёРј В«AgentВ»:** РґРѕР±Р°РІР»РµРЅ С‚СЂРµС‚РёР№ СЂРµР¶РёРј СЂР°Р±РѕС‚С‹ вЂ” Р°РІС‚РѕРЅРѕРјРЅС‹Р№ Р°РіРµРЅС‚ СЃ РїРѕР»РЅС‹Рј РґРѕСЃС‚СѓРїРѕРј Рє РёРЅСЃС‚СЂСѓРјРµРЅС‚Р°Рј (editor, run_commands, read_files Рё РґСЂ.) Рё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј РІС‹РїРѕР»РЅРµРЅРёРµРј Р±РµР· Р·Р°РїСЂРѕСЃР° РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ (YOLO). Р РµР¶РёРј РїСЂРµРґРЅР°Р·РЅР°С‡РµРЅ РґР»СЏ СЃР»РѕР¶РЅС‹С… РјРЅРѕРіРѕС€Р°РіРѕРІС‹С… Р·Р°РґР°С‡: Р°РіРµРЅС‚ СЃР°РјРѕСЃС‚РѕСЏС‚РµР»СЊРЅРѕ РїР»Р°РЅРёСЂСѓРµС‚, РІС‹РїРѕР»РЅСЏРµС‚ Рё РїСЂРѕРІРµСЂСЏРµС‚ СЂРµР·СѓР»СЊС‚Р°С‚. Р¦РёРєР» РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ: Plan в†’ Act в†’ Agent в†’ Plan.
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ Agent СЂРµР¶РёРјР°:** РјРЅРѕРіРѕС€Р°РіРѕРІРѕРµ РїР»Р°РЅРёСЂРѕРІР°РЅРёРµ, self-critique (РѕС†РµРЅРєР° СЂРёСЃРєРѕРІ РїРµСЂРµРґ РєР°Р¶РґС‹Рј РґРµР№СЃС‚РІРёРµРј), Р°СЂС…РёС‚РµРєС‚СѓСЂРЅРѕРµ РјС‹С€Р»РµРЅРёРµ (SOLID/DRY/KISS), Р°РІС‚РѕРЅРѕРјРЅРѕРµ РІС‹РїРѕР»РЅРµРЅРёРµ, РїСЂРѕРІРµСЂРєР° СЂРµР·СѓР»СЊС‚Р°С‚Р°.
-- **UI:** С‚СЂС‘С…РїРѕР·РёС†РёРѕРЅРЅС‹Р№ РїРµСЂРµРєР»СЋС‡Р°С‚РµР»СЊ СЂРµР¶РёРјРѕРІ СЃ С†РІРµС‚РѕРІС‹Рј РѕС‚Р»РёС‡РёРµРј (РїР»Р°РЅ вЂ” Р¶С‘Р»С‚С‹Р№, act вЂ” СЃРёРЅРёР№, agent вЂ” С„РёРѕР»РµС‚РѕРІС‹Р№).
-- **Proto:** РґРѕР±Р°РІР»РµРЅРѕ Р·РЅР°С‡РµРЅРёРµ `AGENT = 2` РІ enum `PlanActMode`.
+- **Новый режим «Agent»:** добавлен третий режим работы — автономный агент с полным доступом к инструментам (editor, run_commands, read_files и др.) и автоматическим выполнением без запроса подтверждения (YOLO). Режим предназначен для сложных многошаговых задач: агент самостоятельно планирует, выполняет и проверяет результат. Цикл переключения: Plan → Act → Agent → Plan.
+- **Системный промпт Agent режима:** многошаговое планирование, self-critique (оценка рисков перед каждым действием), архитектурное мышление (SOLID/DRY/KISS), автономное выполнение, проверка результата.
+- **UI:** трёхпозиционный переключатель режимов с цветовым отличием (план — жёлтый, act — синий, agent — фиолетовый).
+- **Proto:** добавлено значение `AGENT = 2` в enum `PlanActMode`.
 
 ---
 
-## [0.10.13] вЂ” 2026-07-10
+## [0.10.13] — 2026-07-10
 
 ### Fixed
 
-- **РљР°С‚РµРіРѕСЂРёСЏ Skills РІ РєРѕРЅС‚РµРєСЃС‚Рµ:** РїРѕР»РЅРѕРµ РёСЃРїСЂР°РІР»РµРЅРёРµ вЂ” РґРѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° РґР»СЏ `mcp` Рё `skills` РєР°С‚РµРіРѕСЂРёР№ РІ `isContextBudgetBreakdown`. Р Р°РЅСЊС€Рµ webview РёРіРЅРѕСЂРёСЂРѕРІР°Р» budget СЃ СЌС‚РёРјРё РєР°С‚РµРіРѕСЂРёСЏРјРё РёР·-Р·Р° РѕС‚СЃСѓС‚СЃС‚РІРёСЏ РїСЂРѕРІРµСЂРѕРє, С‡С‚Рѕ РїСЂРёРІРѕРґРёР»Рѕ Рє РѕС‚РѕР±СЂР°Р¶РµРЅРёСЋ 0.
+- **Категория Skills в контексте:** полное исправление — добавлена проверка для `mcp` и `skills` категорий в `isContextBudgetBreakdown`. Раньше webview игнорировал budget с этими категориями из-за отсутствия проверок, что приводило к отображению 0.
 
 ---
 
-## [0.10.12] вЂ” 2026-07-02
+## [0.10.12] — 2026-07-02
 
 ### Changed
 
-- **РРЅРґРµРєСЃРёСЂРѕРІР°РЅРёРµ С„Р°Р№Р»РѕРІ:** Р·РЅР°С‡РёС‚РµР»СЊРЅРѕ СЂР°СЃС€РёСЂРµРЅ СЃРїРёСЃРѕРє РёРЅРґРµРєСЃРёСЂСѓРµРјС‹С… С‚РёРїРѕРІ С„Р°Р№Р»РѕРІ вЂ” С‚РµРїРµСЂСЊ РёРЅРґРµРєСЃРёСЂСѓСЋС‚СЃСЏ РІСЃРµ С‚РµРєСЃС‚РѕРІС‹Рµ С„Р°Р№Р»С‹ (СЃРєСЂРёРїС‚С‹ `.cmd`/`.bat`/`.ps1`/`.sh`, РёСЃС…РѕРґРЅРёРєРё РєРѕРґР° `.c`/`.cpp`/`.cs`/`.rb`/`.php`/`.swift`/`.lua` Рё РґСЂ., РєРѕРЅС„РёРіСѓСЂР°С†РёРё `.ini`/`.cfg`/`.env`/`.properties`, РґР°РЅРЅС‹Рµ `.csv`/`.xml`, СЂР°Р·РјРµС‚РєР° `.tex`/`.rst`, `.svg`/`.proto`/`.graphql` Рё РјРЅРѕРіРёРµ РґСЂСѓРіРёРµ). Р”РѕР±Р°РІР»РµРЅ С‡С‘СЂРЅС‹Р№ СЃРїРёСЃРѕРє Р±РёРЅР°СЂРЅС‹С… СЂР°СЃС€РёСЂРµРЅРёР№ Рё РїРѕРґРґРµСЂР¶РєР° С„Р°Р№Р»РѕРІ Р±РµР· СЂР°СЃС€РёСЂРµРЅРёСЏ (Dockerfile, Makefile, Rakefile Рё РґСЂ.).
-- **РџРѕРґСЃРєР°Р·РєР° СЃРєРёР»Р°:** РїСЂРё РЅР°РІРµРґРµРЅРёРё РЅР° СЃС‚СЂРѕРєСѓ СЃРєРёР»Р° РІРѕ РІРєР»Р°РґРєРµ РїРѕРґРєР»СЋС‡РµРЅРёСЏ С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РѕРїРёСЃР°РЅРёРµ СЃРєРёР»Р° (РёР· YAML frontmatter `description:`) РІРјРµСЃС‚Рѕ РїСѓС‚Рё Рє С„Р°Р№Р»Сѓ.
-- **РљР°С‚РµРіРѕСЂРёСЏ В«SkillsВ» РІ РєРѕРЅС‚РµРєСЃС‚Рµ:** РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ вЂ” С‚РµРїРµСЂСЊ С‚РѕРєРµРЅС‹ РёРЅСЃС‚СЂСѓРјРµРЅС‚Р° `skills` РєРѕСЂСЂРµРєС‚РЅРѕ СѓС‡РёС‚С‹РІР°СЋС‚СЃСЏ РІ РєР°С‚РµРіРѕСЂРёРё В«SkillsВ» РІРјРµСЃС‚Рѕ В«ToolsВ». Р Р°РЅСЊС€Рµ РєР°С‚РµРіРѕСЂРёСЏ РїРѕРєР°Р·С‹РІР°Р»Р° 0, С‚.Рє. `estimateContextBudget` РЅРµ СЂР°Р·РґРµР»СЏР»Р° skills-РёРЅСЃС‚СЂСѓРјРµРЅС‚ РѕС‚ РѕСЃС‚Р°Р»СЊРЅС‹С….
+- **Индексирование файлов:** значительно расширен список индексируемых типов файлов — теперь индексируются все текстовые файлы (скрипты `.cmd`/`.bat`/`.ps1`/`.sh`, исходники кода `.c`/`.cpp`/`.cs`/`.rb`/`.php`/`.swift`/`.lua` и др., конфигурации `.ini`/`.cfg`/`.env`/`.properties`, данные `.csv`/`.xml`, разметка `.tex`/`.rst`, `.svg`/`.proto`/`.graphql` и многие другие). Добавлен чёрный список бинарных расширений и поддержка файлов без расширения (Dockerfile, Makefile, Rakefile и др.).
+- **Подсказка скила:** при наведении на строку скила во вкладке подключения теперь показывается описание скила (из YAML frontmatter `description:`) вместо пути к файлу.
+- **Категория «Skills» в контексте:** исправлено отображение — теперь токены инструмента `skills` корректно учитываются в категории «Skills» вместо «Tools». Раньше категория показывала 0, т.к. `estimateContextBudget` не разделяла skills-инструмент от остальных.
 
 ---
 
-## [0.10.11] вЂ” 2026-07-10
+## [0.10.11] — 2026-07-10
 
 ### Changed
 
-- **Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РјРѕРґРµР»Рё:** РїРѕР»РЅРѕСЃС‚СЊСЋ РїРµСЂРµСЂР°Р±РѕС‚Р°РЅ РјРµС…Р°РЅРёР·Рј вЂ” С‚РµРїРµСЂСЊ РєРЅРѕРїРєР° СЌРєСЃРїРѕСЂС‚Р° РєРѕРЅС‚РµРєСЃС‚Р° РїРµСЂРµС…РІР°С‚С‹РІР°РµС‚ Р Р•РђР›Р¬РќР«Р™ РєРѕРЅС‚РµРєСЃС‚, РѕС‚РїСЂР°РІР»СЏРµРјС‹Р№ РІ РјРѕРґРµР»СЊ (system prompt + СЃРѕРѕР±С‰РµРЅРёСЏ + РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹), С‡РµСЂРµР· СЌРјСѓР»СЏС†РёСЋ РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ. SDK С„РѕСЂРјРёСЂСѓРµС‚ РїРѕР»РЅС‹Р№ РєРѕРЅС‚РµРєСЃС‚, РЅРѕ `beforeModel`-С…СѓРє РїРµСЂРµС…РІР°С‚С‹РІР°РµС‚ РµРіРѕ Рё РїСЂРµСЂС‹РІР°РµС‚ РѕС‚РїСЂР°РІРєСѓ РґРѕ РІС‹Р·РѕРІР° LLM. Р РµР·СѓР»СЊС‚Р°С‚ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ С„Р°Р№Р» `model_context_<date>.txt` СЃ СЂР°Р·РґРµР»РµРЅРёРµРј РЅР° СЃРµРєС†РёРё: СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚, РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹ СЃРѕ СЃС…РµРјР°РјРё, СЃРѕРѕР±С‰РµРЅРёСЏ РєРѕРЅС‚РµРєСЃС‚Р°, Рё СЃРІРѕРґРєР° РїРѕ С‚РѕРєРµРЅР°Рј.
+- **Экспорт контекста модели:** полностью переработан механизм — теперь кнопка экспорта контекста перехватывает РЕАЛЬНЫЙ контекст, отправляемый в модель (system prompt + сообщения + инструменты), через эмуляцию отправки сообщения. SDK формирует полный контекст, но `beforeModel`-хук перехватывает его и прерывает отправку до вызова LLM. Результат сохраняется в файл `model_context_<date>.txt` с разделением на секции: системный промпт, инструменты со схемами, сообщения контекста, и сводка по токенам.
 
 ---
 
-## [0.10.10] вЂ” 2026-07-10
+## [0.10.10] — 2026-07-10
 
 ### Fixed
 
-- **Р­РєСЃРїРѕСЂС‚ С‡Р°С‚Р°:** СѓРїСЂРѕС‰С‘РЅ С„РѕСЂРјР°С‚ вЂ” С‚РµРїРµСЂСЊ СЌРєСЃРїРѕСЂС‚РёСЂСѓРµС‚СЃСЏ С…СЂРѕРЅРѕР»РѕРіРёС‡РµСЃРєР°СЏ РёСЃС‚РѕСЂРёСЏ С‡Р°С‚Р° (Р±РµР· РґСѓР±Р»РёСЂСѓСЋС‰РµР№ СЃРµРєС†РёРё В«РєРѕРЅС‚РµРєСЃС‚ РјРѕРґРµР»РёВ», РєРѕС‚РѕСЂР°СЏ РІ SDK-СЂРµР¶РёРјРµ РёРґРµРЅС‚РёС‡РЅР° РёСЃС‚РѕСЂРёРё). Р¤Р°Р№Р» РЅР°Р·С‹РІР°РµС‚СЃСЏ `chat_<taskId>_<date>.txt`.
+- **Экспорт чата:** упрощён формат — теперь экспортируется хронологическая история чата (без дублирующей секции «контекст модели», которая в SDK-режиме идентична истории). Файл называется `chat_<taskId>_<date>.txt`.
 
 ---
 
-## [0.10.9] вЂ” 2026-07-09
+## [0.10.9] — 2026-07-09
 
 ### Fixed
 
-- **РљРЅРѕРїРєР° СЌРєСЃРїРѕСЂС‚Р° РєРѕРЅС‚РµРєСЃС‚Р°:** РёСЃРїСЂР°РІР»РµРЅР° РєСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР° вЂ” Р°СЂРіСѓРјРµРЅС‚С‹ handler'Р° `exportContextText` Р±С‹Р»Рё РїРµСЂРµРїСѓС‚Р°РЅС‹ РјРµСЃС‚Р°РјРё `(request, controller)` РІРјРµСЃС‚Рѕ `(controller, request)`. РР·-Р·Р° СЌС‚РѕРіРѕ `controller.task` РІСЃРµРіРґР° Р±С‹Р» undefined Рё СЌРєСЃРїРѕСЂС‚ РЅРµ СЂР°Р±РѕС‚Р°Р». Р”РѕР±Р°РІР»РµРЅ fallback С‡РµСЂРµР· `taskHistory` РґР»СЏ СЃР»СѓС‡Р°СЏ РїСЂРѕСЃРјРѕС‚СЂР° РёСЃС‚РѕСЂРёРё Р±РµР· Р°РєС‚РёРІРЅРѕРіРѕ С‚Р°СЃРєР°.
+- **Кнопка экспорта контекста:** исправлена критическая ошибка — аргументы handler'а `exportContextText` были перепутаны местами `(request, controller)` вместо `(controller, request)`. Из-за этого `controller.task` всегда был undefined и экспорт не работал. Добавлен fallback через `taskHistory` для случая просмотра истории без активного таска.
 
 ---
 
-## [0.10.8] вЂ” 2026-07-09
+## [0.10.8] — 2026-07-09
 
 ### Changed
 
-- **Popup РєРѕРЅС‚РµРєСЃС‚Р°:** РѕС‚РєСЂС‹С‚РёРµ/Р·Р°РєСЂС‹С‚РёРµ РїРѕРґСЂРѕР±РЅРѕСЃС‚РµР№ РєРѕРЅС‚РµРєСЃС‚Р° РїРѕ РєР»РёРєСѓ, Р° РЅРµ РїРѕ РЅР°РІРµРґРµРЅРёСЋ.
+- **Popup контекста:** открытие/закрытие подробностей контекста по клику, а не по наведению.
 
 ---
 
-## [0.10.7] вЂ” 2026-07-09
+## [0.10.7] — 2026-07-09
 
 ### Fixed
 
-- **Р—Р°РєСЂС‹С‚РёРµ С‡Р°С‚Р°:** РёСЃРїСЂР°РІР»РµРЅ Р±Р°Рі, РєРѕРіРґР° РїСЂРё Р·Р°РєСЂС‹С‚РёРё С‡Р°С‚Р° С‚РµРєСЃС‚ РёСЃС‡РµР·Р°Р», С†РІРµС‚ СЃС‚Р°РЅРѕРІРёР»СЃСЏ Р±РµР»С‹Рј, РЅРѕ С‡Р°С‚ РЅРµ Р·Р°РєСЂС‹РІР°Р»СЃСЏ. РџСЂРёС‡РёРЅР°: message reducer РЅРµ СѓРјРµРЅСЊС€Р°РµС‚ С‚СЂР°РЅСЃРєСЂРёРїС‚ РІ СЂР°РјРєР°С… РѕРґРЅРѕР№ СЌРїРѕС…Рё.
+- **Закрытие чата:** исправлен баг, когда при закрытии чата текст исчезал, цвет становился белым, но чат не закрывался. Причина: message reducer не уменьшает транскрипт в рамках одной эпохи.
 
 ---
 
-## [0.10.5] вЂ” 2026-07-09
+## [0.10.5] — 2026-07-09
 
 ### Fixed
 
-- **Р¦РІРµС‚ РїР»Р°С€РµРє С‚Р°СЃРєРѕРІ:** `taskColor` С‚РµРїРµСЂСЊ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ Рё Р·Р°РіСЂСѓР¶Р°РµС‚СЃСЏ РёР· session metadata.
+- **Цвет плашек тасков:** `taskColor` теперь сохраняется и загружается из session metadata.
 
 ---
 
-## [0.9.0] вЂ” 2026-07-08
+## [0.9.0] — 2026-07-08
 
 ### Changed
 
-- **РџРѕР»РЅС‹Р№ СЂРµР±СЂРµРЅРґРёРЅРі Cline в†’ Agentario:** Р·Р°РІРµСЂС€С‘РЅ РїРµСЂРµС…РѕРґ РІСЃРµС… РІРЅСѓС‚СЂРµРЅРЅРёС… РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРѕРІ, С‚РёРїРѕРІ, С„СѓРЅРєС†РёР№, С„Р°Р№Р»РѕРІ Рё UI-РєРѕРјРїРѕРЅРµРЅС‚РѕРІ.
-  - РўРёРїС‹: `ClineMessage` в†’ `AgentarioMessage`, `ClineSayTool` в†’ `AgentarioSayTool`, `ClineApiReqInfo` в†’ `AgentarioApiReqInfo` Рё С‚.Рґ. (~400+ С„Р°Р№Р»РѕРІ)
-  - Р¤СѓРЅРєС†РёРё: `isClineProvider` в†’ `isAgentarioCloudProvider`, `resolveClineBuildEnv` в†’ `resolveAgentarioBuildEnv`, `getClineMessages` в†’ `getAgentarioMessages` Рё С‚.Рґ.
-  - Р¤Р°Р№Р»С‹: РІСЃРµ `*cline*` РїРµСЂРµРёРјРµРЅРѕРІР°РЅС‹ РІ `*agentario*` (РІРєР»СЋС‡Р°СЏ proto, cli, docs)
-  - Proto: РґРёСЂРµРєС‚РѕСЂРёСЏ `proto/cline/` в†’ `proto/agentario/`, `package cline` в†’ `package agentario`
-  - CLI: Р±РёРЅР°СЂРЅРёРє `cline` в†’ `agentario`, `CLINE_DIR` в†’ `AGENTARIO_DIR`
-  - State keys: `globalClineRulesToggles` в†’ `globalAgentarioRulesToggles` (СЃ РјРёРіСЂР°С†РёРµР№)
-- **РќР• РёР·РјРµРЅРµРЅРѕ (РІРЅРµС€РЅРёРµ РєРѕРЅС‚СЂР°РєС‚С‹):** provider IDs `"cline"`/`"cline-pass"`, URLs `cline.bot`, env var string values (`CLINE_BUILD_ENV`, `CLINE_ENVIRONMENT` Рё С‚.Рґ.)
+- **Полный ребрендинг Cline → Agentario:** завершён переход всех внутренних идентификаторов, типов, функций, файлов и UI-компонентов.
+  - Типы: `ClineMessage` → `AgentarioMessage`, `ClineSayTool` → `AgentarioSayTool`, `ClineApiReqInfo` → `AgentarioApiReqInfo` и т.д. (~400+ файлов)
+  - Функции: `isClineProvider` → `isAgentarioCloudProvider`, `resolveClineBuildEnv` → `resolveAgentarioBuildEnv`, `getClineMessages` → `getAgentarioMessages` и т.д.
+  - Файлы: все `*cline*` переименованы в `*agentario*` (включая proto, cli, docs)
+  - Proto: директория `proto/cline/` → `proto/agentario/`, `package cline` → `package agentario`
+  - CLI: бинарник `cline` → `agentario`, `CLINE_DIR` → `AGENTARIO_DIR`
+  - State keys: `globalClineRulesToggles` → `globalAgentarioRulesToggles` (с миграцией)
+- **НЕ изменено (внешние контракты):** provider IDs `"cline"`/`"cline-pass"`, URLs `cline.bot`, env var string values (`CLINE_BUILD_ENV`, `CLINE_ENVIRONMENT` и т.д.)
 
-## [0.8.6] вЂ” 2026-07-08
-
-### Fixed
-
-- **Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р°:** РєРЅРѕРїРєР° В«Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РІ С„Р°Р№Р»В» РІ popup РїРѕРґСЂРѕР±РЅРѕСЃС‚РµР№ С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚ СЂРµР·СѓР»СЊС‚Р°С‚/РѕС€РёР±РєСѓ (СЂР°РЅСЊС€Рµ РјРѕРіР»Рѕ РєР°Р·Р°С‚СЊСЃСЏ, С‡С‚Рѕ В«РЅРёС‡РµРіРѕ РЅРµ РїСЂРѕРёР·РѕС€Р»РѕВ»).
-- **РџСЂРѕРІР°Р№РґРµСЂС‹ Рё РїСЂРµСЃРµС‚С‹ (РїРµСЂСЃРёСЃС‚):** `writeProviderConfig` С‚РµРїРµСЂСЊ РґРµР»Р°РµС‚ `flushPendingState`, С‡С‚РѕР±С‹ РєР»СЋС‡Рё/РЅР°СЃС‚СЂРѕР№РєРё РїСЂРѕРІР°Р№РґРµСЂРѕРІ (РІ С‚.С‡. Xiaomi) РЅРµ В«СЃР»РµС‚Р°Р»РёВ» РїРѕСЃР»Рµ РїРµСЂРµР·Р°РїСѓСЃРєР° VS Code.
-
-### Changed
-
-- **РќР°СЃС‚СЂРѕР№РєРё в†’ РќР°СЃС‚СЂРѕР№РєР° API:** СЂР°Р·РЅРµСЃРµРЅРѕ РЅР° 2 СЃРІРѕСЂР°С‡РёРІР°РµРјС‹С… Р±Р»РѕРєР° вЂ” В«РќР°СЃС‚СЂРѕР№РєР° РїСЂРѕРІР°Р№РґРµСЂР°В» Рё В«РџСЂРµСЃРµС‚С‹В».
-- **РќР°СЃС‚СЂРѕР№РєРё в†’ РўРµСЂРјРёРЅР°Р»:** РїР°СЂР°РјРµС‚СЂС‹ РѕР±СЉРµРґРёРЅРµРЅС‹ РІ РѕРґРёРЅ СЃРІРѕСЂР°С‡РёРІР°РµРјС‹Р№ Р±Р»РѕРє.
-
----
-
-## [0.8.5] вЂ” 2026-07-08
-
-### Changed
-
-- **РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ Agentario:** РІСЃС‚СЂРѕРµРЅС‹ РєР»СЋС‡РµРІС‹Рµ РїСЂР°РІРёР»Р° РёР· `00-agent-behavior`, `01-terminal` Рё РіР»РѕР±Р°Р»СЊРЅС‹С… РїСЂР°РІРёР» вЂ” РїСЂРёРѕСЂРёС‚РµС‚ `read_files`/`editor` РЅР°Рґ shell, Р·Р°РїСЂРµС‚ Р·Р°РїРёСЃРё С„Р°Р№Р»РѕРІ С‡РµСЂРµР· PowerShell, РїРѕР»РёС‚РёРєР° РїРѕРІС‚РѕСЂРѕРІ РїСЂРё РѕС€РёР±РєР°С…, РїР»Р°С‚С„РѕСЂРјРµРЅРЅС‹Рµ РёРЅСЃС‚СЂСѓРєС†РёРё РґР»СЏ Windows PowerShell.
-- **РўСѓР» `run_commands`:** Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЂР°СЃРїР°РєРѕРІРєР° stringified JSON РІ `commands`, РїСЂРµРґРІР°Р»РёРґР°С†РёСЏ С‚РёРїРёС‡РЅС‹С… РѕС€РёР±РѕРє PowerShell (`&&`, Р»РёС€РЅРёРµ `}`, РЅРµСЃР±Р°Р»Р°РЅСЃРёСЂРѕРІР°РЅРЅС‹Рµ РєР°РІС‹С‡РєРё).
-- **РўСѓР» `editor`:** РѕРїРёСЃР°РЅРёРµ СѓСЃРёР»РµРЅРѕ вЂ” РѕР±СЏР·Р°С‚РµР»СЊРЅРѕРµ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РґР»СЏ РїСЂР°РІРѕРє С„Р°Р№Р»РѕРІ, `read_files` РїРµСЂРµРґ replace.
+## [0.8.6] — 2026-07-08
 
 ### Fixed
 
-- **Р РµР±СЂРµРЅРґРёРЅРі РїСЂРѕРјРїС‚РѕРІ SDK:** `prompt/cline.ts` в†’ `prompt/agentario.ts`, РєРѕРЅСЃС‚Р°РЅС‚С‹ `DEFAULT_AGENTARIO_SYSTEM_PROMPT` / `YOLO_AGENTARIO_SYSTEM_PROMPT` (СЃС‚Р°СЂС‹Рµ РёРјРµРЅР° СЃРѕС…СЂР°РЅРµРЅС‹ РєР°Рє deprecated-Р°Р»РёР°СЃС‹).
+- **Экспорт контекста:** кнопка «Экспорт контекста в файл» в popup подробностей теперь показывает результат/ошибку (раньше могло казаться, что «ничего не произошло»).
+- **Провайдеры и пресеты (персист):** `writeProviderConfig` теперь делает `flushPendingState`, чтобы ключи/настройки провайдеров (в т.ч. Xiaomi) не «слетали» после перезапуска VS Code.
+
+### Changed
+
+- **Настройки → Настройка API:** разнесено на 2 сворачиваемых блока — «Настройка провайдера» и «Пресеты».
+- **Настройки → Терминал:** параметры объединены в один сворачиваемый блок.
 
 ---
 
-## [0.8.4] вЂ” 2026-07-08
+## [0.8.5] — 2026-07-08
+
+### Changed
+
+- **Системный промпт Agentario:** встроены ключевые правила из `00-agent-behavior`, `01-terminal` и глобальных правил — приоритет `read_files`/`editor` над shell, запрет записи файлов через PowerShell, политика повторов при ошибках, платформенные инструкции для Windows PowerShell.
+- **Тул `run_commands`:** автоматическая распаковка stringified JSON в `commands`, предвалидация типичных ошибок PowerShell (`&&`, лишние `}`, несбалансированные кавычки).
+- **Тул `editor`:** описание усилено — обязательное использование для правок файлов, `read_files` перед replace.
+
+### Fixed
+
+- **Ребрендинг промптов SDK:** `prompt/cline.ts` → `prompt/agentario.ts`, константы `DEFAULT_AGENTARIO_SYSTEM_PROMPT` / `YOLO_AGENTARIO_SYSTEM_PROMPT` (старые имена сохранены как deprecated-алиасы).
+
+---
+
+## [0.8.4] — 2026-07-08
 
 ### Added
 
-- **Р’С‹Р±РѕСЂ С†РІРµС‚Р° РїР»Р°С€РµРє С‚Р°СЃРєРѕРІ:** РџРљРњ РїРѕ РїР»Р°С€РєРµ С‚Р°СЃРєР° РІ РёСЃС‚РѕСЂРёРё в†’ РїР°Р»РёС‚СЂР° РёР· 16 С†РІРµС‚РѕРІ. Р¦РІРµС‚ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ Рё РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРµР·Р°РїСѓСЃРєР°.
-- **Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РІ popup РїР°РЅРµР»Рё РєРѕРЅС‚РµРєСЃС‚Р°:** РєРЅРѕРїРєР° В«Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° РІ С„Р°Р№Р»В» РІ РІСЃРїР»С‹РІР°СЋС‰РµРј РѕРєРЅРµ РїР°РЅРµР»Рё РєРѕРЅС‚РµРєСЃС‚Р° С‚Р°СЃРєР°.
+- **Выбор цвета плашек тасков:** ПКМ по плашке таска в истории → палитра из 16 цветов. Цвет сохраняется и отображается после перезапуска.
+- **Экспорт контекста в popup панели контекста:** кнопка «Экспорт контекста в файл» в всплывающем окне панели контекста таска.
 
 ### Changed
 
-- **РќР°СЃС‚СЂРѕР№РєРё вЂ” СЃРІРѕСЂР°С‡РёРІР°РµРјС‹Рµ Р±Р»РѕРєРё:** РІСЃРµ Р±Р»РѕРєРё РЅР° РІСЃРµС… РІРєР»Р°РґРєР°С… (Features, Summarization) С‚РµРїРµСЂСЊ СЃРІРѕСЂР°С‡РёРІР°РµРјС‹Рµ Рё СЃРІС‘СЂРЅСѓС‚С‹ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ. Р—Р°РіРѕР»РѕРІРєРё СѓРІРµР»РёС‡РµРЅС‹ Рё СЃРґРµР»Р°РЅС‹ СЏСЂС‡Рµ.
-- **Р Р°РјРєРё Р±Р»РѕРєРѕРІ РІ РЅР°СЃС‚СЂРѕР№РєР°С…:** СЂР°РјРєРё СЃРґРµР»Р°РЅС‹ Р±РѕР»РµРµ СЏРІРЅС‹РјРё (`border-foreground/15` РІРјРµСЃС‚Рѕ `border-editor-widget-border/50`).
+- **Настройки — сворачиваемые блоки:** все блоки на всех вкладках (Features, Summarization) теперь сворачиваемые и свёрнуты по умолчанию. Заголовки увеличены и сделаны ярче.
+- **Рамки блоков в настройках:** рамки сделаны более явными (`border-foreground/15` вместо `border-editor-widget-border/50`).
 
 ---
 
-## [0.8.3] вЂ” 2026-07-08
+## [0.8.3] — 2026-07-08
 
 ### Changed
 
-- **РџСЂРѕРјРїС‚-С€Р°Р±Р»РѕРЅ СЃСѓРјРјР°СЂРёР·Р°С†РёРё:** РѕР±РЅРѕРІР»РµРЅ С€Р°Р±Р»РѕРЅ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ вЂ” С‚РµРїРµСЂСЊ СЃСѓРјРјР°СЂРёР·Р°С‚РѕСЂ РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РґРёР°Р»РѕРі РїРѕ РѕС‚РґРµР»СЊРЅС‹Рј СЃРѕРѕР±С‰РµРЅРёСЏРј (User, Agent, Agent-thinking, Agent-Tool-calls), СЃР¶РёРјР°РµС‚ РєР°Р¶РґРѕРµ РІ 2 СЂР°Р·Р° (РјРёРЅРёРјСѓРј 30 СЃР»РѕРІ), СЃРѕС…СЂР°РЅСЏСЏ С„РѕСЂРјР°С‚ СЃ С‚РµРіР°РјРё `[User]:`, `[Agent]:`, `[Agent-thinking]:`, `[Agent-Tool-calls]:`. РЈР±СЂР°РЅР° РґСѓР±Р»РёСЂСѓСЋС‰Р°СЏ СЃС‚СЂРѕРєР° РёР· fallback-РїСѓС‚Рё `buildSummaryRequest`.
+- **Промпт-шаблон суммаризации:** обновлен шаблон по умолчанию — теперь суммаризатор обрабатывает диалог по отдельным сообщениям (User, Agent, Agent-thinking, Agent-Tool-calls), сжимает каждое в 2 раза (минимум 30 слов), сохраняя формат с тегами `[User]:`, `[Agent]:`, `[Agent-thinking]:`, `[Agent-Tool-calls]:`. Убрана дублирующая строка из fallback-пути `buildSummaryRequest`.
 
 ---
 
-## [0.8.2] вЂ” 2026-07-08
+## [0.8.2] — 2026-07-08
 
 ### Fixed
 
-- **Р­РєСЃРїРѕСЂС‚ РєРѕРЅС‚РµРєСЃС‚Р° С‡Р°С‚Р°:** РєРЅРѕРїРєР° В«РўРµРєСЃС‚ С‡Р°С‚Р° РёР· РєРѕРЅС‚РµРєСЃС‚Р°В» РІ РЅР°СЃС‚СЂРѕР№РєР°С… СЃСѓРјРјР°СЂРёР·Р°С†РёРё С‚РµРїРµСЂСЊ РєРѕСЂСЂРµРєС‚РЅРѕ СЌРєСЃРїРѕСЂС‚РёСЂСѓРµС‚ С‚РµРєСѓС‰РёР№ РєРѕРЅС‚РµРєСЃС‚ (РІСЃРµ СЃРѕРѕР±С‰РµРЅРёСЏ, РѕС‚РїСЂР°РІР»СЏРµРјС‹Рµ РјРѕРґРµР»СЊ) РІ С‚РµРєСЃС‚РѕРІС‹Р№ С„Р°Р№Р» СЃ СЂР°Р·РґРµР»РµРЅРёРµРј РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј Рё РѕС‚РєСЂС‹РІР°РµС‚ РµРіРѕ РІ СЂРµРґР°РєС‚РѕСЂРµ.
+- **Экспорт контекста чата:** кнопка «Текст чата из контекста» в настройках суммаризации теперь корректно экспортирует текущий контекст (все сообщения, отправляемые модель) в текстовый файл с разделением по категориям и открывает его в редакторе.
 
 ---
 
-## [0.8.1] вЂ” 2026-07-08
+## [0.8.1] — 2026-07-08
 
 ### Fixed
 
-- **РЎРѕРѕР±С‰РµРЅРёСЏ СЃСѓРјРјР°СЂРёР·Р°С†РёРё РІ РёСЃС‚РѕСЂРёРё С‡Р°С‚Р°:** info-СЃРѕРѕР±С‰РµРЅРёСЏ РєРѕРјРїР°РєС‚Р° (РїСЂРѕРіСЂРµСЃСЃ, СЃС‚Р°С‚РёСЃС‚РёРєР°, РѕС€РёР±РєРё) Р±РѕР»СЊС€Рµ РЅРµ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ РёСЃС‚РѕСЂРёСЋ Рё С„РёР»СЊС‚СЂСѓСЋС‚СЃСЏ РїСЂРё Р·Р°РіСЂСѓР·РєРµ. Р Р°РЅРµРµ РѕРЅРё РЅР°РєР°РїР»РёРІР°Р»РёСЃСЊ РїСЂРё РєР°Р¶РґРѕРј РѕС‚РєСЂС‹С‚РёРё С‡Р°С‚Р°.
-- **Р¤РёР»СЊС‚СЂ `filterCompactionInfoMessages`** С‚РµРїРµСЂСЊ РїРѕРєСЂС‹РІР°РµС‚ Р’РЎР• `say:"info"` СЃРѕРѕР±С‰РµРЅРёСЏ (Р° РЅРµ С‚РѕР»СЊРєРѕ 10 РїР°С‚С‚РµСЂРЅРѕРІ), РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РІРѕ РІСЃРµС… 6 С‚РѕС‡РєР°С… СЃРѕС…СЂР°РЅРµРЅРёСЏ Рё РїСЂРё Р·Р°РіСЂСѓР·РєРµ РёР· РёСЃС‚РѕСЂРёРё.
+- **Сообщения суммаризации в истории чата:** info-сообщения компакта (прогресс, статистика, ошибки) больше не сохраняются в историю и фильтруются при загрузке. Ранее они накапливались при каждом открытии чата.
+- **Фильтр `filterCompactionInfoMessages`** теперь покрывает ВСЕ `say:"info"` сообщения (а не только 10 паттернов), применяется во всех 6 точках сохранения и при загрузке из истории.
 
 ---
 
-## [0.6.0] вЂ” 2026-07-08
+## [0.6.0] — 2026-07-08
 
 ### Fixed
 
-- **РЎСѓРјРјР°СЂРёР·Р°С†РёСЏ reasoning-РјРѕРґРµР»СЏРјРё:** РёСЃРїСЂР°РІР»РµРЅ РєСЂРёС‚РёС‡РµСЃРєРёР№ Р±Р°Рі вЂ” reasoning-РјРѕРґРµР»Рё (qwen3.5 Рё РґСЂ.) С‚СЂР°С‚РёР»Рё РІСЃРµ С‚РѕРєРµРЅС‹ РЅР° "Thinking Process" Рё РЅРµ РІС‹РґР°РІР°Р»Рё СЂРµР°Р»СЊРЅС‹Р№ summary. РџСЂРёС‡РёРЅС‹: (1) Р»РёРјРёС‚ `maxOutputTokens` С‚РµРїРµСЂСЊ СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РґРёРЅР°РјРёС‡РµСЃРєРё РёР· С‚РµРєСѓС‰РµРіРѕ `chunkSize` (x2), РІРјРµСЃС‚Рѕ С…Р°СЂРґРєРѕРґР°; (2) reasoning Рё text С‚РѕРєРµРЅС‹ СЃРјРµС€РёРІР°Р»РёСЃСЊ РІ РѕРґРЅРѕРј Р±СѓС„РµСЂРµ вЂ” С‚РµРїРµСЂСЊ СЂР°Р·РґРµР»РµРЅС‹; (3) РґРѕР±Р°РІР»РµРЅ retry СЃ `/no_think` РёРЅСЃС‚СЂСѓРєС†РёРµР№ РµСЃР»Рё РјРѕРґРµР»СЊ РІС‹РґР°Р»Р° С‚РѕР»СЊРєРѕ reasoning.
-- **РЎСѓРјРјР°СЂРёР·Р°С†РёСЏ:** fallback РЅР° РїРѕСЃР»РµРґРЅСЋСЋ С‡Р°СЃС‚СЊ reasoning РµСЃР»Рё text РїСѓСЃС‚ РґР°Р¶Рµ РїРѕСЃР»Рµ retry.
+- **Суммаризация reasoning-моделями:** исправлен критический баг — reasoning-модели (qwen3.5 и др.) тратили все токены на "Thinking Process" и не выдавали реальный summary. Причины: (1) лимит `maxOutputTokens` теперь рассчитывается динамически из текущего `chunkSize` (x2), вместо хардкода; (2) reasoning и text токены смешивались в одном буфере — теперь разделены; (3) добавлен retry с `/no_think` инструкцией если модель выдала только reasoning.
+- **Суммаризация:** fallback на последнюю часть reasoning если text пуст даже после retry.
 
 ---
 
-## [0.5.98] вЂ” 2026-07-08
+## [0.5.98] — 2026-07-08
 
 ### Changed
 
-- **Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ:** Р°РєС‚СѓР°Р»РёР·РёСЂРѕРІР°РЅР° РІРµСЂСЃРёСЏ РІ README.md (0.5.27 в†’ 0.5.98), РѕР±РЅРѕРІР»С‘РЅ РїСѓС‚СЊ Рє VSIX РІ РёРЅСЃС‚СЂСѓРєС†РёРё Р±С‹СЃС‚СЂРѕРіРѕ СЃС‚Р°СЂС‚Р°.
+- **Документация:** актуализирована версия в README.md (0.5.27 → 0.5.98), обновлён путь к VSIX в инструкции быстрого старта.
 
 ### Removed
 
-- **Р›РѕРєР°Р»СЊРЅС‹Р№ CPU summarizer:** СѓРґР°Р»С‘РЅ РјС‘СЂС‚РІС‹Р№ С„Р°Р№Р» `src/sdk/local-cpu-summarizer.ts` (РЅРµ РёРјРїРѕСЂС‚РёСЂРѕРІР°Р»СЃСЏ РЅРёРіРґРµ РїРѕСЃР»Рµ v0.5.25).
+- **Локальный CPU summarizer:** удалён мёртвый файл `src/sdk/local-cpu-summarizer.ts` (не импортировался нигде после v0.5.25).
 
 ---
 
@@ -1213,526 +1122,526 @@ esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р
 
 ### Added
 
-- РЁР°Р±Р»РѕРЅ release notes: `release/notes/TEMPLATE.md`.
+- Шаблон release notes: `release/notes/TEMPLATE.md`.
 
 ---
 
-## [0.5.21] вЂ” 2026-07-05
+## [0.5.21] — 2026-07-05
 
 ### Fixed
 
-- **Compact РёСЃС‚РѕСЂРёРё: РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ СЃРѕРѕР±С‰РµРЅРёР№ РІ UI:** РїРѕСЃР»Рµ СЃР¶Р°С‚РёСЏ РЅРµР°РєС‚РёРІРЅРѕР№ Р·Р°РґР°С‡Рё РєРѕРјРїР°РєС‚РЅСѓС‚С‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РєРѕРЅРІРµСЂС‚РёСЂСѓСЋС‚СЃСЏ РёР· SDK-С„РѕСЂРјР°С‚Р° РІ ClineMessage[] Рё СѓСЃС‚Р°РЅР°РІР»РёРІР°СЋС‚СЃСЏ РІ UI С‡РµСЂРµР· `messageStateHandler` Рё `messages` coordinator. Р Р°РЅСЊС€Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РѕС‡РёС‰Р°Р»РёСЃСЊ Рё РЅРµ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°Р»РёСЃСЊ вЂ” С‡Р°С‚ РѕСЃС‚Р°РІР°Р»СЃСЏ РїСѓСЃС‚С‹Рј.
-- **РћС‚РїСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёР№ РїРѕСЃР»Рµ РєРѕРјРїР°РєС‚Р°:** `SdkFollowupCoordinator.askResponse` С‚РµРїРµСЂСЊ РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ СЃР»СѓС‡Р°Р№ РєРѕРіРґР° Р°РєС‚РёРІРЅР°СЏ СЃРµСЃСЃРёСЏ СЃСѓС‰РµСЃС‚РІСѓРµС‚, РЅРѕ РЅРµ running вЂ” СЃРѕРѕР±С‰РµРЅРёРµ РѕС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РЅР°РїСЂСЏРјСѓСЋ Р±РµР· РїРµСЂРµСЃРѕР·РґР°РЅРёСЏ СЃРµСЃСЃРёРё.
-- **РРЅРґРёРєР°С†РёСЏ РїСЂРѕС†РµСЃСЃР° РєРѕРјРїР°РєС‚Р°:** РїРµСЂРµРґ РЅР°С‡Р°Р»РѕРј СЃР¶Р°С‚РёСЏ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ "РЎР¶Р°С‚РёРµ РєРѕРЅС‚РµРєСЃС‚Р°..." СЃРѕРѕР±С‰РµРЅРёРµ.
+- **Compact истории: восстановление сообщений в UI:** после сжатия неактивной задачи компактнутые сообщения конвертируются из SDK-формата в ClineMessage[] и устанавливаются в UI через `messageStateHandler` и `messages` coordinator. Раньше сообщения очищались и не восстанавливались — чат оставался пустым.
+- **Отправка сообщений после компакта:** `SdkFollowupCoordinator.askResponse` теперь обрабатывает случай когда активная сессия существует, но не running — сообщение отправляется напрямую без пересоздания сессии.
+- **Индикация процесса компакта:** перед началом сжатия отображается "Сжатие контекста..." сообщение.
 
 ---
 
-## [0.5.20] вЂ” 2026-07-04
+## [0.5.20] — 2026-07-04
 
 ### Fixed
 
-- **Compact РёСЃС‚РѕСЂРёРё: isRunning=false РїРѕСЃР»Рµ СЃС‚Р°СЂС‚Р°:** РїРѕСЃР»Рµ СЃРѕР·РґР°РЅРёСЏ СЃРµСЃСЃРёРё СЃ compact-СЃРѕРѕР±С‰РµРЅРёСЏРјРё СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ `isRunning: false`. РўРµРїРµСЂСЊ СЃРµСЃСЃРёСЏ РіРѕС‚РѕРІР° РїСЂРёРЅРёРјР°С‚СЊ РЅРѕРІС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ, РїРѕРІС‚РѕСЂРЅС‹Р№ compact РЅРµ Р±Р»РѕРєРёСЂСѓРµС‚СЃСЏ РѕС€РёР±РєРѕР№ "response is in progress".
+- **Compact истории: isRunning=false после старта:** после создания сессии с compact-сообщениями устанавливается `isRunning: false`. Теперь сессия готова принимать новые сообщения, повторный compact не блокируется ошибкой "response is in progress".
 
 ---
 
-## [0.5.19] вЂ” 2026-07-04
+## [0.5.19] — 2026-07-04
 
 ### Fixed
 
-- **Compact РёСЃС‚РѕСЂРёРё: РѕС‡РёСЃС‚РєР° messageStateHandler:** РїРѕСЃР»Рµ РєРѕРјРїР°РєС‚РёСЂРѕРІР°РЅРёСЏ РёСЃС‚РѕСЂРёРё СЃС‚Р°СЂС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РѕС‡РёС‰Р°СЋС‚СЃСЏ, С‡С‚РѕР±С‹ РЅРѕРІС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РѕС‚ SDK РєРѕСЂСЂРµРєС‚РЅРѕ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°Р»РёСЃСЊ С‡РµСЂРµР· message translator. Р­С‚Рѕ РїРѕР·РІРѕР»СЏРµС‚ РїСЂРѕРґРѕР»Р¶РёС‚СЊ СЂР°Р±РѕС‚Сѓ СЃ Р·Р°РґР°С‡РµР№ РїРѕСЃР»Рµ compact.
+- **Compact истории: очистка messageStateHandler:** после компактирования истории старые сообщения очищаются, чтобы новые сообщения от SDK корректно синхронизировались через message translator. Это позволяет продолжить работу с задачей после compact.
 
 ---
 
-## [0.5.18] вЂ” 2026-07-04
+## [0.5.18] — 2026-07-04
 
 ### Fixed
 
-- **Compact РґР»СЏ РЅРµР°РєС‚РёРІРЅС‹С… Р·Р°РґР°С‡ РёР· РёСЃС‚РѕСЂРёРё:** С‚РµРїРµСЂСЊ РјРѕР¶РЅРѕ СЃР¶РёРјР°С‚СЊ РєРѕРЅС‚РµРєСЃС‚ Р·Р°РґР°С‡, РѕС‚РєСЂС‹С‚С‹С… РёР· РёСЃС‚РѕСЂРёРё Р±РµР· РЅР°Р¶Р°С‚РёСЏ "Resume Task". РЎРѕР·РґР°С‘С‚СЃСЏ РІСЂРµРјРµРЅРЅС‹Р№ sdkHost, С‡РёС‚Р°РµС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РёР· РёСЃС‚РѕСЂРёРё, Р·Р°РїСѓСЃРєР°РµС‚ compaction, Рё СЃС‚Р°СЂС‚СѓРµС‚ РЅРѕРІСѓСЋ СЃРµСЃСЃРёСЋ СЃ РєРѕРјРїР°РєС‚РёСЂРѕРІР°РЅРЅС‹РјРё СЃРѕРѕР±С‰РµРЅРёСЏРјРё.
+- **Compact для неактивных задач из истории:** теперь можно сжимать контекст задач, открытых из истории без нажатия "Resume Task". Создаётся временный sdkHost, читает сообщения из истории, запускает compaction, и стартует новую сессию с компактированными сообщениями.
 
 ---
 
-## [0.5.17] вЂ” 2026-07-04
+## [0.5.17] — 2026-07-04
 
 ### Fixed
 
-- **РџСЂРµСЃРµС‚С‹ РјРѕРґРµР»РµР№ СЃРѕС…СЂР°РЅСЏСЋС‚ СЃС‚РѕРёРјРѕСЃС‚СЊ С‚РѕРєРµРЅРѕРІ Рё ModelInfo:** РґРѕР±Р°РІР»РµРЅРѕ РїРѕР»Рµ `selections` РІ `ModelProfileProviderConfig`. РўРµРїРµСЂСЊ РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё РїСЂРµСЃРµС‚Р° С„РёРєСЃРёСЂСѓРµС‚СЃСЏ `modelInfo` (С†РµРЅС‹ `inputPrice`/`outputPrice`/`cacheReadsPrice`/`cacheWritesPrice`, РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РѕРєРЅРѕ Рё С‚.Рґ.) РґР»СЏ РєР°Р¶РґРѕРіРѕ mode. РџСЂРё РїСЂРёРјРµРЅРµРЅРёРё РїСЂРµСЃРµС‚Р° РїРѕСЃР»Рµ РїРµСЂРµР·Р°РїСѓСЃРєР° VS Code/Agentario С†РµРЅС‹ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°СЋС‚СЃСЏ РёР· РїСЂРµСЃРµС‚Р°, Р° РЅРµ РёР· РґРµС„РѕР»С‚РЅРѕРіРѕ РєР°С‚Р°Р»РѕРіР°.
+- **Пресеты моделей сохраняют стоимость токенов и ModelInfo:** добавлено поле `selections` в `ModelProfileProviderConfig`. Теперь при сохранении пресета фиксируется `modelInfo` (цены `inputPrice`/`outputPrice`/`cacheReadsPrice`/`cacheWritesPrice`, контекстное окно и т.д.) для каждого mode. При применении пресета после перезапуска VS Code/Agentario цены восстанавливаются из пресета, а не из дефолтного каталога.
 
 ---
 
-## [0.5.16] вЂ” 2026-07-04
+## [0.5.16] — 2026-07-04
 
 ### Fixed
 
-- **РЎС‚СЂСѓРєС‚СѓСЂРЅР°СЏ РїРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РґР»СЏ РёСЃС‚РѕСЂРёРё:** РґРѕР±Р°РІР»РµРЅРѕ РїРѕР»Рµ `lastContextBudget` РІ `HistoryItem`. РўРµРїРµСЂСЊ РїСЂРё РѕС‚РєСЂС‹С‚РёРё Р·Р°РґР°С‡Рё РёР· РёСЃС‚РѕСЂРёРё РёР»Рё РїРѕСЃР»Рµ РїРµСЂРµР·Р°РїСѓСЃРєР° VS Code РїРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ СЃ СЂР°Р·РґРµР»РµРЅРёРµРј РЅР° segments (system/rules/tools/chat), Р° РЅРµ СЃРїР»РѕС€РЅРѕР№. Р”Р°РЅРЅС‹Рµ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ metadata РёСЃС‚РѕСЂРёРё Р·Р°РґР°С‡Рё.
+- **Структурная полоска контекста сохраняется для истории:** добавлено поле `lastContextBudget` в `HistoryItem`. Теперь при открытии задачи из истории или после перезапуска VS Code полоска контекста отображается с разделением на segments (system/rules/tools/chat), а не сплошной. Данные сохраняются в metadata истории задачи.
 
 ---
 
-## [0.5.15] вЂ” 2026-07-04
+## [0.5.15] — 2026-07-04
 
 ### Added
 
-- **Р”РёР°РіРЅРѕСЃС‚РёРєР° СЃС‚СЂСѓРєС‚СѓСЂРЅРѕР№ РїРѕР»РѕСЃРєРё РєРѕРЅС‚РµРєСЃС‚Р°:** РґРѕР±Р°РІР»РµРЅРѕ Р»РѕРіРёСЂРѕРІР°РЅРёРµ РїСЂРё РїРѕР»СѓС‡РµРЅРёРё `contextBudget` РёР· SDK. РўРµРїРµСЂСЊ РІ Р»РѕРіР°С… РІРёРґРЅРѕ: `system=X, rules=Y, tools=Z, chat=W, total=N`. Р•СЃР»Рё РїРѕР»РѕСЃРєР° СЃРїР»РѕС€РЅР°СЏ вЂ” РїСЂРѕРІРµСЂСЊС‚Рµ Р»РѕРіРё СЂР°СЃС€РёСЂРµРЅРёСЏ (`~/.agentario/data/logs/extension/`).
+- **Диагностика структурной полоски контекста:** добавлено логирование при получении `contextBudget` из SDK. Теперь в логах видно: `system=X, rules=Y, tools=Z, chat=W, total=N`. Если полоска сплошная — проверьте логи расширения (`~/.agentario/data/logs/extension/`).
 
 ---
 
-## [0.5.14] вЂ” 2026-07-04
+## [0.5.14] — 2026-07-04
 
 ### Fixed
 
-- **РЎР¶Р°С‚РёРµ РєРѕРЅС‚РµРєСЃС‚Р° (`/compact`):** `useAutoCondense` С‚РµРїРµСЂСЊ РІРєР»СЋС‡С‘РЅ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (`true`). Р Р°РЅСЊС€Рµ auto-compaction Р±С‹Р» РѕС‚РєР»СЋС‡С‘РЅ, Рё `/compact` СЂР°Р±РѕС‚Р°Р» С‚РѕР»СЊРєРѕ РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РІСЂСѓС‡РЅСѓСЋ РІРєР»СЋС‡Р°Р» РЅР°СЃС‚СЂРѕР№РєСѓ. РўРµРїРµСЂСЊ:
-  - `/compact` РІСЃРµРіРґР° РїС‹С‚Р°РµС‚СЃСЏ СЃР¶Р°С‚СЊ (manual mode)
-  - Auto-compaction СЃСЂР°Р±Р°С‚С‹РІР°РµС‚ РїСЂРё РґРѕСЃС‚РёР¶РµРЅРёРё РїРѕСЂРѕРіР° РєРѕРЅС‚РµРєСЃС‚Р°
-  - РџРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РїСЂРёС‡РёРЅР° РµСЃР»Рё compaction РЅРµ СѓРґР°Р»СЃСЏ (В«РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№В», В«РЎР»РёС€РєРѕРј РјР°Р»Рѕ СЃРѕРѕР±С‰РµРЅРёР№В», В«Р’СЃРµ РІ С‚РµРєСѓС‰РµРј РґРёР°Р»РѕРіРµВ»)
+- **Сжатие контекста (`/compact`):** `useAutoCondense` теперь включён по умолчанию (`true`). Раньше auto-compaction был отключён, и `/compact` работал только если пользователь вручную включал настройку. Теперь:
+  - `/compact` всегда пытается сжать (manual mode)
+  - Auto-compaction срабатывает при достижении порога контекста
+  - Показывается причина если compaction не удался («Нет сообщений», «Слишком мало сообщений», «Все в текущем диалоге»)
 
 ---
 
-## [0.5.13] вЂ” 2026-07-04
+## [0.5.13] — 2026-07-04
 
 ### Changed
 
-- **Р›РѕРєР°Р»РёР·Р°С†РёСЏ UI:** РІСЃРµ РєРЅРѕРїРєРё С‡Р°С‚Р° РїРµСЂРµРІРµРґРµРЅС‹ РЅР° СЂСѓСЃСЃРєРёР№: В«РџРѕРІС‚РѕСЂРёС‚СЊВ», В«РќРѕРІР°СЏ Р·Р°РґР°С‡Р°В», В«РџСЂРѕРґРѕР»Р¶РёС‚СЊВ», В«РџРѕРґС‚РІРµСЂРґРёС‚СЊВ», В«РћС‚РєР»РѕРЅРёС‚СЊВ», В«РЎРѕС…СЂР°РЅРёС‚СЊВ», В«Р’С‹РїРѕР»РЅРёС‚СЊ РєРѕРјР°РЅРґСѓВ», В«РџСЂРѕРґРѕР»Р¶РёС‚СЊ РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРёВ», В«Р’РѕР·РѕР±РЅРѕРІРёС‚СЊ Р·Р°РґР°С‡СѓВ», В«РќРѕРІР°СЏ Р·Р°РґР°С‡Р° СЃ РєРѕРЅС‚РµРєСЃС‚РѕРјВ», В«РЎР¶Р°С‚СЊ РґРёР°Р»РѕРіВ», В«РЎРѕРѕР±С‰РёС‚СЊ РѕР± РѕС€РёР±РєРµВ», В«РћС‚РјРµРЅР°В».
+- **Локализация UI:** все кнопки чата переведены на русский: «Повторить», «Новая задача», «Продолжить», «Подтвердить», «Отклонить», «Сохранить», «Выполнить команду», «Продолжить при выполнении», «Возобновить задачу», «Новая задача с контекстом», «Сжать диалог», «Сообщить об ошибке», «Отмена».
 
 ---
 
-## [0.5.12] вЂ” 2026-07-04
+## [0.5.12] — 2026-07-04
 
 ### Fixed
 
-- **РўР°Р№РјР°СѓС‚ bash-РєРѕРјР°РЅРґ:** `resolveAgentToolTimeoutMs` С‚РµРїРµСЂСЊ РѕРіСЂР°РЅРёС‡РµРЅ РјР°РєСЃРёРјСѓРј 5 РјРёРЅСѓС‚Р°РјРё (300 000 РјСЃ). Р Р°РЅСЊС€Рµ `requestTimeoutMs` РёР· РЅР°СЃС‚СЂРѕРµРє API РїСЂРёРјРµРЅСЏР»СЃСЏ РЅР°РїСЂСЏРјСѓСЋ Рє С‚РµСЂРјРёРЅР°Р»СЊРЅС‹Рј РєРѕРјР°РЅРґР°Рј вЂ” РїСЂРё Р±РѕР»СЊС€РёС… Р·РЅР°С‡РµРЅРёСЏС… (РЅР°РїСЂРёРјРµСЂ, РґР»СЏ РјРµРґР»РµРЅРЅРѕР№ LM Studio) bash-РєРѕРјР°РЅРґС‹ РјРѕРіР»Рё Р¶РґР°С‚СЊ С‡Р°СЃР°РјРё. РўРµРїРµСЂСЊ API-С‚Р°Р№РјР°СѓС‚ Рё tool-С‚Р°Р№РјР°СѓС‚ СЂР°Р·РґРµР»РµРЅС‹: API РјРѕР¶РµС‚ Р±С‹С‚СЊ 10+ РјРёРЅСѓС‚, Р° bash/search вЂ” РјР°РєСЃРёРјСѓРј 5 РјРёРЅСѓС‚.
+- **Таймаут bash-команд:** `resolveAgentToolTimeoutMs` теперь ограничен максимум 5 минутами (300 000 мс). Раньше `requestTimeoutMs` из настроек API применялся напрямую к терминальным командам — при больших значениях (например, для медленной LM Studio) bash-команды могли ждать часами. Теперь API-таймаут и tool-таймаут разделены: API может быть 10+ минут, а bash/search — максимум 5 минут.
 
 ---
 
-## [0.5.11] вЂ” 2026-07-04
+## [0.5.11] — 2026-07-04
 
 ### Fixed
 
-- **Xiaomi вЂ” СЃРїРёСЃРѕРє РјРѕРґРµР»РµР№:** `refreshOpenAiModels` С‚РµРїРµСЂСЊ РїСЂРёРЅРёРјР°РµС‚ `provider_id` Рё РїРѕРґСЃС‚Р°РІР»СЏРµС‚ СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ API-РєР»СЋС‡ РёР· РЅР°СЃС‚СЂРѕРµРє РЅСѓР¶РЅРѕРіРѕ РїСЂРѕРІР°Р№РґРµСЂР° (СЂР°РЅСЊС€Рµ РІСЃРµРіРґР° Р±СЂР°Р» РєР»СЋС‡ РёР· `openai`, РёР·-Р·Р° С‡РµРіРѕ РїРѕСЃР»Рµ РІС‹Р±РѕСЂР° РјРѕРґРµР»Рё РёР»Рё РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ Plan/Act СЃРїРёСЃРѕРє РјРѕРґРµР»РµР№ РїСЂРѕРїР°РґР°Р»).
-- **Settings в†’ API Configuration:** `apiOptionsKey` Р±РѕР»СЊС€Рµ РЅРµ РІРєР»СЋС‡Р°РµС‚ ID РјРѕРґРµР»РµР№ вЂ” РІС‹Р±РѕСЂ РјРѕРґРµР»Рё РЅРµ remount-РёС‚ РІРµСЃСЊ СЌРєСЂР°РЅ РЅР°СЃС‚СЂРѕРµРє Рё РЅРµ СЃР±СЂР°СЃС‹РІР°РµС‚ Р·Р°РіСЂСѓР¶РµРЅРЅС‹Р№ СЃРїРёСЃРѕРє.
+- **Xiaomi — список моделей:** `refreshOpenAiModels` теперь принимает `provider_id` и подставляет сохранённый API-ключ из настроек нужного провайдера (раньше всегда брал ключ из `openai`, из-за чего после выбора модели или переключения Plan/Act список моделей пропадал).
+- **Settings → API Configuration:** `apiOptionsKey` больше не включает ID моделей — выбор модели не remount-ит весь экран настроек и не сбрасывает загруженный список.
 
 ---
 
-## [0.5.10] вЂ” 2026-07-04
+## [0.5.10] — 2026-07-04
 
 ### Fixed
 
-- **РџСЂРµСЃРµС‚С‹ вЂ” stale partial update:** `updateApiConfigurationPartial` Рё `commitModelSelection` С‚РµРїРµСЂСЊ РїРѕР»РЅРѕСЃС‚СЊСЋ РёРіРЅРѕСЂРёСЂСѓСЋС‚ Р·Р°РїСЂРѕСЃС‹ РІ С‚РµС‡РµРЅРёРµ 2 СЃ РїРѕСЃР»Рµ РїСЂРёРјРµРЅРµРЅРёСЏ РїСЂРµСЃРµС‚Р° (СЂР°РЅСЊС€Рµ РїСЂРѕРїСѓСЃРєР°Р»СЃСЏ С‚РѕР»СЊРєРѕ `postStateToWebview`, РЅРѕ СЃРѕСЃС‚РѕСЏРЅРёРµ РЅР° Р±СЌРєРµРЅРґРµ РІСЃС‘ СЂР°РІРЅРѕ РїРµСЂРµР·Р°РїРёСЃС‹РІР°Р»РѕСЃСЊ СЃС‚Р°СЂС‹РјРё РґР°РЅРЅС‹РјРё РѕС‚ СЂР°Р·РјРѕРЅС‚РёСЂСѓРµРјРѕРіРѕ UI РїСЂРѕРІР°Р№РґРµСЂР°). Р­С‚Рѕ СѓСЃС‚СЂР°РЅСЏРµС‚ СЃРёС‚СѓР°С†РёСЋ, РєРѕРіРґР° РїРµСЂРІС‹Р№ РєР»РёРє РЅР° РїСЂРµСЃРµС‚ LM Studio РїРѕРєР°Р·С‹РІР°Р» РЅР°СЃС‚СЂРѕР№РєРё Xiaomi.
+- **Пресеты — stale partial update:** `updateApiConfigurationPartial` и `commitModelSelection` теперь полностью игнорируют запросы в течение 2 с после применения пресета (раньше пропускался только `postStateToWebview`, но состояние на бэкенде всё равно перезаписывалось старыми данными от размонтируемого UI провайдера). Это устраняет ситуацию, когда первый клик на пресет LM Studio показывал настройки Xiaomi.
 
 ---
 
-## [0.5.9] вЂ” 2026-07-04
+## [0.5.9] — 2026-07-04
 
 ### Fixed
 
-- **РџСЂРµСЃРµС‚С‹ вЂ” race condition:** `applyModelProfilePreset` С‚РµРїРµСЂСЊ СЃР°Рј РІС‹Р·С‹РІР°РµС‚ `postStateToWebview` СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РїСЂРёРјРµРЅРµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє, Р° `updateApiConfigurationPartial` Рё `commitModelSelection` РїСЂРѕРїСѓСЃРєР°СЋС‚ СЃРІРѕР№ `postStateToWebview`/`handleApiConfigurationChanged`, РµСЃР»Рё РїСЂРµСЃРµС‚ Р±С‹Р» РїСЂРёРјРµРЅС‘РЅ РјРµРЅРµРµ 1 СЃ РЅР°Р·Р°Рґ. Р­С‚Рѕ СѓСЃС‚СЂР°РЅСЏРµС‚ РїСЂРѕРјРµР¶СѓС‚РѕС‡РЅС‹Р№ СЌРєСЂР°РЅ СЃ РґРµС„РѕР»С‚РЅС‹РјРё РЅР°СЃС‚СЂРѕР№РєР°РјРё Xiaomi РїСЂРё РїРµСЂРµРєР»СЋС‡РµРЅРёРё РјРµР¶РґСѓ РїСЂРµСЃРµС‚Р°РјРё.
-- **updateSettings:** РґСѓР±Р»РёСЂСѓСЋС‰РёР№ `postStateToWebview` РІ РєРѕРЅС†Рµ `updateSettings` РїСЂРѕРїСѓСЃРєР°РµС‚СЃСЏ, РµСЃР»Рё РїСЂРµСЃРµС‚ СѓР¶Рµ РѕС‚РїСЂР°РІРёР» СЃРѕСЃС‚РѕСЏРЅРёРµ.
+- **Пресеты — race condition:** `applyModelProfilePreset` теперь сам вызывает `postStateToWebview` сразу после применения настроек, а `updateApiConfigurationPartial` и `commitModelSelection` пропускают свой `postStateToWebview`/`handleApiConfigurationChanged`, если пресет был применён менее 1 с назад. Это устраняет промежуточный экран с дефолтными настройками Xiaomi при переключении между пресетами.
+- **updateSettings:** дублирующий `postStateToWebview` в конце `updateSettings` пропускается, если пресет уже отправил состояние.
 
 ---
 
-## [0.5.8] вЂ” 2026-07-04
+## [0.5.8] — 2026-07-04
 
 ### Fixed
 
-- **РџСЂРµСЃРµС‚С‹ РјРѕРґРµР»Рё:** UI-РѕР±РЅРѕРІР»РµРЅРёСЏ РѕС‚РґРµР»СЊРЅС‹С… РїРѕР»РµР№ (`lmStudioMaxTokens`, reasoning, provider Рё С‚.Рї.) С‚РµРїРµСЂСЊ РѕС‚РїСЂР°РІР»СЏСЋС‚СЃСЏ С‡РµСЂРµР· `updateApiConfigurationPartial`, Р° РЅРµ РїРѕР»РЅРѕР№ stale-РєРѕРїРёРµР№ `apiConfiguration`; СЌС‚Рѕ СѓСЃС‚СЂР°РЅСЏРµС‚ РѕС‚РєР°С‚ СЃ LM Studio РїСЂРµСЃРµС‚Р° РѕР±СЂР°С‚РЅРѕ РЅР° СЃС‚Р°СЂС‹Р№ Xiaomi РїРѕСЃР»Рµ РїРµСЂРІРѕРіРѕ РєР»РёРєР°.
-- **Plan/Act:** С‡Р°СЃС‚РёС‡РЅС‹Рµ РѕР±РЅРѕРІР»РµРЅРёСЏ Р±РѕР»СЊС€Рµ РЅРµ РїРµСЂРµР·Р°РїРёСЃС‹РІР°СЋС‚ СЃРѕСЃРµРґРЅРёР№ СЂРµР¶РёРј СЃС‚Р°СЂС‹РјРё РґР°РЅРЅС‹РјРё РїСЂРё РїРµСЂРµРєР»СЋС‡РµРЅРёРё РІРєР»Р°РґРѕРє.
+- **Пресеты модели:** UI-обновления отдельных полей (`lmStudioMaxTokens`, reasoning, provider и т.п.) теперь отправляются через `updateApiConfigurationPartial`, а не полной stale-копией `apiConfiguration`; это устраняет откат с LM Studio пресета обратно на старый Xiaomi после первого клика.
+- **Plan/Act:** частичные обновления больше не перезаписывают соседний режим старыми данными при переключении вкладок.
 
 ---
 
-## [0.5.7] вЂ” 2026-07-04
+## [0.5.7] — 2026-07-04
 
 ### Fixed
 
-- **РџСЂРµСЃРµС‚С‹ РјРѕРґРµР»Рё:** provider settings РёР· РїСЂРµСЃРµС‚Р° С‚РµРїРµСЂСЊ РЅР°РїСЂСЏРјСѓСЋ Р·Р°РєСЂРµРїР»СЏСЋС‚СЃСЏ РІ `providers.json` РїРѕСЃР»Рµ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РІС‹Р±РѕСЂР° РјРѕРґРµР»Рё; СЌС‚Рѕ РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ РІРѕР·РІСЂР°С‚ UI Рє РґРµС„РѕР»С‚РЅРѕРјСѓ Xiaomi РїСЂРё РїРµСЂРІРѕРј РїРµСЂРµРєР»СЋС‡РµРЅРёРё РЅР° LM Studio.
-- **Settings в†’ API Configuration:** РїРµСЂРµРєР»СЋС‡РµРЅРёРµ Plan/Act Р±РѕР»СЊС€Рµ РЅРµ remount-РёС‚ РІРµСЃСЊ `ApiOptions`, РїРѕСЌС‚РѕРјСѓ СЃРїРёСЃРѕРє РјРѕРґРµР»РµР№ Xiaomi РЅРµ СЃР±СЂР°СЃС‹РІР°РµС‚СЃСЏ РІ СЂСѓС‡РЅРѕРµ С‚РµРєСЃС‚РѕРІРѕРµ РїРѕР»Рµ.
-- Р”РѕР±Р°РІР»РµРЅ Р»РѕРі `[ModelProfilePreset] Provider config persisted...` РґР»СЏ РїСЂРѕРІРµСЂРєРё Base URL/API line РїСЂРё РїСЂРёРјРµРЅРµРЅРёРё РїСЂРµСЃРµС‚Р°.
+- **Пресеты модели:** provider settings из пресета теперь напрямую закрепляются в `providers.json` после синхронизации выбора модели; это предотвращает возврат UI к дефолтному Xiaomi при первом переключении на LM Studio.
+- **Settings → API Configuration:** переключение Plan/Act больше не remount-ит весь `ApiOptions`, поэтому список моделей Xiaomi не сбрасывается в ручное текстовое поле.
+- Добавлен лог `[ModelProfilePreset] Provider config persisted...` для проверки Base URL/API line при применении пресета.
 
 ---
 
-## [0.5.6] вЂ” 2026-07-04
+## [0.5.6] — 2026-07-04
 
 ### Fixed
 
-- **РџСЂРµСЃРµС‚С‹ РјРѕРґРµР»Рё:** РїРѕР»СЏ СЃ debounced-СЃРѕС…СЂР°РЅРµРЅРёРµРј Р±РѕР»СЊС€Рµ РЅРµ Р·Р°РїРёСЃС‹РІР°СЋС‚ `initialValue` РѕР±СЂР°С‚РЅРѕ РІ backend РїСЂРё РїСЂРёРјРµРЅРµРЅРёРё РїСЂРµСЃРµС‚Р°; Base URL Xiaomi РёР· РїСЂРµСЃРµС‚Р° Р·Р°РєСЂРµРїР»СЏРµС‚СЃСЏ РїРѕСЃР»Рµ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РІС‹Р±РѕСЂР° РјРѕРґРµР»Рё.
-- **РРЅРґРµРєСЃР°С†РёСЏ:** СЃРїРёСЃРѕРє СЂРµР¶РёРјРѕРІ РёРЅРґРµРєСЃР°С†РёРё РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РїРѕРІРµСЂС… РїРѕСЏРІР»СЏСЋС‰РµРіРѕСЃСЏ РІС‹Р±РѕСЂР° backend РґР»СЏ Р»РѕРєР°Р»СЊРЅРѕРіРѕ AI.
+- **Пресеты модели:** поля с debounced-сохранением больше не записывают `initialValue` обратно в backend при применении пресета; Base URL Xiaomi из пресета закрепляется после синхронизации выбора модели.
+- **Индексация:** список режимов индексации отображается поверх появляющегося выбора backend для локального AI.
 
 ---
 
-## [0.5.5] вЂ” 2026-07-04
+## [0.5.5] — 2026-07-04
 
 ### Fixed
 
-- **MCP:** seed Рё merge С€Р°Р±Р»РѕРЅР° С‚РµРїРµСЂСЊ РїРёС€СѓС‚ РІ `~/.agentario/data/settings/agentario_mcp_settings.json` (С‚РѕС‚ Р¶Рµ С„Р°Р№Р», С‡С‚Рѕ С‡РёС‚Р°РµС‚ McpHub), СЃ РјРёРіСЂР°С†РёРµР№ РёР· legacy VS Code globalStorage; РїРѕСЃР»Рµ РѕР±РЅРѕРІР»РµРЅРёСЏ С€Р°Р±Р»РѕРЅР° v3 вЂ” РїРµСЂРµР·Р°РіСЂСѓР·РєР° СЃРїРёСЃРєР° СЃРµСЂРІРµСЂРѕРІ.
-- **РџСЂРµСЃРµС‚С‹ РјРѕРґРµР»Рё:** РїСЂРѕРІР°Р№РґРµСЂ-РєРѕРЅС„РёРі РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РґРѕ СЃРјРµРЅС‹ API; СЃС‡С‘С‚С‡РёРє `modelProfilePresetApplySeq` С„РѕСЂСЃРёСЂСѓРµС‚ remount С„РѕСЂРјС‹; Р±Р»РѕРєРёСЂРѕРІРєР° UI РЅР° В«Р—Р°РіСЂСѓР·РєР°вЂ¦В» РґРѕ readProviderConfig; СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ Base URL РїСЂРё СЃРјРµРЅРµ РїСЂРµСЃРµС‚Р°.
+- **MCP:** seed и merge шаблона теперь пишут в `~/.agentario/data/settings/agentario_mcp_settings.json` (тот же файл, что читает McpHub), с миграцией из legacy VS Code globalStorage; после обновления шаблона v3 — перезагрузка списка серверов.
+- **Пресеты модели:** провайдер-конфиг применяется до смены API; счётчик `modelProfilePresetApplySeq` форсирует remount формы; блокировка UI на «Загрузка…» до readProviderConfig; синхронизация Base URL при смене пресета.
 
 ---
 
-## [0.5.4] вЂ” 2026-07-04
+## [0.5.4] — 2026-07-04
 
 ### Added
 
-- Р¤Р°Р№Р»РѕРІС‹Рµ Р»РѕРіРё СЂР°СЃС€РёСЂРµРЅРёСЏ Рё UI: `~/.agentario/data/logs/extension/` Рё `logs/ui/` (РєР»РёРєРё, СЌРєСЂР°РЅС‹ РЅР°СЃС‚СЂРѕРµРє, РёРЅРґРµРєСЃР°С†РёРё).
-- gRPC `logAgentarioUiEvent` вЂ” webview РїРёС€РµС‚ СЃРѕР±С‹С‚РёСЏ UI РІ С„Р°Р№Р».
-- Р РµР¶РёРјС‹ РёРЅРґРµРєСЃР°С†РёРё: **Р»РѕРєР°Р»СЊРЅС‹Р№ (Р±РµР· AI)**, **Р»РѕРєР°Р»СЊРЅС‹Р№ AI** (LM Studio/Ollama РЅР° 127.0.0.1), **СѓРґР°Р»С‘РЅРЅС‹Р№ AI** (URL/IP); РІС‹Р±РѕСЂ backend Рё embedding-РјРѕРґРµР»Рё.
-- РђРІС‚РѕРґРѕР±Р°РІР»РµРЅРёРµ MCP РёР· С€Р°Р±Р»РѕРЅР° v2 (`memory-slim`, `sequential-thinking-slim`, `charlotte`) СЃ РїРµСЂРµР·Р°РіСЂСѓР·РєРѕР№ СЃРїРёСЃРєР° СЃРµСЂРІРµСЂРѕРІ РїРѕСЃР»Рµ merge.
+- Файловые логи расширения и UI: `~/.agentario/data/logs/extension/` и `logs/ui/` (клики, экраны настроек, индексации).
+- gRPC `logAgentarioUiEvent` — webview пишет события UI в файл.
+- Режимы индексации: **локальный (без AI)**, **локальный AI** (LM Studio/Ollama на 127.0.0.1), **удалённый AI** (URL/IP); выбор backend и embedding-модели.
+- Автодобавление MCP из шаблона v2 (`memory-slim`, `sequential-thinking-slim`, `charlotte`) с перезагрузкой списка серверов после merge.
 
 ### Fixed
 
-- РљРЅРѕРїРєР° **В«РћС‚РєСЂС‹С‚СЊ РїР°РїРєСѓ Р»РѕРіРѕРІВ»** РѕС‚РєСЂС‹РІР°РµС‚ `~/.agentario/data/logs` С‡РµСЂРµР· РїСЂРѕРІРѕРґРЅРёРє РћРЎ.
-- РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РїСЂРµСЃРµС‚РѕРІ РјРѕРґРµР»Рё: СЃР±СЂРѕСЃ РєРµС€Р° РїСЂРѕРІР°Р№РґРµСЂР° Рё remount С„РѕСЂРјС‹ API РїСЂРё СЃРјРµРЅРµ РїСЂРµСЃРµС‚Р° (РѕРґРёРЅ РєР»РёРє вЂ” РєРѕСЂСЂРµРєС‚РЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё).
+- Кнопка **«Открыть папку логов»** открывает `~/.agentario/data/logs` через проводник ОС.
+- Переключение пресетов модели: сброс кеша провайдера и remount формы API при смене пресета (один клик — корректные настройки).
 
 ### Changed
 
-- РџРѕРґСЃРєР°Р·РєР° Рє РєРЅРѕРїРєРµ Р»РѕРіРѕРІ РѕРїРёСЃС‹РІР°РµС‚ РЅРѕРІСѓСЋ СЃС‚СЂСѓРєС‚СѓСЂСѓ РєР°С‚Р°Р»РѕРіР° `logs/`.
+- Подсказка к кнопке логов описывает новую структуру каталога `logs/`.
 
 ---
 
-## [0.5.3] вЂ” 2026-07-03
+## [0.5.3] — 2026-07-03
 
 ### Added
 
-- **РЎР±СЂРѕСЃ Agentario** (Settings в†’ РћР±С‰РёРµ): РїРѕР»РЅР°СЏ РѕС‡РёСЃС‚РєР° РЅР°СЃС‚СЂРѕРµРє, РєРµС€Р°, РёРЅРґРµРєСЃР°С†РёРё, РёСЃС‚РѕСЂРёРё С‡Р°С‚РѕРІ Рё MCP; РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ РїСЂР°РІРёР»Р° СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ, СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ `agentario-global-rules.md` РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ.
-- РљРЅРѕРїРєР° **В«РћС‚РєСЂС‹С‚СЊ РїР°РїРєСѓ Р»РѕРіРѕРІВ»** вЂ” Р±С‹СЃС‚СЂС‹Р№ РґРѕСЃС‚СѓРї Рє `~/.agentario/data/tasks` РґР»СЏ РѕС‚Р»Р°РґРєРё Рё РїРµСЂРµРґР°С‡Рё Р»РѕРіРѕРІ СЂР°Р·СЂР°Р±РѕС‚С‡РёРєР°Рј.
-- РђР»СЊС‚РµСЂРЅР°С‚РёРІРЅС‹Рµ MCP РїСЂРё СѓСЃС‚Р°РЅРѕРІРєРµ: `memory-slim`, `sequential-thinking-slim`, **Charlotte**; РїРѕРґРїРёСЃРё standard / alternate light РІ СЃРїРёСЃРєРµ MCP.
-- РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СѓСЃС‚Р°РЅРѕРІРєР° СЂРµРєРѕРјРµРЅРґСѓРµРјРѕРіРѕ РЅР°Р±РѕСЂР° MCP РїСЂРё РїРµСЂРІРѕРј Р·Р°РїСѓСЃРєРµ СЂР°СЃС€РёСЂРµРЅРёСЏ (Р±РµР· `setup-mcp.cmd`).
+- **Сброс Agentario** (Settings → Общие): полная очистка настроек, кеша, индексации, истории чатов и MCP; пользовательские правила сохраняются, стандартный `agentario-global-rules.md` восстанавливается.
+- Кнопка **«Открыть папку логов»** — быстрый доступ к `~/.agentario/data/tasks` для отладки и передачи логов разработчикам.
+- Альтернативные MCP при установке: `memory-slim`, `sequential-thinking-slim`, **Charlotte**; подписи standard / alternate light в списке MCP.
+- Автоматическая установка рекомендуемого набора MCP при первом запуске расширения (без `setup-mcp.cmd`).
 
 ### Changed
 
-- MCP РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІРєР»СЋС‡РµРЅС‹ С‚РѕР»СЊРєРѕ **sequential-thinking** Рё **Context7**; memory, playwright, trueline Рё Р°Р»СЊС‚РµСЂРЅР°С‚РёРІС‹ вЂ” РІС‹РєР»СЋС‡РµРЅС‹.
-- РЎРѕРѕР±С‰РµРЅРёРµ РїРѕ РєРЅРѕРїРєРµ Р°РєРєР°СѓРЅС‚Р° СѓРїРѕРјРёРЅР°РµС‚ LM Studio, Xiaomi MiMo Рё РґСЂСѓРіРёРµ OpenAI-compatible API.
+- MCP по умолчанию включены только **sequential-thinking** и **Context7**; memory, playwright, trueline и альтернативы — выключены.
+- Сообщение по кнопке аккаунта упоминает LM Studio, Xiaomi MiMo и другие OpenAI-compatible API.
 
 ---
 
-## [0.5.2] вЂ” 2026-07-03
+## [0.5.2] — 2026-07-03
 
 ### Added
 
-- **РџСЂРµСЃРµС‚С‹ РјРѕРґРµР»Рё:** СЃРѕС…СЂР°РЅРµРЅРёРµ РїРѕР»РЅРѕРіРѕ РЅР°Р±РѕСЂР° РЅР°СЃС‚СЂРѕРµРє Plan/Act (РїСЂРѕРІР°Р№РґРµСЂ, РјРѕРґРµР»СЊ, Base URL, Model Configuration) Рё Р±С‹СЃС‚СЂРѕРµ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РёР· С‡Р°С‚Р° РїРѕРґ РЅР°Р·РІР°РЅРёРµРј РјРѕРґРµР»Рё.
-- Р­РєСЂР°РЅ СѓРїСЂР°РІР»РµРЅРёСЏ РїСЂРµСЃРµС‚Р°РјРё РІ Settings в†’ API Configuration.
+- **Пресеты модели:** сохранение полного набора настроек Plan/Act (провайдер, модель, Base URL, Model Configuration) и быстрое переключение из чата под названием модели.
+- Экран управления пресетами в Settings → API Configuration.
 
 ### Changed
 
-- Placeholder Base URL РґР»СЏ Xiaomi вЂ” РѕР±С‰РёР№ `api.xiaomimimo.com`, Р±РµР· РїСЂРёРІСЏР·РєРё Рє Token Plan endpoint РІ РґРµС„РѕР»С‚Р°С… UI.
+- Placeholder Base URL для Xiaomi — общий `api.xiaomimimo.com`, без привязки к Token Plan endpoint в дефолтах UI.
 
 ---
 
-## [0.5.1] вЂ” 2026-07-03
+## [0.5.1] — 2026-07-03
 
 ### Added
 
-- **MiMo Token Plan:** РєРЅРѕРїРєРё Р±С‹СЃС‚СЂРѕР№ РЅР°СЃС‚СЂРѕР№РєРё (Token Plan / Pay-as-you-go) РІ РїСЂРѕРІР°Р№РґРµСЂР°С… **Xiaomi** Рё **OpenAI Compatible** вЂ” Base URL, Model ID, РєРѕРЅС‚РµРєСЃС‚ 1M, Supports Images РІС‹РєР».
-- РћС‚РґРµР»СЊРЅС‹Р№ СЌРєСЂР°РЅ РЅР°СЃС‚СЂРѕРµРє **Xiaomi** СЃ Base URL, Model Configuration Рё РїСЂРµСЃРµС‚Р°РјРё РїРѕРґРїРёСЃРєРё.
+- **MiMo Token Plan:** кнопки быстрой настройки (Token Plan / Pay-as-you-go) в провайдерах **Xiaomi** и **OpenAI Compatible** — Base URL, Model ID, контекст 1M, Supports Images выкл.
+- Отдельный экран настроек **Xiaomi** с Base URL, Model Configuration и пресетами подписки.
 
 ### Fixed
 
-- **MiMo / Xiaomi:** Base URL РёР· `providers.json` РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РІ СЃРµСЃСЃРёРё С‡Р°С‚Р° (СЂР°РЅСЊС€Рµ Р·Р°РїСЂРѕСЃС‹ СѓС…РѕРґРёР»Рё РЅР° РґРµС„РѕР»С‚РЅС‹Р№ `api.xiaomimimo.com` РёР»Рё OpenAI).
-- **РљРѕРЅС‚РµРєСЃС‚ 128K:** `knownModels` СЃ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРј `modelInfo` (context window, supports images) РїРµСЂРµРґР°С‘С‚СЃСЏ РІ SDK-СЃРµСЃСЃРёСЋ.
-- **Supports Images:** РїРµСЂРµРєР»СЋС‡Р°С‚РµР»СЊ РІ Model Configuration РЅРµ РІРєР»СЋС‡Р°РµС‚СЃСЏ РѕР±СЂР°С‚РЅРѕ СЃР°Рј (Р»РѕРєР°Р»СЊРЅС‹Р№ draft + `Switch` РІРјРµСЃС‚Рѕ `VSCodeCheckbox`).
-- РЎРѕС…СЂР°РЅРµРЅРёРµ `modelInfo` РІ `providers.json` (`extras`) РґР»СЏ РїСЂРѕРІР°Р№РґРµСЂРѕРІ Р±РµР· legacy-РїРѕР»РµР№ РІ state.
+- **MiMo / Xiaomi:** Base URL из `providers.json` применяется в сессии чата (раньше запросы уходили на дефолтный `api.xiaomimimo.com` или OpenAI).
+- **Контекст 128K:** `knownModels` с пользовательским `modelInfo` (context window, supports images) передаётся в SDK-сессию.
+- **Supports Images:** переключатель в Model Configuration не включается обратно сам (локальный draft + `Switch` вместо `VSCodeCheckbox`).
+- Сохранение `modelInfo` в `providers.json` (`extras`) для провайдеров без legacy-полей в state.
 
 ---
 
-## [0.5.0] вЂ” 2026-07-03
+## [0.5.0] — 2026-07-03
 
 ### Added
 
-- **РЎС‚СЂСѓРєС‚СѓСЂРЅР°СЏ РїРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р°** РІ РїР»Р°С€РєРµ Р·Р°РґР°РЅРёСЏ: СЃРµРіРјРµРЅС‚С‹ System / Rules / Tools / Chat (compressible); tooltip СЃ СЂР°Р·Р±РёРІРєРѕР№ РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј Рё СЃРїРёСЃРєРѕРј rules РїРѕ С„Р°Р№Р»Р°Рј.
-- **РћС†РµРЅРєР° Р±СЋРґР¶РµС‚Р° РєРѕРЅС‚РµРєСЃС‚Р°** (`estimateContextBudget`) РІ SDK вЂ” СЌРјРёС‚РёС‚СЃСЏ РїРµСЂРµРґ РєР°Р¶РґС‹Рј API-Р·Р°РїСЂРѕСЃРѕРј Рё РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РІ UI (в‰€ heuristic).
-- **Agentic compaction (LLM summary)** РґР»СЏ С‡Р°С‚Р° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ; fallback РЅР° Basic РїСЂРё РѕС€РёР±РєРµ summarizer.
-- **РќР°СЃС‚СЂРѕР№РєРё СЃР¶Р°С‚РёСЏ:** Settings в†’ Features вЂ” СЃС‚СЂР°С‚РµРіРёСЏ (Basic / Agentic), РѕС‚РґРµР»СЊРЅР°СЏ РјРѕРґРµР»СЊ РґР»СЏ summary (provider + model ID).
+- **Структурная полоска контекста** в плашке задания: сегменты System / Rules / Tools / Chat (compressible); tooltip с разбивкой по категориям и списком rules по файлам.
+- **Оценка бюджета контекста** (`estimateContextBudget`) в SDK — эмитится перед каждым API-запросом и отображается в UI (≈ heuristic).
+- **Agentic compaction (LLM summary)** для чата по умолчанию; fallback на Basic при ошибке summarizer.
+- **Настройки сжатия:** Settings → Features — стратегия (Basic / Agentic), отдельная модель для summary (provider + model ID).
 
 ### Changed
 
-- РђРІС‚Рѕ-СЃР¶Р°С‚РёРµ (`useAutoCondense`) РёСЃРїРѕР»СЊР·СѓРµС‚ СЃС‚СЂР°С‚РµРіРёСЋ **agentic** РІРјРµСЃС‚Рѕ basic; manual `/compact` С‡РёС‚Р°РµС‚ strategy Рё summarizer РёР· session config.
-- `preserveRecentTokens` Р°РґР°РїС‚РёСЂСѓРµС‚СЃСЏ Рє РјР°Р»С‹Рј context window (LM Studio 8kвЂ“32k).
+- Авто-сжатие (`useAutoCondense`) использует стратегию **agentic** вместо basic; manual `/compact` читает strategy и summarizer из session config.
+- `preserveRecentTokens` адаптируется к малым context window (LM Studio 8k–32k).
 
 ---
 
-## [0.4.20] вЂ” 2026-07-03
+## [0.4.20] — 2026-07-03
 
 ### Fixed
 
-- **РџРѕР»РѕСЃРєР° РєРѕРЅС‚РµРєСЃС‚Р° РІ РїР»Р°С€РєРµ Р·Р°РґР°РЅРёСЏ:** РґР»СЏ LM Studio (Рё Ollama) РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ С„Р°РєС‚РёС‡РµСЃРєРёР№ СЂР°Р·РјРµСЂ РѕРєРЅР° РјРѕРґРµР»Рё (`loaded_context_length` / `lmStudioMaxTokens`), Р° РЅРµ РґРµС„РѕР»С‚РЅС‹Рµ 128K.
-- **Rules:** С„Р°Р№Р»С‹ СЃРёСЃС‚РµРјРЅРѕРіРѕ РїСЂРѕРјРїС‚Р° (`agentario-system-prompt*.md`, `lmstudio-system-prompt.md`) РёСЃРєР»СЋС‡РµРЅС‹ РёР· СЃРїРёСЃРєР° Rules вЂ” РёС… РјРѕР¶РЅРѕ РѕС‚РєР»СЋС‡РёС‚СЊ/СѓРґР°Р»РёС‚СЊ Р±РµР· Р°РІС‚РѕРїРѕРІС‚РѕСЂРЅРѕРіРѕ РІРєР»СЋС‡РµРЅРёСЏ; РїСЂРё РїРµСЂРІРѕРј Р·Р°РїСѓСЃРєРµ СЃРёРґРёС‚СЃСЏ С‚РѕР»СЊРєРѕ `agentario-global-rules.md`.
+- **Полоска контекста в плашке задания:** для LM Studio (и Ollama) отображается фактический размер окна модели (`loaded_context_length` / `lmStudioMaxTokens`), а не дефолтные 128K.
+- **Rules:** файлы системного промпта (`agentario-system-prompt*.md`, `lmstudio-system-prompt.md`) исключены из списка Rules — их можно отключить/удалить без автоповторного включения; при первом запуске сидится только `agentario-global-rules.md`.
 
 ### Changed
 
-- РћР±РЅРѕРІР»РµРЅС‹ `agentario-global-rules.md` (РµРґРёРЅС‹Р№ С€Р°Р±Р»РѕРЅ РґР»СЏ config Рё VSIX).
-- `config/lmstudio-system-prompt.md` Рё setup-СЃРєСЂРёРїС‚: СЃРїСЂР°РІРєР° РїРµСЂРµРЅРѕСЃРёС‚СЃСЏ РІ `Documents/Agentario/docs/`, РЅРµ РІ Rules.
+- Обновлены `agentario-global-rules.md` (единый шаблон для config и VSIX).
+- `config/lmstudio-system-prompt.md` и setup-скрипт: справка переносится в `Documents/Agentario/docs/`, не в Rules.
 
 ---
 
 ### Added
 
-- **trueline-mcp** РІ СЂРµРєРѕРјРµРЅРґСѓРµРјРѕРј MCP-С€Р°Р±Р»РѕРЅРµ (`config/agentario-recommended-mcp.json`) вЂ” hash-verified РїСЂР°РІРєРё С„Р°Р№Р»РѕРІ.
-- **LM Studio (Р°РіРµРЅС‚):** РІ СЃРїРёСЃРєРµ РјРѕРґРµР»РµР№ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚СЃСЏ С‚РёРї (llm, embeddingвЂ¦) Рё СЃС‚Р°С‚СѓСЃ `loaded`; Р·Р°РіСЂСѓР¶РµРЅРЅС‹Рµ РјРѕРґРµР»Рё вЂ” РїРµСЂРІС‹РјРё (РєР°Рє РІ РёРЅРґРµРєСЃР°С†РёРё).
+- **trueline-mcp** в рекомендуемом MCP-шаблоне (`config/agentario-recommended-mcp.json`) — hash-verified правки файлов.
+- **LM Studio (агент):** в списке моделей отображаются тип (llm, embedding…) и статус `loaded`; загруженные модели — первыми (как в индексации).
 
 ### Changed
 
-- РЎРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ Рё global rules: Р·Р°РїСЂРµС‚ Р·Р°РїРёСЃРё С„Р°Р№Р»РѕРІ С‡РµСЂРµР· shell; workflow `editor` / trueline РґР»СЏ РїСЂР°РІРѕРє.
+- Системный промпт и global rules: запрет записи файлов через shell; workflow `editor` / trueline для правок.
 
 ---
 
-## [0.4.18] вЂ” 2026-07-02
+## [0.4.18] — 2026-07-02
 
 ### Fixed
 
-- **РџСЂР°РІРёР»Р° (Rules):** РїРѕСЃР»Рµ СЃРѕР·РґР°РЅРёСЏ С„Р°Р№Р»Р° С‡РµСЂРµР· В«+В» СЃРїРёСЃРѕРє РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ, С„Р°Р№Р» РѕС‚РєСЂС‹РІР°РµС‚СЃСЏ РІ СЂРµРґР°РєС‚РѕСЂРµ; РёСЃРїСЂР°РІР»РµРЅС‹ РїСѓС‚Рё `.agentariorules` / РіР»РѕР±Р°Р»СЊРЅР°СЏ РїР°РїРєР° `Documents/Agentario/Rules` Рё СЃРєР°РЅРёСЂРѕРІР°РЅРёРµ РєР°С‚Р°Р»РѕРіРѕРІ РІРЅРµ workspace.
+- **Правила (Rules):** после создания файла через «+» список обновляется сразу, файл открывается в редакторе; исправлены пути `.agentariorules` / глобальная папка `Documents/Agentario/Rules` и сканирование каталогов вне workspace.
 
 ---
 
-## [0.4.17] вЂ” 2026-07-02
+## [0.4.17] — 2026-07-02
 
 ### Added
 
-- **РљРЅРѕРїРєР° В«РЎС‚РѕРїВ» РІ С‡Р°С‚Рµ:** РІРѕ РІСЂРµРјСЏ СЂР°Р±РѕС‚С‹ Р°РіРµРЅС‚Р° (СЃС‚СЂРёРјРёРЅРі, РѕР¶РёРґР°РЅРёРµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РёРЅСЃС‚СЂСѓРјРµРЅС‚Р°) СЂСЏРґРѕРј СЃ РѕС‚РїСЂР°РІРєРѕР№ РїРѕСЏРІР»СЏРµС‚СЃСЏ РєРЅРѕРїРєР° РѕСЃС‚Р°РЅРѕРІРєРё; С‚Р°РєР¶Рµ В«РЎС‚РѕРїВ» РІРјРµСЃС‚Рѕ В«CancelВ» РЅР°Рґ РїРѕР»РµРј РІРІРѕРґР°. Р“РѕСЂСЏС‡Р°СЏ РєР»Р°РІРёС€Р° Esc РїРѕ-РїСЂРµР¶РЅРµРјСѓ РїСЂРµСЂС‹РІР°РµС‚ Р·Р°РґР°С‡Сѓ.
+- **Кнопка «Стоп» в чате:** во время работы агента (стриминг, ожидание подтверждения инструмента) рядом с отправкой появляется кнопка остановки; также «Стоп» вместо «Cancel» над полем ввода. Горячая клавиша Esc по-прежнему прерывает задачу.
 
 ---
 
-## [0.4.16] вЂ” 2026-07-02
+## [0.4.16] — 2026-07-02
 
 ### Changed
 
-- **РЎРєСЂРёРїС‚С‹ СЃР±РѕСЂРєРё:** `pause` РІ `build.cmd`, `publish-release.cmd`, `setup-mcp.cmd` Р·Р°РјРµРЅС‘РЅ РЅР° Р·Р°РґРµСЂР¶РєСѓ 15 СЃ (`scripts/wait-before-exit.cmd` / `.ps1`); РїСЂР°РІРёР»Рѕ Р·Р°С„РёРєСЃРёСЂРѕРІР°РЅРѕ РІ `DEVELOPMENT_RULES.mdc`.
+- **Скрипты сборки:** `pause` в `build.cmd`, `publish-release.cmd`, `setup-mcp.cmd` заменён на задержку 15 с (`scripts/wait-before-exit.cmd` / `.ps1`); правило зафиксировано в `DEVELOPMENT_RULES.mdc`.
 
 ---
 
-## [0.4.15] вЂ” 2026-07-02
+## [0.4.15] — 2026-07-02
 
 ### Fixed
 
-- **РљРЅРѕРїРєР° В«РћС‡РёСЃС‚РёС‚СЊВ» (РёРЅРґРµРєСЃР°С†РёСЏ):** `window.confirm` РІ webview VS Code РЅРµ РІС‹Р·С‹РІР°Р» backend вЂ” РѕС‡РёСЃС‚РєР° РЅРµ РІС‹РїРѕР»РЅСЏР»Р°СЃСЊ. Р—Р°РјРµРЅРµРЅРѕ РЅР° РґРІСѓС…С€Р°РіРѕРІРѕРµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ РІ UI (В«РћС‡РёСЃС‚РёС‚СЊВ» в†’ В«РџРѕРґС‚РІРµСЂРґРёС‚СЊ РѕС‡РёСЃС‚РєСѓВ»).
-- **РЈРґР°Р»РµРЅРёРµ РёРЅРґРµРєСЃР°:** РїРѕРІС‚РѕСЂРЅР°СЏ РїРѕРїС‹С‚РєР° СѓРґР°Р»РµРЅРёСЏ РїРѕ РЅР°Р№РґРµРЅРЅРѕРјСѓ hash, РµСЃР»Рё РїРѕСЃР»Рµ РїРµСЂРІРѕРіРѕ РїСЂРѕС…РѕРґР° РёРЅРґРµРєСЃ РѕСЃС‚Р°Р»СЃСЏ РЅР° РґРёСЃРєРµ.
+- **Кнопка «Очистить» (индексация):** `window.confirm` в webview VS Code не вызывал backend — очистка не выполнялась. Заменено на двухшаговое подтверждение в UI («Очистить» → «Подтвердить очистку»).
+- **Удаление индекса:** повторная попытка удаления по найденному hash, если после первого прохода индекс остался на диске.
 
 ---
 
-## [0.4.14] вЂ” 2026-07-02
+## [0.4.14] — 2026-07-02
 
 ### Fixed
 
-- **LM Studio / BodyTimeoutError:** РЅР°СЃС‚СЂРѕР№РєР° В«РўР°Р№РјР°СѓС‚ Р·Р°РїСЂРѕСЃР°В» С‚РµРїРµСЂСЊ СЂРµР°Р»СЊРЅРѕ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ Рє HTTP-СЃС‚СЂРёРјРёРЅРіСѓ (undici `bodyTimeout`/`headersTimeout`). Р Р°РЅСЊС€Рµ Node РѕР±СЂС‹РІР°Р» РґР»РёРЅРЅС‹Рµ РѕС‚РІРµС‚С‹ С‡РµСЂРµР· ~300 СЃ (`UND_ERR_BODY_TIMEOUT`), РґР°Р¶Рµ РїСЂРё РґРµС„РѕР»С‚Рµ 600000 РјСЃ РІ UI.
+- **LM Studio / BodyTimeoutError:** настройка «Таймаут запроса» теперь реально применяется к HTTP-стримингу (undici `bodyTimeout`/`headersTimeout`). Раньше Node обрывал длинные ответы через ~300 с (`UND_ERR_BODY_TIMEOUT`), даже при дефолте 600000 мс в UI.
 
 ---
 
-## [0.4.13] вЂ” 2026-07-02
+## [0.4.13] — 2026-07-02
 
 ### Fixed
 
-- **РћС‡РёСЃС‚РєР° РёРЅРґРµРєСЃР°:** СѓРґР°Р»РµРЅРёРµ СѓС‡РёС‚С‹РІР°РµС‚ `realpath` workspace (Z: vs UNC), РЅРµСЃРєРѕР»СЊРєРѕ РІР°СЂРёР°РЅС‚РѕРІ С…РµС€Р°, РєР°С‚Р°Р»РѕРіРё `~/.agentario` Рё `~/.cline`; РїРѕСЃР»Рµ РѕС‡РёСЃС‚РєРё РїСЂРѕРІРµСЂСЏРµС‚СЃСЏ, С‡С‚Рѕ РёРЅРґРµРєСЃ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ СѓРґР°Р»С‘РЅ.
-- **Р Р°Р·РјРµСЂ РєРѕРЅС‚РµРєСЃС‚Р° LM Studio РІ РЅР°СЃС‚СЂРѕР№РєР°С…:** СЃРЅРѕРІР° РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ `max_context_length` Рё `loaded_context_length` РёР· `/api/v1/models` Рё `/api/v0/models` (СЂР°РЅСЊС€Рµ РїРѕР»СЏ РЅРµ РїР°СЂСЃРёР»РёСЃСЊ Рё РЅРµ РїРµСЂРµРґР°РІР°Р»РёСЃСЊ РІ webview).
+- **Очистка индекса:** удаление учитывает `realpath` workspace (Z: vs UNC), несколько вариантов хеша, каталоги `~/.agentario` и `~/.cline`; после очистки проверяется, что индекс действительно удалён.
+- **Размер контекста LM Studio в настройках:** снова отображается `max_context_length` и `loaded_context_length` из `/api/v1/models` и `/api/v0/models` (раньше поля не парсились и не передавались в webview).
 
 ---
 
-## [0.4.12] вЂ” 2026-07-02
+## [0.4.12] — 2026-07-02
 
 ### Fixed
 
-- **РљРЅРѕРїРєР° В«РћС‡РёСЃС‚РёС‚СЊВ» (РёРЅРґРµРєСЃР°С†РёСЏ):** РїСЂРё РѕС‚РјРµРЅРµ РґРёР°Р»РѕРіР° РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РєРЅРѕРїРєР° РѕСЃС‚Р°РІР°Р»Р°СЃСЊ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРЅРѕР№ (`isWorking=true`) вЂ” С‚РµРїРµСЂСЊ `setIsWorking(false)` РІС‹Р·С‹РІР°РµС‚СЃСЏ РїРµСЂРµРґ `return`, Рё РєРЅРѕРїРєР° СЂР°Р·Р±Р»РѕРєРёСЂСѓРµС‚СЃСЏ.
-- **Р”РёР°РіРЅРѕСЃС‚РёРєР° РѕС‡РёСЃС‚РєРё РёРЅРґРµРєСЃР°:** РґРѕР±Р°РІР»РµРЅРѕ Р»РѕРіРёСЂРѕРІР°РЅРёРµ РІ `clearIndex` РєРѕРЅС‚СЂРѕР»Р»РµСЂ Рё `CodebaseIndexService.clear()` РґР»СЏ РѕС‚Р»Р°РґРєРё РїСЂРѕР±Р»РµРј СЃ СѓРґР°Р»РµРЅРёРµРј С„Р°Р№Р»РѕРІ.
+- **Кнопка «Очистить» (индексация):** при отмене диалога подтверждения кнопка оставалась заблокированной (`isWorking=true`) — теперь `setIsWorking(false)` вызывается перед `return`, и кнопка разблокируется.
+- **Диагностика очистки индекса:** добавлено логирование в `clearIndex` контроллер и `CodebaseIndexService.clear()` для отладки проблем с удалением файлов.
 
 ### Changed
 
-- **РРЅРґРµРєСЃР°С†РёСЏ Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ:** С‚РµРєСЃС‚РѕРІС‹Рµ Рё РєРѕРґРѕРІС‹Рµ С„РѕСЂРјР°С‚С‹ (`.ts`, `.js`, `.py`, `.md`, `.html` Рё РґСЂ.) С‚РµРїРµСЂСЊ С‡РёС‚Р°СЋС‚СЃСЏ **РїРѕР»РЅРѕСЃС‚СЊСЋ Р±РµР· Р»РёРјРёС‚Р° 2 РњР‘**. Р›РёРјРёС‚ СЃРѕС…СЂР°РЅС‘РЅ С‚РѕР»СЊРєРѕ РґР»СЏ СЃС‚СЂСѓРєС‚СѓСЂРёСЂРѕРІР°РЅРЅС‹С… С„РѕСЂРјР°С‚РѕРІ (`.json`, `.sql`).
+- **Индексация больших файлов:** текстовые и кодовые форматы (`.ts`, `.js`, `.py`, `.md`, `.html` и др.) теперь читаются **полностью без лимита 2 МБ**. Лимит сохранён только для структурированных форматов (`.json`, `.sql`).
 
 ---
 
-## [0.4.10] вЂ” 2026-07-02
+## [0.4.10] — 2026-07-02
 
 ### Fixed
 
-- **РљРЅРѕРїРєР° В«РћС‡РёСЃС‚РёС‚СЊВ» (РёРЅРґРµРєСЃР°С†РёСЏ):** РїСЂРё РѕС‚РјРµРЅРµ РґРёР°Р»РѕРіР° РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РєРЅРѕРїРєР° РѕСЃС‚Р°РІР°Р»Р°СЃСЊ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРЅРѕР№ (`isWorking=true`) вЂ” С‚РµРїРµСЂСЊ `setIsWorking(false)` РІС‹Р·С‹РІР°РµС‚СЃСЏ РїРµСЂРµРґ `return`, Рё РєРЅРѕРїРєР° СЂР°Р·Р±Р»РѕРєРёСЂСѓРµС‚СЃСЏ.
-- **Р”РёР°РіРЅРѕСЃС‚РёРєР° РѕС‡РёСЃС‚РєРё РёРЅРґРµРєСЃР°:** РґРѕР±Р°РІР»РµРЅРѕ Р»РѕРіРёСЂРѕРІР°РЅРёРµ РІ `clearIndex` РєРѕРЅС‚СЂРѕР»Р»РµСЂ Рё `CodebaseIndexService.clear()` РґР»СЏ РѕС‚Р»Р°РґРєРё РїСЂРѕР±Р»РµРј СЃ СѓРґР°Р»РµРЅРёРµРј С„Р°Р№Р»РѕРІ.
+- **Кнопка «Очистить» (индексация):** при отмене диалога подтверждения кнопка оставалась заблокированной (`isWorking=true`) — теперь `setIsWorking(false)` вызывается перед `return`, и кнопка разблокируется.
+- **Диагностика очистки индекса:** добавлено логирование в `clearIndex` контроллер и `CodebaseIndexService.clear()` для отладки проблем с удалением файлов.
 
 ### Changed
 
-- **РРЅРґРµРєСЃР°С†РёСЏ Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ:** С‚РµРєСЃС‚РѕРІС‹Рµ Рё РєРѕРґРѕРІС‹Рµ С„РѕСЂРјР°С‚С‹ (`.ts`, `.js`, `.py`, `.md`, `.html` Рё РґСЂ.) С‚РµРїРµСЂСЊ С‡РёС‚Р°СЋС‚СЃСЏ **РїРѕР»РЅРѕСЃС‚СЊСЋ Р±РµР· Р»РёРјРёС‚Р° 2 РњР‘**. Р›РёРјРёС‚ СЃРѕС…СЂР°РЅС‘РЅ С‚РѕР»СЊРєРѕ РґР»СЏ СЃС‚СЂСѓРєС‚СѓСЂРёСЂРѕРІР°РЅРЅС‹С… С„РѕСЂРјР°С‚РѕРІ (`.json`, `.sql`).
+- **Индексация больших файлов:** текстовые и кодовые форматы (`.ts`, `.js`, `.py`, `.md`, `.html` и др.) теперь читаются **полностью без лимита 2 МБ**. Лимит сохранён только для структурированных форматов (`.json`, `.sql`).
 
 ---
 
-## [0.4.9] вЂ” 2026-07-02
+## [0.4.9] — 2026-07-02
 
 ### Fixed
 
-- **РРЅРґРµРєСЃР°С†РёСЏ Р±РѕР»СЊС€РёС… РїСЂРѕРµРєС‚РѕРІ** (РјРѕР±РёР»СЊРЅС‹Рµ/Flutter/Android): РѕС€РёР±РєР° `Invalid string length` РїСЂРё `JSON.stringify` С„РёРЅР°Р»СЊРЅРѕРіРѕ РёРЅРґРµРєСЃР° вЂ” Р·Р°РјРµРЅРµРЅРѕ РЅР° **С€Р°СЂРґРёСЂРѕРІР°РЅРЅРѕРµ С…СЂР°РЅРµРЅРёРµ** (meta.json + РѕРґРёРЅ JSON РЅР° С„Р°Р№Р» РІ `indexes/{hash}/files/`). Р‘РµР· Р»РёРјРёС‚Р° СЂР°Р·РјРµСЂР°.
-- **В«РћС‡РёСЃС‚РёС‚СЊВ»** РЅРµ СѓРґР°Р»СЏР» С„Р°Р№Р»С‹ РёРЅРґРµРєСЃР° Рё РЅРµ РїСЂРµСЂС‹РІР°Р» Р°РєС‚РёРІРЅСѓСЋ РёРЅРґРµРєСЃР°С†РёСЋ вЂ” С‚РµРїРµСЂСЊ `deleteAllIndexesForWorkspace` СЃРєР°РЅРёСЂСѓРµС‚ РїРѕ `workspacePath` (РІРєР»СЋС‡Р°СЏ legacy), РїСЂРµСЂС‹РІР°РµС‚ СЃР±РѕСЂРєСѓ Рё Р¶РґС‘С‚ Р·Р°РІРµСЂС€РµРЅРёСЏ.
-- **РџСЂРѕРіСЂРµСЃСЃ РёРЅРґРµРєСЃР°С†РёРё** РІ UI: С‚РµРєСѓС‰РёР№ С„Р°Р№Р», РїСЂРѕС†РµРЅС‚, СЂР°Р·РјРµСЂ РёРЅРґРµРєСЃР° РЅР° РґРёСЃРєРµ РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё.
+- **Индексация больших проектов** (мобильные/Flutter/Android): ошибка `Invalid string length` при `JSON.stringify` финального индекса — заменено на **шардированное хранение** (meta.json + один JSON на файл в `indexes/{hash}/files/`). Без лимита размера.
+- **«Очистить»** не удалял файлы индекса и не прерывал активную индексацию — теперь `deleteAllIndexesForWorkspace` сканирует по `workspacePath` (включая legacy), прерывает сборку и ждёт завершения.
+- **Прогресс индексации** в UI: текущий файл, процент, размер индекса на диске в реальном времени.
 
 ### Changed
 
-- **Р§Р°РЅРєРё РґР»СЏ embedding-РјРѕРґРµР»РµР№ СЃ РєРѕРЅС‚РµРєСЃС‚РѕРј 2048 / eval batch 2048**: СЂР°Р·РјРµСЂ С‡Р°РЅРєР° ~1024 tok (~3072 СЃРёРјРІ.), РЅР°С…Р»С‘СЃС‚ **17.5 %** (15вЂ“20 %), batch Р·Р°РїСЂРѕСЃРѕРІ СЃСѓРјРјР°СЂРЅРѕ в‰¤ 2048 tok. Р›РёРјРёС‚ MAX_CHUNKS_PER_FILE СЃРЅСЏС‚.
-- Р’РµСЂСЃРёСЏ bumped РїРѕСЃР»Рµ РєР°Р¶РґРѕРіРѕ РёР·РјРµРЅРµРЅРёСЏ (РїСЂР°РІРёР»Рѕ СѓСЃРёР»РµРЅРѕ РІ DEVELOPMENT_RULES.mdc).
+- **Чанки для embedding-моделей с контекстом 2048 / eval batch 2048**: размер чанка ~1024 tok (~3072 симв.), нахлёст **17.5 %** (15–20 %), batch запросов суммарно ≤ 2048 tok. Лимит MAX_CHUNKS_PER_FILE снят.
+- Версия bumped после каждого изменения (правило усилено в DEVELOPMENT_RULES.mdc).
 
 ### Added
 
-- Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ РёРЅРґРµРєСЃР°С†РёРё LM Studio: domain type Embedding, РєРѕРЅС‚РµРєСЃС‚/РїР°РјСЏС‚СЊ, headless ([config/lmstudio-indexing.md](config/lmstudio-indexing.md)).
-- РЎРєСЂРёРїС‚ [`scripts/lmstudio-headless-server.cmd`](scripts/lmstudio-headless-server.cmd) вЂ” LM Studio Р±РµР· GUI (СЂРµР¶РёРјС‹ `restore` / `load`).
-- РЎРєСЂРёРїС‚ [`publish-release.cmd`](publish-release.cmd) Рё [config/RELEASE.md](config/RELEASE.md) вЂ” Р°РІС‚РѕРїСѓР±Р»РёРєР°С†РёСЏ РЅР° GitHub + Release СЃ VSIX.
+- Документация индексации LM Studio: domain type Embedding, контекст/память, headless ([config/lmstudio-indexing.md](config/lmstudio-indexing.md)).
+- Скрипт [`scripts/lmstudio-headless-server.cmd`](scripts/lmstudio-headless-server.cmd) — LM Studio без GUI (режимы `restore` / `load`).
+- Скрипт [`publish-release.cmd`](publish-release.cmd) и [config/RELEASE.md](config/RELEASE.md) — автопубликация на GitHub + Release с VSIX.
 
 ---
 
-## [0.4.3] вЂ” 2026-06-30
+## [0.4.3] — 2026-06-30
 
 ### Added
 
-- РРЅРґРµРєСЃР°С†РёСЏ: РІС‹Р±РѕСЂ **embedding-РјРѕРґРµР»Рё** LM Studio (СЂСѓС‡РЅРѕР№ РІРІРѕРґ РёРјРµРЅРё) РІ СЌРєСЂР°РЅРµ В«РРЅРґРµРєСЃР°С†РёСЏ РєРѕРґР°В».
+- Индексация: выбор **embedding-модели** LM Studio (ручной ввод имени) в экране «Индексация кода».
 
 ### Changed
 
-- РЎРїРёСЃРѕРє РїСЂРѕРёРЅРґРµРєСЃРёСЂРѕРІР°РЅРЅС‹С… С„Р°Р№Р»РѕРІ вЂ” РєРѕРјРїР°РєС‚РЅС‹Рµ РѕРґРЅРѕСЃС‚СЂРѕС‡РЅС‹Рµ РїР»Р°С€РєРё.
+- Список проиндексированных файлов — компактные однострочные плашки.
 
 ---
 
-## [0.4.2] вЂ” 2026-06-30
+## [0.4.2] — 2026-06-30
 
 ### Changed
 
-- Global rules / system prompt: **РєСЂР°С‚РєРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РІ С‡Р°С‚Рµ**, reasoning С‚РѕР»СЊРєРѕ РІ Thinking, Р±РµР· РїРµСЂРµСЃРєР°Р·Р° С„Р°Р№Р»РѕРІ.
-- РўР°Р№РјР°СѓС‚ `run_commands` Рё `search_codebase`: РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ **120 СЃ** РґР»СЏ LM Studio/Ollama; РЅР°СЃС‚СЂР°РёРІР°РµС‚СЃСЏ С‡РµСЂРµР· **Request Timeout (ms)** РІ API settings.
+- Global rules / system prompt: **краткие сообщения в чате**, reasoning только в Thinking, без пересказа файлов.
+- Таймаут `run_commands` и `search_codebase`: по умолчанию **120 с** для LM Studio/Ollama; настраивается через **Request Timeout (ms)** в API settings.
 
 ---
 
-## [0.4.1] вЂ” 2026-06-30
+## [0.4.1] — 2026-06-30
 
 ### Fixed
 
-- РљСЂРёС‚РёС‡РµСЃРєРёР№ Р±Р°Рі 0.4.0: РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°Р» РёРјРїРѕСЂС‚ `StateManager` РІ `cline-session-factory.ts` вЂ” Р·Р°РїСЂРѕСЃ Рє РјРѕРґРµР»Рё РЅРµ РѕС‚РїСЂР°РІР»СЏР»СЃСЏ (`ReferenceError: StateManager is not defined`).
-- UI: РїРѕСЃР»Рµ РѕС€РёР±РєРё СЃС‚Р°СЂС‚Р° Р·Р°РґР°С‡Рё РёР»Рё РѕС‚РјРµРЅС‹ Р±РµР· Р°РєС‚РёРІРЅРѕР№ СЃРµСЃСЃРёРё Р±РѕР»СЊС€Рµ РЅРµ Р·Р°РІРёСЃР°РµС‚ В«Thinking...В» (СЃР±СЂРѕСЃ `turnState`, С„РёРЅР°Р»РёР·Р°С†РёСЏ РЅРµР·Р°РІРµСЂС€С‘РЅРЅС‹С… API-СЃС‚СЂРѕРє РїСЂРё cancel).
+- Критический баг 0.4.0: отсутствовал импорт `StateManager` в `cline-session-factory.ts` — запрос к модели не отправлялся (`ReferenceError: StateManager is not defined`).
+- UI: после ошибки старта задачи или отмены без активной сессии больше не зависает «Thinking...» (сброс `turnState`, финализация незавершённых API-строк при cancel).
 
 ---
 
-## [0.4.0] вЂ” 2026-06-30
+## [0.4.0] — 2026-06-30
 
 ### Added
 
-- Р’СЃС‚СЂРѕРµРЅРЅС‹Р№ СЃРёСЃС‚РµРјРЅС‹Р№ РїСЂРѕРјРїС‚ Agentario + Р°РІС‚Рѕ-СѓСЃС‚Р°РЅРѕРІРєР° global rules РІ `Documents/Agentario/Rules` РїСЂРё РїРµСЂРІРѕРј Р·Р°РїСѓСЃРєРµ.
-- Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ: [config/PROMPTS_AND_RULES.md](config/PROMPTS_AND_RULES.md).
-- Р СѓСЃСЃРєР°СЏ Р»РѕРєР°Р»РёР·Р°С†РёСЏ: Customize (Rules/Hooks/Skills), MCP, Debug, onboarding LM Studio (РїРѕРґСЃРєР°Р·РєР° Tool Use).
+- Встроенный системный промпт Agentario + авто-установка global rules в `Documents/Agentario/Rules` при первом запуске.
+- Документация: [config/PROMPTS_AND_RULES.md](config/PROMPTS_AND_RULES.md).
+- Русская локализация: Customize (Rules/Hooks/Skills), MCP, Debug, onboarding LM Studio (подсказка Tool Use).
 
 ### Changed
 
-- РЈСЃРёР»РµРЅС‹ РёРЅСЃС‚СЂСѓРєС†РёРё РїРѕ **РѕР±СЏР·Р°С‚РµР»СЊРЅРѕРјСѓ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЋ tools** РІ system prompt Рё global rules.
-- Plan mode: СЂСѓСЃСЃРєРёРµ РёРЅСЃС‚СЂСѓРєС†РёРё РїСЂРё СЏР·С‹РєРµ В«Р СѓСЃСЃРєРёР№В».
-- LM Studio / Ollama: capability `tools` РІ РєР°С‚Р°Р»РѕРіРµ РїСЂРѕРІР°Р№РґРµСЂРѕРІ.
+- Усилены инструкции по **обязательному использованию tools** в system prompt и global rules.
+- Plan mode: русские инструкции при языке «Русский».
+- LM Studio / Ollama: capability `tools` в каталоге провайдеров.
 
 ---
 
-## [0.3.0] вЂ” 2026-06-30
+## [0.3.0] — 2026-06-30
 
 ### Added
 
-- **РђРІС‚РѕРЅРѕРјРЅС‹Р№ СЂРµР¶РёРј (standalone):** bundled `endpoints.json` вЂ” Agentario РЅРµ С‚СЂРµР±СѓРµС‚ Р°РєРєР°СѓРЅС‚ Cline, OAuth WorkOS Рё `api.cline.bot`.
-- Onboarding РґР»СЏ LM Studio / Ollama Р±РµР· СЌРєСЂР°РЅР° РІС…РѕРґР° РІ Cline.
-- РЁР°Р±Р»РѕРЅ `config/agentario-endpoints.json` РґР»СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРѕРіРѕ `~/.agentario/endpoints.json`.
+- **Автономный режим (standalone):** bundled `endpoints.json` — Agentario не требует аккаунт Cline, OAuth WorkOS и `api.cline.bot`.
+- Onboarding для LM Studio / Ollama без экрана входа в Cline.
+- Шаблон `config/agentario-endpoints.json` для пользовательского `~/.agentario/endpoints.json`.
 
 ### Changed
 
-- РџСЂРѕРІР°Р№РґРµСЂ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ: **LM Studio** (`http://127.0.0.1:1234`), С‚РµР»РµРјРµС‚СЂРёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ **РІС‹РєР»СЋС‡РµРЅР°**.
-- Р’ standalone СЃРєСЂС‹С‚С‹ РїСЂРѕРІР°Р№РґРµСЂС‹ `cline` / `cline-pass`, РєРЅРѕРїРєР° Account, РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ Cline OAuth Рё remote config.
-- MCP РёР· `config/agentario-recommended-mcp.json` вЂ” Р»РѕРєР°Р»СЊРЅС‹Р№ stdio (memory, sequential-thinking, playwright); РѕР±Р»Р°С‡РЅС‹Рµ СЃРµСЂРІРµСЂС‹ РѕС‚РєР»СЋС‡РµРЅС‹.
+- Провайдер по умолчанию: **LM Studio** (`http://127.0.0.1:1234`), телеметрия по умолчанию **выключена**.
+- В standalone скрыты провайдеры `cline` / `cline-pass`, кнопка Account, восстановление Cline OAuth и remote config.
+- MCP из `config/agentario-recommended-mcp.json` — локальный stdio (memory, sequential-thinking, playwright); облачные серверы отключены.
 
 ---
 
-## [0.2.3] вЂ” 2026-06-30
+## [0.2.3] — 2026-06-30
 
 ### Fixed
 
-- РќРѕСЂРјР°Р»РёР·Р°С†РёСЏ tool-call `editor`: СЃС‚СЂРѕРєРё `"null"` / `"undefined"` РґР»СЏ `insert_line` Рё `old_text` РїСЂРёРІРѕРґСЏС‚СЃСЏ Рє РѕС‚СЃСѓС‚СЃС‚РІРёСЋ РїРѕР»СЏ; С‡РёСЃР»РѕРІС‹Рµ СЃС‚СЂРѕРєРё (`"3"`) вЂ” Рє С‡РёСЃР»Сѓ. РЈСЃС‚СЂР°РЅСЏРµС‚ РѕС‚РєР°Р· РІР°Р»РёРґР°С†РёРё Сѓ Р»РѕРєР°Р»СЊРЅС‹С… РјРѕРґРµР»РµР№ LM Studio.
+- Нормализация tool-call `editor`: строки `"null"` / `"undefined"` для `insert_line` и `old_text` приводятся к отсутствию поля; числовые строки (`"3"`) — к числу. Устраняет отказ валидации у локальных моделей LM Studio.
 
 ### Changed
 
-- Р’ `config/agentario-global-rules.md` РґРѕР±Р°РІР»РµРЅ РїСѓРЅРєС‚ РїСЂРѕ РєРѕСЂСЂРµРєС‚РЅС‹Р№ РІС‹Р·РѕРІ `editor`.
+- В `config/agentario-global-rules.md` добавлен пункт про корректный вызов `editor`.
 
 ---
 
-## [0.2.2] вЂ” 2026-06-30
+## [0.2.2] — 2026-06-30
 
 ### Fixed
 
-- РЎРєРѕСЂРѕСЃС‚СЊ `tok/s` РІ С‡Р°С‚Рµ: СЃС‡РёС‚Р°РµС‚СЃСЏ РїРѕ С„Р°Р·Рµ **РіРµРЅРµСЂР°С†РёРё** (РєР°Рє `eval time` РІ LM Studio), Р° РЅРµ РїРѕ РїРѕР»РЅРѕРјСѓ РІСЂРµРјРµРЅРё СЃ РѕР±СЂР°Р±РѕС‚РєРѕР№ РїСЂРѕРјРїС‚Р°. Р’ stats РґРѕР±Р°РІР»РµРЅРѕ `gen: вЂ¦s` (РІСЂРµРјСЏ РіРµРЅРµСЂР°С†РёРё) РѕС‚РґРµР»СЊРЅРѕ РѕС‚ `time: вЂ¦s` (РїРѕР»РЅРѕРµ).
+- Скорость `tok/s` в чате: считается по фазе **генерации** (как `eval time` в LM Studio), а не по полному времени с обработкой промпта. В stats добавлено `gen: …s` (время генерации) отдельно от `time: …s` (полное).
 
 ---
 
-## [0.2.1] вЂ” 2026-06-30
+## [0.2.1] — 2026-06-30
 
 ### Fixed
 
-- РљРЅРѕРїРєР° В«Р­РєСЃРїРѕСЂС‚ С‡Р°С‚Р° РІ MarkdownВ» РІСЃРµРіРґР° РІРёРґРЅР° РІ С€Р°РїРєРµ Р·Р°РґР°С‡Рё (СЂР°РЅСЊС€Рµ С‚РѕР»СЊРєРѕ РІ dev-СЃР±РѕСЂРєРµ Рё С‚РѕР»СЊРєРѕ РїСЂРё СЂР°Р·РІС‘СЂРЅСѓС‚РѕР№ С€Р°РїРєРµ).
-- РџРѕРґСЃРєР°Р·РєРё СЌРєСЃРїРѕСЂС‚Р° РІ РёСЃС‚РѕСЂРёРё Р·Р°РґР°С‡ РЅР° СЂСѓСЃСЃРєРѕРј.
+- Кнопка «Экспорт чата в Markdown» всегда видна в шапке задачи (раньше только в dev-сборке и только при развёрнутой шапке).
+- Подсказки экспорта в истории задач на русском.
 
 ---
 
-## [0.2.0] вЂ” 2026-06-30
+## [0.2.0] — 2026-06-30
 
 ### Added
 
-- Р­РєСЃРїРѕСЂС‚ С‡Р°С‚Р° РІ Markdown (РґРёР°Р»РѕРі СЃРѕС…СЂР°РЅРµРЅРёСЏ, `Documents/Agentario/Exports`).
-- Р—Р°РіРѕР»РѕРІРєРё СЃРѕРѕР±С‰РµРЅРёР№: СЂРѕР»СЊ (User / Agentario / Thinking) Рё РґР°С‚Р°/РІСЂРµРјСЏ.
-- РџРѕРґРІР°Р» СЃС‚Р°С‚РёСЃС‚РёРєРё СЃРѕРѕР±С‰РµРЅРёСЏ: tokens in/out/total, РІСЂРµРјСЏ РѕС‚РІРµС‚Р°, tok/s (РєРѕРїРёСЂСѓРµРјС‹Р№ С‚РµРєСЃС‚).
-- РЁР°Р±Р»РѕРЅ СЃРёСЃС‚РµРјРЅРѕРіРѕ РїСЂРѕРјРїС‚Р° РґР»СЏ LM Studio: `config/lmstudio-system-prompt.md`.
+- Экспорт чата в Markdown (диалог сохранения, `Documents/Agentario/Exports`).
+- Заголовки сообщений: роль (User / Agentario / Thinking) и дата/время.
+- Подвал статистики сообщения: tokens in/out/total, время ответа, tok/s (копируемый текст).
+- Шаблон системного промпта для LM Studio: `config/lmstudio-system-prompt.md`.
 
 ### Changed
 
-- РРЅРґРµРєСЃР°С†РёСЏ: Р±РѕР»СЊС€РёРµ С„Р°Р№Р»С‹ РёРЅРґРµРєСЃРёСЂСѓСЋС‚СЃСЏ **С‡Р°СЃС‚РёС‡РЅРѕ** (СЃС‚Р°С‚СѓСЃ `partial`), Р±РµР· Р¶С‘СЃС‚РєРѕРіРѕ РїСЂРѕРїСѓСЃРєР° >512 KB; С‡С‚РµРЅРёРµ РґРѕ 2 MB, РґРѕ 12 С‡Р°РЅРєРѕРІ РЅР° С„Р°Р№Р».
-- LM Studio: Р·Р°РІРµСЂС€РµРЅРёРµ API-Р·Р°РїСЂРѕСЃР° РѕРїСЂРµРґРµР»СЏРµС‚СЃСЏ РїРѕ `tokensIn`, РЅРµ С‚РѕР»СЊРєРѕ РїРѕ `cost`.
+- Индексация: большие файлы индексируются **частично** (статус `partial`), без жёсткого пропуска >512 KB; чтение до 2 MB, до 12 чанков на файл.
+- LM Studio: завершение API-запроса определяется по `tokensIn`, не только по `cost`.
 
 ### Docs
 
-- РџСЂР°РІРёР»Р° СЂР°Р·СЂР°Р±РѕС‚РєРё: `.cursor/rules/DEVELOPMENT_RULES.mdc`, СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ С€Р°Р±Р»РѕРЅ `config/templates/DEVELOPMENT_RULES.universal.mdc`.
+- Правила разработки: `.cursor/rules/DEVELOPMENT_RULES.mdc`, универсальный шаблон `config/templates/DEVELOPMENT_RULES.universal.mdc`.
 
 ---
 
-## [0.1.0] вЂ” 2026-06-29
+## [0.1.0] — 2026-06-29
 
 ### Added
 
-- РџРѕР»РЅРѕС†РµРЅРЅР°СЏ Р»РѕРєР°Р»СЊРЅР°СЏ codebase-РёРЅРґРµРєСЃР°С†РёСЏ СЃ embedding-РјРѕРґРµР»СЊСЋ LM Studio `text-embedding-qwen3-embedding-0.6b`.
-- РќРѕРІС‹Р№ UI `Code Index` РІ СЃР°Р№РґР±Р°СЂРµ: СЃРїРёСЃРѕРє С„Р°Р№Р»РѕРІ СЃ РїСЂРѕРєСЂСѓС‚РєРѕР№ Рё РєРЅРѕРїРєР°РјРё `РћС‡РёСЃС‚РёС‚СЊ`, `РџРµСЂРµСЃРѕР·РґР°С‚СЊ`, `РћР±РЅРѕРІРёС‚СЊ РЅРѕРІС‹Рµ`.
-- Р›РѕРєР°Р»СЊРЅРѕРµ С…СЂР°РЅРµРЅРёРµ embedding-РёРЅРґРµРєСЃР° РІ `%USERPROFILE%\.agentario\data\indexes`.
+- Полноценная локальная codebase-индексация с embedding-моделью LM Studio `text-embedding-qwen3-embedding-0.6b`.
+- Новый UI `Code Index` в сайдбаре: список файлов с прокруткой и кнопками `Очистить`, `Пересоздать`, `Обновить новые`.
+- Локальное хранение embedding-индекса в `%USERPROFILE%\.agentario\data\indexes`.
 
 ---
 
-## [0.0.6] вЂ” 2026-06-29
+## [0.0.6] — 2026-06-29
 
 ### Changed
 
-- РџСѓС‚Рё Agentario: `~/.agentario`, `Documents/Agentario`, `.agentariorules`, `.agentarioignore` (legacy `.cline*` СЃРѕС…СЂР°РЅРµРЅС‹ РґР»СЏ С‡С‚РµРЅРёСЏ).
+- Пути Agentario: `~/.agentario`, `Documents/Agentario`, `.agentariorules`, `.agentarioignore` (legacy `.cline*` сохранены для чтения).
 - MCP settings: `agentario_mcp_settings.json`.
 
 ### Fixed
 
-- MCP stdio РЅР° Windows: `spawn npx ENOENT` вЂ” `setup-mcp.cmd` РЅР°С…РѕРґРёС‚ `npx.cmd` Рё РїСЂРѕРїРёСЃС‹РІР°РµС‚ РїРѕР»РЅС‹Р№ РїСѓС‚СЊ + PATH РґР»СЏ VS Code.
-- Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ: Node.js РѕР±СЏР·Р°С‚РµР»РµРЅ РґР»СЏ Р»РѕРєР°Р»СЊРЅС‹С… MCP; context7/github СЂР°Р±РѕС‚Р°СЋС‚ Р±РµР· npx (HTTP / РѕС‚РєР»СЋС‡РµРЅС‹).
+- MCP stdio на Windows: `spawn npx ENOENT` — `setup-mcp.cmd` находит `npx.cmd` и прописывает полный путь + PATH для VS Code.
+- Документация: Node.js обязателен для локальных MCP; context7/github работают без npx (HTTP / отключены).
 
 ---
 
-## [0.0.5] вЂ” 2026-06-29
+## [0.0.5] — 2026-06-29
 
-РџРµСЂРІС‹Р№ РЅСѓРјРµСЂРѕРІР°РЅРЅС‹Р№ СЂРµР»РёР· С„РѕСЂРєР° **Agentario** (Р±Р°Р·Р°: Cline 4.x). Р’РµСЂСЃРёСЏ СЂР°СЃС€РёСЂРµРЅРёСЏ VS Code: **0.0.5**.
+Первый нумерованный релиз форка **Agentario** (база: Cline 4.x). Версия расширения VS Code: **0.0.5**.
 
 ### Added
 
-- Р РµР±СЂРµРЅРґРёРЅРі UI: **Agentario**, publisher `kabzon93region`.
-- Р СѓСЃСЃРєРёР№ РёРЅС‚РµСЂС„РµР№СЃ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (onboarding, РЅР°СЃС‚СЂРѕР№РєРё, LM Studio/Ollama, MCP, С‡Р°С‚).
-- РЎР±РѕСЂРєР° РїРѕРґ Windows: `build.cmd`, `scripts/build-windows.ps1` (sync РЅР° `C:`, VSIX РІ `release/`).
-- Р РµРєРѕРјРµРЅРґСѓРµРјС‹Р№ MCP-РЅР°Р±РѕСЂ: `config/agentario-recommended-mcp.json`, СѓСЃС‚Р°РЅРѕРІРєР° С‡РµСЂРµР· `setup-mcp.cmd`.
-- Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїСЂР°РІРёР»Р°: `config/agentario-global-rules.md`.
-- Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ С„РѕСЂРєР°: [VERSIONING.md](VERSIONING.md), РѕР±РЅРѕРІР»С‘РЅРЅС‹Р№ [README.md](README.md).
+- Ребрендинг UI: **Agentario**, publisher `kabzon93region`.
+- Русский интерфейс по умолчанию (onboarding, настройки, LM Studio/Ollama, MCP, чат).
+- Сборка под Windows: `build.cmd`, `scripts/build-windows.ps1` (sync на `C:`, VSIX в `release/`).
+- Рекомендуемый MCP-набор: `config/agentario-recommended-mcp.json`, установка через `setup-mcp.cmd`.
+- Глобальные правила: `config/agentario-global-rules.md`.
+- Документация форка: [VERSIONING.md](VERSIONING.md), обновлённый [README.md](README.md).
 
 ### Changed
 
-- РЇР·С‹Рє Р°РіРµРЅС‚Р° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ: **Russian - Р СѓСЃСЃРєРёР№**.
-- **РђРІС‚Рѕ-СЃР¶Р°С‚РёРµ** РёСЃС‚РѕСЂРёРё С‡Р°С‚Р° РІРєР»СЋС‡РµРЅРѕ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (`useAutoCondense`).
-- РРјСЏ VSIX: `agentario-<version>.vsix` (РІРµСЂСЃРёСЏ РёР· `package.json`).
+- Язык агента по умолчанию: **Russian - Русский**.
+- **Авто-сжатие** истории чата включено по умолчанию (`useAutoCondense`).
+- Имя VSIX: `agentario-<version>.vsix` (версия из `package.json`).
 
 ### Fixed
 
-- LM Studio: Р·Р°РїСЂРѕСЃС‹ Р±РѕР»СЊС€Рµ РЅРµ РїРѕРґСЃС‚Р°РІР»СЏСЋС‚ РєР°С‚Р°Р»РѕРіРѕРІСѓСЋ РјРѕРґРµР»СЊ `openai/gpt-oss-20b` РІРјРµСЃС‚Рѕ РІС‹Р±СЂР°РЅРЅРѕР№ Р»РѕРєР°Р»СЊРЅРѕР№ РјРѕРґРµР»Рё.
-- РЎРѕС…СЂР°РЅРµРЅРёРµ РІС‹Р±РѕСЂР° РјРѕРґРµР»Рё LM Studio РїСЂРё РїРµСЂРІРѕРј РїРѕРґРєР»СЋС‡РµРЅРёРё Рє СЃРµСЂРІРµСЂСѓ.
-- РЎР±РѕСЂРєР° webview/esbuild РЅР° Windows (PATH, `bunx`, РѕС‚РєР»СЋС‡РµРЅРёРµ bash prepublish).
+- LM Studio: запросы больше не подставляют каталоговую модель `openai/gpt-oss-20b` вместо выбранной локальной модели.
+- Сохранение выбора модели LM Studio при первом подключении к серверу.
+- Сборка webview/esbuild на Windows (PATH, `bunx`, отключение bash prepublish).
 
 ---
 
-## РСЃС‚РѕСЂРёСЏ upstream (Cline)
+## История upstream (Cline)
 
-РќРёР¶Рµ вЂ” Р¶СѓСЂРЅР°Р» РёР·РјРµРЅРµРЅРёР№ Р±Р°Р·РѕРІРѕРіРѕ РїСЂРѕРµРєС‚Р° [Cline](https://github.com/cline/cline) РґРѕ С„РѕСЂРєР° Agentario.
+Ниже — журнал изменений базового проекта [Cline](https://github.com/cline/cline) до форка Agentario.
 
 ## [4.0.0]
 
@@ -1741,7 +1650,7 @@ esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р
 - Add the SDK-backed VS Code extension runtime. Cline now runs tasks through the shared Cline SDK session layer for agent turns, tools, Plan/Act mode coordination, MCP, checkpoints, telemetry, provider changes, compaction, mistake limits, and task history.
 - Add ClinePass to the VS Code extension, including onboarding, provider selection, signup and subscription handoff, live model lists, entitlement and organization error states, out-of-credit prompts, and clearer ClinePass auth/error handling.
 - Add the Customize marketplace for discovering and managing Skills, MCP servers, and Plugins from the extension, including installed/marketplace tabs, search and filtering, install/uninstall flows, enable/disable controls, and support for plugin-bundled skills.
-- Cline Plugins: Plugins let you extend Cline with custom tools, workflows, skills, and MCP-powered capabilities tailored to your team or project. Install them from the new Customize marketplace to add specialized behavior, connect external services, and package reusable automationsвЂ”so Cline can do more than code: it can adapt to the way you work.
+- Cline Plugins: Plugins let you extend Cline with custom tools, workflows, skills, and MCP-powered capabilities tailored to your team or project. Install them from the new Customize marketplace to add specialized behavior, connect external services, and package reusable automations—so Cline can do more than code: it can adapt to the way you work.
 - Add queued prompts in chat. Messages submitted while Cline is already working are now queued, shown while the current turn streams, and can be cancelled before they run.
 - Add edit-and-regenerate support for previous user messages, with clearer Reset Chat and Reset Code actions.
 - Add generic SDK provider settings and model-catalog support so more providers can share the same model picker, reasoning controls, dynamic model IDs, provider config persistence, and custom model handling.
@@ -1936,7 +1845,7 @@ esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р
 
 ### Fixed
 
-- Remove hardcoded "WhatвЂ™s New" fallback items in webview; only remote-configured welcome banners are shown.
+- Remove hardcoded "What’s New" fallback items in webview; only remote-configured welcome banners are shown.
 
 ### Changed
 
@@ -1949,7 +1858,7 @@ esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р
 
 ### Added
 
-- Wire up remote `globalSkills` from enterprise remote config with full UI, toggle support, and system prompt integration вЂ” enterprise-managed skills now appear under a dedicated "Enterprise Skills" section and support `alwaysEnabled` enforcement
+- Wire up remote `globalSkills` from enterprise remote config with full UI, toggle support, and system prompt integration — enterprise-managed skills now appear under a dedicated "Enterprise Skills" section and support `alwaysEnabled` enforcement
 - Onboarding flow now uses dynamically fetched recommended models instead of a hardcoded list, with a fallback to the welcome view on failure
 - Add dedicated "Quota Exceeded" error message in the chat error UI when Cline account spend caps are hit
 
@@ -1961,7 +1870,7 @@ esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р
 
 ### Changed
 
-- Remove foreground terminal mode вЂ” all task command execution now defaults to background mode, removing the VS Code integrated terminal dependency and related settings UI
+- Remove foreground terminal mode — all task command execution now defaults to background mode, removing the VS Code integrated terminal dependency and related settings UI
 - Remove old hardcoded announcement banners
 
 ## [3.79.0]
@@ -2510,11 +2419,11 @@ esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р
 
 - Polished the model picker UI with checkmarks for selected models, tooltips on Plan/Act tabs, and consistent arrow pointers across all popup modals
 - Improved WhatsNew modal responsiveness and cleaned up redundant UI elements
-- Fixed GLM models outputting garbled text in thinking tagsвЂ”reasoning is now properly disabled for these models
+- Fixed GLM models outputting garbled text in thinking tags—reasoning is now properly disabled for these models
 
 ## [3.44.1]
 
-- Fixed a critical bug where local MCP servers stopped connecting after v3.42.0вЂ”all user-configured stdio-based MCP servers should now work again
+- Fixed a critical bug where local MCP servers stopped connecting after v3.42.0—all user-configured stdio-based MCP servers should now work again
 - Fixed remotely configured API keys not being extracted correctly for enterprise users
 - Added support for dynamic tool instructions that adapt based on runtime context, laying groundwork for future context-aware features
 
@@ -2739,7 +2648,7 @@ esponseType: "user_response" вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р
 ## [3.34.0]
 
 - Cline Teams is now free through 2025 for unlimited users. Includes Jetbrains, RBAC, centralized billing and more.
-- Use the вЂњexactoвЂќ versions of GLM-4.6, Kimi-K2, and Qwen3-Coder in the Cline provider for the best balance of cost, speed, accuracy and tool-calling.
+- Use the “exacto” versions of GLM-4.6, Kimi-K2, and Qwen3-Coder in the Cline provider for the best balance of cost, speed, accuracy and tool-calling.
 
 ## [3.33.1]
 
@@ -3417,7 +3326,7 @@ Add Opus 4.1 through Claude Code
 - Fix freezing issues during rendering of large streaming text
 - Fix grey screen webview crashes by releasing memory after every diff edit
 - Fix breaking out of diff auto-scroll
-- Fix IME composition Enter autoвЂ‘sending edited message
+- Fix IME composition Enter auto‑sending edited message
 
 ## [3.15.1]
 
@@ -3525,7 +3434,7 @@ Add Opus 4.1 through Claude Code
 ## [3.13.0]
 
 - Add Cline rules popover under the chat field, allowing you to easily add, enable & disable workspace level or global rule files
-- Add new slash command menu letting you type вЂњ/вЂњ to do quick actions like creating new tasks
+- Add new slash command menu letting you type “/“ to do quick actions like creating new tasks
 - Add ability to edit past messages, with options to restore your workspace back to that point
 - Allow sending a message when selecting an option provided by the question or plan tool
 - Add command to jump to Cline's chat input
@@ -4046,7 +3955,7 @@ Add Opus 4.1 through Claude Code
 
 ## [1.5.27]
 
-- Claude's changes now appear in your file's Timeline, allowing you to easily view a diff of each edit. This is especially helpful if you want to revert to a previous version. No need for gitвЂ”everything is tracked by VSCode's local history!
+- Claude's changes now appear in your file's Timeline, allowing you to easily view a diff of each edit. This is especially helpful if you want to revert to a previous version. No need for git—everything is tracked by VSCode's local history!
 - Updated system prompt to keep Claude from re-reading files unnecessarily
 
 ## [1.5.19]

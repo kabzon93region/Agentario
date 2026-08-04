@@ -39,8 +39,8 @@ $binaryExtensions = @(
 )
 
 $utf8NoBomExts = @(
-    ".ts",".tsx",".js",".jsx",".json",
-    ".py",".md",".sql",".html",".css",
+    ".ts",".tsx",".mts",".cts",".js",".jsx",".mjs",".cjs",".json",
+    ".py",".md",".mdx",".sql",".html",".css",
     ".yml",".yaml",".toml",".svg",".xml",
     ".proto",".mdc",".sh",".txt"
 )

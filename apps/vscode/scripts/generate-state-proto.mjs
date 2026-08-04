@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * Generates proto message definitions from TypeScript source of truth.
  *

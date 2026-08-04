@@ -3,8 +3,9 @@ import fs from "node:fs"
 import path from "node:path"
 import os from "node:os"
 import { estimateTokens } from "@agentario/shared"
+import { formatMessageStatsLine } from "../shared/message-display"
 
-const VERSION = "0.14.83"
+const VERSION = "0.14.88"
 
 export interface ApiServerOptions {
 	port: number
@@ -47,7 +48,7 @@ export function startAgentarioApiServer(opts: ApiServerOptions): http.Server {
 	return server
 }
 
-// в”Ђв”Ђ Helper: get AgentarioMessage[] from the active controller task в”Ђв”Ђ
+// РІвЂќР‚РІвЂќР‚ Helper: get AgentarioMessage[] from the active controller task РІвЂќР‚РІвЂќР‚
 function getAgentarioMessages(controller: any): any[] {
 	try {
 		const task = controller.task
@@ -58,7 +59,7 @@ function getAgentarioMessages(controller: any): any[] {
 	}
 }
 
-// в”Ђв”Ђ Helper: get active session в”Ђв”Ђ
+// РІвЂќР‚РІвЂќР‚ Helper: get active session РІвЂќР‚РІвЂќР‚
 function getActiveSession(controller: any): any {
 	try {
 		return controller.sessions?.getActiveSession?.() ?? null
@@ -282,12 +283,12 @@ async function handleRequest(
 		return { status: "ok", version: VERSION, port: parseInt(url.port || "19231") }
 	}
 
-	// в”Ђв”Ђ GET /api/status в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ GET /api/status РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/status" && req.method === "GET") {
 		return getStatusSnapshot(controller)
 	}
 
-	// в”Ђв”Ђ POST /api/new_task в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ POST /api/new_task РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/new_task" && req.method === "POST") {
 		const body = await readBody(req)
 		const parsed = JSON.parse(body)
@@ -316,7 +317,7 @@ async function handleRequest(
 		return { ok: true, sessionId, deletedTaskId, fresh, status: getStatusSnapshot(controller) }
 	}
 
-	// в”Ђв”Ђ POST /api/followup в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ POST /api/followup РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/followup" && req.method === "POST") {
 		const body = await readBody(req)
 		const { text, images, files } = JSON.parse(body)
@@ -325,8 +326,8 @@ async function handleRequest(
 		return { ok: true }
 	}
 
-	// в”Ђв”Ђ POST /api/cancel в”Ђв”Ђ
-	// POST /api/stop — same as UI Stop button, then wait until generation stopped
+	// РІвЂќР‚РІвЂќР‚ POST /api/cancel РІвЂќР‚РІвЂќР‚
+	// POST /api/stop вЂ” same as UI Stop button, then wait until generation stopped
 	if ((pathname === "/api/stop" || pathname === "/api/cancel") && req.method === "POST") {
 		const bodyRaw = await readBody(req)
 		let timeoutMs = 60000
@@ -340,12 +341,12 @@ async function handleRequest(
 		return result
 	}
 
-	// POST /api/clear — close current chat and return to home (chat list)
+	// POST /api/clear вЂ” close current chat and return to home (chat list)
 	if (pathname === "/api/clear" && req.method === "POST") {
 		return await closeChat(controller)
 	}
 
-	// POST /api/delete_task — stop + delete chat (no confirmation modal)
+	// POST /api/delete_task вЂ” stop + delete chat (no confirmation modal)
 	if (pathname === "/api/delete_task" && req.method === "POST") {
 		const bodyRaw = await readBody(req)
 		let taskId: string | null = null
@@ -358,24 +359,36 @@ async function handleRequest(
 		return await deleteChat(controller, taskId)
 	}
 
-	// в”Ђв”Ђ GET /api/messages в”Ђв”Ђ
+	// ═══════ GET /api/messages ═══════
 	if (pathname === "/api/messages" && req.method === "GET") {
 		const limit = parseInt(url.searchParams.get("limit") || "50")
 		const msgs = getAgentarioMessages(controller)
 		const recent = msgs.slice(-limit)
 		return {
-			messages: recent.map((m: any) => ({
-				role: m.type === "ask" ? "user" : "assistant",
-				text: m.text || "",
-				ts: m.ts,
-				partial: m.partial || false,
-				say: m.say,
-				ask: m.ask,
-			})),
+			messages: recent.map((m: any) => {
+				const msg: any = {
+					role: m.type === "ask" ? "user" : "assistant",
+					text: m.text || "",
+					ts: m.ts,
+					partial: m.partial || false,
+					say: m.say,
+					ask: m.ask,
+				}
+				// Include metrics if available (from SDK session messages)
+				if (m.metrics) {
+					msg.metrics = {
+						inputTokens: m.metrics.inputTokens,
+						outputTokens: m.metrics.outputTokens,
+						cacheReadTokens: m.metrics.cacheReadTokens,
+						cacheWriteTokens: m.metrics.cacheWriteTokens,
+					}
+				}
+				return msg
+			}),
 		}
 	}
 
-	// в”Ђв”Ђ GET /api/context в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ GET /api/context РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/context" && req.method === "GET") {
 		const snap = getStatusSnapshot(controller)
 		// Prefer durable session files (works while busy / after error)
@@ -393,7 +406,7 @@ async function handleRequest(
 		return { error: "no_context", busy: snap.busy, phase: snap.phase, taskId: snap.taskId }
 	}
 
-	// в”Ђв”Ђ GET /api/export_chat в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ GET /api/export_chat РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/export_chat" && req.method === "GET") {
 		const outPath = url.searchParams.get("outPath") || path.join(os.tmpdir(), "agentario-export.md")
 		const msgs = getAgentarioMessages(controller)
@@ -405,7 +418,7 @@ async function handleRequest(
 		return { path: outPath, messageCount: msgs.length, compact }
 	}
 
-	// в”Ђв”Ђ GET /api/wait_idle в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ GET /api/wait_idle РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/wait_idle" && req.method === "GET") {
 		const timeout = parseInt(url.searchParams.get("timeout") || "600000")
 		const pollMs = parseInt(url.searchParams.get("pollMs") || "3000")
@@ -437,7 +450,7 @@ async function handleRequest(
 		return { status: "timeout", elapsed: Date.now() - start, ...finalSnap }
 	}
 
-	// в”Ђв”Ђ GET /api/logs вЂ” read extension log file в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ GET /api/logs РІР‚вЂќ read extension log file РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/logs" && req.method === "GET") {
 		const linesParam = parseInt(url.searchParams.get("lines") || "200")
 		const found = findExtensionLogFile(clineDir)
@@ -450,7 +463,7 @@ async function handleRequest(
 		return { path: found.path, lineCount: allLines.length, lines: tail, exists: true }
 	}
 
-	// в”Ђв”Ђ GET /api/compaction_files вЂ” list/read compaction debug files в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ GET /api/compaction_files РІР‚вЂќ list/read compaction debug files РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/compaction_files" && req.method === "GET") {
 		const phaseFilter = url.searchParams.get("phase") // "map" | "single" | null
 		const chunkFilter = url.searchParams.get("chunk") // chunk index | null
@@ -485,7 +498,7 @@ async function handleRequest(
 		return { dir: compactionDir, files: result }
 	}
 
-	// в”Ђв”Ђ GET /api/collect вЂ” collect session files to export directory в”Ђв”Ђ
+	// ═══════ GET /api/collect — collect session files to export directory ═══════
 	if (pathname === "/api/collect" && req.method === "GET") {
 		const outDirParam = url.searchParams.get("outDir")
 		const timestamp = Date.now()
@@ -568,7 +581,182 @@ async function handleRequest(
 		return { outDir, taskId, files: collected, verdict: outcome.verdict }
 	}
 
-	// в”Ђв”Ђ POST /api/install_vsix вЂ” install VSIX via code CLI в”Ђв”Ђ
+	// ═══════ GET /api/save_run — full run save with quality analysis ═══════
+	if (pathname === "/api/save_run" && req.method === "GET") {
+		const timestamp = new Date().toISOString().replace(/[:.]/g, "-").substring(0, 19)
+		const outDir = path.join(process.cwd(), "Exports", `lab-run-${timestamp}`)
+		fs.mkdirSync(outDir, { recursive: true })
+		const collected: string[] = []
+
+		// 1. Export chat markdown
+		const msgs = getAgentarioMessages(controller)
+		if (msgs.length > 0) {
+			const mdPath = path.join(outDir, "chat-export.md")
+			fs.writeFileSync(mdPath, exportMessagesToMarkdown(msgs), "utf-8")
+			collected.push(mdPath)
+		}
+
+		// 2. Save UI messages
+		if (msgs.length > 0) {
+			const jsonPath = path.join(outDir, "ui_messages.json")
+			fs.writeFileSync(jsonPath, JSON.stringify(msgs, null, 2), "utf-8")
+			collected.push(jsonPath)
+		}
+
+		// 3. Copy session files (session.json, messages.json)
+		const fromFile = loadSessionContext(controller, clineDir)
+		if (fromFile) {
+			try {
+				const srcDir = path.dirname(fromFile.path)
+				const destDir = path.join(outDir, "session")
+				fs.mkdirSync(destDir, { recursive: true })
+				for (const name of fs.readdirSync(srcDir)) {
+					const src = path.join(srcDir, name)
+					if (fs.statSync(src).isFile()) {
+						const dest = path.join(destDir, name)
+						fs.copyFileSync(src, dest)
+						collected.push(dest)
+					}
+				}
+			} catch {}
+		}
+
+		// 4. Copy extension logs
+		const logFound = findExtensionLogFile(clineDir)
+		if (logFound.exists) {
+			const dest = path.join(outDir, "extension-logs.txt")
+			fs.copyFileSync(logFound.path, dest)
+			collected.push(dest)
+		}
+
+		// 5. Save final status
+		const status = getStatusSnapshot(controller)
+		fs.writeFileSync(path.join(outDir, "final-status.json"), JSON.stringify(status, null, 2), "utf-8")
+		collected.push(path.join(outDir, "final-status.json"))
+
+		// 6. Save outcome analysis
+		const outcome = analyzeChatOutcome(controller)
+		fs.writeFileSync(path.join(outDir, "outcome.json"), JSON.stringify(outcome, null, 2), "utf-8")
+		collected.push(path.join(outDir, "outcome.json"))
+
+		// 7. Generate SUMMARY.txt with quality analysis
+		const summaryLines: string[] = [
+			"=== LAB RUN SUMMARY ===",
+			`Date: ${new Date().toLocaleString("ru-RU")}`,
+			`Session: ${status.taskId || "unknown"}`,
+			"",
+			"=== METRICS ===",
+			`Messages (UI): ${msgs.length}`,
+			`Verdict: ${outcome.verdict}`,
+			`Completion: ${outcome.hasCompletion}`,
+			`API failures: ${outcome.hasApiFail ? "yes" : "no"}`,
+			`Mistake limit: ${outcome.hasMistakeLimit ? "reached" : "not reached"}`,
+			"",
+			"=== FILES ===",
+			...collected.map((f) => `  ${path.relative(outDir, f)} (${fs.statSync(f).size} bytes)`),
+			"",
+		]
+
+		// Add quality analysis from session messages if available
+		if (fromFile?.messages) {
+			try {
+				const sessionMsgs = fromFile.messages as any[]
+				const assistantMsgs = sessionMsgs.filter((m: any) => m.role === "assistant" && m.metrics)
+				if (assistantMsgs.length > 0) {
+					const totalIn = assistantMsgs.reduce((sum: number, m: any) => sum + (m.metrics?.inputTokens || 0), 0)
+					const totalOut = assistantMsgs.reduce((sum: number, m: any) => sum + (m.metrics?.outputTokens || 0), 0)
+					const lastMsg = assistantMsgs[assistantMsgs.length - 1]
+					const contextTokens = lastMsg?.metrics?.inputTokens || 0
+
+					summaryLines.push(
+						"=== TOKEN ANALYSIS ===",
+						`Total input tokens (aggregate): ${totalIn}`,
+						`Total output tokens: ${totalOut}`,
+						`Last context size: ${contextTokens} tokens`,
+						`Assistant turns: ${assistantMsgs.length}`,
+						"",
+					)
+
+					// Detect repeated thinking patterns
+					let maxConsecutiveIdentical = 0
+					let currentStreak = 1
+					let lastThinking = ""
+					let enoentCount = 0
+					let consecutiveEof = 0
+					let maxConsecutiveEof = 0
+
+					for (const msg of sessionMsgs) {
+						if (msg.role === "assistant") {
+							// Check thinking
+							const thinking = msg.content?.find((c: any) => c.type === "thinking")?.thinking
+							if (thinking) {
+								const normalized = thinking.trim().replace(/\s+/g, " ").substring(0, 200)
+								if (normalized === lastThinking) {
+									currentStreak++
+									maxConsecutiveIdentical = Math.max(maxConsecutiveIdentical, currentStreak)
+								} else {
+									currentStreak = 1
+									lastThinking = normalized
+								}
+							}
+						}
+						// Check for ENOENT in tool results
+						if (msg.role === "user") {
+							for (const content of (msg.content || [])) {
+								if (content.type === "tool_result") {
+									const resultText = JSON.stringify(content.content || "")
+									if (resultText.includes("ENOENT") || resultText.includes("no such file")) {
+										enoentCount++
+										consecutiveEof++
+										maxConsecutiveEof = Math.max(maxConsecutiveEof, consecutiveEof)
+									} else {
+										consecutiveEof = 0
+									}
+								}
+							}
+						}
+					}
+
+					summaryLines.push(
+						"=== QUALITY ANALYSIS ===",
+						`ENOENT errors total: ${enoentCount}`,
+						`Max consecutive ENOENT: ${maxConsecutiveEof}`,
+						`Max consecutive identical thinking: ${maxConsecutiveIdentical}`,
+						"",
+						"=== RECOMMENDATIONS ===",
+					)
+
+					if (maxConsecutiveEof >= 5) {
+						summaryLines.push("- WARNING: Agent looped on ENOENT errors. Consider adding file existence checks.")
+					}
+					if (maxConsecutiveIdentical >= 3) {
+						summaryLines.push("- WARNING: Agent repeated same thinking. Possible reasoning loop.")
+					}
+					if (enoentCount > 10) {
+						summaryLines.push("- WARNING: High ENOENT count. Agent may be guessing file paths.")
+					}
+					if (summaryLines[summaryLines.length - 1] === "=== RECOMMENDATIONS ===") {
+						summaryLines.push("- No issues detected.")
+					}
+				}
+			} catch (e: any) {
+				summaryLines.push(`Quality analysis failed: ${e.message}`)
+			}
+		}
+
+		fs.writeFileSync(path.join(outDir, "SUMMARY.txt"), summaryLines.join("\n"), "utf-8")
+		collected.push(path.join(outDir, "SUMMARY.txt"))
+
+		return {
+			ok: true,
+			outDir,
+			files: collected,
+			verdict: outcome.verdict,
+			messageCount: msgs.length,
+		}
+	}
+
+	// РІвЂќР‚РІвЂќР‚ POST /api/install_vsix РІР‚вЂќ install VSIX via code CLI РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/install_vsix" && req.method === "POST") {
 		const body = await readBody(req)
 		const { vsixPath } = JSON.parse(body)
@@ -588,7 +776,7 @@ async function handleRequest(
 		}
 	}
 
-	// POST /api/compact — run context/full compaction (summarization)
+	// POST /api/compact вЂ” run context/full compaction (summarization)
 	if (pathname === "/api/compact" && req.method === "POST") {
 		const bodyRaw = await readBody(req)
 		let mode: "context" | "full" = "context"
@@ -637,7 +825,7 @@ async function handleRequest(
 		}
 	}
 
-	// в”Ђв”Ђ POST /api/restart — restart VS Code window в”Ђв”Ђ
+	// РІвЂќР‚РІвЂќР‚ POST /api/restart вЂ” restart VS Code window РІвЂќР‚РІвЂќР‚
 	if (pathname === "/api/restart" && req.method === "POST") {
 		if (!vscode) throw new Error("vscode module not available")
 		vscode.commands.executeCommand("workbench.action.reloadWindow")
@@ -660,17 +848,36 @@ function readBody(req: http.IncomingMessage): Promise<string> {
 		req.on("data", (chunk: Buffer) => chunks.push(chunk))
 		req.on("end", () => {
 			const buf = Buffer.concat(chunks)
-			// Detect charset from Content-Type header; default to UTF-8.
-			// PowerShell 5.1 sends body in system default encoding (e.g. cp1251),
-			// so we must honour the declared charset to avoid garbling Cyrillic.
 			const contentType = req.headers["content-type"] || ""
 			const charsetMatch = contentType.match(/charset=([^\s;]+)/i)
-			const charset = (charsetMatch?.[1] || "utf-8") as BufferEncoding
+			const declaredCharset = (charsetMatch?.[1] || "").toLowerCase()
+
+			// If client declared a specific charset (e.g. charset=cp1251), use it.
+			if (declaredCharset && declaredCharset !== "utf-8") {
+				try {
+					const decoder = new TextDecoder(declaredCharset)
+					resolve(decoder.decode(buf))
+					return
+				} catch {
+					// Unknown charset вЂ” fall through to auto-detection
+				}
+			}
+
+			// No charset declared (or utf-8 declared): try UTF-8 first.
+			const utf8 = buf.toString("utf-8")
+			if (!utf8.includes("\uFFFD")) {
+				resolve(utf8)
+				return
+			}
+
+			// UTF-8 produced replacement chars вЂ” the body is likely in the system
+			// default ANSI codepage (cp1251 on Russian Windows). PowerShell 5.1
+			// sends Invoke-RestMethod bodies this way without declaring charset.
 			try {
-				resolve(buf.toString(charset))
+				const decoder = new TextDecoder("windows-1251")
+				resolve(decoder.decode(buf))
 			} catch {
-				// Fallback: try UTF-8 then Latin-1 (lossless byte round-trip)
-				resolve(buf.toString("utf-8"))
+				resolve(utf8)
 			}
 		})
 		req.on("error", reject)
@@ -681,7 +888,7 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// в”Ђв”Ђ Markdown export в”Ђв”Ђ
+// РІвЂќР‚РІвЂќР‚ Markdown export РІвЂќР‚РІвЂќР‚
 const COMMAND_OUTPUT_STRING = "Output:"
 const SKIP_SAY = new Set([
 	"api_req_started", "api_req_finished", "api_req_retried",
@@ -694,7 +901,7 @@ const SKIP_ASK_TOOL = new Set(["attempt_completion"])
 function formatTs(ts: number | undefined): string {
 	// MessageIdMinter ids are small counters; only treat values as wall-clock ms.
 	if (!ts || !Number.isFinite(ts) || ts < 1e12) return ""
-	try { return new Date(ts).toISOString() } catch { return "" }
+	try { return new Date(ts).toLocaleString("ru-RU") } catch { return "" }
 }
 
 function appendBlock(lines: string[], heading: string, body: string, ts?: number): void {
@@ -731,10 +938,49 @@ function formatToolLine(msg: any): string {
 	return parts.join("\n")
 }
 
+/**
+ * Build a map from message index to stats line for all api_req_started messages.
+ * Returns a Map<messageIndex, statsLine>.
+ */
+function buildStatsMap(messages: any[]): Map<number, string> {
+	const statsMap = new Map<number, string>()
+	for (let i = 0; i < messages.length; i++) {
+		const msg = messages[i]
+		if (msg.say === "api_req_started" && msg.text) {
+			try {
+				const info = JSON.parse(msg.text)
+				const line = formatMessageStatsLine(info)
+				if (line) {
+					statsMap.set(i, line)
+				}
+			} catch {}
+		}
+	}
+	return statsMap
+}
+
+/**
+ * Find the stats line for a given message index by searching both
+ * backward and forward, returning the closest match.
+ */
+function findStatsForMessage(statsMap: Map<number, string>, messageIndex: number): string | undefined {
+	const indices = Array.from(statsMap.keys()).sort((a, b) => a - b)
+	let closestIdx: number | undefined
+	let closestDist = Infinity
+	for (const idx of indices) {
+		const dist = Math.abs(idx - messageIndex)
+		if (dist < closestDist) {
+			closestDist = dist
+			closestIdx = idx
+		}
+	}
+	return closestIdx !== undefined ? statsMap.get(closestIdx) : undefined
+}
+
 function exportMessagesToMarkdown(messages: any[], options: { title?: string; compact?: boolean } = {}): string {
 	const lines: string[] = []
 	if (options.title?.trim()) lines.push(`# ${options.title.trim()}`, "")
-	lines.push(`Exported: ${new Date().toISOString()}`, "", "---", "")
+	lines.push(`Exported: ${new Date().toLocaleString("ru-RU")}`, "", "---", "")
 
 	const taskMessages = messages.filter((m: any) => m.say === "task")
 	const otherMessages = messages.filter((m: any) => m.say !== "task")
@@ -743,7 +989,11 @@ function exportMessagesToMarkdown(messages: any[], options: { title?: string; co
 		...otherMessages.sort((a: any, b: any) => (a.ts ?? 0) - (b.ts ?? 0)),
 	]
 
-	for (const msg of ordered) {
+	// Build stats map for all api_req_started messages
+	const statsMap = buildStatsMap(ordered)
+
+	for (let msgIdx = 0; msgIdx < ordered.length; msgIdx++) {
+		const msg = ordered[msgIdx]
 		if (msg.partial) continue
 		if (msg.type === "say" && msg.say && SKIP_SAY.has(msg.say)) continue
 		if (options.compact && msg.type === "say" && msg.say === "reasoning" && !(msg.text || "").trim()) continue
@@ -760,23 +1010,50 @@ function exportMessagesToMarkdown(messages: any[], options: { title?: string; co
 			continue
 		}
 		if (msg.type === "say" && msg.say === "reasoning") {
-			if (msg.text?.trim()) appendBlock(lines, "Thinking", msg.text, msg.ts)
+			if (msg.text?.trim()) {
+				appendBlock(lines, "Thinking", msg.text, msg.ts)
+				// Append stats after Thinking block
+				const stats = findStatsForMessage(statsMap, msgIdx)
+				if (stats) {
+					lines.push(`  ${stats}`, "")
+				}
+			}
 			continue
 		}
 		if (msg.type === "say" && (msg.say === "text" || msg.say === "completion_result")) {
 			appendBlock(lines, "Agent", msg.text ?? "", msg.ts)
+			// Append stats after Agent text/completion block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 			continue
 		}
 		if (msg.type === "say" && msg.say === "command") {
 			appendBlock(lines, "Agent", formatCommandBlock(msg), msg.ts)
+			// Append stats after command block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 			continue
 		}
 		if (msg.type === "say" && msg.say === "tool") {
 			appendBlock(lines, "Tool", formatToolLine(msg), msg.ts)
+			// Append stats after tool block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 			continue
 		}
 		if (msg.type === "ask" && msg.ask === "tool") {
 			appendBlock(lines, "Tool", formatToolLine(msg), msg.ts)
+			// Append stats after tool block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 			continue
 		}
 	}
@@ -784,3 +1061,4 @@ function exportMessagesToMarkdown(messages: any[], options: { title?: string; co
 	while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop()
 	return `${lines.join("\n")}\n`
 }
+

@@ -1,5 +1,5 @@
 import { COMMAND_OUTPUT_STRING } from "@shared/combineCommandSequences"
-import type { AgentarioMessage, AgentarioSayTool } from "@shared/ExtensionMessage"
+import type { AgentarioMessage, AgentarioSayTool, AgentarioApiReqInfo } from "@shared/ExtensionMessage"
 import { formatMessageStatsLine } from "@shared/message-display"
 
 const LOW_STAKES_TOOLS = new Set([
@@ -42,13 +42,52 @@ function parseTool(text: string | undefined): AgentarioSayTool {
 	}
 }
 
+/**
+ * Build a map from message index to stats line for all api_req_started messages.
+ * Returns a Map<messageIndex, statsLine>.
+ */
+function buildStatsMap(messages: AgentarioMessage[]): Map<number, string> {
+	const statsMap = new Map<number, string>()
+	for (let i = 0; i < messages.length; i++) {
+		const msg = messages[i]
+		if (msg.say === "api_req_started" && msg.text) {
+			try {
+				const info = JSON.parse(msg.text) as AgentarioApiReqInfo
+				const line = formatMessageStatsLine(info)
+				if (line) {
+					statsMap.set(i, line)
+				}
+			} catch {}
+		}
+	}
+	return statsMap
+}
+
+/**
+ * Find the stats line for a given message index by searching both
+ * backward and forward, returning the closest match.
+ */
+function findStatsForMessage(statsMap: Map<number, string>, messageIndex: number): string | undefined {
+	const indices = Array.from(statsMap.keys()).sort((a, b) => a - b)
+	let closestIdx: number | undefined
+	let closestDist = Infinity
+	for (const idx of indices) {
+		const dist = Math.abs(idx - messageIndex)
+		if (dist < closestDist) {
+			closestDist = dist
+			closestIdx = idx
+		}
+	}
+	return closestIdx !== undefined ? statsMap.get(closestIdx) : undefined
+}
+
 function formatTs(ts: number | undefined): string {
 	// AgentarioMessage.ts is often a MessageIdMinter counter, not wall-clock ms.
 	if (!ts || !Number.isFinite(ts) || ts < 1_000_000_000_000) {
 		return ""
 	}
 	try {
-		return new Date(ts).toISOString()
+		return new Date(ts).toLocaleString("ru-RU")
 	} catch {
 		return ""
 	}
@@ -116,7 +155,7 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 	if (options.title?.trim()) {
 		lines.push(`# ${options.title.trim()}`, "")
 	}
-	lines.push(`Exported: ${exportedAt.toISOString()}`, "", "---", "")
+	lines.push(`Exported: ${exportedAt.toLocaleString("ru-RU")}`, "", "---", "")
 
 	// Agentario: pin task message(s) to the beginning, then sort rest by ts.
 	// Task messages use Date.now() while SDK messages use minter.nextId() (1,2,3...),
@@ -128,7 +167,11 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 		...otherMessages.sort((a, b) => (a.ts ?? 0) - (b.ts ?? 0)),
 	]
 
-	for (const message of ordered) {
+	// Build stats map for all api_req_started messages
+	const statsMap = buildStatsMap(ordered)
+
+	for (let msgIdx = 0; msgIdx < ordered.length; msgIdx++) {
+		const message = ordered[msgIdx]
 		if (message.partial) {
 			continue
 		}
@@ -153,17 +196,32 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 		if (message.type === "say" && message.say === "reasoning") {
 			if (message.text?.trim()) {
 				appendBlock(lines, "Thinking", message.text, message.ts)
+				// Append stats after Thinking block
+				const stats = findStatsForMessage(statsMap, msgIdx)
+				if (stats) {
+					lines.push(`  ${stats}`, "")
+				}
 			}
 			continue
 		}
 
 		if (message.type === "say" && (message.say === "text" || message.say === "completion_result")) {
 			appendBlock(lines, "Agent", message.text ?? "", message.ts)
+			// Append stats after Agent text/completion block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 			continue
 		}
 
 		if (message.type === "say" && message.say === "command") {
 			appendBlock(lines, "Agent", formatCommandBlock(message), message.ts)
+			// Append stats after command block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 			continue
 		}
 
@@ -172,6 +230,11 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 				continue
 			}
 			appendBlock(lines, "Tool", formatToolLine(message), message.ts)
+			// Append stats after tool block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 			continue
 		}
 
@@ -180,6 +243,11 @@ export function exportChatToMarkdown(messages: AgentarioMessage[], options: Expo
 				continue
 			}
 			appendBlock(lines, "Tool", formatToolLine(message), message.ts)
+			// Append stats after tool block
+			const stats = findStatsForMessage(statsMap, msgIdx)
+			if (stats) {
+				lines.push(`  ${stats}`, "")
+			}
 		}
 	}
 

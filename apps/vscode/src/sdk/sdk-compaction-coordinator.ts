@@ -169,13 +169,13 @@ export interface SdkCompactionCoordinatorOptions {
 	postStateToWebview: () => Promise<void>
 
 
-	/** РЎРѕР·РґР°С‘С‚ РІСЂРµРјРµРЅРЅС‹Р№ sdkHost РґР»СЏ С‡С‚РµРЅРёСЏ РёСЃС‚РѕСЂРёРё (dispose РІС‹Р·С‹РІР°РµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё). */
+	/** Создаёт временный sdkHost для чтения истории (dispose вызывается автоматически). */
 
 
 	createTempHost: () => Promise<{ host: SdkSessionHost; dispose: () => Promise<void> }>
 
 
-	/** EMA scale: provider tokensIn / char-estimate. РњР°СЃС€С‚Р°Р±РёСЂСѓРµС‚ chars/3 Рє СЂРµР°Р»СЊРЅС‹Рј С‚РѕРєРµРЅР°Рј РїСЂРѕРІР°Р№РґРµСЂР°. */
+	/** EMA scale: provider tokensIn / char-estimate. Масштабирует chars/3 к реальным токенам провайдера. */
 
 
 	getProviderScale?: () => number
@@ -253,13 +253,13 @@ export class SdkCompactionCoordinator {
 		if (this.compactInFlight) {
 
 
-			// Р–РґС‘Рј Р·Р°РІРµСЂС€РµРЅРёСЏ С‚РµРєСѓС‰РµР№ РєРѕРјРїР°РєС†РёРё РІРјРµСЃС‚Рѕ РЅРµРјРµРґР»РµРЅРЅРѕРіРѕ РѕС‚РєР»РѕРЅРµРЅРёСЏ.
+			// Ждём завершения текущей компакции вместо немедленного отклонения.
 
 
-			// Р­С‚Рѕ СЂРµС€Р°РµС‚ РїСЂРѕР±Р»РµРјСѓ false positive РєРѕРіРґР° API-РєР»РёРµРЅС‚ РІС‹Р·С‹РІР°РµС‚ compact
+			// Это решает проблему false positive когда API-клиент вызывает compact
 
 
-			// РїРѕРєР° РїСЂРµРґС‹РґСѓС‰РёР№ РІС‹Р·РѕРІ РµС‰С‘ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ (LLM СЃСѓРјРјР°СЂРёР·Р°С†РёСЏ 30-60СЃ).
+			// пока предыдущий вызов ещё выполняется (LLM суммаризация 30-60с).
 
 
 			Logger.log("[SdkController] compactTask: compaction in progress, waiting for completion...")
@@ -280,7 +280,7 @@ export class SdkCompactionCoordinator {
 			if (!this.compactInFlight) {
 
 
-				// РљРѕРјРїР°РєС†РёСЏ Р·Р°РІРµСЂС€РёР»Р°СЃСЊ РїРѕРєР° Р¶РґР°Р»Рё вЂ” РІРѕР·РІСЂР°С‰Р°РµРј СЂРµР·СѓР»СЊС‚Р°С‚ РЅР° РѕСЃРЅРѕРІРµ С‚РµРєСѓС‰РµРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ
+				// Компакция завершилась пока ждали — возвращаем результат на основе текущего состояния
 
 
 				Logger.log("[SdkController] compactTask: previous compaction completed while waiting")
@@ -457,7 +457,7 @@ export class SdkCompactionCoordinator {
 	private async runCompaction(sdkHost: SdkSessionHost, sessionId: string, compactionMode: "context" | "full" = "context"): Promise<CompactTaskResult> {
 
 
-		// Agentario: Р»РѕРіРёСЂСѓРµРј СЂРµР¶РёРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё
+		// Agentario: логируем режим суммаризации
 
 
 		Logger.log(`[SdkCompaction] runCompaction: compactionMode=${compactionMode}, sessionId=${sessionId}`)
@@ -466,7 +466,7 @@ export class SdkCompactionCoordinator {
 		
 
 
-		// Agentario: РґР»СЏ full СЂРµР¶РёРјР° С‡РёС‚Р°РµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ)
+		// Agentario: для full режима читаем display messages (полная история)
 
 
 		let messages: SdkMessage[]
@@ -487,7 +487,7 @@ export class SdkCompactionCoordinator {
 			
 
 
-			// Р›РѕРіРёСЂСѓРµРј С‚РёРїС‹ СЃРѕРѕР±С‰РµРЅРёР№
+			// Логируем типы сообщений
 
 
 			const typeCounts: Record<string, number> = {}
@@ -511,7 +511,7 @@ export class SdkCompactionCoordinator {
 			
 
 
-			// РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј AgentarioMessage РІ SDK Message (РІРєР»СЋС‡Р°РµРј РІСЃРµ Р·РЅР°С‡РёРјС‹Рµ С‚РёРїС‹)
+			// Конвертируем AgentarioMessage в SDK Message (включаем все значимые типы)
 
 
 			messages = agentarioMessages
@@ -547,7 +547,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Agentario: СЃС‡РёС‚Р°РµРј С‚РѕРєРµРЅС‹ РїРѕ Р’РЎР•Рњ display СЃРѕРѕР±С‰РµРЅРёСЏРј (Р±РѕР»РµРµ С‚РѕС‡РЅРѕ)
+			// Agentario: считаем токены по ВСЕМ display сообщениям (более точно)
 
 
 			const displayTotalChars = agentarioMessages.reduce((sum, m) => {
@@ -649,10 +649,10 @@ export class SdkCompactionCoordinator {
 			messages,
 
 
-			compactionMode, // Agentario: РїРµСЂРµРґР°С‘Рј СЂРµР¶РёРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё
+			compactionMode, // Agentario: передаём режим суммаризации
 
 
-			statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback РґР»СЏ СЃС‚Р°С‚СѓСЃРѕРІ РІ UI
+			statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback для статусов в UI
 
 
 			providerScale: this.options.getProviderScale?.(), // Agentario: EMA scale для согласования токенов с UI
@@ -796,7 +796,7 @@ export class SdkCompactionCoordinator {
 
 
 
-		// Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С‚РѕРєРµРЅС‹ РґРѕ Рё РїРѕСЃР»Рµ РґР»СЏ СЃС‚Р°С‚РёСЃС‚РёРєРё (РµРґРёРЅС‹Р№ estimator СЃ РєСЌРїР°РјРё)
+		// Рассчитываем токены до и после для статистики (единый estimator с кэпами)
 
 
 		const estimator = createTokenEstimator("compaction")
@@ -811,7 +811,7 @@ export class SdkCompactionCoordinator {
 
 
 
-		// Agentario: СЃРѕС…СЂР°РЅСЏРµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ) РџР•Р Р•Р” РёР·РјРµРЅРµРЅРёСЏРјРё
+		// Agentario: сохраняем display messages (полная история) ПЕРЕД изменениями
 
 
 		if (task) {
@@ -862,7 +862,7 @@ export class SdkCompactionCoordinator {
 
 
 
-		// Agentario: Р±РѕР»РµРµ РґРµС‚Р°Р»СЊРЅС‹Рµ РєР°С‚РµРіРѕСЂРёРё context budget
+		// Agentario: более детальные категории context budget
 
 
 		const systemPrompt = config.systemPrompt ?? ""
@@ -922,13 +922,13 @@ export class SdkCompactionCoordinator {
 
 
 
-		// Agentario: РѕР±РЅРѕРІР»СЏРµРј РўРћР›Р¬РљРћ context messages (РґР»СЏ РјРѕРґРµР»Рё), display РЅРµ С‚СЂРѕРіР°РµРј
+		// Agentario: обновляем ТОЛЬКО context messages (для модели), display не трогаем
 
 
 		if (task) {
 
 
-			// РћР±РЅРѕРІР»СЏРµРј context messages (С‚Рѕ С‡С‚Рѕ РІРёРґРёС‚ РјРѕРґРµР»СЊ)
+			// Обновляем context messages (то что видит модель)
 
 
 			task.messageStateHandler.replaceContextMessages(compactedagentarioMessages)
@@ -937,7 +937,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Р”РѕР±Р°РІР»СЏРµРј context budget РІ display РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂР°
+			// Добавляем context budget в display для обновления прогресс-бара
 
 
 			const contextBudgetMsg: AgentarioMessage = {
@@ -970,7 +970,7 @@ export class SdkCompactionCoordinator {
 
 
 
-		// РЎРѕС…СЂР°РЅСЏРµРј РѕР±РЅРѕРІР»С‘РЅРЅС‹Рµ display messages РЅР° РґРёСЃРє (С„РёР»СЊС‚СЂСѓРµРј info-СЃРѕРѕР±С‰РµРЅРёСЏ)
+		// Сохраняем обновлённые display messages на диск (фильтруем info-сообщения)
 
 
 		if (task) {
@@ -1000,7 +1000,7 @@ export class SdkCompactionCoordinator {
 
 
 
-		// РЎРѕС…СЂР°РЅСЏРµРј summary РІ С„Р°Р№Р»
+		// Сохраняем summary в файл
 
 
 		const summaryPath = this.saveSummaryToFile(result.messages, sessionId)
@@ -1090,7 +1090,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// РРЅРґРёРєР°С†РёСЏ РЅР°С‡Р°Р»Р° РєРѕРјРїР°РєС‚Р°
+			// Индикация начала компакта
 
 
 			this.emitInfo(compactionMode === "full" ? "Полная суммаризация чата..." : "Сжатие контекста...")
@@ -1102,7 +1102,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Agentario: РґР»СЏ full СЂРµР¶РёРјР° С‡РёС‚Р°РµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ)
+			// Agentario: для full режима читаем display messages (полная история)
 
 
 			let messages: SdkMessage[]
@@ -1120,7 +1120,7 @@ export class SdkCompactionCoordinator {
 				
 
 
-				// Р›РѕРіРёСЂСѓРµРј С‚РёРїС‹ СЃРѕРѕР±С‰РµРЅРёР№
+				// Логируем типы сообщений
 
 
 				const typeCounts: Record<string, number> = {}
@@ -1144,7 +1144,7 @@ export class SdkCompactionCoordinator {
 				
 
 
-				// РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј AgentarioMessage РІ SDK Message (РІРєР»СЋС‡Р°РµРј РІСЃРµ Р·РЅР°С‡РёРјС‹Рµ С‚РёРїС‹)
+				// Конвертируем AgentarioMessage в SDK Message (включаем все значимые типы)
 
 
 				messages = agentarioMessages
@@ -1189,7 +1189,7 @@ export class SdkCompactionCoordinator {
 
 
 
-				// Agentario: СЃС‡РёС‚Р°РµРј С‚РѕРєРµРЅС‹ РїРѕ РєРѕРЅРІРµСЂС‚РёСЂРѕРІР°РЅРЅС‹Рј SDK СЃРѕРѕР±С‰РµРЅРёСЏРј (РєР°Рє РІ СЃСѓРјРјР°СЂРёР·Р°С†РёРё)
+				// Agentario: считаем токены по конвертированным SDK сообщениям (как в суммаризации)
 
 
 				const convertedTotalChars = messages.reduce((sum, m) => {
@@ -1210,7 +1210,7 @@ export class SdkCompactionCoordinator {
 
 
 
-				// Agentario: СЃРѕС…СЂР°РЅСЏРµРј РїРѕР»РЅС‹Р№ С‚РµРєСЃС‚ С‡Р°С‚Р° РІ РѕС‚Р»Р°РґРѕС‡РЅС‹Р№ С„Р°Р№Р»
+				// Agentario: сохраняем полный текст чата в отладочный файл
 
 
 				try {
@@ -1333,10 +1333,10 @@ export class SdkCompactionCoordinator {
 				messages,
 
 
-				compactionMode, // Agentario: РїРµСЂРµРґР°С‘Рј СЂРµР¶РёРј СЃСѓРјРјР°СЂРёР·Р°С†РёРё
+				compactionMode, // Agentario: передаём режим суммаризации
 
 
-				statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback РґР»СЏ СЃС‚Р°С‚СѓСЃРѕРІ РІ UI
+				statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback для статусов в UI
 
 
 			})
@@ -1399,7 +1399,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// 1. РЎС‚Р°СЂС‚СѓРµРј РЅРѕРІСѓСЋ СЃРµСЃСЃРёСЋ СЃ compact'РЅСѓС‚С‹РјРё СЃРѕРѕР±С‰РµРЅРёСЏРјРё
+			// 1. Стартуем новую сессию с compact'нутыми сообщениями
 
 
 			config.sessionId = taskId
@@ -1432,7 +1432,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С‚РѕРєРµРЅС‹ РґРѕ Рё РїРѕСЃР»Рµ (РµРґРёРЅС‹Р№ estimator СЃ РєСЌРїР°РјРё)
+			// Рассчитываем токены до и после (единый estimator с кэпами)
 
 
 			const estimator = createTokenEstimator("compaction")
@@ -1447,7 +1447,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Agentario: СЃРѕС…СЂР°РЅСЏРµРј display messages (РїРѕР»РЅР°СЏ РёСЃС‚РѕСЂРёСЏ) РџР•Р Р•Р” РёР·РјРµРЅРµРЅРёСЏРјРё (С„РёР»СЊС‚СЂСѓРµРј info)
+			// Agentario: сохраняем display messages (полная история) ПЕРЕД изменениями (фильтруем info)
 
 
 			const displayMessages = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
@@ -1468,7 +1468,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// 2. РљРѕРЅРІРµСЂС‚РёСЂСѓРµРј compact'РЅСѓС‚С‹Рµ SDK-СЃРѕРѕР±С‰РµРЅРёСЏ РІ AgentarioMessage[] РґР»СЏ РєРѕРЅС‚РµРєСЃС‚Р° (РјРѕРґРµР»СЊ)
+			// 2. Конвертируем compact'нутые SDK-сообщения в AgentarioMessage[] для контекста (модель)
 
 
 			// Display messages remain unchanged вЂ” user sees full history.
@@ -1486,7 +1486,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// 3. Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј РЅРѕРІС‹Р№ contextBudget
+			// 3. Рассчитываем новый contextBudget
 
 
 			const chatTokens = Math.round(result.messages.reduce((total, msg) => total + estimator(msg), 0) * scale)
@@ -1495,7 +1495,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Agentario: Р±РѕР»РµРµ РґРµС‚Р°Р»СЊРЅС‹Рµ РєР°С‚РµРіРѕСЂРёРё context budget
+			// Agentario: более детальные категории context budget
 
 
 			const systemPrompt = config.systemPrompt ?? ""
@@ -1555,7 +1555,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Agentario: РѕР±РЅРѕРІР»СЏРµРј РўРћР›Р¬РљРћ context messages (РґР»СЏ РјРѕРґРµР»Рё), display РЅРµ С‚СЂРѕРіР°РµРј
+			// Agentario: обновляем ТОЛЬКО context messages (для модели), display не трогаем
 
 
 			task.messageStateHandler.replaceContextMessages(compactedagentarioMessages)
@@ -1564,7 +1564,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Р”РѕР±Р°РІР»СЏРµРј context budget РІ display РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂР°
+			// Добавляем context budget в display для обновления прогресс-бара
 
 
 			const contextBudgetMsg: AgentarioMessage = {
@@ -1594,7 +1594,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// РЎРѕС…СЂР°РЅСЏРµРј РѕР±РЅРѕРІР»С‘РЅРЅС‹Рµ display messages РЅР° РґРёСЃРє (С„РёР»СЊС‚СЂСѓРµРј info)
+			// Сохраняем обновлённые display messages на диск (фильтруем info)
 
 
 			const updatedDisplay = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
@@ -1618,7 +1618,7 @@ export class SdkCompactionCoordinator {
 
 
 
-			// РЎРѕС…СЂР°РЅСЏРµРј summary РІ С„Р°Р№Р»
+			// Сохраняем summary в файл
 
 
 			const summaryPath = this.saveSummaryToFile(result.messages, taskId)
@@ -1807,7 +1807,7 @@ export class SdkCompactionCoordinator {
 		try {
 
 
-			// РС‰РµРј summary-СЃРѕРѕР±С‰РµРЅРёРµ РІ СЂРµР·СѓР»СЊС‚Р°С‚Р°С… СЃР¶Р°С‚РёСЏ
+			// Ищем summary-сообщение в результатах сжатия
 
 
 			const summaryMsg = messages.find((m: any) => m.metadata?.kind === "compaction_summary")
@@ -1816,7 +1816,7 @@ export class SdkCompactionCoordinator {
 			if (!summaryMsg) {
 
 
-				// Р•СЃР»Рё РЅРµС‚ summary-РјРµС‚Р°РґР°РЅРЅС‹С…, СЃРѕС…СЂР°РЅСЏРµРј РІРµСЃСЊ РґРёР°Р»РѕРі
+				// Если нет summary-метаданных, сохраняем весь диалог
 
 
 				const transcript = messages.map((m: SdkMessage) => {
@@ -1947,13 +1947,13 @@ export class SdkCompactionCoordinator {
 
 
 
-/** Р¤РёР»СЊС‚СЂСѓРµС‚ compaction-info СЃРѕРѕР±С‰РµРЅРёСЏ РёР· display messages РїРµСЂРµРґ СЃРѕС…СЂР°РЅРµРЅРёРµРј РІ РёСЃС‚РѕСЂРёСЋ.
+/** Фильтрует compaction-info сообщения из display messages перед сохранением в историю.
 
 
- *  Р’СЂРµРјРµРЅРЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ ("auto-compacting", "compacting") РќР• СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ.
+ *  Временные сообщения ("auto-compacting", "compacting") НЕ сохраняются.
 
 
- *  РЎС‚Р°С‚РёСЃС‚РёРєР° (рџ“Љ) Рё СЂРµР·СѓР»СЊС‚Р°С‚ (вњ…) РЎРћРҐР РђРќРЇР®РўРЎРЇ РґР»СЏ РёСЃС‚РѕСЂРёРё. */
+ *  Статистика (📊) и результат (✅) СОХРАНЯЮТСЯ для истории. */
 
 
 export function filterCompactionInfoMessages(messages: AgentarioMessage[]): AgentarioMessage[] {
@@ -1968,13 +1968,13 @@ export function filterCompactionInfoMessages(messages: AgentarioMessage[]): Agen
 		const text = m.text || ""
 
 
-		// РЎРѕС…СЂР°РЅСЏРµРј СЃС‚Р°С‚РёСЃС‚РёРєСѓ РєРѕРЅС‚РµРєСЃС‚Р° Рё СЂРµР·СѓР»СЊС‚Р°С‚ РєРѕРјРїР°РєС†РёРё
+		// Сохраняем статистику контекста и результат компакции
 
 
 		if (text.startsWith("\U0001f4ca") || text.startsWith("\u2705") || text.startsWith("\U0001f504") || text.startsWith("\u274c")) return true
 
 
-		// Р¤РёР»СЊС‚СЂСѓРµРј РІСЂРµРјРµРЅРЅС‹Рµ РёРЅРґРёРєР°С‚РѕСЂС‹ РїСЂРѕРіСЂРµСЃСЃР°
+		// Фильтруем временные индикаторы прогресса
 
 
 		return false

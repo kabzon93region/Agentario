@@ -1,0 +1,201 @@
+﻿---
+description: "Правила автономного тестирования чатов через Agentario Lab API. Используй когда пользователь просит запустить тестовый чат, проверить суммаризацию, или провести пайплайн тестирования."
+globs: ""
+alwaysApply: true
+---
+
+# Lab Testing Pipeline — Agentario
+
+## Стандартный промпт для тестового чата
+
+ВСЕГДА используй этот промпт при запуске тестового чата через Lab API:
+
+```
+Ознакомься с докумнетацией проекта (если есть).
+Ознакомься с историей чатов и изменений проекта (если есть).
+Проанализируй файл правил работы с проектом (если есть).
+Проанализируй структуру папок проекта.
+Ознакомься с прогрессом проекта и его планами (если есть).
+Пойми чем занимаемся в проекте, что он из себя представляет и на каком этапе мы находимся.
+```
+
+**НИКОГДА** не придумывай свои промпты для тестовых чатов. Всегда используй стандартный выше.
+
+---
+
+## Workspace лаборатории
+
+Лаборатория работает с **тестовым workspace** `S:\temo` — это выделенная папка для отладки агентарио, а НЕ папка с исходниками проекта.
+
+- **Тестовый workspace:** `S:\temo` — задан в `scripts/start-lab.cmd`
+- **По умолчанию:** `%TEMP%\agentario-lab-workspace`
+
+Workspace задаётся при запуске VS Code и не меняется во время работы. Агент видит файлы только из этого workspace.
+
+Чтобы переключить workspace (если нужно), перезапусти лабораторию:
+
+```bat
+scripts\agentario-lab.cmd stop
+scripts\agentario-lab.cmd start --workspace S:\temo
+```
+
+---
+
+## Кодировка (CRITICAL)
+
+**PowerShell 5.1 отправляет тела запросов в системной кодировке (cp1251), НЕ объявляя charset.**
+
+С версии 0.14.85 сервер автоопределяет cp1251, но для надёжности **всегда** отправляй UTF-8 явно:
+
+```powershell
+# Правильно — явный UTF-8:
+$body = @{ text = "..."; fresh = $true } | ConvertTo-Json
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+Invoke-RestMethod -Uri "http://127.0.0.1:19231/api/new_task" -Method POST -Body $bytes -ContentType "application/json; charset=utf-8"
+
+# НЕПРАВИЛЬНО — ломает кириллицу:
+$body = @{ text = "..."; fresh = $true } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://127.0.0.1:19231/api/new_task" -Method POST -Body $body -ContentType "application/json"
+```
+
+Если используешь PowerShell 7+ (pwsh), `-Body $body` работает корректно без ручного преобразования.
+
+---
+
+## API Endpoints (port 19231)
+
+Lab API доступен на http://127.0.0.1:19231. Все запросы — REST (GET/POST).
+
+| Endpoint | Method | Описание |
+|----------|--------|----------|
+| /health | GET | Проверка здоровья сервера |
+| /api/status | GET | Текущий статус (idle/busy/phase/verdict) |
+| /api/new_task | POST | Создать новый чат. Body: {"text": "...", "fresh": true} |
+| /api/followup | POST | Отправить followup. Body: {"text": "..."} |
+| /api/stop | POST | Остановить текущий чат |
+| /api/clear | POST | Закрыть текущий чат |
+| /api/delete_task | POST | Удалить чат |
+| /api/wait_idle | GET | Ждать завершения. Params: ?timeout=600000&pollMs=5000 |
+| /api/messages | GET | Получить сообщения с metrics. Params: ?limit=50 |
+| /api/context | GET | Получить контекст модели |
+| /api/logs | GET | Логи расширения. Params: ?lines=200 |
+| /api/compact | POST | Запустить суммаризацию. Body: {"mode": "context"} |
+| /api/compaction_files | GET | Файлы отладки компакции |
+| /api/export_chat | GET | Экспорт чата в markdown (со stats для каждого сообщения) |
+| /api/collect | GET | Собрать все файлы сессии. Params: ?outDir=Exports/run |
+| /api/save_run | GET | **Полный экспорт** в Exports/lab-run-{timestamp}/ с SUMMARY.txt и анализом качества |
+| /api/install_vsix | POST | Установить VSIX. Body: {"path": "..."} |
+| /api/restart | POST | Перезапуск VS Code |
+
+---
+
+## Полный пайплайн тестирования (чеклист)
+
+### Шаг 1: Проверить Lab API
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:19231/api/status" -Method GET -TimeoutSec 5
+```
+- Убедиться что `idle: true`, `phase: "idle"`
+
+### Шаг 2: Создать задачу
+```powershell
+$body = @{ text = "<стандартный промпт>"; fresh = $true } | ConvertTo-Json
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+Invoke-RestMethod -Uri "http://127.0.0.1:19231/api/new_task" -Method POST -Body $bytes -ContentType "application/json; charset=utf-8"
+```
+- Проверить `lastMessagePreview` — кириллица должна быть читаемой (без кракозябр)
+
+### Шаг 3: Ждать завершения
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:19231/api/wait_idle?timeout=600000&pollMs=10000" -Method GET -TimeoutSec 620
+```
+- Проверить `verdict: "ok"`, `hasCompletion: true`
+
+### Шаг 4: Проверить сообщения
+```powershell
+$raw = Invoke-WebRequest -Uri "http://127.0.0.1:19231/api/messages?limit=300" -Method GET
+$data = $raw.Content | ConvertFrom-Json
+```
+- Проверить что промпт доставлен чисто (task message)
+- Проверить что ответ агента релевантен заданию (completion_result)
+- Проверить что нет кракозябр в тексте
+
+### Шаг 5: Сохранить результаты (CRITICAL)
+```powershell
+$result = Invoke-RestMethod -Uri "http://127.0.0.1:19231/api/save_run" -Method GET -TimeoutSec 30
+Write-Host "Saved to: $($result.outDir)"
+Write-Host "Verdict: $($result.verdict)"
+Write-Host "Messages: $($result.messageCount)"
+```
+- Endpoint автоматически сохраняет: chat-export.md, ui_messages.json, session files, extension-logs.txt, final-status.json, outcome.json, SUMMARY.txt
+- SUMMARY.txt содержит автоматический анализ качества (ENOENT циклы, повторяющиеся thinking, рекомендации)
+
+### Шаг 6: Проверить SUMMARY.txt
+```powershell
+Get-Content "$($result.outDir)\SUMMARY.txt"
+```
+- Проверить секцию "QUALITY ANALYSIS"
+- Проверить секцию "RECOMMENDATIONS"
+- Если есть WARNING — investigate and fix
+
+---
+
+## Метрики токенов (CRITICAL — не путать!)
+
+| Метрика | Где взять | Что означает |
+|---------|-----------|--------------|
+| `metrics.inputTokens` (последнее сообщение) | messages.json, последнее assistant сообщение | Размер контекста на последнем API вызове |
+| `metadata.usage.inputTokens` | session.json | Сумма ВСЕХ input токенов за ВСЕ вызовы |
+| `lastContextBudget.totalEstimated` | session.json | Актуальный размер контекста |
+| `lastContextBudget.contextWindow` | session.json | Максимальный размер контекстного окна |
+
+**Пример:**
+- `metadata.usage.inputTokens` = 884,433 → это НЕ контекст, а сумма 42 вызовов
+- `metrics.inputTokens` (последнее) = 32,950 → это РАЗМЕР контекста
+- `lastContextBudget.contextWindow` = 62,464 → максимум
+- Заполненность: 32,950 / 62,464 = 52.8%
+
+**Правило:** Для оценки заполненности контекста используй `metrics.inputTokens` последнего сообщения / `contextWindow`.
+
+---
+
+## Статистика по сообщениям
+
+Stats типа `"in: 32950 · out: 1081 · total: 34031 · time: 20.8s · gen: 20.4s · 52.9 tok/s"` теперь включены в экспорт `chat-export.md` после каждого блока Thinking/Tool/Agent.
+
+Также доступны:
+- В `messages.json` — поле `metrics` у каждого assistant сообщения
+- Через `/api/messages` — поле `metrics` в ответе (если доступно)
+
+---
+
+## Важные замечания
+
+1. **Промпт**: Всегда используй стандартный промпт выше. Никогда не придумывай свой.
+2. **Workspace**: Лаборатория работает с S:\temo — тестовым workspace для отладки.
+3. **Кодировка**: Всегда отправляй UTF-8 байты с charset=utf-8.
+4. **Модель**: Lab работает с моделью из настроек LM Studio.
+5. **Контекст**: Суммаризация триггерится при заполнении ~87% контекстного окна.
+6. **Логи**: /api/logs?lines=500.
+7. **Экспорт**: ВСЕГДА сохраняй результаты в Exports/lab-run-{timestamp}/ с SUMMARY.txt.
+8. **Анализ**: ВСЕГДА оценивай качество работы агента и выявляй рекомендуемые правки.
+
+---
+
+## Troubleshooting
+
+### Кракозябры в промпте
+- Убедись что отправляешь UTF-8 байты (см. Кодировка)
+- Проверь `lastMessagePreview` в ответе `/api/new_task`
+
+### Агент работает не с тем workspace
+- Проверь `session.json` → `cwd` и `workspace_root`
+- Должно быть `S:\temo` (или другой заданный workspace)
+
+### Контекст переполнен
+- Проверь `lastContextBudget.totalEstimated` vs `contextWindow`
+- Если >87% — суммаризация должна триггериться автоматически
+
+### Агент зациклился
+- Проверь `messages.json` — если thinking повторяется 3+ раза с минимальными изменениями
+- Проверь количество ENOENT ошибок подряд
