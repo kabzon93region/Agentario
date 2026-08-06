@@ -234,7 +234,9 @@ export interface AgentarioMessage {
 	isCheckpointCheckedOut?: boolean
 	isOperationOutsideWorkspace?: boolean
 	conversationHistoryIndex?: number
-	conversationHistoryDeletedRange?: [number, number] // for when conversation history is truncated for API requests
+	conversationHistoryDeletedRange?: [number, number]
+	/** Agentario: metadata for action buttons (restart chunk, etc) */
+	metadata?: { action?: string; chunkIndex?: number } // for when conversation history is truncated for API requests
 	modelInfo?: AgentarioMessageModelInfo
 	/** Wall-clock time when the message was created (ms since epoch). */
 	createdAtMs?: number

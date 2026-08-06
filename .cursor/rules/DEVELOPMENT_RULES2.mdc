@@ -25,6 +25,12 @@ Scheme: `MAJOR.MINOR.PATCH` (see [VERSIONING.md](../../VERSIONING.md)).
 - **MINOR** — new feature, new screen, new API/proto, noticeable behavior change (backward-compatible).
 - **MAJOR** — only by explicit project owner decision.
 
+> **Важно:** При смене уровня (PATCH->MINOR или MINOR->MAJOR) младшие блоки сбрасываются в 0.
+> Пример: `0.14.99` + новый функционал -> `0.15.0` (не `0.14.100` или `0.15.1`).
+
+> **Важно:** При смене уровня (PATCH→MINOR или MINOR→MAJOR) младшие блоки сбрасываются в 0.
+> Пример: `0.14.99` + новый функционал → `0.15.0` (не `0.14.100` или `0.15.1`).
+
 ### Files to update (Agentario)
 
 | File | What to update |

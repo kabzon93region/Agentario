@@ -188,6 +188,12 @@ export class VscodeWebviewProvider extends WebviewProvider implements vscode.Web
 				}
 				break
 			}
+			case "restart_compaction_chunk": {
+				const chunkIndex = message.restart_compaction_chunk_index ?? 0
+				Logger.info(`[webview] restart_compaction_chunk: chunkIndex=${chunkIndex}`)
+				this.controller.restartCompactionChunk(chunkIndex)
+				break
+			}
 			default: {
 				Logger.error("Received unhandled WebviewMessage type:", JSON.stringify(message))
 			}

@@ -138,6 +138,99 @@ Get-Content "$($result.outDir)\SUMMARY.txt"
 - Проверить секцию "RECOMMENDATIONS"
 - Если есть WARNING — investigate and fix
 
+### Шаг 7: Анализ качества суммаризации (CRITICAL)
+
+Если в чате была компакция — **ОБЯЗАТЕЛЬНО** провести анализ качества суммаризации.
+
+#### 7.1. Получить оригинальные сообщения (до компакции)
+
+Оригиналы хранятся в `session/*.messages.json` — это **пост-компактные** сообщения. Для получения **докомпактных** оригиналов используй логи расширения:
+
+```powershell
+# Найти в логах debug-файл с оригинальным запросом суммаризатора
+$logs = Get-Content "$($result.outDir)\extension-logs.txt" -Encoding UTF8
+$debugFiles = $logs | Select-String "request saved to" | ForEach-Object {
+    if ($_ -match "saved to (.+\.txt)") { $matches[1] }
+}
+Write-Host "Debug files found: $($debugFiles.Count)"
+$debugFiles | ForEach-Object { Write-Host "  $_" }
+```
+
+Также проверь debug-папку суммаризатора:
+```powershell
+$debugDir = "Y:\Documents\agentario-compaction-debug"
+if (Test-Path $debugDir) {
+    Get-ChildItem $debugDir -Filter "*.txt" | Sort-Object LastWriteTime -Descending | Select-Object -First 10 | ForEach-Object {
+        Write-Host "$($_.LastWriteTime) | $($_.Length) bytes | $($_.Name)"
+    }
+}
+```
+
+#### 7.2. Получить суммаризированную версию
+
+Суммаризированная версия — это сообщение с ролью `user`, содержащее `Context summary:` в начале. Найди его в `session/*.messages.json`:
+
+```powershell
+$sessionFile = Get-ChildItem "$($result.outDir)\session\*.messages.json" | Select-Object -First 1
+$sessionData = Get-Content $sessionFile.FullName -Raw | ConvertFrom-Json
+$summaryMessage = $sessionData.messages | Where-Object {
+    $_.role -eq "user" -and ($_.content | ConvertTo-Json) -match "Context summary"
+} | Select-Object -First 1
+
+if ($summaryMessage) {
+    Write-Host "=== Суммаризированная версия (Context summary) ==="
+    if ($summaryMessage.content -is [array]) {
+        $summaryMessage.content | Where-Object { $_.type -eq "text" } | ForEach-Object { Write-Host $_.text }
+    } elseif ($summaryMessage.content -is [string]) {
+        Write-Host $summaryMessage.content
+    }
+} else {
+    Write-Host "Context summary не найден — компакция не применялась или использовалась другая стратегия."
+}
+```
+
+#### 7.3. Сравнительный анализ качества
+
+Проведи **ручной** сравнительный анализ по следующим критериям:
+
+| Критерий | Что проверять | Плохо | Хорошо |
+|----------|---------------|-------|--------|
+| **Смысловая полнота** | Сохранены ли ключевые факты, имена файлов, пути, решения | "Агент анализировал проект" | "Агент прочитал llama-cpp-src/README.md, pyproject.toml, convert.py — проект: llama.cpp с инструментами конвертации Ollama→GGUF" |
+| **Действенность** | Может ли модель продолжить работу на основе суммари? | "Были прочитаны файлы" | "Прочитаны: convert.py (логика конвертации), find_llama.py (поиск моделей). Не прочитаны: fix_gguf.py, gguf_patch.py" |
+| **Контекст решений** | Сохранены ли промежуточные выводы и логика рассуждений | "Агент нашёл ошибку" | "ENOENT при чтении README.md в корне — файл существует только в llama-cpp-src/. Агент переключился на searchFiles." |
+| **Структура диалога** | Сохранён ли порядок действий и причинно-следственные связи | Сплошной текст | Нумерованный список шагов с результатами |
+| **Ошибки и recovery** | Зафиксированы ли ошибки и как агент их обработал | Ошибки пропущены | "1x attempt_completion с пустым result → retry с заголовком отчёта" |
+| **Tool results** | Сохранены ли ключевые выводы tool calls (НЕ полные файлы) | "Файл прочитан" | "convert.py: Logger класс, QUANT_MAP, get_ollama_models(), основная логика конвертации Ollama blob → GGUF" |
+
+#### 7.4. Оценка и выводы
+
+Запиши результат анализа в формате:
+
+```
+## Анализ качества суммаризации
+
+### Общая оценка: [отлично/хорошо/удовлетворительно/плохо]
+
+### Сохранённые элементы:
+- [список что хорошо сохранилось]
+
+### Потерянные элементы:
+- [список что丢失илось или было искажено]
+
+### Влияние на модель:
+- [смогла ли модель эффективно использовать суммари для продолжения работы]
+
+### Рекомендации:
+- [что можно улучшить в промпте суммаризатора]
+```
+
+#### 7.5. Ключевой критерий: "Модель-тест"
+
+**Главный тест:** Прочитай суммаризированную версию и ответь — сможешь ли ты, зная только суммари (без оригиналов), продолжить работу агента **почти так же эффективно**, как если бы читал оригиналы?
+
+Если **да** — суммаризация качественная.
+Если **нет** — суммаризация потеряла критический контекст, нужно улучшать промпт суммаризатора.
+
 ---
 
 ## Метрики токенов (CRITICAL — не путать!)
@@ -179,6 +272,7 @@ Stats типа `"in: 32950 · out: 1081 · total: 34031 · time: 20.8s · gen: 2
 6. **Логи**: /api/logs?lines=500.
 7. **Экспорт**: ВСЕГДА сохраняй результаты в Exports/lab-run-{timestamp}/ с SUMMARY.txt.
 8. **Анализ**: ВСЕГДА оценивай качество работы агента и выявляй рекомендуемые правки.
+9. **Суммаризация**: Если была компакция — ВСЕГДА проводи анализ качества суммаризации (Шаг 7). Критерий: "сможет ли модель работать по суммари почти как по оригиналу?"
 
 ---
 

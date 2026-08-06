@@ -8,6 +8,7 @@ import {
 	AgentarioSayTool,
 	COMPLETION_RESULT_CHANGES_FLAG,
 } from "@shared/ExtensionMessage"
+import { PLATFORM_CONFIG } from "../../config/platform.config"
 import { BooleanRequest, StringRequest } from "@shared/proto/agentario/common"
 import { Mode } from "@shared/storage/types"
 import deepEqual from "fast-deep-equal"
@@ -35,7 +36,7 @@ import {
 import { MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
 import { canRestoreWorkspaceFromMessage } from "@/components/chat/chat-view/utils/messageUtils"
-import { findApiStatsForMessage, findFollowingApiStats, hasFollowingAssistantText } from "@shared/message-display"
+import { findApiStatsForMessage, hasFollowingAssistantText } from "@shared/message-display"
 import { OptionsButtons } from "@/components/chat/OptionsButtons"
 import { WithCopyButton } from "@/components/common/CopyButton"
 import McpResponseDisplay from "@/components/mcp/chat-display/McpResponseDisplay"
@@ -162,9 +163,10 @@ export const ChatRowContent = memo(
 			selectedText: "",
 		})
 		const contentRef = useRef<HTMLDivElement>(null)
-		const messageApiStats = useMemo(() => message.say === "completion_result"
-			? findApiStatsForMessage(agentarioMessages, message.ts)
-			: findFollowingApiStats(agentarioMessages, message.ts), [agentarioMessages, message.ts, message.say])
+	const messageApiStats = useMemo(
+		() => findApiStatsForMessage(agentarioMessages, message.ts),
+		[agentarioMessages, message.ts],
+	)
 		const deferStatsToFollowingText = useMemo(
 			() => message.say === "reasoning" && hasFollowingAssistantText(agentarioMessages, message.ts),
 			[agentarioMessages, message.say, message.ts],
@@ -1216,10 +1218,26 @@ export const ChatRowContent = memo(
 						}
 						
 						if (isProgress) {
+							const canRestart = message.metadata?.action === "restart-chunk"
+							const chunkIdx = message.metadata?.chunkIndex ?? 0
 							return (
 								<div className="flex items-center gap-2 py-1 px-2 text-xs text-foreground/60">
 									<span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
 									<span>{text.replace("🔄 ", "")}</span>
+									{canRestart && (
+										<button
+											className="ml-1 px-1.5 py-0.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 rounded cursor-pointer border border-blue-400/30"
+											title="Перезапустить этот чанк"
+											onClick={() => {
+												PLATFORM_CONFIG.postMessage({
+													type: "restart_compaction_chunk",
+													restart_compaction_chunk_index: chunkIdx,
+												})
+											}}
+										>
+											⟳ Повторить
+										</button>
+									)}
 								</div>
 							)
 						}

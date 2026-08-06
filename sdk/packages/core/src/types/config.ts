@@ -114,7 +114,7 @@ export interface CoreCompactionConfig {
 		| CoreCompactionResult
 		| undefined;
 	/** Agentario: callback for status updates in UI during auto-compaction */
-	statusCallback?: (message: string) => void;
+	statusCallback?: (message: string, meta?: { action?: string; chunkIndex?: number }) => void;
 }
 
 /**

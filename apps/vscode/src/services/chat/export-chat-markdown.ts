@@ -64,21 +64,18 @@ function buildStatsMap(messages: AgentarioMessage[]): Map<number, string> {
 }
 
 /**
- * Find the stats line for a given message index by searching both
- * backward and forward, returning the closest match.
+ * Find the stats line for a given message index by searching backward
+ * for the nearest api_req_started with stats. This correctly associates
+ * stats with the API call that produced the message.
  */
 function findStatsForMessage(statsMap: Map<number, string>, messageIndex: number): string | undefined {
-	const indices = Array.from(statsMap.keys()).sort((a, b) => a - b)
-	let closestIdx: number | undefined
-	let closestDist = Infinity
+	const indices = Array.from(statsMap.keys()).sort((a, b) => b - a)
 	for (const idx of indices) {
-		const dist = Math.abs(idx - messageIndex)
-		if (dist < closestDist) {
-			closestDist = dist
-			closestIdx = idx
+		if (idx < messageIndex) {
+			return statsMap.get(idx)
 		}
 	}
-	return closestIdx !== undefined ? statsMap.get(closestIdx) : undefined
+	return undefined
 }
 
 function formatTs(ts: number | undefined): string {

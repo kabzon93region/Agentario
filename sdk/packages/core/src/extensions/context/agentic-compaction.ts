@@ -34,6 +34,8 @@ const DEFAULT_CHUNK_SIZE = 16000;
 
 // Agentario: dump summarizer request/response under Documents for debugging.
 // Set AGENTARIO_COMPACTION_DEBUG=0 to disable.
+const MAX_REASONING_ONLY_CHUNKS = 1000;
+
 const COMPACTION_DEBUG_ENABLED =
 	typeof process === "undefined" ||
 	(process.env.AGENTARIO_COMPACTION_DEBUG !== "0" &&
@@ -223,14 +225,18 @@ async function collectStreamingChunks(options: {
 	request: string;
 	logger?: BasicLogger;
 	chunkIndex?: number;
+	/** Agentario: abort signal */
+	signal?: AbortSignal;
 }): Promise<{ text: string; reasoning: string; chunkCount: number; textChunkCount: number; reasoningChunkCount: number; rawChunks: string[]; rawChunkObjects: unknown[] }> {
 	const handler = await createHandlerAsync(options.providerConfig);
+	handler.setAbortSignal?.(options.signal);
 
 	let text = "";
 	let reasoning = "";
 	let chunkCount = 0;
 	let textChunkCount = 0;
 	let reasoningChunkCount = 0;
+	let consecutiveReasoningOnly = 0;
 	const rawChunks: string[] = [];
 	const rawChunkObjects: unknown[] = [];
 
@@ -238,10 +244,15 @@ async function collectStreamingChunks(options: {
 	// Системный промпт вызывает конфликт с чат-темплейтами моделей (например, tool-calling темплейты
 	// в LM Studio ожидают формат с инструментами). Запрос суммаризации должен быть полностью
 	// самостоятельным сообщением, не зависящим от контекста чата.
+	// Agentario: abort listener
+	const onAbort = () => { throw new Error("Compaction chunk aborted by user"); };
+	options.signal?.addEventListener("abort", onAbort, { once: true });
+	try {
 	for await (const chunk of handler.createMessage(
 		"", // пустой системный промпт
 		[{ role: "user", content: options.request }],
 	)) {
+		if (options.signal?.aborted) throw new Error("Compaction chunk aborted by user");
 		chunkCount++;
 		const chunkAny = chunk as unknown as { type: string; text?: string; reasoning?: string; success?: boolean; error?: string | object | Record<string, unknown> };
 		// Agentario: сохраняем RAW объект каждого чанка (полный JSON)
@@ -257,11 +268,16 @@ async function collectStreamingChunks(options: {
 		if (chunkAny.type === "text" || chunkAny.type === "text-delta") {
 			text += (chunkAny.text || '');
 			textChunkCount++;
+			consecutiveReasoningOnly = 0;
 			continue;
 		}
 		if (chunkAny.type === "reasoning" || chunkAny.type === "reasoning-delta") {
 			reasoning += (chunkAny.reasoning || '');
 			reasoningChunkCount++;
+			consecutiveReasoningOnly++;
+			if (consecutiveReasoningOnly >= MAX_REASONING_ONLY_CHUNKS && textChunkCount === 0) {
+				throw new Error(`Summarizer stuck in reasoning-only mode (${consecutiveReasoningOnly} chunks, 0 text)`);
+			}
 			continue;
 		}
 		if (chunkAny.type === "done" && !chunkAny.success && chunkAny.error) {
@@ -289,6 +305,9 @@ async function collectStreamingChunks(options: {
 		}
 	}
 
+	} finally {
+		options.signal?.removeEventListener('abort', onAbort);
+	}
 	return { text, reasoning, chunkCount, textChunkCount, reasoningChunkCount, rawChunks, rawChunkObjects };
 }
 
@@ -318,7 +337,9 @@ async function generateSummary(options: {
 	providerConfig: ProviderConfig;
 	request: string;
 	logger?: BasicLogger;
-	chunkIndex?: number; // Agentario: индекс чанка для отладки
+	chunkIndex?: number;
+	/** Agentario: abort signal */
+	signal?: AbortSignal;
 }): Promise<string> {
 	const phase = options.chunkIndex !== undefined ? 'map' : 'single';
 	options.logger?.log?.(`generateSummary: starting phase=${phase}, chunk=${options.chunkIndex ?? 'N/A'}, provider=${options.providerConfig.providerId}/${options.providerConfig.modelId}, requestLen=${options.request.length}`, { severity: "info" });
@@ -336,6 +357,7 @@ async function generateSummary(options: {
 	const result = await collectStreamingChunks({
 		...options,
 		request: options.request,
+		signal: options.signal,
 	});
 
 	options.logger?.log?.(`generateSummary: done. chunks=${result.chunkCount}, textChunks=${result.textChunkCount}, reasoningChunks=${result.reasoningChunkCount}, textLen=${result.text.length}, reasoningLen=${result.reasoning.length}`, { severity: "info" });
@@ -353,6 +375,7 @@ async function generateSummary(options: {
 		const reasoningText = result.reasoning.trim();
 		const reasoningTokens = estimateTokens(reasoningText.length);
 		const inputTokens = estimateTokens(options.request.length);
+		if (options.signal?.aborted) throw new Error("Compaction chunk aborted by user");
 		// If reasoning is more than 1.5x the input, it's thinking — not a summary.
 		// Agentario: retry with /no_think suffix before giving up.
 		if (reasoningTokens > inputTokens * 1.5) {
@@ -364,6 +387,7 @@ async function generateSummary(options: {
 				const retryResult = await collectStreamingChunks({
 					...options,
 					request: noThinkRequest,
+					signal: options.signal,
 				});
 				options.logger?.log?.(`generateSummary: /no_think retry done. chunks=${retryResult.chunkCount}, textChunks=${retryResult.textChunkCount}, reasoningChunks=${retryResult.reasoningChunkCount}, textLen=${retryResult.text.length}`, { severity: "info" });
 				const retryText = retryResult.text.trim();
@@ -475,9 +499,11 @@ export async function runAgenticCompaction(options: {
 	/** Agentario: auto vs manual compaction trigger */
 	mode?: "auto" | "manual";
 	/** Agentario: callback for status updates in UI */
-	statusCallback?: (message: string) => void;
+	statusCallback?: (message: string, meta?: { action?: string; chunkIndex?: number }) => void;
 	/** Agentario: EMA scale for aligning char-based estimates with provider tokens */
 	providerScale?: number;
+	/** Agentario: abort signal */
+	abortSignal?: AbortSignal;
 }): Promise<CoreCompactionResult | undefined> {
 	const messages = options.context.messages;
 	if (messages.length < 2) {
@@ -572,6 +598,7 @@ export async function runAgenticCompaction(options: {
 						providerConfig: summarizerProviderConfig,
 						request: summaryRequest,
 						logger: options.logger,
+						signal: options.abortSignal,
 					});
 				} else {
 					const intermediateSummaries: string[] = [];
@@ -743,7 +770,10 @@ export async function runAgenticCompaction(options: {
 		}
 
 		const intermediateSummaries: string[] = [];
-		for (let i = 0; i < packedTexts.length; i++) {
+		const MAX_CHUNK_RETRIES = 3;
+		const chunkRetries: Record<number, number> = {};
+		let i = 0;
+		while (i < packedTexts.length) {
 			const chunkTokens = estimateTokens(packedTexts[i].length);
 			const chunkRequest = buildSummaryRequest({
 				previousSummary: i === 0 ? previousSummary : undefined,
@@ -755,21 +785,39 @@ export async function runAgenticCompaction(options: {
 
 			options.statusCallback?.(
 				`🔄 Чанк ${i + 1}/${packedTexts.length}: ~${chunkTokens.toLocaleString()} ток. на входе`,
+				{ action: "restart-chunk", chunkIndex: i },
 			);
 
 			options.logger?.debug(`Compaction map phase chunk ${i + 1}/${packedTexts.length}`, {
 				chunkChars: packedTexts[i].length,
 			});
-			const chunkSummary = await generateSummary({
-				providerConfig: summarizerProviderConfig,
-				request: chunkRequest,
-				logger: options.logger,
-				chunkIndex: i,
-			});
-			if (chunkSummary.trim()) {
-				intermediateSummaries.push(chunkSummary.trim());
-				const summaryTokens = estimateTokens(chunkSummary.length);
-				options.statusCallback?.(`🔄 Чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
+			try {
+				const chunkSummary = await generateSummary({
+					providerConfig: summarizerProviderConfig,
+					request: chunkRequest,
+					logger: options.logger,
+					chunkIndex: i,
+					signal: options.abortSignal,
+				});
+				if (chunkSummary.trim()) {
+					intermediateSummaries.push(chunkSummary.trim());
+					const summaryTokens = estimateTokens(chunkSummary.length);
+					options.statusCallback?.(`🔄 Чанк ${i + 1}/${packedTexts.length} готов: ~${summaryTokens.toLocaleString()} ток. на выходе`);
+				}
+				i++;
+			} catch (chunkErr) {
+				const isAbort = (chunkErr instanceof Error && chunkErr.message.includes("abort"))
+					|| options.abortSignal?.aborted;
+				if (isAbort && (chunkRetries[i] || 0) < MAX_CHUNK_RETRIES) {
+					chunkRetries[i] = (chunkRetries[i] || 0) + 1;
+					options.logger?.log?.(
+						`Chunk ${i + 1} aborted, retry ${chunkRetries[i]}/${MAX_CHUNK_RETRIES}`,
+						{ severity: "warn" }
+					);
+					options.statusCallback?.(`⟳ Повтор чанка ${i + 1} (попытка ${chunkRetries[i]}/${MAX_CHUNK_RETRIES})`);
+					continue;
+				}
+				throw chunkErr;
 			}
 		}
 

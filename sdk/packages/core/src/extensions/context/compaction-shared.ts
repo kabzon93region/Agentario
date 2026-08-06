@@ -47,6 +47,36 @@ export function truncateText(text: string, limit: number): string {
 	return `${text.slice(0, limit)}\n...[truncated ${text.length - limit} chars]`;
 }
 
+/**
+ * Extract readable text from a structured tool entry (ToolOperationResult).
+ * These entries have shape {query, result, error, success} without a `type` field,
+ * so the typed switch/case in flatten functions misses them.
+ */
+export function formatStructuredToolEntry(block: unknown): string {
+	if (!block || typeof block !== "object") {
+		return "";
+	}
+	const entry = block as Record<string, unknown>;
+	if (!("result" in entry || "error" in entry || "query" in entry)) {
+		return "";
+	}
+	const parts: string[] = [];
+	if (entry.query) {
+		parts.push(`query: ${String(entry.query)}`);
+	}
+	if (entry.result) {
+		const text = String(entry.result);
+		parts.push(`result: ${text.length > TOOL_RESULT_CHAR_LIMIT ? truncateText(text, TOOL_RESULT_CHAR_LIMIT) : text}`);
+	}
+	if (entry.error) {
+		parts.push(`error: ${String(entry.error)}`);
+	}
+	if (entry.success === false && !entry.error) {
+		parts.push("success: false");
+	}
+	return parts.join(" | ");
+}
+
 export function flattenToolResultContent(
 	content: ToolResultContent["content"],
 ): string {
@@ -64,7 +94,7 @@ export function flattenToolResultContent(
 				case "image":
 					return `[image:${block.mediaType}]`;
 				default:
-					return "";
+					return formatStructuredToolEntry(block);
 			}
 		})
 		.join("\n");
@@ -123,9 +153,6 @@ export const SOLO_BLOCK_CHAR_THRESHOLD = 2_000;
 
 /** Max characters for thinking blocks in summarization units. Longer thinking is truncated. */
 export const THINKING_TRUNCATE_CHARS = 2_000;
-
-/** Individual oversized blocks may use up to this fraction of the model context window. */
-export const SOLO_CHUNK_CONTEXT_RATIO = 0.9;
 
 export function serializeMessage(
 	message: MessageWithMetadata,
@@ -207,7 +234,7 @@ export function flattenToolResultContentFull(
 				case "image":
 					return `[image:${block.mediaType}]`;
 				default:
-					return "";
+					return formatStructuredToolEntry(block);
 			}
 		})
 		.join("\n");
@@ -329,10 +356,11 @@ export function packSummarizationUnits(options: {
 	modelContextTokens: number;
 }): string[] {
 	const normalBudget = Math.max(1, options.chunkSizeTokens);
-	const soloBudget = Math.max(
-		1,
-		Math.floor(options.modelContextTokens * SOLO_CHUNK_CONTEXT_RATIO),
-	);
+	// Agentario: solo-чанки получают 2x лимит вместо 90% контекста модели.
+	const soloBudget = Math.max(1, normalBudget * 2);
+	// Agentario: порог для solo — равен chunkSizeTokens. Блок <= chunkSizeTokens может упаковываться с другими, блок > chunkSizeTokens — solo.
+	const soloThreshold = normalBudget;
+	const microFlushThreshold = Math.floor(normalBudget * 0.1);
 
 	const chunks: string[] = [];
 	let currentParts: string[] = [];
@@ -386,21 +414,20 @@ export function packSummarizationUnits(options: {
 
 	for (const unit of options.units) {
 		const unitTokens = estimateTokens(unit.text.length);
-		const solo = unit.forceSolo || unitTokens > normalBudget;
+		// Agentario: solo определяется по chunkSizeTokens, а не по forceSolo из buildSummarizationUnits.
+		const solo = unitTokens > soloThreshold;
 
 		if (solo) {
+			// Agentario: не делаем micro-flush — если текущий чанк почти пуст (<10% лимита), продолжаем накапливать.
+			if (currentParts.length > 0 && currentTokens >= microFlushThreshold) {
+				flush();
+			}
 			emitSplitUnit(unit, soloBudget);
 			continue;
 		}
 
 		if (currentParts.length > 0 && currentTokens + unitTokens > normalBudget) {
-			// Would need truncation to keep with prior dialog — move to its own chunk instead.
 			flush();
-		}
-
-		if (unitTokens > normalBudget) {
-			emitSplitUnit(unit, soloBudget);
-			continue;
 		}
 
 		pushPart(unit.text, unitTokens);
@@ -409,8 +436,6 @@ export function packSummarizationUnits(options: {
 	flush();
 	return chunks.filter((c) => c.length > 0);
 }
-
-// Agentario: проверка является ли сообщение "Общей картиной"
 export function isOverallPictureMessage(message: MessageWithMetadata): boolean {
 	if (message.role !== "user") {
 		return false;
@@ -530,12 +555,18 @@ function estimateToolResultLength(
 				} else if (b.type === "image") {
 					total += `[image:${(b as { mediaType?: string }).mediaType ?? ""}]`.length;
 				} else {
-					// Structured tool payloads (read_files / run_commands): count JSON size.
-					try {
-						total += Math.min(JSON.stringify(b).length, limits.textLimit);
-					} catch {
-						total += Math.min(String(b).length, limits.textLimit);
+					// Structured tool payloads (read_files / run_commands):
+					// Count same fields as formatStructuredToolEntry for accurate estimation.
+					const entry = b as Record<string, unknown>;
+					let entryLen = 0;
+					if (entry.query) entryLen += `query: ${String(entry.query)}`.length;
+					if (entry.result) {
+						const rLen = String(entry.result).length;
+						entryLen += `result: `.length + Math.min(rLen, TOOL_RESULT_CHAR_LIMIT) + (rLen > TOOL_RESULT_CHAR_LIMIT ? 30 : 0);
 					}
+					if (entry.error) entryLen += ` | error: ${String(entry.error)}`.length;
+					if (entry.success === false && !entry.error) entryLen += ` | success: false`.length;
+					total += Math.min(entryLen, limits.textLimit);
 				}
 			}
 		}
@@ -890,15 +921,22 @@ export function ensureFilesSection(
 // Agentario: стандартные части промпт-шаблона суммаризации (до и после текста диалога)
 export const DEFAULT_PROMPT_BEFORE = `Ты — компрессор(суммаризатор) текста сообщений чата. Получаешь диалог из чата пользователя с агентом, и разбив чат на отдельные сообщения, начинаешь их обрабатывать отдельно, по следующим правилам:
 1. Отдельным сообщением считается отдельное действие участника диалога (сообщение пользователя целиком (даже из многих предложений), размышления агента в чате, действия агента в чате (Tool calls, чтение файлов, запись в файлов, открытие браузера, и так далее), ответные сообщения агента в чате, промежуточные высказывания агента в чате между другими действиями).
-2. Удали из каждого обрабатываемого отдельного сообщения ВСЮ техническую служебную информацию (конкретику вызовов инструментов, пути к файлам, списки файлов, diff кода, логовые маркеры типа "Tool calls", "Thinking", "Completed").
-3. Сожми текст (суммаризируй) отдельного сообщения, оставив только его смысл и ключевые действия/требования/вопросы/ответы (кратко).
-4. Сжатый текст отдельного сообщения должен быть в 1.5-2 раза меньше оригинального (но не менее 30 слов, чтобы не потерять смысл и контекст сообщения). Если всё исходное отдельное сообщение короче 30 слов — не сжимай его, а возвращай целиком оригинальный текст.
-5. Для отдельных сообщений о действиях агента (вызов tools, чтение файлов, индексация, обращение к браузеру, создание файла и т.д.) оставляй только сжатый смысл и краткое описание произведенных действий, без перечисления деталей.
+2. Сожми текст каждого сообщения, убрав РАЗВЁРНУТЫЕ технические детали (полные diff-блоки, полные логи команд, полные содержимые файлов), НО ОБЯЗАТЕЛЬНО сохрани:
+   - Пути к файлам (относительные пути в проекте)
+   - Краткое содержание прочитанных файлов (назначение, ключевые функции/классы, что нашёл)
+   - Результаты tool calls (что именно было сделано и какой результат получен)
+   - Ключевые факты, выводы и решения агента
+   - Ошибки и как агент их обработал
+3. Сжатый текст должен сохранять ВСЮ полезную информацию оригинала, убирая только избыточность и развёрнутые технические блоки. Не менее 50 слов на сообщение (если оригинал длиннее 50 слов). Если оригинал короче 50 слов — не сжимай, верни как есть.
+4. Для каждого прочитанного файла — ОБЯЗАТЕЛЬНО укажи его путь и 1-2 предложения о ключевом содержимом/назначении (что за файл, какие функции/классы содержит, какую роль играет в проекте). Не просто "прочитал файл X", а "прочитал файл X — содержит описание API для..., ключевые функции: ...".
+5. Для actions агента (вызов tools, чтение файлов, запись файлов, запуск команд) — оставляй краткое описание действия, путь к файлу/команду, и результат. Не просто "прочитал файл", а "прочитал src/main.ts — содержит класс Main с методами init() и run(), файл используется как точка входа".
 6. ВАЖНО: Сохраняй все найденные факты, выводы, результаты анализа и ключевую информацию. Не теряй то, что агент выяснил или решил — это критично для продолжения работы.
+6.1. ОПРЕДЕЛИ основной проект/задачу диалога: что пользователь просил сделать? Какой файл/скрипт/модуль является ЦЕНТРОМ работы? Сохрани это понимание. Зависимости и библиотеки (например, llama.cpp, numpy, React) — это ВСПОМОГАТЕЛЬНЫЕ компоненты, НЕ основной проект. Упоминай их кратко как зависимости. Пример: "convert.py — основной скрипт конвертации, использует llama-quantize из llama.cpp как внешний инструмент" (а НЕ "проект llama.cpp с функцией конвертации").
+6.2. Для каждого сообщения пользователя — ОБЯЗАТЕЛЬНО сохрани его ЗАДАНИЕ/ЦЕЛЬ. Это ключевой контекст для понимания, что агент должен был сделать.
 7. Сохраняй последовательность действий агента (что делал, что нашёл, что решил) — это нужно для понимания хода рассуждений.
-8. Для каждого прочитанного файла — ОБЯЗАТЕЛЬНО укажи его путь и 1-2 предложения о ключевом содержимом/назначении (что за файл, какие функции/классы содержит, какую роль играет в проекте). Не просто "прочитал файл X", а "прочитал файл X — содержит описание API для..., ключевые функции: ...".
-9. Не дублируй одинаковые формулировки между сообщениями — каждое сообщение должно содержать уникальную информацию. Если агент читал несколько файлов, для каждого укажи уникальные находки.
-10. Для thinking-блоков — если содержание повторяет предыдущий thinking, сократи до одной фразы "Продолжаю анализ..." вместо повторения того же текста.
+8. Не дублируй одинаковые формулировки между сообщениями — каждое сообщение должно содержать уникальную информацию. Если агент читал несколько файлов, для каждого укажи уникальные находки.
+9. Для thinking-блоков — если содержание точно повторяет предыдущий thinking (без нового контента), сократи до одной фразы "Продолжаю анализ...". Если thinking содержит НОВЫЕ выводы или рассуждения — сохрани их.
+10. Если результат tool call содержит ошибку (error) — запомни её и контекст, но НЕ считай что файл не существует. Файл может быть прочитан другим tool call или в другом контексте.
 
 Пример и формат вывода диалога сжатыми сообщениями:
 [User]: Изучи документацию, историю чатов, файлы правил, структуру папок и прогресс проекта.
@@ -911,7 +949,7 @@ export const DEFAULT_PROMPT_BEFORE = `Ты — компрессор(суммар
 
 Вот диалог для обработки (сжатия):`;
 
-export const DEFAULT_PROMPT_AFTER = `Выводи мне в ответ только обработанный диалог с сжатыми тобой сообщениями, без кавычек, без предисловий "Вот сжатое сообщение". Сохраняй все ключевые факты и выводы — их потеря приведёт к потере контекста.`;
+export const DEFAULT_PROMPT_AFTER = `Выводи мне в ответ только обработанный диалог с сжатыми тобой сообщениями, без кавычек, без предисловий "Вот сжатое сообщение". КРИТИЧЕСКИ ВАЖНО: Сохраняй пути к файлам, краткое содержание прочитанных файлов, результаты tool calls и все ключевые факты. Потеря этой информации сделает сумму бесполезной для продолжения работы. Определи основной проект/задачу диалога и сохрани это понимание. Зависимости — второстепенны, основной проект/скрипт — первичен.`;
 
 // Agentario: wrap-up промпт — для принудительной суммаризации завершённого диалога.
 // Сохраняет якоря (задание + финальный ответ), сжимает промежуточную работу.
@@ -920,12 +958,13 @@ export const WRAP_UP_PROMPT_BEFORE = `Ты — компрессор текста
 Первое сообщение (задание пользователя) и последнее (финальный ответ агента) ты НЕ сжимаешь — они остаются как есть. Твоя задача — сжать ВСЁ между ними.
 
 Правила:
-1. Оставь только суть: что делали, какие файлы читали/писали, какие команды выполняли, какие выводы сделали по ходу.
+1. Оставь суть: что делали, какие файлы читали/писали, какие команды выполняли, какие выводы сделали.
+1.5. Определи основной проект/задачу и сохрани контекст: какой скрипт/модуль является центром работы, а какие зависимости. Не путай зависимости с основным проектом.
 2. Для прочитанных файлов — ОБЯЗАТЕЛЬНО укажи путь и краткое описание СОДЕРЖИМОГО (назначение файла, ключевые функции/классы/компоненты, какие данные в нём находятся). Не просто "прочитал файл X", а "прочитал файл X — содержит описание API для..., ключевые функции: ...".
-3. Удали служебные маркеры (Tool calls, Thinking, Completed, пути к файлам, diff-блоки).
+3. Удали только служебные маркеры (Tool calls, Thinking, Completed, diff-блоки), НО СОХРАНИ пути к файлам и результаты tool calls.
 4. Формат: один связный абзац или несколько кратких тезисов.
 5. Не дублируй одинаковые формулировки — каждый тезис должен содержать уникальную информацию.
-6. Для thinking-блоков — если содержание повторяет предыдущий thinking, сократи до одной фразы.
+6. Для thinking-блоков — если содержание точно повторяет предыдущий thinking, сократи до одной фразы. Если содержит новые выводы — сохрани их.
 7. Обязательно добавь секцию:
 ## Находки из файлов
 - путь: краткое описание содержимого (назначение, ключевые элементы, что нашёл в файле)

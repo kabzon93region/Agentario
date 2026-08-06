@@ -1847,6 +1847,10 @@ export class Controller {
 	 * means any straggler message/state from the previous task or render carries an older epoch
 	 * and is dropped by the webview. Order matters: bump synchronously here, before any await.
 	 */
+	restartCompactionChunk(chunkIndex: number): void {
+		this.compaction.restartCompactionChunk(chunkIndex);
+	}
+
 	resetMessageTranslatorAndFence(): void {
 		this.messageTranslatorState.reset()
 		this.messageTranslatorState.getMinter().bumpEpoch()

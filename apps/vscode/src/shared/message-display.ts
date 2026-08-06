@@ -62,19 +62,12 @@ export function findFollowingApiStats(messages: AgentarioMessage[], fromTs: numb
 }
 
 /**
- * Find API stats for a message, looking forward first, then backward.
- * For completion_result messages, stats often appear BEFORE them (the API request
- * completes before the final message is emitted).
+ * Find API stats for a message by searching backward for the nearest completed
+ * api_req_started. Stats are emitted AFTER tool/thinking messages (as a usage event),
+ * so backward search correctly associates stats with the API call that produced them.
+ * For completion_result, stats appear just before the final message.
  */
 export function findApiStatsForMessage(messages: AgentarioMessage[], fromTs: number): AgentarioApiReqInfo | undefined {
-	// Try forward first (original behavior)
-	const forward = findFollowingApiStats(messages, fromTs)
-	if (forward) {
-		return forward
-	}
-
-	// Agentario: look backward for completion_result or text responses.
-	// The API stats (tokensIn, time, speed) are emitted before the final message.
 	const startIndex = messages.findIndex((message) => message.ts === fromTs)
 	if (startIndex <= 0) {
 		return undefined

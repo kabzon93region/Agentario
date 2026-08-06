@@ -1,8 +1,9 @@
 export interface WebviewMessage {
-	type: "grpc_request" | "grpc_request_cancel" | "lab_api_request"
+	type: "grpc_request" | "grpc_request_cancel" | "lab_api_request" | "restart_compaction_chunk"
 	grpc_request?: GrpcRequest
 	grpc_request_cancel?: GrpcCancel
 	lab_api_request?: LabApiRequest
+	restart_compaction_chunk_index?: number
 }
 
 export type GrpcRequest = {

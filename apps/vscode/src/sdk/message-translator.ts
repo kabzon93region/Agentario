@@ -125,7 +125,10 @@ export class CycleDetector {
 	private consecutiveEofErrors = 0
 	private consecutiveIdenticalThinking = 0
 	private lastThinkingHash = ""
+	private consecutiveIdenticalToolCalls = 0
+	private lastToolCallHash = ""
 	private cycleDetected = false
+	private cycleWarningEmitted = false
 
 	/** Call when a tool result contains ENOENT or similar "not found" errors. */
 	onFileNotFound(): void {
@@ -141,20 +144,62 @@ export class CycleDetector {
 		this.consecutiveEofErrors = 0
 	}
 
-	/** Call when a thinking/reasoning block is received. */
-	onThinking(thinkingText: string): void {
+	/** Call when a tool call starts. Returns warning text if 3+ identical calls detected. */
+	onToolCall(toolName: string, toolInput: unknown): string | null {
+		const inputStr = typeof toolInput === "string" ? toolInput : JSON.stringify(toolInput ?? {})
+		const hash = `${toolName}:${inputStr.substring(0, 300)}`
+		if (hash === this.lastToolCallHash) {
+			this.consecutiveIdenticalToolCalls++
+		} else {
+			this.consecutiveIdenticalToolCalls = 1
+			this.lastToolCallHash = hash
+		}
+
+		if (this.consecutiveIdenticalToolCalls >= 3 && !this.cycleWarningEmitted) {
+			Logger.warn(`[CycleDetector] ${this.consecutiveIdenticalToolCalls} consecutive identical tool calls detected (${toolName}) — emitting cycle warning`)
+			this.cycleDetected = true
+			this.cycleWarningEmitted = true
+			return [
+				`⚠️ ОБНАРУЖЕНО ЗАЦИКЛИВАНИЕ: Вы повторяете одно и то же действие (${toolName}) ${this.consecutiveIdenticalToolCalls} раза подряд.`,
+				"",
+				"Пожалуйста:",
+				"1. Перечитайте сообщение с заданием пользователя",
+				"2. Проанализируйте свои последние 2-3 действия — они идентичны",
+				"3. Осознайте, что вы зациклились, и попробуйте ДРУГОЙ подход или начните с ДРУГОГО шага",
+				"",
+				"НЕ ПОВТОРЯЙТЕ то же самое действие снова. Остановитесь и подумайте иначе.",
+			].join("\n")
+		}
+		return null
+	}
+
+	/** Call when a thinking/reasoning block is received. Returns warning text if 3+ identical blocks detected. */
+	onThinking(thinkingText: string): string | null {
 		// Normalize: trim, collapse whitespace, take first 200 chars as hash
 		const normalized = thinkingText.trim().replace(/\s+/g, " ").substring(0, 200)
 		if (normalized === this.lastThinkingHash) {
 			this.consecutiveIdenticalThinking++
-			if (this.consecutiveIdenticalThinking >= 3) {
-				Logger.warn(`[CycleDetector] ${this.consecutiveIdenticalThinking} consecutive identical thinking blocks detected — agent may be in a loop`)
-				this.cycleDetected = true
-			}
 		} else {
 			this.consecutiveIdenticalThinking = 1
 			this.lastThinkingHash = normalized
 		}
+
+		if (this.consecutiveIdenticalThinking >= 3 && !this.cycleWarningEmitted) {
+			Logger.warn(`[CycleDetector] ${this.consecutiveIdenticalThinking} consecutive identical thinking blocks detected — emitting cycle warning`)
+			this.cycleDetected = true
+			this.cycleWarningEmitted = true
+			return [
+				"⚠️ ОБНАРУЖЕНО ЗАЦИКЛИВАНИЕ: Ваши размышления повторяются 3 раза подряд без прогресса.",
+				"",
+				"Пожалуйста:",
+				"1. Перечитайте сообщение с заданием пользователя",
+				"2. Проанализируйте свои последние действия — вы повторяете одни и те же мысли",
+				"3. Попробуйте СОВЕРШЕННО ДРУГОЙ подход или начните с другого шага",
+				"",
+				"НЕ ПОВТОРЯЙТЕ те же мысли снова. Остановитесь и подумайте иначе.",
+			].join("\n")
+		}
+		return null
 	}
 
 	/** Whether a cycle has been detected. */
@@ -163,10 +208,11 @@ export class CycleDetector {
 	}
 
 	/** Get current counters for reporting. */
-	getStats(): { consecutiveEofErrors: number; consecutiveIdenticalThinking: number; cycleDetected: boolean } {
+	getStats(): { consecutiveEofErrors: number; consecutiveIdenticalThinking: number; consecutiveIdenticalToolCalls: number; cycleDetected: boolean } {
 		return {
 			consecutiveEofErrors: this.consecutiveEofErrors,
 			consecutiveIdenticalThinking: this.consecutiveIdenticalThinking,
+			consecutiveIdenticalToolCalls: this.consecutiveIdenticalToolCalls,
 			cycleDetected: this.cycleDetected,
 		}
 	}
@@ -176,7 +222,10 @@ export class CycleDetector {
 		this.consecutiveEofErrors = 0
 		this.consecutiveIdenticalThinking = 0
 		this.lastThinkingHash = ""
+		this.consecutiveIdenticalToolCalls = 0
+		this.lastToolCallHash = ""
 		this.cycleDetected = false
+		this.cycleWarningEmitted = false
 	}
 }
 
@@ -439,6 +488,11 @@ export class MessageTranslatorState {
 	/** Append a reasoning delta and return the accumulated reasoning text */
 	appendStreamingReasoning(reasoningDelta: string): string {
 		this.streamingReasoningText += reasoningDelta
+		return this.streamingReasoningText
+	}
+
+	/** Get accumulated reasoning text without clearing (for cycle detection before clear) */
+	getStreamingReasoningText(): string {
 		return this.streamingReasoningText
 	}
 
@@ -1283,6 +1337,18 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 						state.setStreamingToolTs(approvedToolMessageTs)
 					}
 
+					// Track tool calls for cycle detection (3+ identical calls = loop)
+					const cycleWarning = state.cycleDetector.onToolCall(toolName, input)
+					if (cycleWarning) {
+						messages.push({
+							ts: state.getStreamingToolTs() - 1,
+							type: "say",
+							say: "text",
+							text: cycleWarning,
+							partial: false,
+						})
+					}
+
 					// ask_question (and ask_followup_question) is NOT a visual tool row: the
 					// SdkInteractionCoordinator services it and emits the proper ask:"followup"
 					// message. Emitting a generic say:"tool" here would leave an orphan partial
@@ -1448,11 +1514,23 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 					break
 				}
 				case "reasoning": {
+					// Get accumulated reasoning text BEFORE clearing (clearStreamingReasoning resets the buffer)
+					const accumulatedReasoning = state.getStreamingReasoningText()
 					const ts = state.clearStreamingReasoning()
-					const reasoning = event.reasoning ?? ""
-					// Track thinking patterns for cycle detection
-					if (reasoning.trim()) {
-						state.cycleDetector.onThinking(reasoning)
+					const reasoning = event.reasoning || accumulatedReasoning || ""
+					// Track thinking patterns for cycle detection using accumulated text
+					const reasoningForCycle = accumulatedReasoning || reasoning
+					if (reasoningForCycle.trim()) {
+						const cycleWarning = state.cycleDetector.onThinking(reasoningForCycle)
+						if (cycleWarning) {
+							messages.push({
+								ts: ts - 1,
+								type: "say",
+								say: "text",
+								text: cycleWarning,
+								partial: false,
+							})
+						}
 					}
 					messages.push({
 						ts,
@@ -1760,41 +1838,12 @@ function translateAgentEvent(event: AgentEvent, state: MessageTranslatorState): 
 				break
 			}
 			// Sync progress bar with compaction's preflight stats (📊 Контекст: N / M).
-			// Without this, the bar can stay on stale measured tokensIn / old model window
-			// while the chat shows the live compaction numbers.
+			// WITHOUT setting pendingContextBudget or pushing api_req_started —
+			// that would create a fake budget with zeroed categories that overwrites
+			// the real budget from estimateContextBudget / CONTEXT_BUDGET_NOTICE_KIND.
 			if (metadataKind === "context_stats" && event.metadata) {
-				const inputTokens =
-					typeof event.metadata.inputTokens === "number" && event.metadata.inputTokens > 0
-						? event.metadata.inputTokens
-						: undefined
-				const maxInputTokens =
-					typeof event.metadata.maxInputTokens === "number" && event.metadata.maxInputTokens > 0
-						? event.metadata.maxInputTokens
-						: undefined
-				if (inputTokens !== undefined && maxInputTokens !== undefined) {
-					const budget: ContextBudgetBreakdown = {
-						contextWindow: maxInputTokens,
-						totalEstimated: inputTokens,
-						pinnedEstimated: 0,
-						compressibleEstimated: inputTokens,
-						categories: {
-							system: 0,
-							rules: 0,
-							tools: 0,
-							mcp: 0,
-							skills: 0,
-							chat: inputTokens,
-						},
-					}
-					state.setPendingContextBudget(budget)
-					messages.push({
-						ts: state.nextTs(),
-						type: "say",
-						say: "api_req_started",
-						text: JSON.stringify({ contextBudget: budget }),
-						partial: false,
-					})
-				}
+				// Only log for diagnostics; the info message below updates the UI text
+				Logger.log(`[MessageTranslator] context_stats: inputTokens=${event.metadata.inputTokens}, maxInputTokens=${event.metadata.maxInputTokens}`)
 			}
 			// Agent notices are informational
 			messages.push({

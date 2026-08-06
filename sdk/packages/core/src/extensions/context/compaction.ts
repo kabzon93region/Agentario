@@ -64,9 +64,11 @@ type BuiltinCompactionStrategyOptions = {
 	/** Agentario: compaction mode - "context" uses previous summary, "full" re-summarizes all */
 	compactionMode?: "context" | "full";
 	/** Agentario: callback for status updates in UI */
-	statusCallback?: (message: string) => void;
+	statusCallback?: (message: string, meta?: { action?: string; chunkIndex?: number }) => void;
 	/** Agentario: EMA scale for aligning char-based estimates with provider tokens */
 	providerScale?: number;
+	/** Agentario: abort signal for cancelling chunk requests */
+	abortSignal?: AbortSignal;
 };
 
 type BuiltinCompactionStrategyRunner = (
@@ -84,7 +86,7 @@ export interface ContextCompactionPrepareTurnOptions {
 	/** Agentario: compaction mode - "context" uses previous summary, "full" re-summarizes all */
 	compactionMode?: "context" | "full";
 	/** Agentario: callback for status updates in UI */
-	statusCallback?: (message: string) => void;
+	statusCallback?: (message: string, meta?: { action?: string; chunkIndex?: number }) => void;
 	/** Agentario: EMA scale for aligning char-based estimates with provider tokens */
 	providerScale?: number;
 }
@@ -148,6 +150,7 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 		compactionMode,
 		statusCallback,
 		providerScale,
+		abortSignal,
 	}) =>
 		runAgenticCompaction({
 			context,
@@ -169,6 +172,7 @@ const BUILTIN_COMPACTION_STRATEGIES = {
 			compactionMode, // Agentario: передаём режим суммаризации
 			statusCallback, // Agentario: callback для статусов в UI
 			providerScale, // Agentario: EMA scale для согласования токенов с UI
+			abortSignal, // Agentario: abort signal
 		}),
 } satisfies Record<CoreCompactionStrategy, BuiltinCompactionStrategyRunner>;
 
@@ -625,6 +629,7 @@ export function createContextCompactionPrepareTurn(
 					compactionMode: options.compactionMode, // Agentario: передаём режим суммаризации
 					statusCallback: options.statusCallback, // Agentario: callback для статусов в UI
 					providerScale: options.providerScale, // Agentario: EMA scale для согласования токенов с UI
+					abortSignal: context.abortSignal, // Agentario: abort signal
 				});
 
 		const durationMs = Date.now() - startedAt;
@@ -659,14 +664,17 @@ export function createContextCompactionPrepareTurn(
 			messagesRemoved: beforeMessageCount - result.messages.length,
 		} as Record<string, unknown>);
 		// Agentario: эмитим статистику ПОСЛЕ компакции
-		const tokensSaved = displayInputTokens - afterTokens;
+		// Используем chatTokens (реально суммаризированные токены), а не displayInputTokens (весь контекст).
+		// displayInputTokens включает system prompt + tool schemas, которые НЕ суммаризируются.
+		const tokensSaved = chatTokens - afterTokens;
 		const afterPercent = maxInputTokens > 0 ? Math.round((afterTokens / maxInputTokens) * 100) : 0;
 		const durationSec = (durationMs / 1000).toFixed(1);
-		const resultMessage = `✅ Компакция завершена за ${durationSec}с: ${displayInputTokens.toLocaleString()} → ${afterTokens.toLocaleString()} токенов (−${tokensSaved.toLocaleString()}, ${afterPercent}%)`;
+		const resultMessage = `✅ Компакция завершена за ${durationSec}с: ${chatTokens.toLocaleString()} → ${afterTokens.toLocaleString()} токенов (−${tokensSaved.toLocaleString()}, ${afterPercent}% контекста)`;
 		context.emitStatusNotice?.(resultMessage, {
 			kind: "compaction_result",
 			reason: statusReason,
-			inputTokens: displayInputTokens,
+			inputTokens: chatTokens,
+			totalContextTokens: displayInputTokens,
 			afterTokens,
 			tokensSaved,
 			afterPercent,
@@ -690,9 +698,9 @@ export function createContextCompactionPrepareTurn(
 				messagesBefore: beforeMessageCount,
 				messagesAfter: result.messages.length,
 				messagesRemoved: beforeMessageCount - result.messages.length,
-			tokensBefore: displayInputTokens,
+			tokensBefore: chatTokens,
 			tokensAfter: afterTokens,
-			tokensSaved: displayInputTokens - afterTokens,
+			tokensSaved: chatTokens - afterTokens,
 				triggerTokens: targetState.triggerTokens,
 				maxInputTokens,
 				thresholdRatio: targetState.thresholdRatio,
@@ -709,7 +717,7 @@ export function createContextCompactionPrepareTurn(
 				strategy: telemetryStrategy,
 				mode,
 				reason: "no_result",
-			tokensBefore: displayInputTokens,
+			tokensBefore: chatTokens,
 			triggerTokens: targetState.triggerTokens,
 				maxInputTokens,
 				thresholdRatio: targetState.thresholdRatio,

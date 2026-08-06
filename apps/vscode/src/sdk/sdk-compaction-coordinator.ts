@@ -200,6 +200,7 @@ export class SdkCompactionCoordinator {
 
 	private emitInfoCounter = 0
 	private emitInfoStateTimer: ReturnType<typeof setTimeout> | null = null
+	private compactionAbortController: AbortController | null = null
 
 
 
@@ -613,6 +614,7 @@ export class SdkCompactionCoordinator {
 
 
 
+		this.compactionAbortController = new AbortController();
 		const result = await compactSessionMessages({
 
 
@@ -648,17 +650,18 @@ export class SdkCompactionCoordinator {
 
 			messages,
 
+			abortSignal: this.compactionAbortController.signal,
 
 			compactionMode, // Agentario: передаём режим суммаризации
 
-
-			statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback для статусов в UI
+			statusCallback: (msg, meta) => { Logger.info(`[compaction] ${msg}`); this.emitInfo(msg, meta); }, // Agentario: логируем И показываем в UI
 
 
 			providerScale: this.options.getProviderScale?.(), // Agentario: EMA scale для согласования токенов с UI
 
 
 		})
+		this.compactionAbortController = null; // Agentario: cleanup
 
 
 
@@ -862,109 +865,9 @@ export class SdkCompactionCoordinator {
 
 
 
-		// Agentario: более детальные категории context budget
-
-
-		const systemPrompt = config.systemPrompt ?? ""
-
-
-		const systemTokens = estimateTokens(systemPrompt.length)
-
-
-		const rulesTokens = 3000 // Agentario rules + .clinerules
-
-
-		const toolsTokens = 3000 // Built-in tools
-
-
-		const mcpTokens = 1500 // MCP tools (estimate, actual depends on connected servers)
-
-
-		const skillsTokens = 500 // Skills/rules
-
-
-		const pinnedTokens = systemTokens + rulesTokens + toolsTokens + mcpTokens + skillsTokens
-
-
-		const totalTokens = pinnedTokens + chatTokens
-
-
-		const contextWindow = config.providerConfig?.modelInfo?.contextWindow ?? 65500
-
-
-
-
-
-		const contextBudget = {
-
-
-			contextWindow,
-
-
-			totalEstimated: totalTokens,
-
-
-			pinnedEstimated: pinnedTokens,
-
-
-			compressibleEstimated: chatTokens,
-
-
-			categories: { system: systemTokens, rules: rulesTokens, tools: toolsTokens, chat: chatTokens, mcp: mcpTokens, skills: skillsTokens },
-
-
-			measuredAt: Date.now(),
-
-
-		}
-
-
-
-
-
-		// Agentario: обновляем ТОЛЬКО context messages (для модели), display не трогаем
-
-
-		if (task) {
-
-
-			// Обновляем context messages (то что видит модель)
-
-
-			task.messageStateHandler.replaceContextMessages(compactedagentarioMessages)
-
-
-
-
-
-			// Добавляем context budget в display для обновления прогресс-бара
-
-
-			const contextBudgetMsg: AgentarioMessage = {
-
-
-				ts: Date.now(),
-
-
-				type: "say",
-
-
-				say: "api_req_started",
-
-
-				text: JSON.stringify({ contextBudget, cost: 0, tokensIn: 0, tokensOut: 0 }),
-
-
-				partial: false,
-
-
-			}
-
-
-			task.messageStateHandler.addMessages([contextBudgetMsg])
-
-
-		}
+		// Agentario: НЕ эмитим contextBudget с хардкод-оценками.
+		// SDK сам рассчитает правильный contextBudget при следующем API-запросе.
+		task.messageStateHandler.replaceContextMessages(compactedagentarioMessages)
 
 
 
@@ -1297,7 +1200,8 @@ export class SdkCompactionCoordinator {
 
 
 
-			const result = await compactSessionMessages({
+			this.compactionAbortController = new AbortController();
+		const result = await compactSessionMessages({
 
 
 				config: {
@@ -1332,11 +1236,11 @@ export class SdkCompactionCoordinator {
 
 				messages,
 
+				abortSignal: this.compactionAbortController.signal,
 
 				compactionMode, // Agentario: передаём режим суммаризации
 
-
-				statusCallback: (msg) => this.emitInfo(msg), // Agentario: callback для статусов в UI
+				statusCallback: (msg, meta) => { Logger.info(`[compaction] ${msg}`); this.emitInfo(msg, meta); }, // Agentario: логируем И показываем в UI
 
 
 			})
@@ -1495,151 +1399,9 @@ export class SdkCompactionCoordinator {
 
 
 
-			// Agentario: более детальные категории context budget
-
-
-			const systemPrompt = config.systemPrompt ?? ""
-
-
-			const systemTokens = estimateTokens(systemPrompt.length)
-
-
-			const rulesTokens = 3000 // Agentario rules + .clinerules
-
-
-			const toolsTokens = 3000 // Built-in tools
-
-
-			const mcpTokens = 1500 // MCP tools (estimate)
-
-
-			const skillsTokens = 500 // Skills/rules
-
-
-			const pinnedTokens = systemTokens + rulesTokens + toolsTokens + mcpTokens + skillsTokens
-
-
-			const totalTokens = pinnedTokens + chatTokens
-
-
-			const contextWindow = config.providerConfig?.modelInfo?.contextWindow ?? 65500
-
-
-
-
-
-			const contextBudget = {
-
-
-				contextWindow,
-
-
-				totalEstimated: totalTokens,
-
-
-				pinnedEstimated: pinnedTokens,
-
-
-				compressibleEstimated: chatTokens,
-
-
-				categories: { system: systemTokens, rules: rulesTokens, tools: toolsTokens, chat: chatTokens, mcp: mcpTokens, skills: skillsTokens },
-
-
-				measuredAt: Date.now(),
-
-
-			}
-
-
-
-
-
-			// Agentario: обновляем ТОЛЬКО context messages (для модели), display не трогаем
-
-
+			// Agentario: НЕ эмитим contextBudget с хардкод-оценками.
+			// SDK сам рассчитает правильный contextBudget при следующем API-запросе.
 			task.messageStateHandler.replaceContextMessages(compactedagentarioMessages)
-
-
-
-
-
-			// Добавляем context budget в display для обновления прогресс-бара
-
-
-			const contextBudgetMsg: AgentarioMessage = {
-
-
-				ts: Date.now(),
-
-
-				type: "say",
-
-
-				say: "api_req_started",
-
-
-				text: JSON.stringify({ contextBudget, cost: 0, tokensIn: 0, tokensOut: 0 }),
-
-
-				partial: false,
-
-
-			}
-
-
-			task.messageStateHandler.addMessages([contextBudgetMsg])
-
-
-
-
-
-			// Сохраняем обновлённые display messages на диск (фильтруем info)
-
-
-			const updatedDisplay = filterCompactionInfoMessages(task.messageStateHandler.getagentarioMessages())
-
-
-			await saveDisplayMessages(taskId, updatedDisplay).catch(err =>
-
-
-				Logger.error("[SdkCompaction] Failed to save updated display messages (history):", err)
-
-
-			)
-
-
-
-
-
-			this.options.resetMessageTranslator()
-
-
-
-
-
-			// Сохраняем summary в файл
-
-
-			const summaryPath = this.saveSummaryToFile(result.messages, taskId)
-
-
-
-
-
-			this.emitInfo(this.formatCompactionStatus(messagesBefore, result.messages.length, tokensBefore, chatTokens, taskId, summaryPath))
-
-
-			await this.options.postStateToWebview()
-
-
-			this.options.sessions.setRunning(false)
-
-
-			await this.options.postStateToWebview()
-
-
-			setTimeout(async () => { await this.options.postStateToWebview() }, 200)
 
 
 
@@ -1903,7 +1665,17 @@ export class SdkCompactionCoordinator {
 
 
 
-	private emitInfo(text: string): void {
+		public restartCompactionChunk(chunkIndex: number): void {
+		if (this.compactionAbortController) {
+			this.emitInfo(`Перезапуск чанка ${chunkIndex + 1}...`);
+			this.compactionAbortController.abort();
+			this.compactionAbortController = null;
+		} else {
+			this.emitInfo("Нет активной компакции для перезапуска");
+		}
+	}
+
+	private emitInfo(text: string, meta?: { action?: string; chunkIndex?: number }): void {
 		const sessionId = this.options.sessions.getActiveSession()?.sessionId ?? ""
 
 		// Monotonic ts to avoid message merge collisions
@@ -1915,6 +1687,7 @@ export class SdkCompactionCoordinator {
 			say: "info",
 			text,
 			partial: false,
+			...(meta ? { metadata: meta } : {}),
 		}
 
 		this.options.messages.appendAndEmit([infoMessage], {
